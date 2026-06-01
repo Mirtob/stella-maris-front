@@ -23,13 +23,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(driveRes.status).json({ error: `Drive respondió ${driveRes.status}` });
     }
 
-    const contentType = driveRes.headers.get('content-type') || 'application/pdf';
     const buffer = await driveRes.arrayBuffer();
 
-    res.setHeader('Content-Type', contentType);
+    // Forzar application/pdf — Drive a veces devuelve octet-stream
+    res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline');
-    // Permitir que la app muestre el PDF (misma origin)
     res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.status(200).send(Buffer.from(buffer));
   } catch (err: any) {
     res.status(500).json({ error: 'Error descargando el PDF', detalle: err.message });

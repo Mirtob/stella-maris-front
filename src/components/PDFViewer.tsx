@@ -7,9 +7,8 @@ interface PDFViewerProps {
   title: string;
 }
 
-// CDN del worker de PDF.js — evita problemas de bundling con Vite
-const PDFJS_VERSION = '5.7.284';
-const WORKER_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.mjs`;
+// Worker servido desde nuestro propio dominio — más confiable que CDN
+const WORKER_URL = '/pdf.worker.min.mjs';
 
 export function PDFViewer({ proxyUrl, driveViewUrl, title }: PDFViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
