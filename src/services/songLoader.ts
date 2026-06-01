@@ -132,7 +132,71 @@ function parseDescription(description: string): ParsedMeta | null {
 // Convertir video de YouTube → Song
 // ──────────────────────────────────────────────
 
-function videoToSong(video: any): Song | null {
+// ──────────────────────────────────────────────
+// Matching de partituras por nombre
+// ──────────────────────────────────────────────
+
+interface DriveFile { id: string; name: string; mimeType: string; }
+
+/** Normaliza un texto para comparación: minúsculas, sin acentos, sin caracteres especiales. */
+function normalize(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')   // quita acentos
+    .replace(/\.(pdf|jpg|jpeg|png|webp)$/i, '')           // quita extensión
+    .replace(/_+/g, ' ')                                  // _ → espacio
+    .replace(/[^a-z0-9\s]/g, ' ')                         // solo letras/números/espacios
+    .replace(/\s+/g, ' ')                                 // espacios múltiples
+    .trim();
+}
+
+/** Busca el mejor match de partitura para un título de canto. */
+function findBestSheetMatch(songTitle: string, sheets: DriveFile[]): DriveFile | null {
+  if (sheets.length === 0) return null;
+
+  const songWords = normalize(songTitle).split(' ').filter(w => w.length > 2);
+  if (songWords.length === 0) return null;
+
+  let bestMatch: DriveFile | null = null;
+  let bestScore = 0;
+
+  for (const sheet of sheets) {
+    const sheetWords = normalize(sheet.name).split(' ').filter(w => w.length > 2);
+    if (sheetWords.length === 0) continue;
+
+    // Contar palabras del título del canto que aparecen en el nombre del archivo
+    const matchedWords = songWords.filter(w => sheetWords.includes(w));
+    const score = matchedWords.length / songWords.length;
+
+    if (score > bestScore && score >= 0.5) {  // mínimo 50% de palabras coincidentes
+      bestScore = score;
+      bestMatch = sheet;
+    }
+  }
+
+  return bestMatch;
+}
+
+// Cache global de archivos de Drive — se carga una vez por sesión
+let cachedSheets: DriveFile[] | null = null;
+async function loadSheets(): Promise<DriveFile[]> {
+  if (cachedSheets) return cachedSheets;
+  try {
+    const r = await fetch('/api/sheets');
+    if (!r.ok) return [];
+    const data = await r.json();
+    cachedSheets = (data.files || []).filter((f: DriveFile) => f.mimeType?.includes('pdf') || f.mimeType?.includes('image'));
+    return cachedSheets;
+  } catch {
+    return [];
+  }
+}
+
+// ──────────────────────────────────────────────
+// Convertir video de YouTube → Song
+// ──────────────────────────────────────────────
+
+function videoToSong(video: any, sheets: DriveFile[] = []): Song | null {
   const snippet = video.snippet ?? {};
   const details = video.contentDetails ?? {};
   const stats   = video.statistics ?? {};
@@ -151,8 +215,16 @@ function videoToSong(video: any): Song | null {
     thumbnails.medium?.url ??
     thumbnails.default?.url ?? '';
 
-  const sheetMusicUrl = meta.partitura
-    ? `https://drive.google.com/file/d/${meta.partitura}/preview`
+  // 1. Si la descripción tiene "partitura: ID", usar ese ID directamente
+  // 2. Si no, buscar automáticamente en Drive por título similar
+  let sheetFileId = meta.partitura;
+  if (!sheetFileId) {
+    const match = findBestSheetMatch(snippet.title ?? '', sheets);
+    if (match) sheetFileId = match.id;
+  }
+
+  const sheetMusicUrl = sheetFileId
+    ? `https://drive.google.com/file/d/${sheetFileId}/preview`
     : undefined;
 
   return {
@@ -257,9 +329,13 @@ export async function loadSongsFromYouTube(): Promise<Song[]> {
   const videoIds = await getPlaylistVideoIds(uploadsId, apiKey);
   if (videoIds.length === 0) return [];
 
-  const videos = await getVideoDetails(videoIds, apiKey);
-  const songs = videos.map(videoToSong).filter((s): s is Song => s !== null);
+  // Cargar videos y partituras en paralelo
+  const [videos, sheets] = await Promise.all([
+    getVideoDetails(videoIds, apiKey),
+    loadSheets(),
+  ]);
 
+  const songs = videos.map(v => videoToSong(v, sheets)).filter((s): s is Song => s !== null);
   return songs;
 }
 
