@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Toaster, toast } from 'sonner';
 import { Login } from './components/Login';
 import { AuthCallback } from './components/AuthCallback';
@@ -23,7 +23,6 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Song, UserProfile, UserRole, InstrumentType, PublishedCantoral } from './types';
-import { mockPublishedCantorals } from './data/mockPublishedCantorals';
 import { logApiConfig } from './config/api';
 import {
   getStoredSession,
@@ -32,6 +31,7 @@ import {
   sessionToUserProfile,
   logout as googleLogout,
 } from './services/googleAuth';
+import { listCantorals, publishCantoral as publishCantoralToDB, deleteCantoral as deleteCantoralFromDB } from './services/cantorals';
 
 type AppState = 'loading' | 'login' | 'profile-setup' | 'main' | 'player' | 'settings';
 type ViewState = 'main' | 'cantorals' | 'courses' | 'admin' | 'theory' | 'liturgy' | 'instruments' | 'manage-cantorals' | 'history' | 'liturgical-calendar' | 'sheet-music';
@@ -42,13 +42,19 @@ function App() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [cantoral, setCantoral] = useState<Song[]>([]);
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
-  const [publishedCantorals, setPublishedCantorals] = useState<PublishedCantoral[]>(mockPublishedCantorals);
+  const [publishedCantorals, setPublishedCantorals] = useState<PublishedCantoral[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Log API configuration on mount (development only)
   useEffect(() => {
     logApiConfig();
   }, []);
+
+  // Cargar cantorales desde Supabase cuando el usuario entra a la app
+  useEffect(() => {
+    if (appState !== 'main' || !userProfile) return;
+    listCantorals().then(setPublishedCantorals);
+  }, [appState, userProfile]);
 
   // Simulate initial loading
   useEffect(() => {
@@ -138,28 +144,24 @@ function App() {
     setAppState('main');
   };
 
-  const handlePublishCantoral = (newCantoral: PublishedCantoral) => {
+  const handlePublishCantoral = async (newCantoral: PublishedCantoral) => {
+    // Optimistic update — agregar al estado local mientras se guarda
     setPublishedCantorals([newCantoral, ...publishedCantorals]);
-    
-    // Limpiar el cantoral actual después de publicar
     setCantoral([]);
-    
-    // Mostrar notificación a usuarios de Pueblo Fiel simulando una notificación push
-    // En producción, esto se haría a través de un sistema de notificaciones real
-    if (userProfile?.role === 'Pueblo fiel') {
-      setTimeout(() => {
-        toast.info(
-          `¡Nuevo cantoral disponible! 📖\n${newCantoral.parishName} - ${newCantoral.liturgicalDate}\nMisa: ${newCantoral.massTime}`,
-          {
-            duration: 6000,
-            action: {
-              label: 'Ver ahora',
-              onClick: () => setCurrentView('cantorals')
-            }
-          }
-        );
-      }, 1000);
+
+    const result = await publishCantoralToDB(newCantoral);
+    if (!result.ok) {
+      toast.error('Error guardando el cantoral. Revisa tu conexión.', {
+        description: result.error,
+      });
+      // Revertir si falla
+      setPublishedCantorals(prev => prev.filter(c => c.id !== newCantoral.id));
+      return;
     }
+
+    // Recargar desde DB para reflejar el estado real (otros usuarios verán este cantoral)
+    const fresh = await listCantorals();
+    setPublishedCantorals(fresh);
   };
 
   const handleNavigate = (view: string) => {
@@ -198,27 +200,25 @@ function App() {
     }
   };
 
-  // Effect para simular notificaciones de nuevos cantorales para Pueblo Fiel
+  // Notificar al Pueblo Fiel cuando aparezca un cantoral nuevo de su parroquia
+  const lastSeenCount = useRef(0);
   useEffect(() => {
-    if (userProfile?.role === 'Pueblo fiel' && publishedCantorals.length > mockPublishedCantorals.length) {
-      const newestCantoral = publishedCantorals[0];
-      
-      // Solo mostrar si el cantoral es para la misma parroquia del usuario (si tiene parroquia configurada)
+    if (userProfile?.role !== 'Pueblo fiel') {
+      lastSeenCount.current = publishedCantorals.length;
+      return;
+    }
+    if (publishedCantorals.length > lastSeenCount.current && lastSeenCount.current > 0) {
+      const newest = publishedCantorals[0];
       const userParish = (userProfile as any).parishName;
-      if (!userParish || newestCantoral.parishName === userParish) {
-        toast.success(
-          `¡Nuevo cantoral publicado! 📖`,
-          {
-            description: `${newestCantoral.parishName}\n${newestCantoral.liturgicalDate} - ${newestCantoral.massTime}`,
-            duration: 8000,
-            action: {
-              label: 'Ver Cantoral',
-              onClick: () => setCurrentView('cantorals')
-            }
-          }
-        );
+      if (!userParish || newest.parishName === userParish) {
+        toast.success('¡Nuevo cantoral publicado! 📖', {
+          description: `${newest.parishName}\n${newest.liturgicalDate} - ${newest.massTime}`,
+          duration: 8000,
+          action: { label: 'Ver Cantoral', onClick: () => setCurrentView('cantorals') },
+        });
       }
     }
+    lastSeenCount.current = publishedCantorals.length;
   }, [publishedCantorals, userProfile]);
 
   // Auth Callback Route
@@ -441,8 +441,14 @@ function App() {
           <CantoralHistory
             cantorals={publishedCantorals}
             onPlaySong={handlePlaySong}
-            onDeleteCantoral={(id: string) => {
-              setPublishedCantorals(publishedCantorals.filter((c: PublishedCantoral) => c.id !== id));
+            onDeleteCantoral={async (id: string) => {
+              setPublishedCantorals(prev => prev.filter(c => c.id !== id));
+              const r = await deleteCantoralFromDB(id);
+              if (!r.ok) {
+                toast.error('No se pudo eliminar el cantoral', { description: r.error });
+                const fresh = await listCantorals();
+                setPublishedCantorals(fresh);
+              }
             }}
           />
         )}
