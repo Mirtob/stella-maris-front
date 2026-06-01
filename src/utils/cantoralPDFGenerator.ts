@@ -1,364 +1,314 @@
 import { jsPDF } from 'jspdf';
 import { PublishedCantoral, Song } from '../types';
 
-// Logo de la app en base64 (simple text logo for now)
-const APP_NAME = '✝️ Cantoral Católico';
-const APP_SUBTITLE = 'Cantos Litúrgicos';
-
 interface PDFGeneratorOptions {
   cantoral: PublishedCantoral;
-  includeChords?: boolean; // Para coros con guitarra
-  includeSheetMusic?: boolean; // Para coros con órgano
 }
 
+const CATEGORY_ORDER = [
+  'Entrada', 'Kyrie', 'Gloria', 'Salmo', 'Aleluya', 'Post Evangelio',
+  'Ofertorio', 'Santo', 'Cordero de Dios', 'Comunión', 'Salida',
+];
+
+// ──────────────────────────────────────────────
+// Limpieza de texto
+// ──────────────────────────────────────────────
+
+/**
+ * jsPDF (fuentes default) solo soporta Latin-1.
+ * Eliminar/reemplazar todo lo que rompe: emojis, comillas tipográficas, guiones largos, etc.
+ */
+function cleanText(text: string): string {
+  if (!text) return '';
+  return text
+    // Comillas tipográficas → simples
+    .replace(/[“”‘’]/g, '"')
+    .replace(/[‘’]/g, "'")
+    // Guiones largos → guión simple
+    .replace(/[–—―]/g, '-')
+    // Puntos suspensivos
+    .replace(/…/g, '...')
+    // Eliminar emojis y símbolos no-Latin-1 (mantiene tildes y eñes)
+    .replace(/[\u{1F300}-\u{1FAFF}]/gu, '')
+    .replace(/[\u{2600}-\u{27BF}]/gu, '')
+    .replace(/[\u{FE00}-\u{FE0F}]/gu, '')
+    // Espacios no estándar → espacio normal
+    .replace(/[  -​]/g, ' ')
+    .trim();
+}
+
+/**
+ * Limpia la letra del canto:
+ * - Elimina acordes inline tipo [Am], [G7], [Em/B]
+ * - Elimina líneas que son solo acordes (ej: "G  D  Em  C")
+ * - Elimina secciones explícitas como (Repetir Coro), (Bis)
+ * - Mantiene marcas tipo "Coro:", "Estrofa 1:" en su propia línea
+ */
+function cleanLyrics(lyrics: string): string {
+  if (!lyrics) return '';
+
+  // Quitar acordes inline: [Am] [G/B] [C#m7]
+  let cleaned = lyrics.replace(/\[[A-G][#b]?[a-zA-Z0-9/]*\]/g, '');
+
+  // Procesar línea por línea
+  const lines = cleaned.split('\n').map(line => {
+    const stripped = line.trim();
+    if (!stripped) return '';
+
+    // Si la línea es solo acordes (letras de acordes separadas por espacios), eliminarla
+    // Patrón: "G   D   Em" → toda la línea son acordes
+    const tokens = stripped.split(/\s+/);
+    const isChordLine = tokens.length > 0 && tokens.every(t =>
+      /^[A-G][#b]?(maj|min|m|sus|dim|aug|add)?[0-9]?(\/[A-G][#b]?)?$/.test(t)
+    );
+    if (isChordLine) return '';
+
+    return line;
+  });
+
+  // Compactar líneas vacías consecutivas → máximo una
+  const result: string[] = [];
+  let lastEmpty = false;
+  for (const line of lines) {
+    const isEmpty = line.trim() === '';
+    if (isEmpty && lastEmpty) continue;
+    result.push(line);
+    lastEmpty = isEmpty;
+  }
+
+  return cleanText(result.join('\n').trim());
+}
+
+// ──────────────────────────────────────────────
+// Generador principal
+// ──────────────────────────────────────────────
+
 export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise<void> {
-  const { cantoral, includeChords = false, includeSheetMusic = false } = options;
-  
-  const pdf = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4'
-  });
+  const { cantoral } = options;
 
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 15;
-  const contentWidth = pageWidth - (margin * 2);
-  
-  let currentY = margin;
-  let pageNumber = 1;
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const margin = 18;
+  const contentW = pageW - margin * 2;
 
-  // Función para agregar el membrete en cada página
-  const addHeader = (isFirstPage = false) => {
-    // Línea superior decorativa
-    pdf.setDrawColor(41, 98, 255); // Azul
-    pdf.setLineWidth(2);
-    pdf.line(margin, 10, pageWidth - margin, 10);
-    
-    // Logo y nombre de la app
-    pdf.setFontSize(16);
+  let y = margin;
+  let pageNum = 1;
+
+  // Header en cada página
+  const addPageHeader = () => {
     pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(41, 98, 255);
-    pdf.text(APP_NAME, pageWidth / 2, 18, { align: 'center' });
-    
     pdf.setFontSize(10);
+    pdf.setTextColor(60, 60, 60);
+    pdf.text('Stella Maris', margin, 10);
     pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(100, 100, 100);
-    pdf.text(APP_SUBTITLE, pageWidth / 2, 24, { align: 'center' });
-    
-    // Línea inferior del membrete
-    pdf.setLineWidth(0.5);
-    pdf.setDrawColor(200, 200, 200);
-    pdf.line(margin, 28, pageWidth - margin, 28);
-    
-    currentY = 35;
-  };
-
-  // Función para agregar el pie de página
-  const addFooter = () => {
-    pdf.setLineWidth(0.5);
-    pdf.setDrawColor(200, 200, 200);
-    pdf.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
-    
-    pdf.setFontSize(9);
     pdf.setTextColor(120, 120, 120);
+    pdf.text(cleanText(cantoral.liturgicalDate), pageW - margin, 10, { align: 'right' });
+    pdf.setDrawColor(220, 220, 220);
+    pdf.setLineWidth(0.3);
+    pdf.line(margin, 13, pageW - margin, 13);
+  };
+
+  // Footer en cada página
+  const addPageFooter = () => {
+    pdf.setDrawColor(220, 220, 220);
+    pdf.setLineWidth(0.3);
+    pdf.line(margin, pageH - 12, pageW - margin, pageH - 12);
     pdf.setFont('helvetica', 'normal');
-    
-    // Información del cantoral en el pie
-    const footerLeft = `${cantoral.parishName}`;
-    const footerCenter = `${cantoral.liturgicalDate} - ${cantoral.massTime}`;
-    const footerRight = `Pág. ${pageNumber}`;
-    
-    pdf.text(footerLeft, margin, pageHeight - 10);
-    pdf.text(footerCenter, pageWidth / 2, pageHeight - 10, { align: 'center' });
-    pdf.text(footerRight, pageWidth - margin, pageHeight - 10, { align: 'right' });
+    pdf.setFontSize(9);
+    pdf.setTextColor(140, 140, 140);
+    const parish = cleanText(cantoral.parishName);
+    pdf.text(parish, margin, pageH - 7);
+    pdf.text(`Pág. ${pageNum}`, pageW - margin, pageH - 7, { align: 'right' });
   };
 
-  // Función para verificar si necesitamos una nueva página
-  const checkNewPage = (requiredSpace: number) => {
-    if (currentY + requiredSpace > pageHeight - 25) {
-      addFooter();
+  // Saltar de página si no entra el contenido
+  const needPage = (required: number) => {
+    if (y + required > pageH - 18) {
+      addPageFooter();
       pdf.addPage();
-      pageNumber++;
-      addHeader();
+      pageNum++;
+      addPageHeader();
+      y = 22;
     }
   };
 
-  // Primera página - Portada
-  addHeader(true);
-  
-  // Título del cantoral
-  pdf.setFontSize(24);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(41, 98, 255);
-  currentY = 60;
-  pdf.text('Cantoral de la Misa', pageWidth / 2, currentY, { align: 'center' });
-  
-  // Fecha litúrgica
-  currentY += 15;
-  pdf.setFontSize(18);
-  pdf.setTextColor(60, 60, 60);
-  pdf.text(cantoral.liturgicalDate, pageWidth / 2, currentY, { align: 'center' });
-  
-  // Fecha y hora
-  currentY += 12;
-  pdf.setFontSize(14);
-  const dateObj = new Date(cantoral.date);
-  const formattedDate = dateObj.toLocaleDateString('es-ES', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  });
-  pdf.text(formattedDate, pageWidth / 2, currentY, { align: 'center' });
-  
-  currentY += 8;
-  pdf.setFontSize(16);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text(cantoral.massTime, pageWidth / 2, currentY, { align: 'center' });
-  
-  // Parroquia y coro
-  currentY += 20;
-  pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setTextColor(80, 80, 80);
-  pdf.text(cantoral.parishName, pageWidth / 2, currentY, { align: 'center' });
-  
-  currentY += 7;
-  pdf.text(`Coro: ${cantoral.choirName}`, pageWidth / 2, currentY, { align: 'center' });
-  
-  // Decoración
-  currentY += 15;
-  pdf.setDrawColor(41, 98, 255);
-  pdf.setLineWidth(1);
-  pdf.line(pageWidth / 2 - 30, currentY, pageWidth / 2 + 30, currentY);
-  
-  // Icono o símbolo
-  currentY += 20;
-  pdf.setFontSize(48);
-  pdf.text('🎵', pageWidth / 2, currentY, { align: 'center' });
-  
-  // Pie de primera página
-  addFooter();
-  
-  // Segunda página - Índice
-  pdf.addPage();
-  pageNumber++;
-  addHeader();
-  
-  pdf.setFontSize(18);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(41, 98, 255);
-  pdf.text('Índice de Cantos', pageWidth / 2, currentY, { align: 'center' });
-  
-  currentY += 12;
-  pdf.setLineWidth(0.5);
-  pdf.setDrawColor(200, 200, 200);
-  pdf.line(margin, currentY, pageWidth - margin, currentY);
-  currentY += 8;
-  
-  // Agrupar cantos por categoría
-  const categoryOrder = ['Entrada', 'Kyrie', 'Gloria', 'Salmo', 'Aleluya', 'Post Evangelio', 'Ofertorio', 'Santo', 'Cordero de Dios', 'Comunión', 'Salida'];
-  const songsByCategory = cantoral.songs.reduce((acc, song) => {
-    if (!acc[song.category]) {
-      acc[song.category] = [];
+  // Renderizar bloque de texto con wrap automático
+  const renderTextBlock = (text: string, fontSize: number, lineHeight: number, options: { bold?: boolean; color?: [number, number, number]; align?: 'left' | 'center' } = {}) => {
+    pdf.setFont('helvetica', options.bold ? 'bold' : 'normal');
+    pdf.setFontSize(fontSize);
+    pdf.setTextColor(...(options.color ?? [30, 30, 30]));
+
+    const lines = pdf.splitTextToSize(text, contentW) as string[];
+    for (const line of lines) {
+      needPage(lineHeight);
+      const x = options.align === 'center' ? pageW / 2 : margin;
+      pdf.text(line, x, y, options.align === 'center' ? { align: 'center' } : undefined);
+      y += lineHeight;
     }
+  };
+
+  // ─── PORTADA ───
+  addPageHeader();
+  y = 60;
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(22);
+  pdf.setTextColor(30, 58, 95);
+  pdf.text('Cantoral de la Misa', pageW / 2, y, { align: 'center' });
+  y += 14;
+
+  pdf.setFontSize(16);
+  pdf.setTextColor(80, 80, 80);
+  pdf.text(cleanText(cantoral.liturgicalDate), pageW / 2, y, { align: 'center' });
+  y += 10;
+
+  // Fecha y hora
+  const dateObj = new Date(cantoral.date);
+  const formattedDate = dateObj.toLocaleDateString('es-ES', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  });
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(12);
+  pdf.setTextColor(100, 100, 100);
+  pdf.text(cleanText(formattedDate), pageW / 2, y, { align: 'center' });
+  y += 7;
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(13);
+  pdf.setTextColor(60, 60, 60);
+  pdf.text(cleanText(cantoral.massTime), pageW / 2, y, { align: 'center' });
+  y += 14;
+
+  // Línea decorativa
+  pdf.setDrawColor(30, 58, 95);
+  pdf.setLineWidth(0.5);
+  pdf.line(pageW / 2 - 30, y, pageW / 2 + 30, y);
+  y += 12;
+
+  // Parroquia
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(11);
+  pdf.setTextColor(80, 80, 80);
+  pdf.text(cleanText(cantoral.parishName), pageW / 2, y, { align: 'center' });
+  y += 6;
+  pdf.text(`Coro: ${cleanText(cantoral.choirName)}`, pageW / 2, y, { align: 'center' });
+
+  addPageFooter();
+
+  // ─── CANTOS POR CATEGORÍA ───
+  pdf.addPage();
+  pageNum++;
+  addPageHeader();
+  y = 22;
+
+  // Agrupar cantos por parte de la misa
+  const byCategory = cantoral.songs.reduce((acc, song) => {
+    if (!acc[song.category]) acc[song.category] = [];
     acc[song.category].push(song);
     return acc;
   }, {} as Record<string, Song[]>);
-  
-  const sortedCategories = Object.keys(songsByCategory).sort((a, b) => {
-    return categoryOrder.indexOf(a) - categoryOrder.indexOf(b);
-  });
-  
-  sortedCategories.forEach((category, index) => {
-    checkNewPage(15);
-    
-    pdf.setFontSize(12);
+
+  const sortedCategories = Object.keys(byCategory).sort(
+    (a, b) => CATEGORY_ORDER.indexOf(a) - CATEGORY_ORDER.indexOf(b)
+  );
+
+  sortedCategories.forEach((category) => {
+    // Cabecera de categoría con fondo azul claro
+    needPage(20);
+    pdf.setFillColor(30, 58, 95);
+    pdf.rect(margin, y - 6, contentW, 9, 'F');
     pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(41, 98, 255);
-    pdf.text(`${category}`, margin, currentY);
-    currentY += 6;
-    
-    songsByCategory[category].forEach((song) => {
-      checkNewPage(10);
-      
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(60, 60, 60);
-      pdf.text(`• ${song.title}`, margin + 5, currentY);
-      
-      if (song.author) {
-        pdf.setFontSize(9);
-        pdf.setTextColor(120, 120, 120);
-        pdf.text(`(${song.author})`, margin + 10, currentY + 4);
-        currentY += 5;
-      }
-      
-      currentY += 6;
-    });
-    
-    currentY += 3;
-  });
-  
-  addFooter();
-  
-  // Páginas de cantos
-  sortedCategories.forEach((category, categoryIndex) => {
-    // Solo agregamos nueva página para la primera categoría (después del índice)
-    if (categoryIndex === 0) {
-      pdf.addPage();
-      pageNumber++;
-      addHeader();
-    }
-    
-    songsByCategory[category].forEach((song, songIndex) => {
-      // Ya no agregamos una página nueva para cada canto
-      // Solo verificamos si hay espacio suficiente
-      checkNewPage(50);
-      
-      // Categoría del canto (solo mostrar para el primer canto de cada categoría)
-      if (songIndex === 0) {
-        pdf.setFontSize(14);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(41, 98, 255);
-        pdf.text(category.toUpperCase(), margin, currentY);
-        currentY += 8;
-      }
-      
+    pdf.setFontSize(13);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text(cleanText(category).toUpperCase(), margin + 3, y);
+    y += 10;
+
+    byCategory[category].forEach((song, idx) => {
+      needPage(20);
+
       // Título del canto
-      pdf.setFontSize(13);
       pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(41, 98, 255);
-      pdf.text(song.title, margin, currentY);
-      currentY += 8;
-      
-      // Autor
+      pdf.setFontSize(12);
+      pdf.setTextColor(30, 58, 95);
+      const titleLines = pdf.splitTextToSize(cleanText(song.title), contentW) as string[];
+      titleLines.forEach((line) => {
+        needPage(6);
+        pdf.text(line, margin, y);
+        y += 6;
+      });
+
+      // Autor (si existe)
       if (song.author) {
-        pdf.setFontSize(11);
         pdf.setFont('helvetica', 'italic');
-        pdf.setTextColor(100, 100, 100);
-        pdf.text(`Autor: ${song.author}`, margin, currentY);
-        currentY += 6;
-      }
-      
-      // Tonalidad si está disponible
-      if (song.originalKey) {
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
-        pdf.setTextColor(80, 80, 80);
-        pdf.text(`Tonalidad: ${song.originalKey}`, margin, currentY);
-        currentY += 6;
-      }
-      
-      currentY += 3;
-      
-      // Línea separadora
-      pdf.setLineWidth(0.5);
-      pdf.setDrawColor(200, 200, 200);
-      pdf.line(margin, currentY, pageWidth - margin, currentY);
-      currentY += 8;
-      
-      // Letra del canto
-      if (song.lyrics) {
-        pdf.setFontSize(11);
-        pdf.setFont('courier', 'normal'); // Courier para mejor visualización de acordes
-        pdf.setTextColor(40, 40, 40);
-        
-        const lines = song.lyrics.split('\n');
-        
-        lines.forEach((line) => {
-          checkNewPage(6);
-          
-          // Si la línea contiene acordes (líneas que empiezan con espacios o tienen caracteres de acordes)
-          const isChordLine = /^[\s]*[A-G][#b]?[m]?[0-9]?[\/]?/.test(line);
-          
-          if (isChordLine && includeChords) {
-            pdf.setFont('courier', 'bold');
-            pdf.setTextColor(200, 50, 50); // Rojo para acordes
-            pdf.text(line, margin, currentY);
-          } else if (isChordLine && !includeChords) {
-            // Omitir líneas de acordes si no se incluyen
-            return;
-          } else {
-            pdf.setFont('courier', 'normal');
-            pdf.setTextColor(40, 40, 40);
-            pdf.text(line, margin, currentY);
-          }
-          
-          currentY += 5;
-        });
-      } else {
-        pdf.setFontSize(11);
-        pdf.setFont('helvetica', 'italic');
-        pdf.setTextColor(150, 150, 150);
-        pdf.text('Letra no disponible en el sistema', margin, currentY);
-        currentY += 8;
-      }
-      
-      // Nota sobre partitura
-      if (song.sheetMusicUrl && includeSheetMusic) {
-        currentY += 5;
         pdf.setFontSize(9);
-        pdf.setFont('helvetica', 'italic');
-        pdf.setTextColor(100, 100, 100);
-        pdf.text('📄 Partitura disponible - Consulta en la app o descarga desde YouTube', margin, currentY);
-        currentY += 5;
+        pdf.setTextColor(130, 130, 130);
+        pdf.text(`${cleanText(song.author)}`, margin, y);
+        y += 5;
       }
-      
-      // Espacio entre cantos
-      currentY += 10;
+
+      y += 2;
+
+      // Letra limpia
+      const lyrics = cleanLyrics(song.lyrics || '');
+      if (lyrics) {
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(10.5);
+        pdf.setTextColor(40, 40, 40);
+
+        const lyricLines = lyrics.split('\n');
+        for (const rawLine of lyricLines) {
+          const line = rawLine.replace(/\s+$/, ''); // trim trailing spaces
+
+          if (line === '') {
+            y += 3; // espacio entre estrofas
+            continue;
+          }
+
+          // Detectar marcas de sección: "Coro:", "Estrofa 1:", etc.
+          const isSection = /^(Coro|Estrofa\s*\d*|Puente|Final|Refrán|Recitativo)\s*:?\s*$/i.test(line.trim());
+
+          if (isSection) {
+            pdf.setFont('helvetica', 'bold');
+            pdf.setTextColor(80, 80, 80);
+            needPage(6);
+            pdf.text(line.trim(), margin, y);
+            y += 6;
+            pdf.setFont('helvetica', 'normal');
+            pdf.setTextColor(40, 40, 40);
+          } else {
+            // Texto normal — wrap si la línea es muy larga
+            const wrapped = pdf.splitTextToSize(line, contentW) as string[];
+            for (const wl of wrapped) {
+              needPage(5.5);
+              pdf.text(wl, margin, y);
+              y += 5.5;
+            }
+          }
+        }
+      } else {
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(9);
+        pdf.setTextColor(160, 160, 160);
+        pdf.text('(Letra no disponible)', margin, y);
+        y += 6;
+      }
+
+      // Separador entre cantos de la misma categoría
+      if (idx < byCategory[category].length - 1) {
+        y += 4;
+        pdf.setDrawColor(230, 230, 230);
+        pdf.setLineWidth(0.2);
+        pdf.line(margin + 20, y, pageW - margin - 20, y);
+        y += 6;
+      }
     });
-    
-    // Espacio pequeño entre categorías
-    currentY += 5;
+
+    y += 6; // espacio entre categorías
   });
-  
-  // Agregar footer después de todos los cantos
-  addFooter();
-  
-  // Última página - Información adicional
-  pdf.addPage();
-  pageNumber++;
-  addHeader();
-  
-  pdf.setFontSize(14);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(41, 98, 255);
-  pdf.text('Notas', pageWidth / 2, currentY, { align: 'center' });
-  
-  currentY += 10;
-  pdf.setLineWidth(0.5);
-  pdf.setDrawColor(200, 200, 200);
-  pdf.line(margin, currentY, pageWidth - margin, currentY);
-  currentY += 10;
-  
-  pdf.setFontSize(11);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setTextColor(80, 80, 80);
-  
-  const notes = [
-    '• Este cantoral fue generado automáticamente desde la app Cantoral Católico.',
-    '',
-    '• Todos los cantos incluyen enlaces a videos de YouTube donde puedes escuchar',
-    '  las versiones completas con acompañamiento.',
-    '',
-    '• Para acceder a las partituras completas y audios, descarga la app.',
-    '',
-    '• Este documento es para uso litúrgico en tu parroquia.',
-  ];
-  
-  notes.forEach((note) => {
-    checkNewPage(6);
-    if (note) {
-      pdf.text(note, margin, currentY);
-    }
-    currentY += 6;
-  });
-  
-  addFooter();
-  
-  // Guardar el PDF
-  const fileName = `Cantoral_${cantoral.parishName.replace(/\s+/g, '_')}_${cantoral.liturgicalDate.replace(/\s+/g, '_')}.pdf`;
-  pdf.save(fileName);
+
+  addPageFooter();
+
+  // Descargar
+  const safeFileName = cleanText(cantoral.liturgicalDate).replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
+  pdf.save(`Cantoral_${safeFileName}.pdf`);
 }
