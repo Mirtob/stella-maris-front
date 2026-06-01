@@ -1,0 +1,119 @@
+interface LyricsWithChordsProps {
+  lyrics: string;
+}
+
+/**
+ * Componente para mostrar letra de cantos con acordes.
+ * 
+ * Formato esperado de la letra:
+ * - Los acordes deben estar entre corchetes: [C], [Am], [G7], etc.
+ * - Los acordes se mostrarán encima de la letra en el punto donde aparecen
+ * 
+ * Ejemplo:
+ * "[C]Santo, [G]Santo, [Am]Santo\n[F]Es el Se[G]ñor"
+ */
+export function LyricsWithChords({ lyrics }: LyricsWithChordsProps) {
+  if (!lyrics) {
+    return (
+      <div className="text-center text-gray-600 dark:text-gray-400 py-4">
+        <p className="text-sm">Letra no disponible</p>
+      </div>
+    );
+  }
+
+  // Función para procesar cada línea y mostrar acordes encima
+  const processLine = (line: string, lineIndex: number) => {
+    if (line.trim() === '') {
+      return <div key={lineIndex} className="h-4" />; // Espacio en blanco
+    }
+
+    // Detectar si es un encabezado de sección (Coro, Estrofa, Puente, etc.)
+    if (/^(Coro|Estrofa|Puente|Intro|Final|Verso)(\s+\d+)?:?\s*$/i.test(line.trim())) {
+      return (
+        <div key={lineIndex} className="text-amber-700 dark:text-amber-300 font-bold text-base mt-4 mb-2">
+          {line.trim()}
+        </div>
+      );
+    }
+
+    // Buscar todos los acordes [X] en la línea
+    const chordRegex = /\[([^\]]+)\]/g;
+    const parts: Array<{ type: 'chord' | 'text'; content: string; position: number }> = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = chordRegex.exec(line)) !== null) {
+      // Agregar texto antes del acorde
+      if (match.index > lastIndex) {
+        parts.push({
+          type: 'text',
+          content: line.substring(lastIndex, match.index),
+          position: lastIndex
+        });
+      }
+
+      // Agregar el acorde
+      parts.push({
+        type: 'chord',
+        content: match[1],
+        position: match.index
+      });
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Agregar el texto restante
+    if (lastIndex < line.length) {
+      parts.push({
+        type: 'text',
+        content: line.substring(lastIndex),
+        position: lastIndex
+      });
+    }
+
+    // Si no hay acordes en la línea, mostrarla como texto simple
+    if (parts.length === 0 || parts.every(p => p.type === 'text')) {
+      return (
+        <div key={lineIndex} className="text-gray-900 dark:text-gray-100 text-base leading-relaxed py-1">
+          {line}
+        </div>
+      );
+    }
+
+    // Renderizar acordes encima del texto
+    return (
+      <div key={lineIndex} className="relative py-1 my-1">
+        <div className="flex flex-wrap items-start min-h-[3rem]">
+          {parts.map((part, partIndex) => {
+            if (part.type === 'chord') {
+              return (
+                <span key={partIndex} className="relative inline-block">
+                  <span className="absolute -top-6 left-0 text-blue-700 dark:text-blue-300 font-bold text-sm whitespace-nowrap">
+                    {part.content}
+                  </span>
+                  <span className="invisible">.</span> {/* Espaciador invisible */}
+                </span>
+              );
+            } else {
+              return (
+                <span key={partIndex} className="text-gray-900 dark:text-gray-100 text-base">
+                  {part.content}
+                </span>
+              );
+            }
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const lines = lyrics.split('\n');
+
+  return (
+    <div className="bg-white/60 dark:bg-white/10 rounded-xl p-4 border-2 border-blue-200 dark:border-blue-700 font-mono">
+      <div className="space-y-1">
+        {lines.map((line, index) => processLine(line, index))}
+      </div>
+    </div>
+  );
+}

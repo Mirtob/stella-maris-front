@@ -1,0 +1,165 @@
+import { useState } from 'react';
+import { Users, Church, Music, ShieldCheck, Lock, AlertTriangle } from 'lucide-react';
+import { ProfileManager } from './ProfileManager';
+import { ParishManager } from './ParishManager';
+import { SongManager } from './SongManager';
+
+type AdminView = 'menu' | 'users' | 'parishes' | 'songs';
+
+export function AdminDashboard() {
+  const [currentView, setCurrentView] = useState<AdminView>('menu');
+
+  if (currentView === 'users') {
+    return <ProfileManager />;
+  }
+
+  if (currentView === 'parishes') {
+    return <ParishManager />;
+  }
+
+  if (currentView === 'songs') {
+    return <SongManager />;
+  }
+
+  return (
+    <div className="w-full max-w-md md:max-w-2xl mx-auto min-h-screen p-3 sm:p-4 md:p-6 pb-24 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
+      <div className="pt-16">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center mb-4">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-900 to-blue-950 rounded-full flex items-center justify-center shadow-lg border-4 border-blue-800">
+              <ShieldCheck className="w-12 h-12 text-white" strokeWidth={2.5} />
+            </div>
+          </div>
+          <h1 className="text-4xl font-bold text-blue-950 dark:text-white mb-2">Panel Administrativo</h1>
+          <p className="text-xl text-blue-900 dark:text-blue-100">Gestión completa del sistema</p>
+        </div>
+
+        {/* Admin Menu Cards */}
+        <div className="space-y-4">
+          {/* Users Management */}
+          <button
+            onClick={() => setCurrentView('users')}
+            className="w-full bg-gradient-to-br from-blue-900 to-blue-950 rounded-2xl shadow-xl p-6 border-2 border-blue-800 hover:border-blue-600 active:scale-98 transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
+                <Users className="w-9 h-9 text-white" strokeWidth={2.5} />
+              </div>
+              <div className="text-left flex-1">
+                <h2 className="text-2xl font-bold text-white mb-1">Gestión de Usuarios</h2>
+                <p className="text-base text-blue-100">
+                  Administra perfiles, roles y permisos
+                </p>
+              </div>
+              <div className="text-3xl">👥</div>
+            </div>
+          </button>
+
+          {/* Parishes Management */}
+          <button
+            onClick={() => setCurrentView('parishes')}
+            className="w-full bg-gradient-to-br from-blue-900 to-blue-950 rounded-2xl shadow-xl p-6 border-2 border-blue-800 hover:border-blue-600 active:scale-98 transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
+                <Church className="w-9 h-9 text-white" strokeWidth={2.5} />
+              </div>
+              <div className="text-left flex-1">
+                <h2 className="text-2xl font-bold text-white mb-1">Gestión de Parroquias</h2>
+                <p className="text-base text-blue-100">
+                  Administra parroquias y comunidades
+                </p>
+              </div>
+              <div className="text-3xl">⛪</div>
+            </div>
+          </button>
+
+          {/* Songs Management */}
+          <button
+            onClick={() => setCurrentView('songs')}
+            className="w-full bg-gradient-to-br from-blue-900 to-blue-950 rounded-2xl shadow-xl p-6 border-2 border-blue-800 hover:border-blue-600 active:scale-98 transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
+                <Music className="w-9 h-9 text-white" strokeWidth={2.5} />
+              </div>
+              <div className="text-left flex-1">
+                <h2 className="text-2xl font-bold text-white mb-1">Gestión de Cantos</h2>
+                <p className="text-base text-blue-100">
+                  Administra biblioteca musical
+                </p>
+              </div>
+              <div className="text-3xl">🎵</div>
+            </div>
+          </button>
+        </div>
+
+        {/* Aviso de Seguridad de YouTube */}
+        <div className="mt-8 bg-gradient-to-br from-red-100 to-orange-100 dark:from-red-950 dark:to-orange-950 rounded-2xl p-3 sm:p-4 border-2 border-red-400 dark:border-red-700 shadow-xl">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="w-14 h-14 bg-red-500 rounded-full flex items-center justify-center border-3 border-red-600 shadow-lg">
+                <Lock className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={2.5} />
+              </div>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-red-900 dark:text-red-100 mb-3 flex items-center gap-2">
+                <AlertTriangle className="w-6 h-6" strokeWidth={2.5} />
+                Seguridad del Canal de YouTube
+              </h3>
+              <div className="space-y-3 text-base text-red-800 dark:text-red-200">
+                <p className="leading-relaxed">
+                  <strong>⚠️ Acceso Exclusivo de Administrador:</strong>
+                </p>
+                <ul className="space-y-2 ml-4">
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600 dark:text-red-400 mt-1">•</span>
+                    <span>Solo los administradores pueden subir cantos a través de esta aplicación</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600 dark:text-red-400 mt-1">•</span>
+                    <span>Los usuarios de tipo Coro y Pueblo Fiel NO tienen acceso a esta sección</span>
+                  </li>
+                </ul>
+                
+                <div className="mt-4 pt-4 border-t-2 border-red-300 dark:border-red-800">
+                  <p className="leading-relaxed mb-2">
+                    <strong>🔐 Configuración de YouTube:</strong>
+                  </p>
+                  <p className="text-sm leading-relaxed">
+                    Para proteger el canal de YouTube contra modificaciones no autorizadas directamente desde YouTube:
+                  </p>
+                  <ul className="space-y-2 ml-4 mt-2 text-sm">
+                    <li className="flex items-start gap-2">
+                      <span className="text-red-600 dark:text-red-400 mt-1">1.</span>
+                      <span>Accede a <strong>YouTube Studio → Configuración → Permisos</strong></span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-red-600 dark:text-red-400 mt-1">2.</span>
+                      <span>Mantén solo al administrador como <strong>"Propietario"</strong></span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-red-600 dark:text-red-400 mt-1">3.</span>
+                      <span>NO agregues otros usuarios como editores o administradores</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-red-600 dark:text-red-400 mt-1">4.</span>
+                      <span>Activa la <strong>verificación en dos pasos (2FA)</strong> en tu cuenta de Google</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="mt-4 pt-4 border-t-2 border-red-300 dark:border-red-800">
+                  <p className="text-sm italic">
+                    📌 <strong>Nota:</strong> La aplicación conecta a YouTube mediante la API oficial. Los permisos se gestionan desde la consola de YouTube Studio y la Google Cloud Console.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

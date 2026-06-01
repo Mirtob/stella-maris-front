@@ -1,0 +1,37 @@
+# Dependencias
+node_modules/
+
+# Build
+build/
+dist/
+
+# Variables de entorno — NUNCA subir al repositorio
+.env
+.env.local
+.env.*.local
+.env.production
+
+# Logs
+*.log
+dev-server.log
+dev-server-err.log
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos de prueba generados
+test-screenshots/
+test-login.mjs
+tmp_*.py
+
+# Caché
+.cache/

@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Start-Sleep -Seconds 4)",
+      "Bash(Invoke-WebRequest -Uri \"http://localhost:5173\" -UseBasicParsing -TimeoutSec 5)",
+      "Bash(Select-Object -ExpandProperty StatusCode)",
+      "PowerShell(cd \"C:\\\\Users\\\\gusta\\\\Downloads\\\\Aplicación Móvil para Coros \\(front\\)\"; Start-Process -FilePath \"npx\" -ArgumentList \"vite\",\"--port\",\"5173\" -NoNewWindow -RedirectStandardOutput \"dev-server.log\" -RedirectStandardError \"dev-server-err.log\"; Start-Sleep -Seconds 5; try { $r = Invoke-WebRequest -Uri \"http://localhost:5173\" -UseBasicParsing -TimeoutSec 5; $r.StatusCode } catch { $_.Exception.Message })",
+      "Bash(npm install *)",
+      "Bash(node test-login.mjs)",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:5173\" -UseBasicParsing -TimeoutSec 3; \"Servidor corriendo: $\\($r.StatusCode\\)\" } catch { \"Servidor no responde: $_\" })",
+      "Bash(node -e ' *)",
+      "Bash(sed -i 's/px-6 py-5 text-xl sm:text-2xl rounded-2xl/px-3 py-3 sm:px-4 sm:py-4 text-sm sm:text-base rounded-xl/g' src/components/ProfileSetup.tsx)",
+      "Bash(sed -i 's/text-2xl sm:text-3xl font-bold text-blue-950 dark:text-white\\\\\"\\\\>\\\\s*Selecciona tu parroquia/text-lg sm:text-xl font-bold text-blue-950 dark:text-white\\\\\">Selecciona tu parroquia/g' src/components/ProfileSetup.tsx)",
+      "Bash(sed -i '183s/text-2xl sm:text-3xl font-bold text-blue-950 dark:text-white/text-base sm:text-lg font-bold text-blue-950 dark:text-white/' src/components/ProfileSetup.tsx)",
+      "Bash(sed -i '248s/text-2xl sm:text-3xl font-bold text-blue-950 dark:text-white/text-base sm:text-lg font-bold text-blue-950 dark:text-white/' src/components/ProfileSetup.tsx)",
+      "Bash(sed -i 's/py-6 sm:py-7 px-6 rounded-2xl text-2xl sm:text-3xl font-bold/py-4 sm:py-5 px-4 rounded-2xl text-lg sm:text-xl font-bold/g' src/components/ProfileSetup.tsx)",
+      "Bash(sed -i 's/<div className=\"text-xl sm:text-2xl font-bold\">Guitarra<\\\\/div>/<div className=\"text-base sm:text-lg font-bold\">Guitarra<\\\\/div>/g' src/components/ProfileSetup.tsx)",
+      "Bash(sed -i 's/<div className=\"text-xl sm:text-2xl font-bold\">Órgano<\\\\/div>/<div className=\"text-base sm:text-lg font-bold\">Órgano<\\\\/div>/g' src/components/ProfileSetup.tsx)"
+    ]
+  }
+}

@@ -1,0 +1,580 @@
+import { useState } from 'react';
+import { Search, ChevronDown, ChevronUp, Music, Cross, CheckCircle, Play, AlertCircle, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
+import { Song, InstrumentType } from '../types';
+import { useSongs } from '../hooks/useSongs';
+import { getCategoryColors } from '../utils/colors';
+import { getCurrentLiturgicalColor, getLiturgicalCrossColor } from '../utils/liturgicalColors';
+import { AddGloriaDialog } from './AddGloriaDialog';
+import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji } from '../utils/specialLiturgicalDays';
+import { getCurrentLiturgicalSeason } from '../utils/liturgicalSeason';
+
+interface CategorySearchProps {
+  category: string;
+  icon: string;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  onAddToCantoral: (song: Song) => void;
+  onRemoveFromCantoral: (songId: string) => void;
+  cantoral: Song[];
+  onPlaySong: (song: Song) => void;
+  preferredInstrument?: InstrumentType;
+}
+
+export function CategorySearch({ 
+  category, 
+  icon, 
+  isExpanded, 
+  onToggle, 
+  onClose, 
+  onAddToCantoral, 
+  onRemoveFromCantoral, 
+  cantoral, 
+  onPlaySong, 
+  preferredInstrument 
+}: CategorySearchProps) {
+  const { songs } = useSongs();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showGloriaDialog, setShowGloriaDialog] = useState(false);
+  const [pendingGloria, setPendingGloria] = useState<Song | null>(null);
+  const [showSantoCordeloDialog, setShowSantoCordeloDialog] = useState(false);
+  const [pendingKyrie, setPendingKyrie] = useState<Song | null>(null);
+  const [pendingSanto, setPendingSanto] = useState<Song | null>(null);
+  const [pendingCordero, setPendingCordero] = useState<Song | null>(null);
+
+  // Obtener el tiempo litúrgico actual
+  const currentSeason = getCurrentLiturgicalSeason();
+
+  // **FUNCIÓN AUXILIAR**: Verificar si un canto está en el cantoral
+  const isInCantoral = (songId: string) => {
+    return cantoral.some(s => s.id === songId);
+  };
+
+  const isMassPart = (category: string) => {
+    return ['Kyrie', 'Gloria', 'Santo', 'Cordero de Dios'].includes(category);
+  };
+
+  // **SUGERENCIAS LITÚRGICAS**: Filtrar cantos por categoría Y tiempo litúrgico
+  const getSuggestedSongs = (): Song[] => {
+    // Obtener todos los cantos de esta categoría
+    const categorySongs = songs.filter(song => song.category === category);
+    
+    // Filtrar por tiempo litúrgico
+    const suggestedSongs = categorySongs.filter(song => {
+      // Si el canto no tiene liturgicalSeason definido, considerarlo para todas las temporadas
+      if (!song.liturgicalSeason) return true;
+      
+      // Si tiene liturgicalSeason, verificar si incluye la temporada actual
+      const seasons = song.liturgicalSeason.split(',').map(s => s.trim());
+      
+      // Mapear nombres de temporadas
+      const seasonMapping: Record<string, string[]> = {
+        'Adviento': ['Adviento'],
+        'Navidad': ['Navidad'],
+        'Cuaresma': ['Cuaresma'],
+        'Pascua': ['Pascua'],
+        'Tiempo Ordinario': ['Ordinario', 'Tiempo Ordinario'],
+      };
+      
+      const currentSeasonVariants = seasonMapping[currentSeason] || [currentSeason];
+      return seasons.some(s => currentSeasonVariants.includes(s));
+    });
+    
+    // Excluir cantos que ya están en el cantoral
+    const availableSongs = suggestedSongs.filter(song => !isInCantoral(song.id));
+    
+    // Ordenar por instrumento preferido si está definido
+    if (preferredInstrument) {
+      availableSongs.sort((a, b) => {
+        const aMatch = a.version === preferredInstrument ? 1 : 0;
+        const bMatch = b.version === preferredInstrument ? 1 : 0;
+        return bMatch - aMatch;
+      });
+    }
+    
+    // Retornar solo los primeros 3 como sugerencias
+    return availableSongs.slice(0, 3);
+  };
+
+  const suggestedSongs = getSuggestedSongs();
+
+  let categorySongs = songs.filter(song => song.category === category);
+  
+  // Sort by preferred instrument if available
+  if (preferredInstrument) {
+    categorySongs = categorySongs.sort((a, b) => {
+      const aMatch = a.version === preferredInstrument ? 1 : 0;
+      const bMatch = b.version === preferredInstrument ? 1 : 0;
+      return bMatch - aMatch;
+    });
+  }
+  
+  const filteredSongs = categorySongs.filter(song =>
+    song.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (song.artist && song.artist.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (song.author && song.author.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (song.massName && song.massName.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const handleAddSong = (song: Song) => {
+    // Solo Comunión permite múltiples cantos
+    if (category !== 'Comunión') {
+      // Remover cualquier canto existente de esta categoría
+      const existingInCategory = cantoral.filter(s => s.category === category);
+      existingInCategory.forEach(s => onRemoveFromCantoral(s.id));
+    }
+
+    // Caso especial: Kyrie
+    if (song.category === 'Kyrie' && song.massName) {
+      // Guardar Kyrie pendiente
+      setPendingKyrie(song);
+      
+      // Buscar Santo y Cordero de la misma misa
+      const santo = songs.find(s => 
+        s.massName === song.massName && 
+        s.category === 'Santo' && 
+        s.version === song.version
+      );
+      
+      const cordero = songs.find(s => 
+        s.massName === song.massName && 
+        s.category === 'Cordero de Dios' && 
+        s.version === song.version
+      );
+      
+      // Buscar Gloria de la misma misa
+      const gloria = songs.find(s => 
+        s.massName === song.massName && 
+        s.category === 'Gloria' && 
+        s.version === song.version
+      );
+      
+      console.log('🔍 Autocompletar Misa:', song.massName);
+      console.log('  Kyrie:', song.title);
+      console.log('  Santo encontrado:', santo ? santo.title : 'NO ENCONTRADO');
+      console.log('  Cordero encontrado:', cordero ? cordero.title : 'NO ENCONTRADO');
+      console.log('  Gloria encontrado:', gloria ? gloria.title : 'NO ENCONTRADO');
+      
+      setPendingSanto(santo || null);
+      setPendingCordero(cordero || null);
+      setPendingGloria(gloria || null);
+      
+      // Primera pregunta: ¿Agregar Santo y Cordero de la misma misa?
+      setShowSantoCordeloDialog(true);
+    } else {
+      // Para otros cantos, simplemente agregar
+      onAddToCantoral(song);
+      
+      // Cerrar card automáticamente después de agregar (con pequeño delay para feedback visual)
+      setTimeout(() => {
+        onClose();
+      }, 300);
+    }
+  };
+
+  const handleConfirmSantoCordero = () => {
+    // El usuario quiere el Santo y Cordero de la misma Misa
+    console.log('✅ Usuario confirmó agregar Santo y Cordero');
+    console.log('  pendingKyrie:', pendingKyrie ? pendingKyrie.title : 'NULL');
+    console.log('  pendingSanto:', pendingSanto ? pendingSanto.title : 'NULL');
+    console.log('  pendingCordero:', pendingCordero ? pendingCordero.title : 'NULL');
+    
+    // Remover Santo y Cordero existentes PRIMERO
+    const existingSanto = cantoral.filter(s => s.category === 'Santo');
+    const existingCordero = cantoral.filter(s => s.category === 'Cordero de Dios');
+    console.log('  → Removiendo Santo existente:', existingSanto.length, 'cantos');
+    console.log('  → Removiendo Cordero existente:', existingCordero.length, 'cantos');
+    existingSanto.forEach(s => onRemoveFromCantoral(s.id));
+    existingCordero.forEach(s => onRemoveFromCantoral(s.id));
+    
+    // Guardar referencias locales antes de cerrar el modal
+    const kyrieToAdd = pendingKyrie;
+    const santoToAdd = pendingSanto;
+    const corderoToAdd = pendingCordero;
+    const gloriaToAdd = pendingGloria;
+    
+    console.log('📝 Agregando cantos en orden:');
+    
+    // Ahora agregar todo junto EN ORDEN
+    if (kyrieToAdd) {
+      console.log('  1. Agregando Kyrie:', kyrieToAdd.title, '(ID:', kyrieToAdd.id + ')');
+      onAddToCantoral(kyrieToAdd);
+    } else {
+      console.log('  ✗ No hay Kyrie para agregar');
+    }
+    
+    if (santoToAdd) {
+      console.log('  2. Agregando Santo:', santoToAdd.title, '(ID:', santoToAdd.id + ')');
+      onAddToCantoral(santoToAdd);
+    } else {
+      console.log('  ✗ No hay Santo para agregar - REVISAR BÚSQUEDA');
+    }
+    
+    if (corderoToAdd) {
+      console.log('  3. Agregando Cordero:', corderoToAdd.title, '(ID:', corderoToAdd.id + ')');
+      onAddToCantoral(corderoToAdd);
+    } else {
+      console.log('  ✗ No hay Cordero para agregar - REVISAR BÚSQUEDA');
+    }
+    
+    console.log('✅ Proceso completado');
+    
+    setShowSantoCordeloDialog(false);
+    
+    // Ahora preguntar por el Gloria
+    if (gloriaToAdd) {
+      setShowGloriaDialog(true);
+    } else {
+      // Si no hay Gloria, cerrar directamente
+      resetPendingState();
+      setTimeout(() => onClose(), 300);
+    }
+  };
+
+  const handleCancelSantoCordero = () => {
+    // El usuario NO quiere el Santo y Cordero automático
+    // Solo agregar el Kyrie
+    if (pendingKyrie) {
+      onAddToCantoral(pendingKyrie);
+    }
+    
+    setShowSantoCordeloDialog(false);
+    
+    // Preguntar por el Gloria
+    if (pendingGloria) {
+      setShowGloriaDialog(true);
+    } else {
+      // Si no hay Gloria, cerrar directamente
+      resetPendingState();
+      setTimeout(() => onClose(), 300);
+    }
+  };
+
+  const handleConfirmGloria = () => {
+    // Agregar el Gloria sugerido
+    if (pendingGloria) {
+      // Remover Gloria existente si lo hay
+      const existingGloria = cantoral.filter(s => s.category === 'Gloria');
+      existingGloria.forEach(s => onRemoveFromCantoral(s.id));
+      
+      onAddToCantoral(pendingGloria);
+    }
+    
+    setShowGloriaDialog(false);
+    resetPendingState();
+    setTimeout(() => onClose(), 300);
+  };
+
+  const handleCancelGloria = () => {
+    // El usuario no quiere el Gloria sugerido
+    setShowGloriaDialog(false);
+    resetPendingState();
+    setTimeout(() => onClose(), 300);
+  };
+
+  const resetPendingState = () => {
+    setPendingKyrie(null);
+    setPendingSanto(null);
+    setPendingCordero(null);
+    setPendingGloria(null);
+  };
+
+  const colors = getCategoryColors(category);
+  const liturgicalColor = getCurrentLiturgicalColor();
+  const crossColor = getLiturgicalCrossColor(liturgicalColor);
+
+  return (
+    <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border-2 border-white/40 dark:border-white/20 transition-all hover:shadow-xl">
+      {/* Header */}
+      <button
+        onClick={onToggle}
+        className={`w-full ${colors.gradient} text-white p-3 sm:p-4 flex items-center justify-between active:opacity-90 border-2 border-blue-800 transition-all hover:scale-[1.01] group`}
+        aria-expanded={isExpanded}
+        aria-label={`${isExpanded ? 'Cerrar' : 'Abrir'} categoría ${category}`}
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-2xl sm:text-3xl transform group-hover:scale-110 transition-transform">{icon}</span>
+          <div className="text-left">
+            <div className="text-base sm:text-xl font-bold">{category}</div>
+            <div className="text-base opacity-90">
+              {categorySongs.length} {categorySongs.length === 1 ? 'canto disponible' : 'cantos disponibles'}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {filteredSongs.length > 0 && cantoral.filter(s => categorySongs.some(cs => cs.id === s.id)).length > 0 && (
+            <span className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-bold border border-white/30">
+              {cantoral.filter(s => categorySongs.some(cs => cs.id === s.id)).length} añadido{cantoral.filter(s => categorySongs.some(cs => cs.id === s.id)).length !== 1 ? 's' : ''}
+            </span>
+          )}
+          {isExpanded ? (
+            <ChevronUp className="w-7 h-7 transform group-hover:translate-y-[-2px] transition-transform" strokeWidth={2.5} />
+          ) : (
+            <ChevronDown className="w-7 h-7 transform group-hover:translate-y-[2px] transition-transform" strokeWidth={2.5} />
+          )}
+        </div>
+      </button>
+
+      {/* Expanded Content */}
+      {isExpanded && (
+        <div className="p-4 bg-white/40 dark:bg-white/5 backdrop-blur-sm animate-slideDown">
+          {/* Sugerencias Litúrgicas */}
+          {suggestedSongs.length > 0 && (
+            <div className="mb-4 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/30 dark:to-yellow-900/30 rounded-xl p-4 border-2 border-amber-300 dark:border-amber-700">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="w-5 h-5 text-amber-600 dark:text-amber-400" strokeWidth={2.5} />
+                <h3 className="text-base font-bold text-amber-900 dark:text-amber-100">
+                  Sugerencias para {currentSeason}
+                </h3>
+              </div>
+              <div className="space-y-2">
+                {suggestedSongs.map((song) => (
+                  <div
+                    key={song.id}
+                    className="bg-white/70 dark:bg-white/20 rounded-lg p-3 border border-amber-200 dark:border-amber-800 hover:scale-[1.02] transition-all"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <h4 className="text-sm font-bold text-blue-950 dark:text-white leading-tight">
+                          {song.title}
+                        </h4>
+                        {song.author && (
+                          <p className="text-xs text-blue-900 dark:text-blue-200 mt-1">
+                            {song.author}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 mt-1">
+                          {song.version && (
+                            <span className="inline-flex items-center bg-amber-500 text-white px-2 py-0.5 rounded text-xs font-bold">
+                              {song.version === 'Coro' && '👥'}
+                              {song.version === 'Guitarra' && '🎶'}
+                              {song.version === 'Órgano' && '🎹'}
+                              {' '}{song.version}
+                            </span>
+                          )}
+                          {song.liturgicalSeason && (
+                            <span className="text-xs text-amber-700 dark:text-amber-300 bg-white/50 dark:bg-white/10 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-700">
+                              {song.liturgicalSeason}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => onPlaySong(song)}
+                        className="flex-1 bg-gradient-to-br from-blue-600 to-blue-700 text-white py-2 px-3 rounded-lg flex items-center justify-center gap-2 active:scale-95 transition-all text-xs font-bold hover:from-blue-700 hover:to-blue-800"
+                      >
+                        <Play className="w-3.5 h-3.5" fill="currentColor" />
+                        Ver
+                      </button>
+                      <button
+                        onClick={() => handleAddSong(song)}
+                        className="bg-gradient-to-br from-green-600 to-green-700 text-white py-2 px-4 rounded-lg flex items-center justify-center gap-2 active:scale-95 transition-all text-xs font-bold hover:from-green-700 hover:to-green-800"
+                      >
+                        <Cross className="w-3.5 h-3.5" strokeWidth={3} />
+                        Agregar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Search Bar */}
+          <div className="relative mb-4">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-900 dark:text-blue-300 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Buscar por título, autor o misa..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-4 rounded-xl text-lg text-blue-950 dark:text-white bg-white/70 dark:bg-white/15 border-2 border-white/60 dark:border-white/20 focus:outline-none focus:ring-4 focus:ring-blue-400/30 focus:border-blue-600 dark:focus:border-blue-400 placeholder-blue-700/70 dark:placeholder-blue-300/70 transition-all"
+              aria-label="Buscar cantos"
+            />
+          </div>
+
+          {/* Songs List */}
+          <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+            {filteredSongs.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4 opacity-50">🔍</div>
+                <p className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-2">No se encontraron cantos</p>
+                <p className="text-base text-blue-800 dark:text-blue-200">Intenta con otros términos de búsqueda</p>
+              </div>
+            ) : (
+              filteredSongs.map((song, index) => (
+                <div
+                  key={song.id}
+                  className="bg-white/60 dark:bg-white/15 backdrop-blur-sm rounded-xl p-4 border-2 border-white/70 dark:border-white/25 transition-all hover:scale-[1.02] hover:shadow-lg hover:border-blue-400 dark:hover:border-blue-500 group"
+                  style={{
+                    animationDelay: `${index * 0.05}s`,
+                    animationName: 'fadeInUp',
+                    animationDuration: '0.3s',
+                    animationTimingFunction: 'ease-out',
+                    animationFillMode: 'forwards',
+                    opacity: 0
+                  }}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 mr-3">
+                      <h3 className="text-lg font-bold text-blue-950 dark:text-white leading-tight mb-1 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
+                        {song.title}
+                      </h3>
+                      
+                      {/* Mass Name Badge */}
+                      {song.massName && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="inline-flex items-center gap-1.5 bg-gradient-to-br from-blue-900 to-blue-950 text-white px-3 py-1.5 rounded-lg text-sm font-bold border-2 border-blue-800 shadow-md">
+                            <Music className="w-3.5 h-3.5" />
+                            {song.massName}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        {song.author && (
+                          <span className="text-sm text-blue-900 dark:text-blue-200 bg-white/40 dark:bg-white/10 px-2 py-0.5 rounded border border-white/40">
+                            <strong>Autor:</strong> {song.author}
+                          </span>
+                        )}
+                        {song.version && (
+                          <span className="inline-flex items-center bg-gradient-to-br from-amber-500 to-amber-600 text-white px-2.5 py-1 rounded-lg text-sm font-semibold border border-amber-700 shadow-sm">
+                            {song.version === 'Coro' && '👥'}
+                            {song.version === 'Guitarra' && '🎶'}
+                            {song.version === 'Órgano' && '🎹'}
+                            {' '}{song.version}
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-base text-blue-800 dark:text-blue-200 flex items-center gap-1.5">
+                        <span className="text-sm">⏱️</span>
+                        {song.duration}
+                      </p>
+                    </div>
+                    {isInCantoral(song.id) && (
+                      <div className="flex-shrink-0 bg-green-500/20 backdrop-blur-sm rounded-full p-2 border-2 border-green-500">
+                        <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" strokeWidth={2.5} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => onPlaySong(song)}
+                      className={`flex-1 ${colors.gradient} text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold border-2 border-blue-800 shadow-md hover:shadow-lg`}
+                      aria-label={`Ver detalles de ${song.title}`}
+                    >
+                      <Play className="w-5 h-5" strokeWidth={2.5} fill="currentColor" />
+                      Ver Detalles
+                    </button>
+                    
+                    {!isInCantoral(song.id) && (
+                      <button
+                        onClick={() => handleAddSong(song)}
+                        className="bg-gradient-to-br from-green-600 to-green-700 text-white py-3 px-5 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold border-2 border-green-800 shadow-md hover:shadow-lg hover:from-green-700 hover:to-green-800"
+                        aria-label={`Añadir ${song.title} al cantoral`}
+                      >
+                        <Cross className="w-5 h-5" strokeWidth={3} />
+                        {song.massName && isMassPart(song.category) ? 'Agregar Misa' : 'Agregar'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* Add Gloria Dialog */}
+      {showGloriaDialog && pendingGloria && (
+        <AddGloriaDialog
+          gloria={pendingGloria}
+          onConfirm={handleConfirmGloria}
+          onCancel={handleCancelGloria}
+        />
+      )}
+
+      {/* Add Santo y Cordero Dialog */}
+      {showSantoCordeloDialog && pendingKyrie && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border-4 border-blue-900 dark:border-blue-700 animate-scaleIn transition-colors">
+            {/* Header */}
+            <div className="bg-gradient-to-br from-blue-900 to-blue-950 p-6 border-b-4 border-blue-800">
+              <div className="flex items-center gap-4 mb-3">
+                <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border-2 border-white/30">
+                  <Music className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={2.5} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-2xl font-bold text-white leading-tight">
+                    Completar la Misa
+                  </h3>
+                  <p className="text-base text-blue-100 mt-1">
+                    {pendingKyrie.massName}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="mb-6">
+                <p className="text-xl font-bold text-blue-950 dark:text-white mb-4 leading-relaxed">
+                  ¿Deseas agregar el <span className="text-blue-700 dark:text-blue-400">Santo</span> y el <span className="text-blue-700 dark:text-blue-400">Cordero de Dios</span> de la misma Misa?
+                </p>
+                
+                {/* Detalles de los cantos */}
+                <div className="space-y-3 bg-blue-50 dark:bg-slate-700/50 rounded-2xl p-4 border-2 border-blue-200 dark:border-blue-800 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl flex-shrink-0">✝️</span>
+                    <div className="flex-1">
+                      <div className="font-bold text-blue-950 dark:text-white text-lg">Santo</div>
+                      {pendingSanto && (
+                        <div className="text-sm text-blue-800 dark:text-blue-200 mt-1">
+                          {pendingSanto.title}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl flex-shrink-0">🙏</span>
+                    <div className="flex-1">
+                      <div className="font-bold text-blue-950 dark:text-white text-lg">Cordero de Dios</div>
+                      {pendingCordero && (
+                        <div className="text-sm text-blue-800 dark:text-blue-200 mt-1">
+                          {pendingCordero.title}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={handleConfirmSantoCordero}
+                  className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-4 px-3 sm:px-4 rounded-2xl font-bold text-lg active:scale-95 transition-all border-2 border-green-800 shadow-lg hover:shadow-xl hover:from-green-700 hover:to-green-800"
+                >
+                  ✓ Sí, agregar Santo y Cordero
+                </button>
+                
+                <button
+                  onClick={handleCancelSantoCordero}
+                  className="w-full bg-white dark:bg-slate-700 text-blue-950 dark:text-white py-4 px-3 sm:px-4 rounded-2xl font-bold text-lg active:scale-95 transition-all border-2 border-gray-300 dark:border-slate-600 shadow-md hover:bg-gray-50 dark:hover:bg-slate-600"
+                >
+                  No, elegiré después
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
