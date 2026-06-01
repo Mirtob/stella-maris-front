@@ -18,7 +18,7 @@ export function PublishedCantorals({ cantorals, onPlaySong, userRole, userParish
   const [viewingOrdinary, setViewingOrdinary] = useState<string | null>(null);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
 
-  const categoryOrder = ['Entrada', 'Kyrie', 'Gloria', 'Salmo', 'Aleluya', 'Post Evangelio', 'Ofertorio', 'Santo', 'Cordero de Dios', 'Comunión', 'Salida'];
+  const categoryOrder = ['Entrada', 'Kyrie', 'Gloria', 'Salmo', 'Aleluya', 'Post Evangelio', 'Ofertorio', 'Santo', 'Padre Nuestro', 'Cordero de Dios', 'Comunión', 'Salida'];
 
   // Filtrar cantorales según el rol del usuario Y la parroquia
   let visibleCantorals = cantorals;

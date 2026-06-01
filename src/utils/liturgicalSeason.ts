@@ -139,5 +139,5 @@ export function getGospelAcclamationName(date: Date = new Date()): string {
  * Obtiene el icono correcto para el canto después del salmo
  */
 export function getGospelAcclamationIcon(date: Date = new Date()): string {
-  return isLent(date) ? '📿' : ' труба';
+  return isLent(date) ? '📿' : '🎺';
 }

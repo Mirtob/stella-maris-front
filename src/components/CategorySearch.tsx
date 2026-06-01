@@ -6,6 +6,7 @@ import { useSongs } from '../hooks/useSongs';
 import { getCategoryColors } from '../utils/colors';
 import { getCurrentLiturgicalColor, getLiturgicalCrossColor } from '../utils/liturgicalColors';
 import { AddGloriaDialog } from './AddGloriaDialog';
+import { AddPadreNuestroDialog } from './AddPadreNuestroDialog';
 import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji } from '../utils/specialLiturgicalDays';
 import { getCurrentLiturgicalSeason } from '../utils/liturgicalSeason';
 
@@ -42,6 +43,7 @@ export function CategorySearch({
   const [pendingKyrie, setPendingKyrie] = useState<Song | null>(null);
   const [pendingSanto, setPendingSanto] = useState<Song | null>(null);
   const [pendingCordero, setPendingCordero] = useState<Song | null>(null);
+  const [showPadreNuestroDialog, setShowPadreNuestroDialog] = useState(false);
 
   // Obtener el tiempo litúrgico actual
   const currentSeason = getCurrentLiturgicalSeason();
@@ -165,12 +167,62 @@ export function CategorySearch({
     } else {
       // Para otros cantos, simplemente agregar
       onAddToCantoral(song);
-      
-      // Cerrar card automáticamente después de agregar (con pequeño delay para feedback visual)
-      setTimeout(() => {
-        onClose();
-      }, 300);
+
+      // Si es Ofertorio y aún no hay Padre Nuestro en el cantoral, preguntar
+      if (song.category === 'Ofertorio' && !cantoral.some(s => s.category === 'Padre Nuestro')) {
+        setTimeout(() => setShowPadreNuestroDialog(true), 300);
+      } else {
+        // Cerrar card automáticamente después de agregar
+        setTimeout(() => { onClose(); }, 300);
+      }
     }
+  };
+
+  // Confirma agregar el Padre Nuestro cantado
+  const handleConfirmPadreNuestro = async () => {
+    // Buscar canto existente en YouTube con category 'Padre Nuestro' o título que coincida
+    const existing = songs.find(s =>
+      s.category === 'Padre Nuestro' ||
+      s.title.toLowerCase().includes('padre nuestro')
+    );
+
+    if (existing) {
+      onAddToCantoral({ ...existing, category: 'Padre Nuestro' });
+    } else {
+      // Crear canto sintético — buscar partitura en Drive por nombre
+      let sheetMusicUrl: string | undefined;
+      try {
+        const r = await fetch('/api/sheets');
+        if (r.ok) {
+          const data = await r.json();
+          const match = (data.files || []).find((f: any) =>
+            /padre\s*nuestro/i.test(f.name.replace(/_/g, ' '))
+          );
+          if (match) sheetMusicUrl = `https://drive.google.com/file/d/${match.id}/preview`;
+        }
+      } catch { /* ignorar */ }
+
+      const padreNuestroSong: Song = {
+        id: `padre-nuestro-${Date.now()}`,
+        title: 'Padre Nuestro',
+        category: 'Padre Nuestro',
+        youtubeId: '',
+        duration: '0:00',
+        author: 'Misa',
+        version: 'Coro',
+        sheetMusicUrl,
+        isLiturgical: true,
+      };
+      onAddToCantoral(padreNuestroSong);
+    }
+
+    setShowPadreNuestroDialog(false);
+    setTimeout(() => onClose(), 300);
+  };
+
+  const handleCancelPadreNuestro = () => {
+    setShowPadreNuestroDialog(false);
+    setTimeout(() => onClose(), 300);
   };
 
   const handleConfirmSantoCordero = () => {
@@ -496,6 +548,14 @@ export function CategorySearch({
           gloria={pendingGloria}
           onConfirm={handleConfirmGloria}
           onCancel={handleCancelGloria}
+        />
+      )}
+
+      {/* Add Padre Nuestro Dialog */}
+      {showPadreNuestroDialog && (
+        <AddPadreNuestroDialog
+          onConfirm={handleConfirmPadreNuestro}
+          onCancel={handleCancelPadreNuestro}
         />
       )}
 

@@ -58,7 +58,7 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
     });
   };
 
-  const categoryOrder = ['Entrada', 'Kyrie', 'Gloria', 'Salmo', 'Aleluya', 'Post Evangelio', 'Ofertorio', 'Santo', 'Cordero de Dios', 'Comunión', 'Salida'];
+  const categoryOrder = ['Entrada', 'Kyrie', 'Gloria', 'Salmo', 'Aleluya', 'Post Evangelio', 'Ofertorio', 'Santo', 'Padre Nuestro', 'Cordero de Dios', 'Comunión', 'Salida'];
 
   const groupSongsByCategory = (songs: Song[]) => {
     const grouped = songs.reduce((acc, song) => {
@@ -84,7 +84,7 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
       'Credo': '📿',
       'Padre Nuestro': '🙏',
       'Salmo': '📖',
-      'Aleluya': ' труба',
+      'Aleluya': '🎺',
       'Post Evangelio': '📿',
       'Ofertorio': '🍇',
       'Comunión': '🫓',

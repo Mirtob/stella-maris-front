@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { PublishedCantoral, Song } from '../types';
+import { getCurrentLiturgicalSeason } from './liturgicalSeason';
 
 interface PDFGeneratorOptions {
   cantoral: PublishedCantoral;
@@ -7,8 +8,38 @@ interface PDFGeneratorOptions {
 
 const CATEGORY_ORDER = [
   'Entrada', 'Kyrie', 'Gloria', 'Salmo', 'Aleluya', 'Post Evangelio',
-  'Ofertorio', 'Santo', 'Cordero de Dios', 'Comunión', 'Salida',
+  'Ofertorio', 'Santo', 'Padre Nuestro', 'Cordero de Dios', 'Comunión', 'Salida',
 ];
+
+// ──────────────────────────────────────────────
+// Colores litúrgicos
+// ──────────────────────────────────────────────
+
+interface LiturgicalColors {
+  primary: [number, number, number];   // color principal (cabeceras, líneas)
+  light: [number, number, number];     // fondo claro
+  textOnPrimary: [number, number, number]; // texto sobre primary
+  seasonName: string;
+}
+
+function getColorsForDate(dateStr: string): LiturgicalColors {
+  const date = new Date(dateStr);
+  const season = getCurrentLiturgicalSeason(date);
+
+  switch (season) {
+    case 'Adviento':
+      return { primary: [91, 33, 182], light: [237, 233, 254], textOnPrimary: [255, 255, 255], seasonName: 'Adviento' };
+    case 'Navidad':
+      return { primary: [180, 130, 32], light: [254, 243, 199], textOnPrimary: [255, 255, 255], seasonName: 'Navidad' };
+    case 'Cuaresma':
+      return { primary: [88, 28, 135], light: [233, 213, 255], textOnPrimary: [255, 255, 255], seasonName: 'Cuaresma' };
+    case 'Pascua':
+      return { primary: [217, 119, 6], light: [254, 243, 199], textOnPrimary: [255, 255, 255], seasonName: 'Pascua' };
+    case 'Tiempo Ordinario':
+    default:
+      return { primary: [21, 128, 61], light: [220, 252, 231], textOnPrimary: [255, 255, 255], seasonName: 'Tiempo Ordinario' };
+  }
+}
 
 // ──────────────────────────────────────────────
 // Limpieza de texto
@@ -85,6 +116,7 @@ function cleanLyrics(lyrics: string): string {
 
 export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise<void> {
   const { cantoral } = options;
+  const colors = getColorsForDate(cantoral.date);
 
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageW = pdf.internal.pageSize.getWidth();
@@ -154,9 +186,16 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
 
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(22);
-  pdf.setTextColor(30, 58, 95);
+  pdf.setTextColor(...colors.primary);
   pdf.text('Cantoral de la Misa', pageW / 2, y, { align: 'center' });
-  y += 14;
+  y += 8;
+
+  // Badge del tiempo litúrgico
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(10);
+  pdf.setTextColor(...colors.primary);
+  pdf.text(`Tiempo: ${colors.seasonName}`, pageW / 2, y, { align: 'center' });
+  y += 6;
 
   pdf.setFontSize(16);
   pdf.setTextColor(80, 80, 80);
@@ -180,7 +219,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   y += 14;
 
   // Línea decorativa
-  pdf.setDrawColor(30, 58, 95);
+  pdf.setDrawColor(...colors.primary);
   pdf.setLineWidth(0.5);
   pdf.line(pageW / 2 - 30, y, pageW / 2 + 30, y);
   y += 12;
@@ -213,13 +252,13 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   );
 
   sortedCategories.forEach((category) => {
-    // Cabecera de categoría con fondo azul claro
+    // Cabecera de categoría con color del tiempo litúrgico
     needPage(20);
-    pdf.setFillColor(30, 58, 95);
+    pdf.setFillColor(...colors.primary);
     pdf.rect(margin, y - 6, contentW, 9, 'F');
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(13);
-    pdf.setTextColor(255, 255, 255);
+    pdf.setTextColor(...colors.textOnPrimary);
     pdf.text(cleanText(category).toUpperCase(), margin + 3, y);
     y += 10;
 
@@ -229,7 +268,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
       // Título del canto
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(12);
-      pdf.setTextColor(30, 58, 95);
+      pdf.setTextColor(...colors.primary);
       const titleLines = pdf.splitTextToSize(cleanText(song.title), contentW) as string[];
       titleLines.forEach((line) => {
         needPage(6);
