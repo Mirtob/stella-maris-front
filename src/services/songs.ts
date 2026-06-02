@@ -92,53 +92,22 @@ function songInputToRow(input: SongInput): Record<string, unknown> {
 // ---------------------------------------------------------------------------
 
 /**
- * List approved songs from the Supabase catalog.
+ * List approved songs from the Supabase catalog via the `search_songs` RPC.
  * All filter params are optional — omit to get everything (up to limit).
- *
- * Uses the `search_songs` DB function for full-text support; falls back to
- * direct table query when only simple column filters are needed.
+ * The DB function handles array containment for liturgical_seasons correctly,
+ * including songs with an empty seasons array (valid for any season).
  */
 export async function listSongs(filters: SongFilters = {}): Promise<Song[]> {
   try {
     const sb = getSupabaseClient();
-
-    if (filters.search) {
-      // Use the full-text DB function
-      const { data, error } = await sb.rpc('search_songs', {
-        p_moment:     filters.massMoment     ?? null,
-        p_season:     filters.liturgicalSeason ?? null,
-        p_instrument: filters.instrument?.toLowerCase() ?? null,
-        p_query:      filters.search,
-        p_limit:      filters.limit  ?? 100,
-        p_offset:     filters.offset ?? 0,
-      });
-      if (error) throw error;
-      return (data ?? []).map(rowToSong);
-    }
-
-    // Simple filtered query — faster when no text search needed
-    let query = sb
-      .from('songs')
-      .select('*')
-      .eq('approval_status', 'approved')
-      .order('title', { ascending: true })
-      .limit(filters.limit ?? 200)
-      .range(filters.offset ?? 0, (filters.offset ?? 0) + (filters.limit ?? 200) - 1);
-
-    if (filters.massMoment) {
-      query = query.eq('mass_moment', filters.massMoment);
-    }
-    if (filters.liturgicalSeason) {
-      // Array containment: 'adviento' = ANY(liturgical_seasons) OR empty array (all seasons)
-      query = query.or(
-        `liturgical_seasons.cs.{"${filters.liturgicalSeason}"},liturgical_seasons.eq.{}`
-      );
-    }
-    if (filters.instrument) {
-      query = query.contains('instruments', [filters.instrument.toLowerCase()]);
-    }
-
-    const { data, error } = await query;
+    const { data, error } = await sb.rpc('search_songs', {
+      p_moment:     filters.massMoment      ?? null,
+      p_season:     filters.liturgicalSeason ?? null,
+      p_instrument: filters.instrument?.toLowerCase() ?? null,
+      p_query:      filters.search          ?? null,
+      p_limit:      filters.limit           ?? 200,
+      p_offset:     filters.offset          ?? 0,
+    });
     if (error) throw error;
     return (data ?? []).map(rowToSong);
   } catch (err) {
