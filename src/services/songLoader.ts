@@ -1,4 +1,11 @@
 /**
+ * @legacy — Ya no es la fuente principal del catálogo de cantos.
+ * El catálogo ahora vive en Supabase (tabla `songs`).
+ * Este archivo se mantiene como herramienta de importación:
+ *   - loadSongsFromYouTube() puede usarse desde AdminDashboard para
+ *     importar nuevos cantos del canal directamente a Supabase.
+ *   - getSongs() queda como fallback en caso de necesitar reconstruir el catálogo.
+ *
  * Carga cantos desde el canal de YouTube de Stella Maris.
  *
  * Convención de metadata en la descripción del video:

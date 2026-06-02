@@ -1,29 +1,49 @@
 import { useState, useEffect } from 'react';
 import { Song } from '../types';
+import { SongFilters, listSongs } from '../services/songs';
 import { mockSongs } from '../data/songs';
-import { getSongs } from '../services/songLoader';
 
 interface UseSongsResult {
   songs: Song[];
   loading: boolean;
 }
 
-export function useSongs(): UseSongsResult {
-  const [songs, setSongs] = useState<Song[]>(mockSongs);
+/**
+ * Returns the song catalog from Supabase with optional filters.
+ * Falls back to local mock data if Supabase is unreachable or returns nothing.
+ *
+ * Step 4 note: YouTube API (songLoader.ts) is no longer the data source.
+ * songLoader.ts is kept as a standalone import tool for admins.
+ */
+export function useSongs(filters?: SongFilters): UseSongsResult {
+  const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Destructure filter primitives to avoid stale closure / infinite re-render
+  const massMoment      = filters?.massMoment;
+  const liturgicalSeason = filters?.liturgicalSeason;
+  const instrument      = filters?.instrument;
+  const search          = filters?.search;
 
   useEffect(() => {
     let cancelled = false;
-    getSongs().then(result => {
-      if (!cancelled) {
-        setSongs(result);
+    setLoading(true);
+
+    listSongs({ massMoment, liturgicalSeason, instrument, search })
+      .then(result => {
+        if (cancelled) return;
+        // If Supabase returns data, use it; otherwise fall back to mock
+        setSongs(result.length > 0 ? result : mockSongs);
         setLoading(false);
-      }
-    }).catch(() => {
-      if (!cancelled) setLoading(false);
-    });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSongs(mockSongs);
+        setLoading(false);
+      });
+
     return () => { cancelled = true; };
-  }, []);
+  }, [massMoment, liturgicalSeason, instrument, search]);
 
   return { songs, loading };
 }
