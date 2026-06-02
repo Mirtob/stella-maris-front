@@ -8,7 +8,7 @@ import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551
 const ADMIN_EMAILS = ['gustavus.tobar@gmail.com'];
 
 interface ProfileSetupProps {
-  onComplete: (role: UserRole, instruments?: InstrumentType[], parishName?: string) => void;
+  onComplete: (role: UserRole, instruments?: InstrumentType[], parishes?: string[]) => void;
   userEmail?: string;
 }
 
@@ -17,7 +17,7 @@ export function ProfileSetup({ onComplete, userEmail }: ProfileSetupProps) {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [selectedInstruments, setSelectedInstruments] = useState<InstrumentType[]>([]);
   const [selectedDiocese, setSelectedDiocese] = useState('');
-  const [selectedParish, setSelectedParish] = useState('');
+  const [selectedParishes, setSelectedParishes] = useState<Set<string>>(new Set());
   const [selectedChapel, setSelectedChapel] = useState('');
 
   const toggleInstrument = (instrument: InstrumentType) => {
@@ -28,35 +28,37 @@ export function ProfileSetup({ onComplete, userEmail }: ProfileSetupProps) {
     }
   };
 
+  const toggleParish = (parishId: string) => {
+    const newSet = new Set(selectedParishes);
+    if (newSet.has(parishId)) {
+      newSet.delete(parishId);
+    } else {
+      newSet.add(parishId);
+    }
+    setSelectedParishes(newSet);
+  };
+
   const handleContinue = () => {
     if (selectedRole) {
-      // Construir el nombre completo de la ubicación
-      let fullLocationName = '';
-      
-      if (selectedChapel) {
-        // Si hay capilla seleccionada, usar nombre completo
-        const diocese = chileDioceses.find(d => d.id === selectedDiocese);
-        const parish = diocese?.parishes.find(p => p.id === selectedParish);
-        const chapel = parish?.chapels?.find(c => c.id === selectedChapel);
-        fullLocationName = `${chapel?.name} - ${parish?.name} - ${diocese?.name}`;
-      } else if (selectedParish) {
-        // Si solo hay parroquia, usar parroquia y diócesis
-        const diocese = chileDioceses.find(d => d.id === selectedDiocese);
-        const parish = diocese?.parishes.find(p => p.id === selectedParish);
-        fullLocationName = `${parish?.name} - ${diocese?.name}`;
-      }
-      
+      const selectedParishIds = Array.from(selectedParishes);
+      const diocese = chileDioceses.find(d => d.id === selectedDiocese);
+
+      const selectedParishNames = selectedParishIds.map(parishId => {
+        const parish = diocese?.parishes.find(p => p.id === parishId);
+        return `${parish?.name} - ${diocese?.name}`;
+      });
+
       if (selectedRole === 'Coro') {
-        if (selectedInstruments.length > 0 && fullLocationName) {
-          onComplete(selectedRole, selectedInstruments, fullLocationName);
+        if (selectedInstruments.length > 0 && selectedParishNames.length > 0) {
+          onComplete(selectedRole, selectedInstruments, selectedParishNames);
         }
       } else if (selectedRole === 'Pueblo fiel') {
-        if (fullLocationName) {
-          onComplete(selectedRole, undefined, fullLocationName);
+        if (selectedParishNames.length > 0) {
+          onComplete(selectedRole, undefined, selectedParishNames);
         }
       } else if (selectedRole === 'Admin') {
-        if (fullLocationName) {
-          onComplete(selectedRole, undefined, fullLocationName);
+        if (selectedParishNames.length > 0) {
+          onComplete(selectedRole, undefined, selectedParishNames);
         }
       } else {
         onComplete(selectedRole);
@@ -67,10 +69,10 @@ export function ProfileSetup({ onComplete, userEmail }: ProfileSetupProps) {
   const canContinue = () => {
     if (!selectedRole) return false;
     if (selectedRole === 'Coro') {
-      return selectedInstruments.length > 0 && selectedDiocese && selectedParish;
+      return selectedInstruments.length > 0 && selectedDiocese && selectedParishes.size > 0;
     }
     if (selectedRole === 'Pueblo fiel' || selectedRole === 'Admin') {
-      return selectedDiocese && selectedParish;
+      return selectedDiocese && selectedParishes.size > 0;
     }
     return true;
   };
@@ -82,12 +84,7 @@ export function ProfileSetup({ onComplete, userEmail }: ProfileSetupProps) {
 
   const handleDioceseChange = (dioceseId: string) => {
     setSelectedDiocese(dioceseId);
-    setSelectedParish('');
-    setSelectedChapel('');
-  };
-
-  const handleParishChange = (parishId: string) => {
-    setSelectedParish(parishId);
+    setSelectedParishes(new Set());
     setSelectedChapel('');
   };
 
@@ -187,11 +184,16 @@ export function ProfileSetup({ onComplete, userEmail }: ProfileSetupProps) {
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-900 to-blue-950 rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-blue-800">
                 <Church className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={2.5} />
               </div>
-              <label className="text-base sm:text-lg font-bold text-blue-950 dark:text-white">
-                Selecciona tu parroquia
-              </label>
+              <div className="flex-1">
+                <label className="text-base sm:text-lg font-bold text-blue-950 dark:text-white">
+                  Selecciona tus parroquias
+                </label>
+                <p className="text-sm sm:text-base text-blue-800 dark:text-blue-200 mt-1">
+                  Puedes seleccionar una o varias
+                </p>
+              </div>
             </div>
-            
+
             <select
               value={selectedDiocese}
               onChange={(e) => handleDioceseChange(e.target.value)}
@@ -204,40 +206,38 @@ export function ProfileSetup({ onComplete, userEmail }: ProfileSetupProps) {
                 </option>
               ))}
             </select>
-            
-            <select
-              value={selectedParish}
-              onChange={(e) => handleParishChange(e.target.value)}
-              className="w-full px-3 py-3 sm:px-4 sm:py-4 text-sm sm:text-base rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white font-bold shadow-lg transition-colors mt-5"
-            >
-              <option value="" className="bg-white dark:bg-slate-800 text-blue-950 dark:text-white">Elige una parroquia...</option>
-              {availableParishes.map((parish) => (
-                <option key={parish.id} value={parish.id} className="bg-white dark:bg-slate-800 text-blue-950 dark:text-white">
-                  {parish.name}
-                </option>
-              ))}
-            </select>
-            
-            {availableChapels.length > 0 && (
-              <select
-                value={selectedChapel}
-                onChange={(e) => setSelectedChapel(e.target.value)}
-                className="w-full px-3 py-3 sm:px-4 sm:py-4 text-sm sm:text-base rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white font-bold shadow-lg transition-colors mt-5"
-              >
-                <option value="" className="bg-white dark:bg-slate-800 text-blue-950 dark:text-white">Elige una capilla (opcional)...</option>
-                {availableChapels.map((chapel) => (
-                  <option key={chapel.id} value={chapel.id} className="bg-white dark:bg-slate-800 text-blue-950 dark:text-white">
-                    {chapel.name}
-                  </option>
-                ))}
-              </select>
+
+            {selectedDiocese && availableParishes.length > 0 && (
+              <div className="mt-5 space-y-3">
+                <p className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100">
+                  Parroquias disponibles:
+                </p>
+                <div className="space-y-2 max-h-64 overflow-y-auto bg-white/50 dark:bg-white/5 rounded-xl p-4">
+                  {availableParishes.map((parish) => (
+                    <label
+                      key={parish.id}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/30 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedParishes.has(parish.id)}
+                        onChange={() => toggleParish(parish.id)}
+                        className="w-5 h-5 rounded border-2 border-blue-600 dark:border-blue-400 bg-white dark:bg-white/10 cursor-pointer accent-blue-600"
+                      />
+                      <span className="text-base sm:text-lg font-medium text-blue-900 dark:text-blue-100">
+                        {parish.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             )}
-            
+
             <div className="mt-5 bg-white/40 dark:bg-white/10 backdrop-blur-sm border-2 border-white/50 dark:border-white/20 rounded-2xl p-5">
               <div className="flex gap-3">
                 <div className="text-3xl">⛪</div>
                 <p className="text-sm sm:text-base text-blue-900 dark:text-blue-100 leading-relaxed">
-                  <strong>Importante:</strong> Selecciona la parroquia donde asistes a Misa para ver los cantorales correspondientes.
+                  <strong>Importante:</strong> Selecciona las parroquias donde usarás Stella Maris. Podrás elegir la activa cada vez que entres a la app.
                 </p>
               </div>
             </div>

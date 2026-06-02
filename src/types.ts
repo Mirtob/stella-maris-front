@@ -38,6 +38,10 @@ export interface UserProfile {
   instruments?: InstrumentType[]; // Arreglo de instrumentos que el coro puede usar
   instrument?: InstrumentType; // Mantener por compatibilidad, pero ahora se usa instruments[]
   photoUrl?: string;
+  parishName?: string; // Parroquia única (compatibilidad retroactiva)
+  parishes?: string[]; // Arreglo de parroquias que el usuario pertenece (multi-parroquia)
+  activeParishName?: string; // Parroquia activa en esta sesión
+  activeRole?: UserRole; // Rol efectivo en esta sesión (Coro puede participar como Pueblo fiel en otra parroquia)
 }
 
 export interface PublishedCantoral {

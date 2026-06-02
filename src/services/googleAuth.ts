@@ -56,15 +56,19 @@ export async function logout(): Promise<void> {
   await supabaseSignOut();
 
   try {
-    sessionStorage.removeItem('stella_maris_user_profile');
+    localStorage.removeItem('stella_maris_user_profile');
   } catch (error) {
     console.error('? Error limpiando user profile:', error);
   }
 }
 
+export async function signOutOnly(): Promise<void> {
+  await supabaseSignOut();
+}
+
 export function saveUserProfile(profile: UserProfile): void {
   try {
-    sessionStorage.setItem('stella_maris_user_profile', JSON.stringify(profile));
+    localStorage.setItem('stella_maris_user_profile', JSON.stringify(profile));
     console.log('? Perfil guardado en sessionStorage');
   } catch (error) {
     console.error('? Error guardando perfil:', error);
@@ -73,7 +77,7 @@ export function saveUserProfile(profile: UserProfile): void {
 
 export function getStoredUserProfile(): UserProfile | null {
   try {
-    const stored = sessionStorage.getItem('stella_maris_user_profile');
+    const stored = localStorage.getItem('stella_maris_user_profile') || sessionStorage.getItem('stella_maris_user_profile');
     if (!stored) return null;
     return JSON.parse(stored) as UserProfile;
   } catch (error) {
@@ -84,7 +88,7 @@ export function getStoredUserProfile(): UserProfile | null {
 
 export function clearUserProfile(): void {
   try {
-    sessionStorage.removeItem('stella_maris_user_profile');
+    localStorage.removeItem('stella_maris_user_profile');
   } catch (error) {
     console.error('? Error limpiando perfil:', error);
   }

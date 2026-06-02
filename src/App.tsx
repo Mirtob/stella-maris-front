@@ -20,6 +20,7 @@ import { LiturgicalCalendar } from './components/LiturgicalCalendar';
 import { SolemnityAlerts } from './components/SolemnityAlerts';
 import { SheetMusicLibrary } from './components/SheetMusicLibrary';
 import { LoadingScreen } from './components/LoadingScreen';
+import { SelectActiveParishDialog } from './components/SelectActiveParishDialog';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Song, UserProfile, UserRole, InstrumentType, PublishedCantoral } from './types';
@@ -29,14 +30,50 @@ import {
   getStoredUserProfile,
   saveUserProfile,
   sessionToUserProfile,
-  logout as googleLogout,
+  signOutOnly,
 } from './services/googleAuth';
-import { listCantorals, publishCantoral as publishCantoralToDB, deleteCantoral as deleteCantoralFromDB } from './services/cantorals';
+import { listCantorals, publishCantoral as publishCantoralToDB, deleteCantoral as deleteCantoralFromDB, findDuplicate, updateCantoral } from './services/cantorals';
 
 type AppState = 'loading' | 'login' | 'profile-setup' | 'main' | 'player' | 'settings';
 type ViewState = 'main' | 'cantorals' | 'courses' | 'admin' | 'theory' | 'liturgy' | 'instruments' | 'manage-cantorals' | 'history' | 'liturgical-calendar' | 'sheet-music';
 
+// AccessDenied component - extracted from duplicated blocks
+function AccessDenied({ onBack, title, message, details, buttonLabel = 'Volver al Inicio', backView = 'main' }: { onBack: (view: ViewState) => void; title: string; message: string; details: string; buttonLabel?: string; backView?: ViewState }) {
+  return (
+    <div className="max-w-md mx-auto min-h-screen p-6 bg-gradient-to-br from-red-100 via-red-50 to-orange-100 dark:from-slate-900 dark:via-red-950 dark:to-red-950 transition-colors flex items-center justify-center">
+      <div className="bg-white/60 dark:bg-white/10 backdrop-blur-sm rounded-3xl p-8 border-4 border-red-500 dark:border-red-600 shadow-2xl text-center">
+        <div className="text-8xl mb-6">🔒</div>
+        <h1 className="text-3xl font-bold text-red-900 dark:text-red-100 mb-4">
+          {title}
+        </h1>
+        <p className="text-xl text-red-800 dark:text-red-200 mb-6">
+          {message}
+        </p>
+        <p className="text-lg text-red-700 dark:text-red-300 mb-8">
+          {details}
+        </p>
+        <button
+          onClick={() => onBack(backView)}
+          className="bg-gradient-to-br from-blue-600 to-blue-700 text-white py-4 px-8 rounded-2xl text-xl font-bold hover:shadow-xl active:scale-95 transition-all border-2 border-blue-800"
+        >
+          {buttonLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function App() {
+  return (
+    <ThemeProvider>
+      <Toaster position="top-center" richColors />
+      <ThemeToggle />
+      <AppContent />
+    </ThemeProvider>
+  );
+}
+
+function AppContent() {
   const [appState, setAppState] = useState<AppState>('loading');
   const [currentView, setCurrentView] = useState<ViewState>('main');
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -44,22 +81,21 @@ function App() {
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [publishedCantorals, setPublishedCantorals] = useState<PublishedCantoral[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showParishSelector, setShowParishSelector] = useState(false);
 
-  // Log API configuration on mount (development only)
   useEffect(() => {
     logApiConfig();
   }, []);
 
-  // Cargar cantorales desde Supabase cuando el usuario entra a la app
   useEffect(() => {
     if (appState !== 'main' || !userProfile) return;
-    listCantorals().then(setPublishedCantorals);
+    const activeParish = userProfile.activeParishName || userProfile.parishName;
+    listCantorals(activeParish).then(setPublishedCantorals);
   }, [appState, userProfile]);
 
-  // Simulate initial loading
   useEffect(() => {
     if (window.location.pathname === '/auth/callback') {
-      return; // AuthCallback component will handle this
+      return;
     }
 
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -67,13 +103,21 @@ function App() {
     async function initializeAuth() {
       const storedSession = await getStoredSession();
       const storedProfile = getStoredUserProfile();
+
       if (storedSession) {
         if (storedProfile) {
           setUserProfile(storedProfile);
-          setAppState('main');
           toast.success(`¡Bienvenido ${storedProfile.name}! 🎵`);
+          // Si tiene varias parroquias y aún no eligió cuál hoy → mostrar selector
+          if (!storedProfile.activeParishName && storedProfile.parishes && storedProfile.parishes.length > 1) {
+            setShowParishSelector(true);
+            // appState sigue 'loading' hasta que seleccione parroquia; el selector es un portal
+            setAppState('main');
+          } else {
+            setAppState('main');
+          }
         } else {
-          // Usuario nuevo — tiene sesión pero aún no eligió rol ni parroquia
+          // Primera vez: tiene sesión Google pero aún no configuró su perfil
           const baseProfile = sessionToUserProfile(storedSession);
           setUserProfile(baseProfile);
           setAppState('profile-setup');
@@ -83,7 +127,7 @@ function App() {
 
       timer = setTimeout(() => {
         setAppState('login');
-      }, 2500); // 2.5 segundos de pantalla de carga
+      }, 2500);
     }
 
     initializeAuth();
@@ -98,7 +142,7 @@ function App() {
     setAppState('loading');
   };
 
-  const handleProfileSetup = (role: UserRole, instruments?: InstrumentType[], parishName?: string) => {
+  const handleProfileSetup = (role: UserRole, instruments?: InstrumentType[], parishes?: string[]) => {
     const baseProfile = userProfile || {
       id: 'user123',
       email: 'usuario@ejemplo.com',
@@ -106,20 +150,42 @@ function App() {
       role,
     };
 
+    const hasSingleParish = parishes && parishes.length === 1;
+
     const profile: UserProfile = {
       ...baseProfile,
       role,
       instruments,
       instrument: instruments && instruments.length > 0 ? instruments[0] : baseProfile.instrument,
+      parishes,
+      parishName: parishes && parishes.length > 0 ? parishes[0] : undefined,
+      // Para una sola parroquia la dejamos activa directamente; para varias se pide al inicio de sesión
+      activeParishName: hasSingleParish ? parishes![0] : undefined,
+      activeRole: undefined,
     };
-
-    if (parishName) {
-      (profile as any).parishName = parishName;
-    }
 
     setUserProfile(profile);
     saveUserProfile(profile);
-    setAppState('main');
+
+    if (parishes && parishes.length > 1) {
+      setShowParishSelector(true);
+      setAppState('main');
+    } else {
+      setAppState('main');
+    }
+  };
+
+  const handleSelectActiveParish = (parish: string, role: UserRole) => {
+    if (userProfile) {
+      const updated: UserProfile = {
+        ...userProfile,
+        activeParishName: parish,
+        activeRole: role,
+      };
+      setUserProfile(updated);
+      saveUserProfile(updated);
+      setShowParishSelector(false);
+    }
   };
 
   const handleAddToCantoral = (song: Song) => {
@@ -145,7 +211,6 @@ function App() {
   };
 
   const handlePublishCantoral = async (newCantoral: PublishedCantoral) => {
-    // Optimistic update — agregar al estado local mientras se guarda
     setPublishedCantorals([newCantoral, ...publishedCantorals]);
     setCantoral([]);
 
@@ -154,13 +219,12 @@ function App() {
       toast.error('Error guardando el cantoral. Revisa tu conexión.', {
         description: result.error,
       });
-      // Revertir si falla
       setPublishedCantorals(prev => prev.filter(c => c.id !== newCantoral.id));
       return;
     }
 
-    // Recargar desde DB para reflejar el estado real (otros usuarios verán este cantoral)
-    const fresh = await listCantorals();
+    toast.success('¡Cantoral publicado!');
+    const fresh = await listCantorals(userProfile?.activeParishName || userProfile?.parishName);
     setPublishedCantorals(fresh);
   };
 
@@ -173,13 +237,22 @@ function App() {
   };
 
   const handleLogout = () => {
+    // Conservar el perfil pero limpiar los datos de sesión activa
+    if (userProfile) {
+      const profileToKeep: UserProfile = {
+        ...userProfile,
+        activeParishName: undefined,
+        activeRole: undefined,
+      };
+      saveUserProfile(profileToKeep);
+    }
     setUserProfile(null);
     setCantoral([]);
     setSelectedSong(null);
     setCurrentView('main');
     setAppState('login');
     setSidebarOpen(false);
-    googleLogout(); // Clear Google session
+    signOutOnly(); // Solo cierra la sesión Google, el perfil queda guardado
     toast.info('Sesión cerrada');
   };
 
@@ -193,23 +266,25 @@ function App() {
 
   const handleUpdateProfile = (updates: Partial<UserProfile>) => {
     if (userProfile) {
-      setUserProfile({
+      const updated = {
         ...userProfile,
         ...updates,
-      } as UserProfile);
+      } as UserProfile;
+      setUserProfile(updated);
+      saveUserProfile(updated);
     }
   };
 
-  // Notificar al Pueblo Fiel cuando aparezca un cantoral nuevo de su parroquia
   const lastSeenCount = useRef(0);
   useEffect(() => {
-    if (userProfile?.role !== 'Pueblo fiel') {
+    const effectiveRole = userProfile?.activeRole || userProfile?.role;
+    if (effectiveRole !== 'Pueblo fiel') {
       lastSeenCount.current = publishedCantorals.length;
       return;
     }
     if (publishedCantorals.length > lastSeenCount.current && lastSeenCount.current > 0) {
       const newest = publishedCantorals[0];
-      const userParish = (userProfile as any).parishName;
+      const userParish = userProfile.activeParishName || userProfile.parishName;
       if (!userParish || newest.parishName === userParish) {
         toast.success('¡Nuevo cantoral publicado! 📖', {
           description: `${newest.parishName}\n${newest.liturgicalDate} - ${newest.massTime}`,
@@ -223,79 +298,64 @@ function App() {
 
   // Auth Callback Route
   if (window.location.pathname === '/auth/callback') {
-    return (
-      <ThemeProvider>
-        <AuthCallback />
-      </ThemeProvider>
-    );
+    return <AuthCallback />;
   }
 
   // Loading Screen
   if (appState === 'loading') {
-    return (
-      <ThemeProvider>
-        <LoadingScreen message="Cargando Stella Maris..." />
-      </ThemeProvider>
-    );
+    return <LoadingScreen message="Cargando Stella Maris..." />;
   }
 
   // Login Screen
   if (appState === 'login') {
-    return (
-      <ThemeProvider>
-        <Toaster position="top-center" richColors />
-        <ThemeToggle />
-        <Login onGoogleLogin={handleGoogleLogin} />
-      </ThemeProvider>
-    );
+    return <Login onGoogleLogin={handleGoogleLogin} />;
   }
 
   // Profile Setup Screen
   if (appState === 'profile-setup') {
-    return (
-      <ThemeProvider>
-        <Toaster position="top-center" richColors />
-        <ThemeToggle />
-        <ProfileSetup onComplete={handleProfileSetup} userEmail={userProfile?.email} />
-      </ThemeProvider>
-    );
+    return <ProfileSetup onComplete={handleProfileSetup} userEmail={userProfile?.email} />;
   }
 
   // Song Player Screen
   if (appState === 'player' && selectedSong) {
     return (
-      <ThemeProvider>
-        <Toaster position="top-center" richColors />
-        <ThemeToggle />
-        <SongPlayer 
-          song={selectedSong} 
-          onBack={handleBackFromPlayer}
-          userInstrument={userProfile?.instrument}
-          userRole={userProfile?.role}
-        />
-      </ThemeProvider>
+      <SongPlayer
+        song={selectedSong}
+        onBack={handleBackFromPlayer}
+        userInstrument={userProfile?.instrument}
+        userRole={userProfile?.role}
+      />
     );
   }
 
   // Settings Screen
   if (appState === 'settings' && userProfile) {
     return (
-      <ThemeProvider>
-        <Toaster position="top-center" richColors />
-        <ThemeToggle />
-        <ProfileSettings userProfile={userProfile} onClose={handleCloseSettings} onSave={handleUpdateProfile} />
-      </ThemeProvider>
+      <ProfileSettings
+        userProfile={userProfile}
+        onClose={handleCloseSettings}
+        onSave={handleUpdateProfile}
+      />
     );
   }
 
-  // Main App Screen (based on user role and current view)
+  // Main App Screen
   if (appState === 'main' && userProfile) {
+    const activeParishName = userProfile.activeParishName || userProfile.parishName || 'Mi Parroquia';
+    const effectiveRole = userProfile.activeRole || userProfile.role;
+
     return (
-      <ThemeProvider>
-        <Toaster position="top-center" richColors />
-        <ThemeToggle />
+      <div>
+        {showParishSelector && userProfile.parishes && userProfile.parishes.length > 1 && (
+          <SelectActiveParishDialog
+            parishes={userProfile.parishes}
+            userRole={userProfile.role}
+            onSelect={handleSelectActiveParish}
+          />
+        )}
+
         <MenuButton onClick={() => setSidebarOpen(true)} />
-        
+
         <Sidebar
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
@@ -306,238 +366,206 @@ function App() {
           onOpenSettings={handleOpenSettings}
         />
 
-        {/* Main View - Depends on role */}
-        {currentView === 'main' && userProfile.role === 'Coro' && (
-          <ChoirView
-            preferredInstrument={userProfile.instrument || 'Coro'}
-            userInstruments={userProfile.instruments}
-            parishName={(userProfile as any).parishName || 'Mi Parroquia'}
-            cantoral={cantoral}
-            onAddToCantoral={handleAddToCantoral}
-            onRemoveFromCantoral={handleRemoveFromCantoral}
-            onPlaySong={handlePlaySong}
-            onPublishCantoral={handlePublishCantoral}
-          />
+        {renderMainContent(
+          currentView,
+          userProfile,
+          effectiveRole,
+          activeParishName,
+          cantoral,
+          publishedCantorals,
+          handleAddToCantoral,
+          handleRemoveFromCantoral,
+          handlePlaySong,
+          handlePublishCantoral,
+          handleSelectCourse,
+          setCurrentView,
+          async (id: string) => {
+            setPublishedCantorals(prev => prev.filter(c => c.id !== id));
+            const r = await deleteCantoralFromDB(id);
+            if (!r.ok) {
+              toast.error('No se pudo eliminar el cantoral', { description: r.error });
+              const fresh = await listCantorals(activeParishName);
+              setPublishedCantorals(fresh);
+            }
+          }
         )}
 
-        {currentView === 'main' && userProfile.role === 'Pueblo fiel' && (
-          <PublishedCantorals
-            cantorals={publishedCantorals}
-            onPlaySong={handlePlaySong}
-            userRole={userProfile.role}
-            userParishName={(userProfile as any).parishName}
-          />
-        )}
-
-        {currentView === 'main' && userProfile.role === 'Admin' && (
-          <AdminDashboard />
-        )}
-
-        {/* Published Cantorals View */}
-        {currentView === 'cantorals' && (
-          <PublishedCantorals
-            cantorals={publishedCantorals}
-            onPlaySong={handlePlaySong}
-            userRole={userProfile.role}
-            userParishName={(userProfile as any).parishName}
-          />
-        )}
-
-        {/* Admin View */}
-        {currentView === 'admin' && userProfile.role === 'Admin' && (
-          <AdminDashboard />
-        )}
-
-        {/* Bloqueo de acceso - Solo Admin */}
-        {currentView === 'admin' && userProfile.role !== 'Admin' && (
-          <div className="max-w-md mx-auto min-h-screen p-6 bg-gradient-to-br from-red-100 via-red-50 to-orange-100 dark:from-slate-900 dark:via-red-950 dark:to-red-950 transition-colors flex items-center justify-center">
-            <div className="bg-white/60 dark:bg-white/10 backdrop-blur-sm rounded-3xl p-8 border-4 border-red-500 dark:border-red-600 shadow-2xl text-center">
-              <div className="text-8xl mb-6">🔒</div>
-              <h1 className="text-3xl font-bold text-red-900 dark:text-red-100 mb-4">
-                Acceso Denegado
-              </h1>
-              <p className="text-xl text-red-800 dark:text-red-200 mb-6">
-                Solo los administradores pueden acceder a esta sección.
-              </p>
-              <p className="text-lg text-red-700 dark:text-red-300 mb-8">
-                Esta área incluye funcionalidades críticas como:
-                <br />
-                • Subir nuevos cantos al sistema
-                <br />
-                • Gestión del canal de YouTube
-                <br />
-                • Administración de usuarios
-              </p>
-              <button
-                onClick={() => setCurrentView('main')}
-                className="bg-gradient-to-br from-blue-600 to-blue-700 text-white py-4 px-8 rounded-2xl text-xl font-bold hover:shadow-xl active:scale-95 transition-all border-2 border-blue-800"
-              >
-                Volver al Inicio
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Courses Menu */}
-        {currentView === 'courses' && (
-          <CoursesMenu onSelectCourse={handleSelectCourse} />
-        )}
-
-        {/* Musical Theory Course */}
-        {currentView === 'theory' && (
-          <MusicalTheory onBack={() => setCurrentView('courses')} />
-        )}
-
-        {/* Liturgy Course */}
-        {currentView === 'liturgy' && (
-          <Liturgy onBack={() => setCurrentView('courses')} />
-        )}
-
-        {/* Musical Instruments Course */}
-        {currentView === 'instruments' && (
-          <MusicalInstruments onBack={() => setCurrentView('courses')} />
-        )}
-
-        {/* Cantoral Manager */}
-        {currentView === 'manage-cantorals' && userProfile.role === 'Coro' && (
-          <CantoralManager
-            cantorals={publishedCantorals}
-            onPublishCantoral={handlePublishCantoral}
-          />
-        )}
-
-        {/* Bloqueo de acceso - Solo Coro puede gestionar cantorales */}
-        {currentView === 'manage-cantorals' && userProfile.role !== 'Coro' && (
-          <div className="max-w-md mx-auto min-h-screen p-6 bg-gradient-to-br from-red-100 via-red-50 to-orange-100 dark:from-slate-900 dark:via-red-950 dark:to-red-950 transition-colors flex items-center justify-center">
-            <div className="bg-white/60 dark:bg-white/10 backdrop-blur-sm rounded-3xl p-8 border-4 border-red-500 dark:border-red-600 shadow-2xl text-center">
-              <div className="text-8xl mb-6">🔒</div>
-              <h1 className="text-3xl font-bold text-red-900 dark:text-red-100 mb-4">
-                Acceso Denegado
-              </h1>
-              <p className="text-xl text-red-800 dark:text-red-200 mb-6">
-                Solo los miembros del coro pueden gestionar cantorales.
-              </p>
-              <p className="text-lg text-red-700 dark:text-red-300 mb-8">
-                Esta funcionalidad permite:
-                <br />
-                • Crear y editar cantorales
-                <br />
-                • Guardar borradores
-                <br />
-                • Publicar cantorales para la comunidad
-              </p>
-              <button
-                onClick={() => setCurrentView('main')}
-                className="bg-gradient-to-br from-blue-600 to-blue-700 text-white py-4 px-8 rounded-2xl text-xl font-bold hover:shadow-xl active:scale-95 transition-all border-2 border-blue-800"
-              >
-                Volver al Inicio
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Cantoral History */}
-        {currentView === 'history' && (userProfile.role === 'Coro' || userProfile.role === 'Admin') && (
-          <CantoralHistory
-            cantorals={publishedCantorals}
-            onPlaySong={handlePlaySong}
-            onDeleteCantoral={async (id: string) => {
-              setPublishedCantorals(prev => prev.filter(c => c.id !== id));
-              const r = await deleteCantoralFromDB(id);
-              if (!r.ok) {
-                toast.error('No se pudo eliminar el cantoral', { description: r.error });
-                const fresh = await listCantorals();
-                setPublishedCantorals(fresh);
-              }
-            }}
-          />
-        )}
-
-        {/* Bloqueo de acceso - Solo Coro y Admin pueden ver historial */}
-        {currentView === 'history' && userProfile.role === 'Pueblo fiel' && (
-          <div className="max-w-md mx-auto min-h-screen p-6 bg-gradient-to-br from-red-100 via-red-50 to-orange-100 dark:from-slate-900 dark:via-red-950 dark:to-red-950 transition-colors flex items-center justify-center">
-            <div className="bg-white/60 dark:bg-white/10 backdrop-blur-sm rounded-3xl p-8 border-4 border-red-500 dark:border-red-600 shadow-2xl text-center">
-              <div className="text-8xl mb-6">🔒</div>
-              <h1 className="text-3xl font-bold text-red-900 dark:text-red-100 mb-4">
-                Acceso Denegado
-              </h1>
-              <p className="text-xl text-red-800 dark:text-red-200 mb-6">
-                El historial de cantorales está disponible solo para coros y administradores.
-              </p>
-              <p className="text-lg text-red-700 dark:text-red-300 mb-8">
-                Puedes ver todos los cantorales publicados en la sección principal.
-              </p>
-              <button
-                onClick={() => setCurrentView('cantorals')}
-                className="bg-gradient-to-br from-blue-600 to-blue-700 text-white py-4 px-8 rounded-2xl text-xl font-bold hover:shadow-xl active:scale-95 transition-all border-2 border-blue-800"
-              >
-                Ver Cantorales Publicados
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Liturgical Calendar */}
-        {currentView === 'liturgical-calendar' && (
-          <LiturgicalCalendar 
-            onCreateCantoral={(liturgicalDate, date) => {
-              // Solo permitir crear cantorales si el usuario es Coro
-              if (userProfile.role === 'Coro') {
-                // Redirigir al usuario al main view (donde se crea el cantoral)
-                setCurrentView('main');
-                // Aquí se podría pre-llenar la información del cantoral si fuera necesario
-                toast.success(`Crear cantoral para: ${liturgicalDate}`, {
-                  description: `Fecha: ${new Date(date).toLocaleDateString('es-ES')}`,
-                  duration: 5000
-                });
-              } else {
-                // Mostrar mensaje informativo para Pueblo fiel
-                toast.info(`${liturgicalDate}`, {
-                  description: `${new Date(date).toLocaleDateString('es-ES')}`,
-                  duration: 3000
-                });
-              }
-            }}
-          />
-        )}
-
-        {/* Sheet Music Library */}
-        {currentView === 'sheet-music' && (userProfile.role === 'Coro' || userProfile.role === 'Admin') && (
-          <SheetMusicLibrary onPlaySong={handlePlaySong} />
-        )}
-
-        {/* Bloqueo de acceso - Solo Coro y Admin pueden acceder al banco de partituras */}
-        {currentView === 'sheet-music' && userProfile.role === 'Pueblo fiel' && (
-          <div className="max-w-md mx-auto min-h-screen p-6 bg-gradient-to-br from-red-100 via-red-50 to-orange-100 dark:from-slate-900 dark:via-red-950 dark:to-red-950 transition-colors flex items-center justify-center">
-            <div className="bg-white/60 dark:bg-white/10 backdrop-blur-sm rounded-3xl p-8 border-4 border-red-500 dark:border-red-600 shadow-2xl text-center">
-              <div className="text-8xl mb-6">🔒</div>
-              <h1 className="text-3xl font-bold text-red-900 dark:text-red-100 mb-4">
-                Acceso Denegado
-              </h1>
-              <p className="text-xl text-red-800 dark:text-red-200 mb-6">
-                El banco de partituras está disponible solo para coros y administradores.
-              </p>
-              <p className="text-lg text-red-700 dark:text-red-300 mb-8">
-                Esta herramienta es para la selección y gestión de cantos durante la preparación de cantorales.
-              </p>
-              <button
-                onClick={() => setCurrentView('cantorals')}
-                className="bg-gradient-to-br from-blue-600 to-blue-700 text-white py-4 px-8 rounded-2xl text-xl font-bold hover:shadow-xl active:scale-95 transition-all border-2 border-blue-800"
-              >
-                Ver Cantorales Publicados
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Solemnity Alerts - Show on all views */}
         <SolemnityAlerts />
-      </ThemeProvider>
+      </div>
     );
   }
 
-  // Fallback
   return <Login onGoogleLogin={handleGoogleLogin} />;
+}
+
+function renderMainContent(
+  currentView: ViewState,
+  userProfile: UserProfile,
+  effectiveRole: UserRole,
+  activeParishName: string,
+  cantoral: Song[],
+  publishedCantorals: PublishedCantoral[],
+  onAddToCantoral: (song: Song) => void,
+  onRemoveFromCantoral: (songId: string) => void,
+  onPlaySong: (song: Song) => void,
+  onPublishCantoral: (cantoral: PublishedCantoral) => Promise<void>,
+  onSelectCourse: (course: 'theory' | 'liturgy' | 'instruments') => void,
+  setCurrentView: (view: ViewState) => void,
+  onDeleteCantoral: (id: string) => Promise<void>
+) {
+  switch (currentView) {
+    case 'main':
+      if (effectiveRole === 'Coro') {
+        return (
+          <ChoirView
+            preferredInstrument={userProfile.instrument || 'Coro'}
+            userInstruments={userProfile.instruments}
+            parishName={activeParishName}
+            cantoral={cantoral}
+            onAddToCantoral={onAddToCantoral}
+            onRemoveFromCantoral={onRemoveFromCantoral}
+            onPlaySong={onPlaySong}
+            onPublishCantoral={onPublishCantoral}
+          />
+        );
+      }
+      if (effectiveRole === 'Pueblo fiel') {
+        return (
+          <PublishedCantorals
+            cantorals={publishedCantorals}
+            onPlaySong={onPlaySong}
+            userRole={effectiveRole}
+            userParishName={activeParishName}
+          />
+        );
+      }
+      if (effectiveRole === 'Admin') {
+        return <AdminDashboard />;
+      }
+      return null;
+
+    case 'cantorals':
+      return (
+        <PublishedCantorals
+          cantorals={publishedCantorals}
+          onPlaySong={onPlaySong}
+          userRole={effectiveRole}
+          userParishName={activeParishName}
+        />
+      );
+
+    case 'admin':
+      if (effectiveRole === 'Admin') {
+        return <AdminDashboard />;
+      }
+      return (
+        <AccessDenied
+          onBack={setCurrentView}
+          title="Acceso Denegado"
+          message="Solo los administradores pueden acceder a esta sección."
+          details="Esta área incluye funcionalidades críticas como:
+• Subir nuevos cantos al sistema
+• Gestión del canal de YouTube
+• Administración de usuarios"
+          buttonLabel="Volver al Inicio"
+          backView="main"
+        />
+      );
+
+    case 'courses':
+      return <CoursesMenu onSelectCourse={onSelectCourse} />;
+
+    case 'theory':
+      return <MusicalTheory onBack={() => setCurrentView('courses')} />;
+
+    case 'liturgy':
+      return <Liturgy onBack={() => setCurrentView('courses')} />;
+
+    case 'instruments':
+      return <MusicalInstruments onBack={() => setCurrentView('courses')} />;
+
+    case 'manage-cantorals':
+      if (effectiveRole === 'Coro') {
+        return (
+          <CantoralManager
+            cantorals={publishedCantorals}
+            onPublishCantoral={onPublishCantoral}
+          />
+        );
+      }
+      return (
+        <AccessDenied
+          onBack={setCurrentView}
+          title="Acceso Denegado"
+          message="Solo los miembros del coro pueden gestionar cantorales."
+          details="Esta funcionalidad permite:
+• Crear y editar cantorales
+• Guardar borradores
+• Publicar cantorales para la comunidad"
+          buttonLabel="Volver al Inicio"
+          backView="main"
+        />
+      );
+
+    case 'history':
+      if (effectiveRole === 'Coro' || effectiveRole === 'Admin') {
+        return (
+          <CantoralHistory
+            cantorals={publishedCantorals}
+            onPlaySong={onPlaySong}
+            onDeleteCantoral={onDeleteCantoral}
+          />
+        );
+      }
+      return (
+        <AccessDenied
+          onBack={setCurrentView}
+          title="Acceso Denegado"
+          message="El historial de cantorales está disponible solo para coros y administradores."
+          details="Puedes ver todos los cantorales publicados en la sección principal."
+          buttonLabel="Ver Cantorales Publicados"
+          backView="cantorals"
+        />
+      );
+
+    case 'liturgical-calendar':
+      return (
+        <LiturgicalCalendar
+          onCreateCantoral={(liturgicalDate, date) => {
+            if (effectiveRole === 'Coro') {
+              setCurrentView('main');
+              toast.success(`Crear cantoral para: ${liturgicalDate}`, {
+                description: `Fecha: ${new Date(date).toLocaleDateString('es-ES')}`,
+                duration: 5000
+              });
+            } else {
+              toast.info(`${liturgicalDate}`, {
+                description: `${new Date(date).toLocaleDateString('es-ES')}`,
+                duration: 3000
+              });
+            }
+          }}
+        />
+      );
+
+    case 'sheet-music':
+      if (effectiveRole === 'Coro' || effectiveRole === 'Admin') {
+        return <SheetMusicLibrary onPlaySong={onPlaySong} />;
+      }
+      return (
+        <AccessDenied
+          onBack={setCurrentView}
+          title="Acceso Denegado"
+          message="El banco de partituras está disponible solo para coros y administradores."
+          details="Esta herramienta es para la selección y gestión de cantos durante la preparación de cantorales."
+          buttonLabel="Ver Cantorales Publicados"
+          backView="cantorals"
+        />
+      );
+
+    default:
+      return null;
+  }
 }
 
 export default App;
