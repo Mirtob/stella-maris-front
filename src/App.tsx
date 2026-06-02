@@ -342,7 +342,8 @@ function AppContent() {
 
   const view = route.screen === 'app' ? route.view : 'main';
   const activeParishName = userProfile.activeParishName || userProfile.parishName || 'Mi Parroquia';
-  const effectiveRole = userProfile.activeRole || userProfile.role;
+  // Ensure effectiveRole always falls back to a valid UserRole so renderView never returns null
+  const effectiveRole = userProfile.activeRole || userProfile.role || 'Coro';
 
   return (
     <div>
@@ -433,7 +434,19 @@ function renderView(p: ViewProps): JSX.Element | null {
         );
       }
       if (p.effectiveRole === 'Admin') return <AdminDashboard />;
-      return null;
+      // Fallback: perfil con rol desconocido o corrupto → tratar como Coro
+      return (
+        <ChoirView
+          preferredInstrument={p.userProfile.instrument || 'Coro'}
+          userInstruments={p.userProfile.instruments}
+          parishName={p.activeParishName}
+          cantoral={p.cantoral}
+          onAddToCantoral={p.onAddToCantoral}
+          onRemoveFromCantoral={p.onRemoveFromCantoral}
+          onPlaySong={p.onPlaySong}
+          onPublishCantoral={p.onPublishCantoral}
+        />
+      );
 
     case 'cantorals':
       return (

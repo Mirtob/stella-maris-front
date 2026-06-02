@@ -16,7 +16,9 @@ interface UseSongsResult {
  * songLoader.ts is kept as a standalone import tool for admins.
  */
 export function useSongs(filters?: SongFilters): UseSongsResult {
-  const [songs, setSongs] = useState<Song[]>([]);
+  // Start with mockSongs so components always have data on first render
+  // (before the Supabase fetch completes or if it fails)
+  const [songs, setSongs] = useState<Song[]>(mockSongs);
   const [loading, setLoading] = useState(true);
 
   // Destructure filter primitives to avoid stale closure / infinite re-render
