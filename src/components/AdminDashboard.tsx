@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Users, Church, Music, ShieldCheck, Lock, AlertTriangle, Database } from 'lucide-react';
+import { Users, Church, Music, ShieldCheck, Lock, AlertTriangle, Database, Youtube } from 'lucide-react';
 import { ProfileManager } from './ProfileManager';
 import { ParishManager } from './ParishManager';
 import { SongManager } from './SongManager';
 import { CatalogMigration } from './CatalogMigration';
+import { YouTubeSyncDialog } from './YouTubeSyncDialog';
 
-type AdminView = 'menu' | 'users' | 'parishes' | 'songs' | 'migration';
+type AdminView = 'menu' | 'users' | 'parishes' | 'songs' | 'migration' | 'youtube-sync';
 
 export function AdminDashboard() {
   const [currentView, setCurrentView] = useState<AdminView>('menu');
@@ -24,6 +25,10 @@ export function AdminDashboard() {
 
   if (currentView === 'migration') {
     return <CatalogMigration onBack={() => setCurrentView('menu')} />;
+  }
+
+  if (currentView === 'youtube-sync') {
+    return <YouTubeSyncDialog onBack={() => setCurrentView('menu')} />;
   }
 
   return (
@@ -96,6 +101,25 @@ export function AdminDashboard() {
                 </p>
               </div>
               <div className="text-3xl">🎵</div>
+            </div>
+          </button>
+
+          {/* YouTube Sync */}
+          <button
+            onClick={() => setCurrentView('youtube-sync')}
+            className="w-full bg-gradient-to-br from-red-600 to-red-700 rounded-2xl shadow-xl p-6 border-2 border-red-500 hover:border-red-300 active:scale-98 transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
+                <Youtube className="w-9 h-9 text-white" strokeWidth={2} />
+              </div>
+              <div className="text-left flex-1">
+                <h2 className="text-2xl font-bold text-white mb-1">Sincronizar YouTube</h2>
+                <p className="text-base text-red-100">
+                  Importar canciones nuevas del canal
+                </p>
+              </div>
+              <div className="text-3xl">▶️</div>
             </div>
           </button>
 

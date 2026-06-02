@@ -8,6 +8,7 @@
 import { Song, MassMoment, LiturgicalSeason } from '../types';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { mockSongs } from './songs';
+import { loadSongsFromYouTube } from '../services/songLoader';
 
 // ---------------------------------------------------------------------------
 // Mapping tables  (old string values → canonical keys)
@@ -177,6 +178,67 @@ export async function migrateMockSongsToSupabase(): Promise<MigrationResult> {
       result.skipped  += skipped;
       result.details.push(
         `Batch ${i / BATCH + 1}: ${inserted} insertados, ${skipped} ya existían`
+      );
+    }
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// YouTube → Supabase sync
+// ---------------------------------------------------------------------------
+
+/**
+ * Reads all videos with STELLA_MARIS_META from the YouTube channel and
+ * inserts any that don't yet exist in Supabase (identified by youtube_id).
+ * Existing songs are left untouched — run this after each channel upload.
+ */
+export async function syncYouTubeToSupabase(): Promise<MigrationResult> {
+  const result: MigrationResult = { total: 0, inserted: 0, skipped: 0, errors: 0, details: [] };
+
+  // 1. Pull videos from YouTube (only those with STELLA_MARIS_META metadata)
+  let ytSongs: Song[];
+  try {
+    ytSongs = await loadSongsFromYouTube();
+  } catch (err: any) {
+    result.errors = 1;
+    result.details.push(`Error accediendo al canal de YouTube: ${err.message}`);
+    return result;
+  }
+
+  result.total = ytSongs.length;
+
+  if (ytSongs.length === 0) {
+    result.details.push(
+      'No se encontraron videos con bloque STELLA_MARIS_META en el canal. ' +
+      'Agrega ese bloque a la descripción del video para que la app lo reconozca.'
+    );
+    return result;
+  }
+
+  // 2. Upsert into Supabase — skip songs already in the catalog
+  const sb = getSupabaseClient();
+  const BATCH = 50;
+
+  for (let i = 0; i < ytSongs.length; i += BATCH) {
+    const batch = ytSongs.slice(i, i + BATCH).map(songToRow);
+
+    const { data, error } = await sb
+      .from('songs')
+      .upsert(batch, { onConflict: 'youtube_id', ignoreDuplicates: true })
+      .select('id');
+
+    if (error) {
+      result.errors += batch.length;
+      result.details.push(`Batch ${Math.floor(i / BATCH) + 1} error: ${error.message}`);
+    } else {
+      const inserted = (data ?? []).length;
+      const skipped  = batch.length - inserted;
+      result.inserted += inserted;
+      result.skipped  += skipped;
+      result.details.push(
+        `Batch ${Math.floor(i / BATCH) + 1}: ${inserted} nuevas, ${skipped} ya existían`
       );
     }
   }
