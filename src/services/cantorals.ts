@@ -73,6 +73,35 @@ export async function publishCantoral(cantoral: PublishedCantoral): Promise<{ ok
   }
 }
 
+/** Busca cantoral existente para misma parroquia + fecha + hora. */
+export async function findDuplicate(parishName: string, date: string, massTime: string): Promise<PublishedCantoral | null> {
+  try {
+    const sb = getSupabaseClient();
+    const { data, error } = await sb.from(TABLE)
+      .select('*')
+      .eq('parish_name', parishName)
+      .eq('date', date)
+      .eq('mass_time', massTime)
+      .limit(1);
+    if (error || !data || data.length === 0) return null;
+    return rowToCantoral(data[0]);
+  } catch {
+    return null;
+  }
+}
+
+/** Actualiza un cantoral existente (mismo ID). */
+export async function updateCantoral(cantoral: PublishedCantoral): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const sb = getSupabaseClient();
+    const { error } = await sb.from(TABLE).update(cantoralToRow(cantoral)).eq('id', cantoral.id);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err.message };
+  }
+}
+
 /** Elimina un cantoral por ID (solo el creador puede). */
 export async function deleteCantoral(id: string): Promise<{ ok: boolean; error?: string }> {
   try {
