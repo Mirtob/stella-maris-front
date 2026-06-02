@@ -21,6 +21,7 @@ import { SolemnityAlerts } from './components/SolemnityAlerts';
 import { SheetMusicLibrary } from './components/SheetMusicLibrary';
 import { LoadingScreen } from './components/LoadingScreen';
 import { SelectActiveParishDialog } from './components/SelectActiveParishDialog';
+import { RoleGuard } from './components/RoleGuard';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Song, UserProfile, UserRole, InstrumentType, PublishedCantoral } from './types';
@@ -91,45 +92,6 @@ type AppRoute =
   | { screen: 'player'; song: Song; returnView: ViewState }
   | { screen: 'settings'; returnView: ViewState }
   | { screen: 'app'; view: ViewState };
-
-// ---------------------------------------------------------------------------
-// Shared sub-components
-// ---------------------------------------------------------------------------
-
-interface AccessDeniedProps {
-  onBack: (view: ViewState) => void;
-  title: string;
-  message: string;
-  details: string;
-  buttonLabel?: string;
-  backView?: ViewState;
-}
-
-function AccessDenied({
-  onBack,
-  title,
-  message,
-  details,
-  buttonLabel = 'Volver al Inicio',
-  backView = 'main',
-}: AccessDeniedProps) {
-  return (
-    <div className="max-w-md mx-auto min-h-screen p-6 bg-gradient-to-br from-red-100 via-red-50 to-orange-100 dark:from-slate-900 dark:via-red-950 dark:to-red-950 transition-colors flex items-center justify-center">
-      <div className="bg-white/60 dark:bg-white/10 backdrop-blur-sm rounded-3xl p-8 border-4 border-red-500 dark:border-red-600 shadow-2xl text-center">
-        <div className="text-8xl mb-6">🔒</div>
-        <h1 className="text-3xl font-bold text-red-900 dark:text-red-100 mb-4">{title}</h1>
-        <p className="text-xl text-red-800 dark:text-red-200 mb-6">{message}</p>
-        <p className="text-lg text-red-700 dark:text-red-300 mb-8">{details}</p>
-        <button
-          onClick={() => onBack(backView)}
-          className="bg-gradient-to-br from-blue-600 to-blue-700 text-white py-4 px-8 rounded-2xl text-xl font-bold hover:shadow-xl active:scale-95 transition-all border-2 border-blue-800"
-        >
-          {buttonLabel}
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Root — global providers mounted once, never re-mount
@@ -484,23 +446,19 @@ function renderView(p: ViewProps): JSX.Element | null {
       );
 
     case 'admin':
-      if (p.effectiveRole === 'Admin') return <AdminDashboard />;
       return (
-        <AccessDenied
-          onBack={v => p.navigate(v)}
-          title="Acceso Denegado"
+        <RoleGuard
+          allowed={p.effectiveRole === 'Admin'}
           message="Solo los administradores pueden acceder a esta sección."
           details={`Esta área incluye funcionalidades críticas como:\n• Subir nuevos cantos al sistema\n• Gestión del canal de YouTube\n• Administración de usuarios`}
-          backView="main"
-        />
+          navigate={p.navigate}
+        >
+          <AdminDashboard />
+        </RoleGuard>
       );
 
     case 'courses':
-      return (
-        <CoursesMenu
-          onSelectCourse={course => p.navigate(course)}
-        />
-      );
+      return <CoursesMenu onSelectCourse={course => p.navigate(course)} />;
 
     case 'theory':
       return <MusicalTheory onBack={() => p.navigate('courses')} />;
@@ -512,43 +470,36 @@ function renderView(p: ViewProps): JSX.Element | null {
       return <MusicalInstruments onBack={() => p.navigate('courses')} />;
 
     case 'manage-cantorals':
-      if (p.effectiveRole === 'Coro') {
-        return (
+      return (
+        <RoleGuard
+          allowed={p.effectiveRole === 'Coro'}
+          message="Solo los miembros del coro pueden gestionar cantorales."
+          details={`Esta funcionalidad permite:\n• Crear y editar cantorales\n• Guardar borradores\n• Publicar cantorales para la comunidad`}
+          navigate={p.navigate}
+        >
           <CantoralManager
             cantorals={p.publishedCantorals}
             onPublishCantoral={p.onPublishCantoral}
           />
-        );
-      }
-      return (
-        <AccessDenied
-          onBack={v => p.navigate(v)}
-          title="Acceso Denegado"
-          message="Solo los miembros del coro pueden gestionar cantorales."
-          details={`Esta funcionalidad permite:\n• Crear y editar cantorales\n• Guardar borradores\n• Publicar cantorales para la comunidad`}
-          backView="main"
-        />
+        </RoleGuard>
       );
 
     case 'history':
-      if (p.effectiveRole === 'Coro' || p.effectiveRole === 'Admin') {
-        return (
+      return (
+        <RoleGuard
+          allowed={p.effectiveRole === 'Coro' || p.effectiveRole === 'Admin'}
+          message="El historial de cantorales está disponible solo para coros y administradores."
+          details="Puedes ver todos los cantorales publicados en la sección principal."
+          buttonLabel="Ver Cantorales Publicados"
+          backView="cantorals"
+          navigate={p.navigate}
+        >
           <CantoralHistory
             cantorals={p.publishedCantorals}
             onPlaySong={p.onPlaySong}
             onDeleteCantoral={p.onDeleteCantoral}
           />
-        );
-      }
-      return (
-        <AccessDenied
-          onBack={v => p.navigate(v)}
-          title="Acceso Denegado"
-          message="El historial de cantorales está disponible solo para coros y administradores."
-          details="Puedes ver todos los cantorales publicados en la sección principal."
-          buttonLabel="Ver Cantorales Publicados"
-          backView="cantorals"
-        />
+        </RoleGuard>
       );
 
     case 'liturgical-calendar':
@@ -572,18 +523,17 @@ function renderView(p: ViewProps): JSX.Element | null {
       );
 
     case 'sheet-music':
-      if (p.effectiveRole === 'Coro' || p.effectiveRole === 'Admin') {
-        return <SheetMusicLibrary onPlaySong={p.onPlaySong} />;
-      }
       return (
-        <AccessDenied
-          onBack={v => p.navigate(v)}
-          title="Acceso Denegado"
+        <RoleGuard
+          allowed={p.effectiveRole === 'Coro' || p.effectiveRole === 'Admin'}
           message="El banco de partituras está disponible solo para coros y administradores."
           details="Esta herramienta es para la selección y gestión de cantos durante la preparación de cantorales."
           buttonLabel="Ver Cantorales Publicados"
           backView="cantorals"
-        />
+          navigate={p.navigate}
+        >
+          <SheetMusicLibrary onPlaySong={p.onPlaySong} />
+        </RoleGuard>
       );
 
     default:
