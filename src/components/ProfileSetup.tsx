@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Cross, Music, Users, ShieldCheck, Church, MapPin } from 'lucide-react';
+import { Cross, Music, Users, ShieldCheck, Church } from 'lucide-react';
 import { UserRole, InstrumentType } from '../types';
-import { chileDioceses, getParishesByDiocese, getChapelsByParish } from '../data/chileDioceses';
+import { chileDioceses, getParishesByDiocese } from '../data/chileDioceses';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
 
 // Solo estos emails pueden elegir el rol Admin
@@ -18,7 +18,6 @@ export function ProfileSetup({ onComplete, userEmail }: ProfileSetupProps) {
   const [selectedInstruments, setSelectedInstruments] = useState<InstrumentType[]>([]);
   const [selectedDiocese, setSelectedDiocese] = useState('');
   const [selectedParishes, setSelectedParishes] = useState<Set<string>>(new Set());
-  const [selectedChapel, setSelectedChapel] = useState('');
 
   const toggleInstrument = (instrument: InstrumentType) => {
     if (selectedInstruments.includes(instrument)) {
@@ -78,14 +77,10 @@ export function ProfileSetup({ onComplete, userEmail }: ProfileSetupProps) {
   };
 
   const availableParishes = selectedDiocese ? getParishesByDiocese(selectedDiocese) : [];
-  const availableChapels = (selectedDiocese && selectedParish) 
-    ? getChapelsByParish(selectedDiocese, selectedParish) 
-    : [];
 
   const handleDioceseChange = (dioceseId: string) => {
     setSelectedDiocese(dioceseId);
     setSelectedParishes(new Set());
-    setSelectedChapel('');
   };
 
   return (
