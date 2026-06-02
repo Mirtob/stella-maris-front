@@ -1,3 +1,64 @@
+/**
+ * Canonical identifier for each moment of the Catholic Mass.
+ * Used as the primary filter in the song catalog.
+ * Maps to the 'mass_moment' column in Supabase.
+ */
+export type MassMoment =
+  | 'entrada'
+  | 'kyrie'
+  | 'gloria'
+  | 'salmo'
+  | 'aleluya'
+  | 'ofertorio'
+  | 'santo'
+  | 'cordero'
+  | 'comunion'
+  | 'final'
+  | 'exposicion'
+  | 'no-liturgico';
+
+/**
+ * Canonical identifier for each liturgical season of the Catholic year.
+ * A song can belong to multiple seasons (stored as an array in Supabase).
+ * Empty array = valid for all seasons.
+ */
+export type LiturgicalSeason =
+  | 'adviento'
+  | 'navidad'
+  | 'tiempo-ordinario'
+  | 'cuaresma'
+  | 'semana-santa'
+  | 'pascua'
+  | 'pentecostes'
+  | 'corpus-christi';
+
+/** Human-readable labels for display in filters and forms */
+export const MASS_MOMENT_LABELS: Record<MassMoment, string> = {
+  entrada:       'Entrada',
+  kyrie:         'Kyrie / Acto Penitencial',
+  gloria:        'Gloria',
+  salmo:         'Salmo Responsorial',
+  aleluya:       'Aleluya / Aclamación',
+  ofertorio:     'Ofertorio',
+  santo:         'Santo',
+  cordero:       'Cordero de Dios',
+  comunion:      'Comunión',
+  final:         'Final / Salida',
+  exposicion:    'Exposición y Adoración',
+  'no-liturgico':'No litúrgico',
+};
+
+export const LITURGICAL_SEASON_LABELS: Record<LiturgicalSeason, string> = {
+  adviento:          'Adviento',
+  navidad:           'Navidad',
+  'tiempo-ordinario':'Tiempo Ordinario',
+  cuaresma:          'Cuaresma',
+  'semana-santa':    'Semana Santa',
+  pascua:            'Pascua',
+  pentecostes:       'Pentecostés',
+  'corpus-christi':  'Corpus Christi',
+};
+
 export interface Song {
   id: string;
   title: string;
@@ -25,6 +86,10 @@ export interface Song {
   approvedBy?: string; // ID del administrador que aprobó el canto
   approvedAt?: string; // Fecha de aprobación
   rejectionReason?: string; // Razón de rechazo si fue rechazado
+  // ── Campos del catálogo Supabase (nuevos) ──────────────────────────────
+  massMoment?: MassMoment;           // Momento canónico de la Misa (reemplaza 'category' a largo plazo)
+  liturgicalSeasons?: LiturgicalSeason[]; // Tiempos litúrgicos válidos (array; vacío = todos)
+  driveFileId?: string;              // ID del archivo en Google Drive (en vez de URL completa)
 }
 
 export type UserRole = 'Coro' | 'Pueblo fiel' | 'Admin';
