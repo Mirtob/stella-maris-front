@@ -159,7 +159,8 @@ function AppContent() {
         if (storedProfile) {
           setUserProfile(storedProfile);
           toast.success(`¡Bienvenido ${storedProfile.name}! 🎵`);
-          if (!storedProfile.activeParishName && storedProfile.parishes && storedProfile.parishes.length > 1) {
+          // Show role selector whenever activeRole is not set (e.g. after logout)
+          if (!storedProfile.activeRole) {
             setShowParishSelector(true);
           }
           setRoute({ screen: 'app', view: 'main' });
@@ -219,12 +220,13 @@ function AppContent() {
       instrument: instruments?.[0] ?? baseProfile.instrument,
       parishes,
       parishName: parishes?.[0],
+      // For single parish: set active state immediately; for multiple: selector will handle it
       activeParishName: hasSingleParish ? parishes![0] : undefined,
-      activeRole: undefined,
+      activeRole: hasSingleParish ? role : undefined,
     };
     setUserProfile(profile);
     saveUserProfile(profile);
-    if (parishes && parishes.length > 1) setShowParishSelector(true);
+    if (!hasSingleParish) setShowParishSelector(true);
     setRoute({ screen: 'app', view: 'main' });
   };
 
@@ -276,13 +278,25 @@ function AppContent() {
     setPublishedCantorals(fresh);
   };
 
+  // "Cambiar perfil" — keeps Google session, shows the role/parish selector
   const handleLogout = () => {
+    if (!userProfile) return;
+    const profileToKeep: UserProfile = { ...userProfile, activeParishName: undefined, activeRole: undefined };
+    saveUserProfile(profileToKeep);
+    setUserProfile(profileToKeep);
+    setCantoral([]);
+    setSidebarOpen(false);
+    setShowParishSelector(true);
+  };
+
+  // "Cerrar sesión de Google" — full sign-out, called from the selector dialog
+  const handleGoogleSignOut = () => {
     if (userProfile) {
       saveUserProfile({ ...userProfile, activeParishName: undefined, activeRole: undefined });
     }
     setUserProfile(null);
     setCantoral([]);
-    setSidebarOpen(false);
+    setShowParishSelector(false);
     signOutOnly();
     setRoute({ screen: 'login' });
     toast.info('Sesión cerrada');
@@ -347,11 +361,13 @@ function AppContent() {
 
   return (
     <div>
-      {showParishSelector && userProfile.parishes && userProfile.parishes.length > 1 && (
+      {showParishSelector && (
         <SelectActiveParishDialog
-          parishes={userProfile.parishes}
+          parishes={userProfile.parishes ?? []}
+          defaultParish={userProfile.parishName}
           userRole={userProfile.role}
           onSelect={handleSelectActiveParish}
+          onSignOut={handleGoogleSignOut}
         />
       )}
 

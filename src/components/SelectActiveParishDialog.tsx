@@ -1,95 +1,141 @@
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { UserRole } from '../types';
 
 interface SelectActiveParishDialogProps {
   parishes: string[];
-  userRole: UserRole;
+  defaultParish?: string;  // fallback for profiles without parishes array
+  userRole: UserRole;       // permanent role — determines if Admin option is shown
   onSelect: (parish: string, role: UserRole) => void;
+  onSignOut: () => void;    // for full Google sign-out
 }
 
-export function SelectActiveParishDialog({ parishes, userRole, onSelect }: SelectActiveParishDialogProps) {
-  const isChoir = userRole === 'Coro';
+/**
+ * Session setup dialog — shown after every logout so the user can choose
+ * how they participate today. Any user can switch between Coro and Pueblo fiel;
+ * Admin users additionally see the Admin option.
+ *
+ * Two-step flow:
+ *   Step 1: pick role  (Coro / Pueblo fiel / Admin)
+ *   Step 2: pick parish (only when multiple parishes exist; otherwise auto-selected)
+ */
+export function SelectActiveParishDialog({
+  parishes,
+  defaultParish,
+  userRole,
+  onSelect,
+  onSignOut,
+}: SelectActiveParishDialogProps) {
+  const [chosenRole, setChosenRole] = useState<UserRole | null>(null);
+
+  const isAdmin = userRole === 'Admin';
+  const effectiveParishes = parishes.length > 0 ? parishes : (defaultParish ? [defaultParish] : []);
+  const multiParish = effectiveParishes.length > 1;
+
+  const handleRoleSelect = (role: UserRole) => {
+    if (!multiParish) {
+      onSelect(effectiveParishes[0] ?? '', role);
+    } else {
+      setChosenRole(role);
+    }
+  };
 
   const dialogContent = (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-md animate-fadeIn" />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
 
       <div
-        className="relative bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-900 dark:to-blue-950 rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 border-4 border-blue-800 animate-fadeInUp transition-colors"
+        className="relative bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-900 dark:to-blue-950 rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 border-4 border-blue-800 transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="text-3xl sm:text-4xl">🏘️</div>
-            <h2 className="text-lg sm:text-2xl font-bold text-blue-950 dark:text-white">
-              ¿A cuál vas hoy?
-            </h2>
-          </div>
-          <p className="text-sm sm:text-base text-blue-800 dark:text-blue-200 ml-12">
-            {isChoir
-              ? 'Elige la parroquia y cómo participarás en la Misa de hoy.'
-              : '¿Para cuál parroquia vas a la Misa hoy?'}
-          </p>
+        <div className="mb-7 text-center">
+          <div className="text-5xl mb-3">✝️</div>
+          <h2 className="text-xl sm:text-2xl font-bold text-blue-950 dark:text-white">
+            {!chosenRole ? '¿Cómo participas hoy?' : '¿A cuál parroquia vas?'}
+          </h2>
+          {!chosenRole && (
+            <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+              Puedes cambiar tu rol en cada sesión
+            </p>
+          )}
         </div>
 
-        {/* Parishes List */}
-        <div className="space-y-4 mb-6 max-h-[55vh] overflow-y-auto">
-          {parishes.map((parish) => (
-            <div
-              key={parish}
-              className="bg-white/50 dark:bg-white/10 border-2 border-blue-200 dark:border-blue-700 rounded-2xl overflow-hidden"
+        {/* ── Step 1: Role selection ─────────────────────────────────────── */}
+        {!chosenRole && (
+          <div className="space-y-3 mb-6">
+            <button
+              onClick={() => handleRoleSelect('Coro')}
+              className="w-full bg-gradient-to-br from-blue-900 to-blue-950 text-white p-4 rounded-2xl flex items-center gap-4 hover:opacity-90 active:scale-95 transition-all border-2 border-blue-800 shadow-lg"
             >
-              {/* Parish name */}
-              <div className="px-4 py-3 border-b border-blue-100 dark:border-blue-800">
-                <p className="text-sm sm:text-base font-bold text-blue-900 dark:text-blue-100 truncate">
-                  {parish}
-                </p>
+              <span className="text-3xl">🎵</span>
+              <div className="text-left">
+                <p className="font-bold text-lg">Como Coro</p>
+                <p className="text-sm text-blue-200">Preparar y publicar cantorales</p>
               </div>
+            </button>
 
-              {/* Role buttons — shown only for Coro users */}
-              {isChoir ? (
-                <div className="flex">
-                  <button
-                    onClick={() => onSelect(parish, 'Coro')}
-                    className="flex-1 flex flex-col items-center gap-1 px-3 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/40 active:scale-95 transition-all border-r border-blue-100 dark:border-blue-800"
-                  >
-                    <span className="text-xl">🎵</span>
-                    <span className="text-xs sm:text-sm font-semibold text-blue-900 dark:text-blue-100">
-                      Preparar cantoral
-                    </span>
-                    <span className="text-xs text-blue-600 dark:text-blue-400">Modo Coro</span>
-                  </button>
-                  <button
-                    onClick={() => onSelect(parish, 'Pueblo fiel')}
-                    className="flex-1 flex flex-col items-center gap-1 px-3 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/40 active:scale-95 transition-all"
-                  >
-                    <span className="text-xl">🙏</span>
-                    <span className="text-xs sm:text-sm font-semibold text-blue-900 dark:text-blue-100">
-                      Solo participar
-                    </span>
-                    <span className="text-xs text-blue-600 dark:text-blue-400">Ver cantoral</span>
-                  </button>
+            <button
+              onClick={() => handleRoleSelect('Pueblo fiel')}
+              className="w-full bg-white/60 dark:bg-white/10 border-2 border-blue-300 dark:border-blue-600 text-blue-900 dark:text-blue-100 p-4 rounded-2xl flex items-center gap-4 hover:bg-white/80 dark:hover:bg-white/20 active:scale-95 transition-all"
+            >
+              <span className="text-3xl">🙏</span>
+              <div className="text-left">
+                <p className="font-bold text-lg">Como Pueblo fiel</p>
+                <p className="text-sm text-blue-700 dark:text-blue-300">Ver cantorales publicados</p>
+              </div>
+            </button>
+
+            {isAdmin && (
+              <button
+                onClick={() => handleRoleSelect('Admin')}
+                className="w-full bg-white/60 dark:bg-white/10 border-2 border-blue-300 dark:border-blue-600 text-blue-900 dark:text-blue-100 p-4 rounded-2xl flex items-center gap-4 hover:bg-white/80 dark:hover:bg-white/20 active:scale-95 transition-all"
+              >
+                <span className="text-3xl">🛡️</span>
+                <div className="text-left">
+                  <p className="font-bold text-lg">Como Administrador</p>
+                  <p className="text-sm text-blue-700 dark:text-blue-300">Gestionar cantos y usuarios</p>
                 </div>
-              ) : (
-                <button
-                  onClick={() => onSelect(parish, userRole)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/40 active:scale-95 transition-all"
-                >
-                  <span className="text-sm sm:text-base text-blue-800 dark:text-blue-200">
-                    Ir a esta parroquia
-                  </span>
-                  <span className="text-lg">→</span>
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
+              </button>
+            )}
+          </div>
+        )}
 
-        {/* Footer */}
-        <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-300 text-center italic">
-          Podrás cambiar de parroquia en cualquier momento desde el menú.
-        </p>
+        {/* ── Step 2: Parish selection (multi-parish only) ───────────────── */}
+        {chosenRole && multiParish && (
+          <div className="mb-4">
+            <button
+              onClick={() => setChosenRole(null)}
+              className="flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 mb-4 hover:opacity-70 transition-opacity"
+            >
+              ← Cambiar rol
+            </button>
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {effectiveParishes.map((parish) => (
+                <button
+                  key={parish}
+                  onClick={() => onSelect(parish, chosenRole)}
+                  className="w-full bg-white/60 dark:bg-white/10 border-2 border-blue-200 dark:border-blue-700 p-4 rounded-2xl text-left hover:bg-white/80 dark:hover:bg-white/20 active:scale-95 transition-all"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100">{parish}</span>
+                    <span className="text-blue-500 dark:text-blue-400 text-lg">→</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Footer — full sign-out option */}
+        <div className="mt-4 text-center">
+          <button
+            onClick={onSignOut}
+            className="text-xs text-blue-500 dark:text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 underline transition-colors"
+          >
+            Cerrar sesión de Google
+          </button>
+        </div>
       </div>
     </div>
   );
