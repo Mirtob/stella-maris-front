@@ -9,35 +9,35 @@ interface ProfileSettingsProps {
 }
 
 export function ProfileSettings({ userProfile, onSave, onClose }: ProfileSettingsProps) {
-  const [parishName, setParishName] = useState((userProfile as any).parishName || '');
+  // Settings only lets the user pick the ACTIVE parish from the ones already
+  // in their profile. Adding/removing parishes from the set is done at the
+  // initial ProfileSetup step.
+  const initialActive = userProfile.activeParishName || userProfile.parishName || '';
+  const [activeParish, setActiveParish] = useState(initialActive);
   const [instrument, setInstrument] = useState<InstrumentType>(userProfile.instrument || 'Coro');
-  
+
   const canChangeInstrument = userProfile.role === 'Coro';
-  
-  const parishes = [
-    'Parroquia San José Patriarca de la Esperanza',
-    'Parroquia Santa María Virgen de Paine',
-    'Parroquia San José de Pintué',
-    'Catedral de San Bernardo',
-    'Parroquia Sagrado Corazón de Buin',
-    'Parroquia Sagrada Familia de Linderos',
-    'Parroquia Virgen del Rosario de Valdivia de Paine',
-    'Parroquia Santa Teresa de Ávila de Huelquén',
-  ];
+
+  // Build the list of parishes the user belongs to (from their saved profile)
+  const userParishes: string[] = (userProfile.parishes && userProfile.parishes.length > 0)
+    ? userProfile.parishes
+    : (userProfile.parishName ? [userProfile.parishName] : []);
 
   const instruments: InstrumentType[] = ['Coro', 'Guitarra', 'Órgano'];
 
   const handleSave = () => {
-    const updates: any = {};
-    
-    // Always update parish name
-    updates.parishName = parishName || undefined;
-    
+    const updates: Partial<UserProfile> = {};
+
+    // Update which parish is active in this session (not the saved set)
+    if (activeParish) {
+      updates.activeParishName = activeParish;
+    }
+
     // Only update instrument for choir members
     if (canChangeInstrument) {
       updates.instrument = instrument;
     }
-    
+
     onSave(updates);
     onClose();
   };
@@ -112,28 +112,60 @@ export function ProfileSettings({ userProfile, onSave, onClose }: ProfileSetting
             <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
               <Church className="w-7 h-7 text-white" strokeWidth={2.5} />
             </div>
-            <h2 className="text-2xl font-bold text-gray-800">Parroquia</h2>
+            <h2 className="text-2xl font-bold text-gray-800">Parroquia activa</h2>
           </div>
 
-          <label className="text-base text-gray-600 mb-2 block">Selecciona tu parroquia</label>
-          <select
-            value={parishName}
-            onChange={(e) => setParishName(e.target.value)}
-            className="w-full px-4 py-4 text-lg border-2 border-amber-200 rounded-xl focus:outline-none focus:border-amber-400 bg-white font-bold"
-          >
-            <option value="">Sin parroquia asignada</option>
-            {parishes.map((parish) => (
-              <option key={parish} value={parish}>
-                {parish}
-              </option>
-            ))}
-          </select>
+          {userParishes.length === 0 && (
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4">
+              <p className="text-base text-amber-900 font-semibold">
+                No tienes parroquias configuradas en tu perfil.
+              </p>
+              <p className="text-sm text-amber-800 mt-1">
+                Cierra sesión y vuelve a entrar para configurar tus parroquias desde el perfil inicial.
+              </p>
+            </div>
+          )}
+
+          {userParishes.length === 1 && (
+            <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
+              <p className="text-sm text-amber-800 mb-1">Tu parroquia:</p>
+              <p className="text-lg font-bold text-amber-900">{userParishes[0]}</p>
+            </div>
+          )}
+
+          {userParishes.length > 1 && (
+            <>
+              <label className="text-base text-gray-600 mb-2 block">
+                Tienes {userParishes.length} parroquias. ¿Cuál usas ahora?
+              </label>
+              <div className="space-y-2">
+                {userParishes.map((parish) => (
+                  <button
+                    key={parish}
+                    onClick={() => setActiveParish(parish)}
+                    className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                      activeParish === parish
+                        ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white border-amber-600 shadow-lg'
+                        : 'bg-white text-gray-800 border-gray-200 hover:border-amber-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-base font-bold flex-1">{parish}</span>
+                      {activeParish === parish && (
+                        <span className="text-sm font-bold bg-white/20 px-2 py-1 rounded-full">Activa</span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
 
           <div className="mt-4 bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
             <div className="flex gap-2 text-amber-800">
               <div className="text-xl">⛪</div>
               <p className="text-sm">
-                <strong>Nota:</strong> Al cambiar de parroquia, podrás ver los cantorales publicados por esa comunidad.
+                <strong>Nota:</strong> La parroquia activa determina qué cantorales se muestran y dónde se publican los tuyos.
               </p>
             </div>
           </div>
