@@ -1,11 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Cross, Music, Users, ShieldCheck, Church } from 'lucide-react';
 import { UserRole, InstrumentType } from '../types';
 import { chileDioceses, getParishesByDiocese } from '../data/chileDioceses';
+import { isCurrentUserAdmin } from '../services/admin';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
-
-// Solo estos emails pueden elegir el rol Admin
-const ADMIN_EMAILS = ['gustavus.tobar@gmail.com'];
 
 interface ProfileSetupProps {
   onComplete: (role: UserRole, instruments?: InstrumentType[], parishes?: string[]) => void;
@@ -13,7 +11,14 @@ interface ProfileSetupProps {
 }
 
 export function ProfileSetup({ onComplete, userEmail }: ProfileSetupProps) {
-  const isAdminAllowed = userEmail ? ADMIN_EMAILS.includes(userEmail.toLowerCase()) : false;
+  // Admin eligibility is decided server-side via the `is_admin()` Supabase RPC
+  // (against the `admins` table). The previous hardcoded ADMIN_EMAILS was
+  // bypassable from DevTools by manipulating React state.
+  const [isAdminAllowed, setIsAdminAllowed] = useState(false);
+
+  useEffect(() => {
+    isCurrentUserAdmin().then(setIsAdminAllowed);
+  }, [userEmail]);
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [selectedInstruments, setSelectedInstruments] = useState<InstrumentType[]>([]);
   const [selectedDiocese, setSelectedDiocese] = useState('');

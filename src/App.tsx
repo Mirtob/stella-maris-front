@@ -43,6 +43,7 @@ import {
 } from './services/cantorals';
 import { uploadCantoralPDF } from './services/cantoralPDF';
 import { generateChoirCantoralPDF } from './utils/choirCantoralPDFGenerator';
+import { isCurrentUserAdmin } from './services/admin';
 
 const PENDING_CANTORAL_KEY = 'stella_maris_pending_cantoral_id';
 
@@ -133,6 +134,8 @@ function AppContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showParishSelector, setShowParishSelector] = useState(false);
   const [qrCantoral, setQrCantoral] = useState<PublishedCantoral | null>(null);
+  // Server-authoritative admin check (vs. trusting the role saved in localStorage)
+  const [isVerifiedAdmin, setIsVerifiedAdmin] = useState(false);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -151,6 +154,32 @@ function AppContent() {
   useEffect(() => {
     logApiConfig();
   }, []);
+
+  // Verify admin status against Supabase every time the user changes.
+  // We never trust userProfile.role === 'Admin' from localStorage on its own;
+  // the DB is the source of truth and the RLS policies enforce it server-side.
+  useEffect(() => {
+    if (!userProfile) {
+      setIsVerifiedAdmin(false);
+      return;
+    }
+    let cancelled = false;
+    isCurrentUserAdmin().then((isAdmin) => {
+      if (cancelled) return;
+      setIsVerifiedAdmin(isAdmin);
+      // If localStorage said "Admin" but Supabase says no, demote immediately.
+      if (!isAdmin && (userProfile.role === 'Admin' || userProfile.activeRole === 'Admin')) {
+        const demoted: UserProfile = {
+          ...userProfile,
+          role: userProfile.role === 'Admin' ? 'Coro' : userProfile.role,
+          activeRole: userProfile.activeRole === 'Admin' ? undefined : userProfile.activeRole,
+        };
+        setUserProfile(demoted);
+        saveUserProfile(demoted);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [userProfile?.id, userProfile?.email]);
 
   // Load cantorals whenever we enter the app shell or the profile changes
   useEffect(() => {
@@ -466,8 +495,11 @@ function AppContent() {
 
   const view = route.screen === 'app' ? route.view : 'main';
   const activeParishName = userProfile.activeParishName || userProfile.parishName || 'Mi Parroquia';
-  // Ensure effectiveRole always falls back to a valid UserRole so renderView never returns null
-  const effectiveRole = userProfile.activeRole || userProfile.role || 'Coro';
+  // Ensure effectiveRole always falls back to a valid UserRole so renderView never returns null.
+  // If localStorage claims 'Admin' but Supabase hasn't verified it, downgrade to 'Coro'.
+  const claimedRole = userProfile.activeRole || userProfile.role || 'Coro';
+  const effectiveRole: UserRole =
+    claimedRole === 'Admin' && !isVerifiedAdmin ? 'Coro' : claimedRole;
 
   return (
     <div>
@@ -475,7 +507,8 @@ function AppContent() {
         <SelectActiveParishDialog
           parishes={userProfile.parishes ?? []}
           defaultParish={userProfile.parishName}
-          userRole={userProfile.role}
+          // Show the Admin option only if Supabase confirms — never trust localStorage alone
+          userRole={isVerifiedAdmin ? 'Admin' : (userProfile.role === 'Admin' ? 'Coro' : userProfile.role)}
           lastSessionRole={userProfile.lastSessionRole}
           lastSessionParish={userProfile.lastSessionParish}
           onSelect={handleSelectActiveParish}
@@ -501,6 +534,7 @@ function AppContent() {
         onNavigate={navigate}
         onLogout={handleLogout}
         onOpenSettings={handleOpenSettings}
+        effectiveRoleOverride={effectiveRole}
       />
 
       {renderView({

@@ -1,5 +1,5 @@
 import { X, Home, BookOpen, GraduationCap, ShieldCheck, Music, LogOut, User, Settings, List, History, Calendar, Church, Book, Cross } from 'lucide-react';
-import { UserProfile } from '../types';
+import { UserProfile, UserRole } from '../types';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
 
 interface SidebarProps {
@@ -10,12 +10,17 @@ interface SidebarProps {
   onNavigate: (view: string) => void;
   onLogout: () => void;
   onOpenSettings: () => void;
+  /** If provided, used instead of the role derived from userProfile.
+   *  Used by App.tsx to enforce a server-verified role (downgrades 'Admin'
+   *  to 'Coro' when the user can't be verified as admin in the DB). */
+  effectiveRoleOverride?: UserRole;
 }
 
-export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate, onLogout, onOpenSettings }: SidebarProps) {
+export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate, onLogout, onOpenSettings, effectiveRoleOverride }: SidebarProps) {
   // Use the session-level role (activeRole) so the menu reflects what the user
-  // chose today, not their permanent registration role.
-  const effectiveRole = userProfile.activeRole || userProfile.role;
+  // chose today, not their permanent registration role. App can override this
+  // with a server-verified role when admin claims need DB confirmation.
+  const effectiveRole = effectiveRoleOverride || userProfile.activeRole || userProfile.role;
   const activeParish = userProfile.activeParishName || userProfile.parishName;
 
   const handleNavigate = (view: string) => {
