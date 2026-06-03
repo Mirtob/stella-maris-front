@@ -21,12 +21,26 @@ const SUPABASE_ANON_KEY = typeof import.meta !== 'undefined'
   ? import.meta.env?.VITE_SUPABASE_ANON_KEY || import.meta.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY
   : undefined;
 
+// Fallback placeholders — intencionalmente inválidos para que sean
+// fácilmente identificables y NUNCA se confundan con una llave real.
+// Si la aplicación intenta usar estos valores, Supabase devolverá 401
+// inmediatamente y el error apuntará claramente a env vars faltantes.
+const SUPABASE_URL_PLACEHOLDER = 'MISSING_VITE_SUPABASE_URL';
+const SUPABASE_KEY_PLACEHOLDER = 'MISSING_VITE_SUPABASE_ANON_KEY';
+
+if (typeof window !== 'undefined' && (!SUPABASE_URL || !SUPABASE_ANON_KEY)) {
+  console.error(
+    '[Stella Maris] Faltan VITE_SUPABASE_URL y/o VITE_SUPABASE_ANON_KEY. ' +
+    'Configurarlas en Vercel → Project Settings → Environment Variables.'
+  );
+}
+
 export const SUPABASE_CONFIG = {
   // URL del proyecto Supabase
-  url: SUPABASE_URL || 'https://[tu-proyecto].supabase.co',
-  
+  url: SUPABASE_URL || SUPABASE_URL_PLACEHOLDER,
+
   // Anon key pública (segura para el frontend)
-  anonKey: SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  anonKey: SUPABASE_ANON_KEY || SUPABASE_KEY_PLACEHOLDER,
   
   // Configuración de autenticación
   auth: {
