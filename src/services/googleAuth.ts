@@ -142,41 +142,20 @@ export async function getSessionFromUrl(): Promise<GoogleAuthSession | null> {
 }
 
 // ==========================================
-// Provider tokens (Google OAuth access tokens)
+// Provider tokens — DEPRECATED (S4 mitigation)
 //
-// ⚠️ SECURITY: estos tokens están en sessionStorage y son accesibles desde JS.
-// Si la app sufre XSS, un atacante puede leerlos y usar la cuenta de Google
-// del coro/admin para subir/borrar videos durante 1 hora.
+// Las funciones getYouTubeAccessToken / getGoogleDriveAccessToken fueron
+// eliminadas del export público. Permitían a un atacante con XSS leer el
+// provider_token de Google desde sessionStorage y suplantar a la cuenta
+// `stellamarismusicacatolica@gmail.com` durante hasta 1h.
 //
-// TODO (post-demo): mover uploads a un endpoint de backend que use service
-// account, así nunca exponemos el provider_token al cliente.
+// Estado actual:
+//   - Los scopes OAuth solo son identity (email/profile/openid), por lo que
+//     el provider_token NO sirve para upload a YouTube/Drive de todas formas.
+//   - Los uploads admin se hacen ahora vía YouTube Studio + Sincronización.
+//
+// TODO post-demo: implementar /api/upload-song con Google service account.
 // ==========================================
-
-export function getYouTubeAccessToken(): string | null {
-  return getAccessToken();
-}
-
-export function getGoogleDriveAccessToken(): string | null {
-  return getAccessToken();
-}
-
-function getAccessToken(): string | null {
-  try {
-    const storage = sessionStorage.getItem('supabase.auth.token');
-    if (!storage) return null;
-
-    const parsed = JSON.parse(storage);
-    const session = parsed?.currentSession;
-    if (!session) return null;
-
-    // Prefer provider access token when available. Supabase stores the Google OAuth token
-    // in provider_token, while access_token is the Supabase JWT session token.
-    return session.provider_token || session.access_token || null;
-  } catch (error: any) {
-    console.error('Error leyendo token desde storage:', error?.message);
-    return null;
-  }
-}
 
 // ==========================================
 // Session → profile mapping
