@@ -190,11 +190,14 @@ function AppContent() {
     if (publishedCantorals.length > lastSeenCount.current && lastSeenCount.current > 0) {
       const newest = publishedCantorals[0];
       const userParish = userProfile!.activeParishName || userProfile!.parishName;
-      if (!userParish || newest.parishName === userParish) {
+      // Only notify if the cantoral belongs to the user's configured parish.
+      // If no parish is set, skip — user hasn't finished setup and shouldn't
+      // receive notifications for cantorals they don't belong to.
+      if (userParish && newest.parishName === userParish) {
         toast.success('¡Nuevo cantoral publicado! 📖', {
-          description: `${newest.parishName}\n${newest.liturgicalDate} - ${newest.massTime}`,
+          description: `${newest.parishName} · ${newest.liturgicalDate} · ${newest.massTime}`,
           duration: 8000,
-          action: { label: 'Ver Cantoral', onClick: () => navigate('cantorals') },
+          action: { label: 'Ver cantorales', onClick: () => navigate('cantorals') },
         });
       }
     }
