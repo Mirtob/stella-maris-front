@@ -235,7 +235,14 @@ function AppContent() {
 
   const handleSelectActiveParish = (parish: string, role: UserRole) => {
     if (!userProfile) return;
-    const updated: UserProfile = { ...userProfile, activeParishName: parish, activeRole: role };
+    // Save both the active session state AND remember this selection for next time
+    const updated: UserProfile = {
+      ...userProfile,
+      activeParishName: parish,
+      activeRole: role,
+      lastSessionRole: role,
+      lastSessionParish: parish,
+    };
     setUserProfile(updated);
     saveUserProfile(updated);
     setShowParishSelector(false);
@@ -384,6 +391,8 @@ function AppContent() {
           parishes={userProfile.parishes ?? []}
           defaultParish={userProfile.parishName}
           userRole={userProfile.role}
+          lastSessionRole={userProfile.lastSessionRole}
+          lastSessionParish={userProfile.lastSessionParish}
           onSelect={handleSelectActiveParish}
           onSignOut={handleGoogleSignOut}
         />

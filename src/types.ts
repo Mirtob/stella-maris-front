@@ -107,6 +107,8 @@ export interface UserProfile {
   parishes?: string[]; // Arreglo de parroquias que el usuario pertenece (multi-parroquia)
   activeParishName?: string; // Parroquia activa en esta sesión
   activeRole?: UserRole; // Rol efectivo en esta sesión (Coro puede participar como Pueblo fiel en otra parroquia)
+  lastSessionRole?: UserRole;  // Rol elegido en la sesión anterior — persiste tras logout para sugerirlo en el próximo dialog
+  lastSessionParish?: string;  // Parroquia elegida en la sesión anterior — persiste tras logout
 }
 
 export interface PublishedCantoral {
