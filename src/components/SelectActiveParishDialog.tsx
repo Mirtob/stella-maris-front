@@ -31,9 +31,11 @@ export function SelectActiveParishDialog({
   const isAdmin = userRole === 'Admin';
   const effectiveParishes = parishes.length > 0 ? parishes : (defaultParish ? [defaultParish] : []);
   const multiParish = effectiveParishes.length > 1;
+  const hasNoParish = effectiveParishes.length === 0;
 
   const handleRoleSelect = (role: UserRole) => {
     if (!multiParish) {
+      // Single or no parish: confirm immediately with whatever parish is available
       onSelect(effectiveParishes[0] ?? '', role);
     } else {
       setChosenRole(role);
@@ -60,6 +62,24 @@ export function SelectActiveParishDialog({
             </p>
           )}
         </div>
+
+        {/* ── No parish configured (safety fallback) ────────────────────── */}
+        {hasNoParish && (
+          <div className="mb-4 bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-400 dark:border-amber-600 rounded-2xl p-4 text-center">
+            <p className="text-base font-semibold text-amber-800 dark:text-amber-200 mb-1">
+              Sin parroquia configurada
+            </p>
+            <p className="text-sm text-amber-700 dark:text-amber-300">
+              Para continuar necesitas completar tu perfil con una parroquia.
+            </p>
+            <button
+              onClick={onSignOut}
+              className="mt-3 px-4 py-2 bg-amber-600 text-white rounded-xl text-sm font-bold hover:bg-amber-700 active:scale-95 transition-all"
+            >
+              Configurar perfil
+            </button>
+          </div>
+        )}
 
         {/* ── Step 1: Role selection ─────────────────────────────────────── */}
         {!chosenRole && (

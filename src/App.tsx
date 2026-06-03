@@ -291,10 +291,20 @@ function AppContent() {
     if (!userProfile) return;
     const profileToKeep: UserProfile = { ...userProfile, activeParishName: undefined, activeRole: undefined };
     saveUserProfile(profileToKeep);
-    setUserProfile(profileToKeep);
     setCantoral([]);
     setSidebarOpen(false);
-    setShowParishSelector(true);
+
+    const hasParishData = (profileToKeep.parishes?.length ?? 0) > 0 || !!profileToKeep.parishName;
+
+    if (hasParishData) {
+      // Batch both state updates together: profile cleared + selector shown
+      setUserProfile(profileToKeep);
+      setShowParishSelector(true);
+    } else {
+      // No parish data (incomplete profile) → go back to full profile setup
+      setUserProfile(profileToKeep);
+      setRoute({ screen: 'profile-setup' });
+    }
   };
 
   // "Cerrar sesión de Google" — full sign-out, called from the selector dialog
