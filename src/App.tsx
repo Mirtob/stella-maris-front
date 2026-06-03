@@ -22,6 +22,8 @@ import { SheetMusicLibrary } from './components/SheetMusicLibrary';
 import { LoadingScreen } from './components/LoadingScreen';
 import { SelectActiveParishDialog } from './components/SelectActiveParishDialog';
 import { RoleGuard } from './components/RoleGuard';
+import { CantoralQRDialog } from './components/CantoralQRDialog';
+import { CantoralDeepLink } from './components/CantoralDeepLink';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Song, UserProfile, UserRole, InstrumentType, PublishedCantoral } from './types';
@@ -37,7 +39,18 @@ import {
   listCantorals,
   publishCantoral as publishCantoralToDB,
   deleteCantoral as deleteCantoralFromDB,
+  updateCantoralPdfUrl,
 } from './services/cantorals';
+import { uploadCantoralPDF } from './services/cantoralPDF';
+import { generateChoirCantoralPDF } from './utils/choirCantoralPDFGenerator';
+
+const PENDING_CANTORAL_KEY = 'stella_maris_pending_cantoral_id';
+
+/** Extract /c/:id from the current URL. Returns null if not a cantoral deep link. */
+function getCantoralIdFromPath(): string | null {
+  const match = window.location.pathname.match(/^\/c\/([a-zA-Z0-9_-]+)\/?$/);
+  return match ? match[1] : null;
+}
 
 // ---------------------------------------------------------------------------
 // Routing types
@@ -91,6 +104,7 @@ type AppRoute =
   | { screen: 'profile-setup' }
   | { screen: 'player'; song: Song; returnView: ViewState }
   | { screen: 'settings'; returnView: ViewState }
+  | { screen: 'cantoral-link'; cantoralId: string }
   | { screen: 'app'; view: ViewState };
 
 // ---------------------------------------------------------------------------
@@ -118,6 +132,7 @@ function AppContent() {
   const [publishedCantorals, setPublishedCantorals] = useState<PublishedCantoral[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showParishSelector, setShowParishSelector] = useState(false);
+  const [qrCantoral, setQrCantoral] = useState<PublishedCantoral | null>(null);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -149,6 +164,9 @@ function AppContent() {
   useEffect(() => {
     if (window.location.pathname === '/auth/callback') return;
 
+    // Detect /c/:id deep link from QR scan
+    const deepLinkCantoralId = getCantoralIdFromPath();
+
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     async function initializeAuth() {
@@ -159,7 +177,15 @@ function AppContent() {
         if (storedProfile) {
           setUserProfile(storedProfile);
           toast.success(`¡Bienvenido ${storedProfile.name}! 🎵`);
-          // Show role selector whenever activeRole is not set (e.g. after logout)
+
+          // Pick up a pending cantoral from a previous QR scan that required login
+          const pendingId = deepLinkCantoralId || localStorage.getItem(PENDING_CANTORAL_KEY);
+          if (pendingId) {
+            localStorage.removeItem(PENDING_CANTORAL_KEY);
+            setRoute({ screen: 'cantoral-link', cantoralId: pendingId });
+            return;
+          }
+
           if (!storedProfile.activeRole) {
             setShowParishSelector(true);
           }
@@ -167,8 +193,18 @@ function AppContent() {
         } else {
           const baseProfile = sessionToUserProfile(storedSession);
           setUserProfile(baseProfile);
+          if (deepLinkCantoralId) {
+            localStorage.setItem(PENDING_CANTORAL_KEY, deepLinkCantoralId);
+          }
           setRoute({ screen: 'profile-setup' });
         }
+        return;
+      }
+
+      // No session — save the cantoral id so we can resume after login
+      if (deepLinkCantoralId) {
+        localStorage.setItem(PENDING_CANTORAL_KEY, deepLinkCantoralId);
+        setRoute({ screen: 'login' });
         return;
       }
 
@@ -289,6 +325,38 @@ function AppContent() {
     // Only clear the draft after DB confirms success
     setCantoral([]);
     toast.success('¡Cantoral publicado! 🎵');
+
+    // Generate PDF blob (without triggering local download) and upload to Storage
+    let pdfUrl: string | undefined;
+    try {
+      const { blob } = generateChoirCantoralPDF(
+        newCantoral.songs,
+        newCantoral.parishName,
+        newCantoral.date,
+        newCantoral.liturgicalDate,
+        newCantoral.massTime,
+        userProfile?.instruments ?? [],
+        'Full Score',
+        { download: false }
+      );
+      const uploadResult = await uploadCantoralPDF(newCantoral.id, blob);
+      if (uploadResult.ok && uploadResult.publicUrl) {
+        pdfUrl = uploadResult.publicUrl;
+        await updateCantoralPdfUrl(newCantoral.id, pdfUrl);
+      } else {
+        toast.warning('Cantoral publicado, pero no pudimos generar el PDF compartible.', {
+          description: uploadResult.error,
+        });
+      }
+    } catch (err: any) {
+      toast.warning('Cantoral publicado, pero falló la generación del PDF.', {
+        description: err?.message,
+      });
+    }
+
+    // Show QR dialog with the final cantoral (with pdfUrl if upload succeeded)
+    setQrCantoral({ ...newCantoral, pdfUrl });
+
     const fresh = await listCantorals(userProfile?.activeParishName || userProfile?.parishName);
     setPublishedCantorals(fresh);
   };
@@ -354,6 +422,23 @@ function AppContent() {
   if (route.screen === 'login')         return <Login onGoogleLogin={handleGoogleLogin} />;
   if (route.screen === 'profile-setup') return <ProfileSetup onComplete={handleProfileSetup} userEmail={userProfile?.email} />;
 
+  if (route.screen === 'cantoral-link') {
+    return (
+      <CantoralDeepLink
+        cantoralId={route.cantoralId}
+        onOpenInApp={() => {
+          // Clean the URL and switch to the published-cantorals view
+          window.history.replaceState({}, '', '/');
+          setRoute({ screen: 'app', view: 'cantorals' });
+        }}
+        onCancel={() => {
+          window.history.replaceState({}, '', '/');
+          setRoute({ screen: 'app', view: 'main' });
+        }}
+      />
+    );
+  }
+
   if (route.screen === 'player') {
     return (
       <SongPlayer
@@ -397,6 +482,14 @@ function AppContent() {
           onSignOut={handleGoogleSignOut}
         />
       )}
+
+      <CantoralQRDialog
+        open={!!qrCantoral}
+        cantoralId={qrCantoral?.id ?? ''}
+        cantoralLabel={qrCantoral ? `${qrCantoral.liturgicalDate} · ${qrCantoral.massTime}` : undefined}
+        parishName={qrCantoral?.parishName}
+        onClose={() => setQrCantoral(null)}
+      />
 
       <MenuButton onClick={() => setSidebarOpen(true)} />
 

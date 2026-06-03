@@ -15,7 +15,10 @@
       "Bash(sed -i '248s/text-2xl sm:text-3xl font-bold text-blue-950 dark:text-white/text-base sm:text-lg font-bold text-blue-950 dark:text-white/' src/components/ProfileSetup.tsx)",
       "Bash(sed -i 's/py-6 sm:py-7 px-6 rounded-2xl text-2xl sm:text-3xl font-bold/py-4 sm:py-5 px-4 rounded-2xl text-lg sm:text-xl font-bold/g' src/components/ProfileSetup.tsx)",
       "Bash(sed -i 's/<div className=\"text-xl sm:text-2xl font-bold\">Guitarra<\\\\/div>/<div className=\"text-base sm:text-lg font-bold\">Guitarra<\\\\/div>/g' src/components/ProfileSetup.tsx)",
-      "Bash(sed -i 's/<div className=\"text-xl sm:text-2xl font-bold\">Órgano<\\\\/div>/<div className=\"text-base sm:text-lg font-bold\">Órgano<\\\\/div>/g' src/components/ProfileSetup.tsx)"
+      "Bash(sed -i 's/<div className=\"text-xl sm:text-2xl font-bold\">Órgano<\\\\/div>/<div className=\"text-base sm:text-lg font-bold\">Órgano<\\\\/div>/g' src/components/ProfileSetup.tsx)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }

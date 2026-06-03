@@ -126,4 +126,5 @@ export interface PublishedCantoral {
   status: 'draft' | 'published'; // Estado del cantoral
   isDraft?: boolean; // DEPRECATED: usar 'status'
   isSuggestion?: boolean; // Si es una sugerencia del sistema
+  pdfUrl?: string; // URL pública del PDF generado en Supabase Storage
 }

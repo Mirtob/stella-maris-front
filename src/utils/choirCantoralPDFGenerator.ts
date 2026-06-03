@@ -3,6 +3,11 @@ import { Song, InstrumentType } from '../types';
 
 type VoiceSelection = 'Soprano' | 'Contralto' | 'Tenor' | 'Bajo' | 'Full Score';
 
+interface GenerateOptions {
+  /** Si true, dispara la descarga local del PDF. Default: true (compatibilidad). */
+  download?: boolean;
+}
+
 export const generateChoirCantoralPDF = (
   songs: Song[],
   parishName: string,
@@ -10,8 +15,9 @@ export const generateChoirCantoralPDF = (
   celebration?: string,
   massTime?: string,
   userInstruments: InstrumentType[] = [],
-  voiceSelection: VoiceSelection = 'Full Score'
-) => {
+  voiceSelection: VoiceSelection = 'Full Score',
+  options: GenerateOptions = { download: true }
+): { blob: Blob; fileName: string } => {
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -450,7 +456,13 @@ export const generateChoirCantoralPDF = (
   const dateGeneratedWidth = pdf.getTextWidth(dateGenerated);
   pdf.text(dateGenerated, (pageWidth - dateGeneratedWidth) / 2, yPosition);
 
-  // Guardar PDF
+  // Generar nombre de archivo y blob
   const fileName = `Folleto_Cantoral_${new Date(date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')}.pdf`;
-  pdf.save(fileName);
+  const blob = pdf.output('blob');
+
+  if (options.download !== false) {
+    pdf.save(fileName);
+  }
+
+  return { blob, fileName };
 };

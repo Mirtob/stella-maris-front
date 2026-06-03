@@ -18,6 +18,7 @@ function rowToCantoral(row: any): PublishedCantoral {
     publishedBy: row.published_by,
     publishedAt: row.published_at,
     createdAt: row.created_at,
+    pdfUrl: row.pdf_url ?? undefined,
   };
 }
 
@@ -35,6 +36,7 @@ function cantoralToRow(c: PublishedCantoral): any {
     published_by: c.publishedBy,
     published_at: c.publishedAt,
     created_at: c.createdAt,
+    pdf_url: c.pdfUrl ?? null,
   };
 }
 
@@ -107,6 +109,30 @@ export async function deleteCantoral(id: string): Promise<{ ok: boolean; error?:
   try {
     const sb = getSupabaseClient();
     const { error } = await sb.from(TABLE).delete().eq('id', id);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err.message };
+  }
+}
+
+/** Trae un cantoral específico por ID (usado en el deep-link del QR). */
+export async function getCantoralById(id: string): Promise<PublishedCantoral | null> {
+  try {
+    const sb = getSupabaseClient();
+    const { data, error } = await sb.from(TABLE).select('*').eq('id', id).maybeSingle();
+    if (error || !data) return null;
+    return rowToCantoral(data);
+  } catch {
+    return null;
+  }
+}
+
+/** Actualiza solo el pdf_url de un cantoral existente (tras subir a Storage). */
+export async function updateCantoralPdfUrl(id: string, pdfUrl: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const sb = getSupabaseClient();
+    const { error } = await sb.from(TABLE).update({ pdf_url: pdfUrl }).eq('id', id);
     if (error) return { ok: false, error: error.message };
     return { ok: true };
   } catch (err: any) {
