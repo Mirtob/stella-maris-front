@@ -3,6 +3,7 @@ import { History, Calendar, Church, ChevronDown, ChevronUp, Play, Clock, Trash2,
 import { PublishedCantoral, Song } from '../types';
 import { generateChoirCantoralPDF } from '../utils/choirCantoralPDFGenerator';
 import { toast } from 'sonner';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface CantoralHistoryProps {
   cantorals: PublishedCantoral[];
@@ -13,6 +14,11 @@ interface CantoralHistoryProps {
 export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: CantoralHistoryProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedParish, setSelectedParish] = useState<string>('all');
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  const pendingDeleteCantoral = pendingDeleteId
+    ? cantorals.find(c => c.id === pendingDeleteId)
+    : null;
 
   // Obtener lista única de parroquias
   const parishes = ['all', ...Array.from(new Set(cantorals.map(c => c.parishName)))];
@@ -251,9 +257,7 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (confirm('¿Estás seguro de eliminar este cantoral del historial?')) {
-                                  onDeleteCantoral(cantoral.id);
-                                }
+                                setPendingDeleteId(cantoral.id);
                               }}
                               className="w-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-3 border-red-200 dark:border-red-700 py-4 px-3 sm:px-4 rounded-2xl font-bold text-xl flex items-center justify-center gap-3 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
                             >
@@ -341,6 +345,23 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
           ))}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!pendingDeleteCantoral}
+        title="Eliminar del historial"
+        message={`¿Estás seguro de eliminar este cantoral del historial?`}
+        details={pendingDeleteCantoral ? `${pendingDeleteCantoral.parishName} · ${pendingDeleteCantoral.liturgicalDate} · ${pendingDeleteCantoral.massTime}` : undefined}
+        confirmLabel="Sí, eliminar"
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={() => {
+          if (pendingDeleteId && onDeleteCantoral) {
+            onDeleteCantoral(pendingDeleteId);
+          }
+          setPendingDeleteId(null);
+        }}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   );
 }

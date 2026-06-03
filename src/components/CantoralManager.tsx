@@ -1,6 +1,7 @@
 import { BookOpen, Calendar, Edit2, Trash2, Share2, Eye } from 'lucide-react';
 import { useState } from 'react';
 import { PublishedCantoral } from '../types';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface CantoralManagerProps {
   cantorals: PublishedCantoral[];
@@ -11,6 +12,10 @@ interface CantoralManagerProps {
 
 export function CantoralManager({ cantorals, onPublishCantoral, onEdit, onDelete }: CantoralManagerProps) {
   const [filterStatus, setFilterStatus] = useState<'Todos' | 'Publicados' | 'Borradores'>('Todos');
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const pendingDeleteCantoral = pendingDeleteId
+    ? cantorals.find(c => c.id === pendingDeleteId)
+    : null;
 
   // Map each cantoral's real DB status ('draft' | 'published') to UI label.
   // Cantorals without an explicit status default to 'published' for backwards compat
@@ -140,8 +145,8 @@ export function CantoralManager({ cantorals, onPublishCantoral, onEdit, onDelete
                   </button>
                 )}
                 
-                <button 
-                  onClick={() => onDelete?.(cantoral.id)}
+                <button
+                  onClick={() => setPendingDeleteId(cantoral.id)}
                   className="bg-gradient-to-br from-red-600 to-red-700 text-white py-3 px-4 rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-lg border-2 border-red-800 hover:shadow-xl"
                 >
                   <Trash2 className="w-5 h-5" strokeWidth={2.5} />
@@ -182,6 +187,23 @@ export function CantoralManager({ cantorals, onPublishCantoral, onEdit, onDelete
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!pendingDeleteCantoral}
+        title="Eliminar cantoral"
+        message="¿Estás seguro de eliminar este cantoral? Esta acción no se puede deshacer."
+        details={pendingDeleteCantoral ? `${pendingDeleteCantoral.parishName} · ${pendingDeleteCantoral.liturgicalDate} · ${pendingDeleteCantoral.massTime}` : undefined}
+        confirmLabel="Sí, eliminar"
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={() => {
+          if (pendingDeleteId && onDelete) {
+            onDelete(pendingDeleteId);
+          }
+          setPendingDeleteId(null);
+        }}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   );
 }
