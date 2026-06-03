@@ -268,15 +268,20 @@ function AppContent() {
   };
 
   const handlePublishCantoral = async (newCantoral: PublishedCantoral) => {
+    // Optimistic UI: show cantoral immediately while the request is in flight
     setPublishedCantorals(prev => [newCantoral, ...prev]);
-    setCantoral([]);
+
     const result = await publishCantoralToDB(newCantoral);
     if (!result.ok) {
-      toast.error('Error guardando el cantoral. Revisa tu conexión.', { description: result.error });
+      // Revert the optimistic update — keep the draft intact so the coro doesn't lose work
       setPublishedCantorals(prev => prev.filter(c => c.id !== newCantoral.id));
+      toast.error('Error al publicar el cantoral. Revisa tu conexión.', { description: result.error });
       return;
     }
-    toast.success('¡Cantoral publicado!');
+
+    // Only clear the draft after DB confirms success
+    setCantoral([]);
+    toast.success('¡Cantoral publicado! 🎵');
     const fresh = await listCantorals(userProfile?.activeParishName || userProfile?.parishName);
     setPublishedCantorals(fresh);
   };
