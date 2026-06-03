@@ -13,6 +13,11 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate, onLogout, onOpenSettings }: SidebarProps) {
+  // Use the session-level role (activeRole) so the menu reflects what the user
+  // chose today, not their permanent registration role.
+  const effectiveRole = userProfile.activeRole || userProfile.role;
+  const activeParish = userProfile.activeParishName || userProfile.parishName;
+
   const handleNavigate = (view: string) => {
     onNavigate(view);
     onClose();
@@ -34,7 +39,8 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
     { id: 'admin', label: 'Panel Admin', icon: ShieldCheck, roles: ['Admin'] },
   ];
 
-  const visibleMenuItems = menuItems.filter(item => item.roles.includes(userProfile.role));
+  // Filter menu by the effective session role, not the permanent registration role
+  const visibleMenuItems = menuItems.filter(item => item.roles.includes(effectiveRole));
 
   return (
     <>
@@ -85,12 +91,15 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
                 <div className="text-base font-bold truncate">{userProfile.name}</div>
                 <div className="text-sm opacity-90 flex items-center gap-1">
                   <span className="inline-block w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                  {userProfile.role}
+                  {effectiveRole}
+                  {effectiveRole !== userProfile.role && (
+                    <span className="text-xs opacity-70 ml-1">(sesión)</span>
+                  )}
                 </div>
               </div>
             </div>
-            
-            {userProfile.role === 'Coro' && userProfile.instrument && (
+
+            {effectiveRole === 'Coro' && userProfile.instrument && (
               <div className="mt-3 pt-2 border-t border-white/20 flex items-center gap-2 text-sm">
                 <span className="text-xl">
                   {userProfile.instrument === 'Guitarra' && '🎶'}
@@ -99,11 +108,11 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
                 <span className="font-medium">{userProfile.instrument}</span>
               </div>
             )}
-            
-            {(userProfile as any).parishName && (
+
+            {activeParish && (
               <div className="mt-2 pt-2 border-t border-white/20 flex items-center gap-2 text-sm">
                 <span className="text-base">⛪</span>
-                <span className="font-medium truncate">{(userProfile as any).parishName}</span>
+                <span className="font-medium truncate">{activeParish}</span>
               </div>
             )}
           </div>
@@ -173,7 +182,7 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
               </button>
               {/* Tooltip */}
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-red-950 text-white text-sm font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-xl">
-                Cerrar Sesión
+                Cambiar perfil
                 <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-red-950"></div>
               </div>
             </div>
