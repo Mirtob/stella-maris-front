@@ -12,41 +12,16 @@ interface CantoralManagerProps {
 export function CantoralManager({ cantorals, onPublishCantoral, onEdit, onDelete }: CantoralManagerProps) {
   const [filterStatus, setFilterStatus] = useState<'Todos' | 'Publicados' | 'Borradores'>('Todos');
 
-  // Simulamos algunos cantorales adicionales como borradores
-  const allCantorals = [
-    ...cantorals.map(c => ({ ...c, status: 'Publicados' as const })),
-    {
-      id: 'draft_temp_1',
-      choirId: 'current_user',
-      choirName: 'Mi Coro',
-      parishName: 'San José',
-      date: '2026-02-08',
-      liturgicalDate: '3° Domingo del Tiempo Ordinario',
-      massTime: '10:00 AM',
-      songs: [],
-      publishedBy: 'Coro Principal',
-      publishedAt: '2026-01-08',
-      createdAt: '2026-01-08',
-      status: 'Borradores' as const
-    },
-    {
-      id: 'draft_temp_2',
-      choirId: 'current_user',
-      choirName: 'Mi Coro',
-      parishName: 'San José',
-      date: '2026-02-15',
-      liturgicalDate: '4° Domingo del Tiempo Ordinario',
-      massTime: '07:00 PM',
-      songs: [],
-      publishedBy: 'Coro Principal',
-      publishedAt: '2026-01-08',
-      createdAt: '2026-01-08',
-      status: 'Borradores' as const
-    },
-  ];
+  // Map each cantoral's real DB status ('draft' | 'published') to UI label.
+  // Cantorals without an explicit status default to 'published' for backwards compat
+  // (older rows in Supabase may not have the field).
+  const cantoralsWithLabel = cantorals.map(c => ({
+    ...c,
+    statusLabel: (c.status === 'draft' ? 'Borradores' : 'Publicados') as 'Publicados' | 'Borradores',
+  }));
 
-  const filteredCantorals = allCantorals.filter(cantoral => 
-    filterStatus === 'Todos' || cantoral.status === filterStatus
+  const filteredCantorals = cantoralsWithLabel.filter(cantoral =>
+    filterStatus === 'Todos' || cantoral.statusLabel === filterStatus
   );
 
   const formatDate = (dateStr: string) => {
@@ -99,11 +74,11 @@ export function CantoralManager({ cantorals, onPublishCantoral, onEdit, onDelete
             >
               {/* Header */}
               <div className={`p-5 ${
-                cantoral.status === 'Publicados' 
-                  ? 'bg-gradient-to-br from-blue-900 to-blue-950' 
+                cantoral.statusLabel === 'Publicados'
+                  ? 'bg-gradient-to-br from-blue-900 to-blue-950'
                   : 'bg-gradient-to-br from-gray-600 to-gray-700'
               } text-white border-b-2 ${
-                cantoral.status === 'Publicados'
+                cantoral.statusLabel === 'Publicados'
                   ? 'border-blue-800'
                   : 'border-gray-800'
               }`}>
@@ -112,7 +87,7 @@ export function CantoralManager({ cantorals, onPublishCantoral, onEdit, onDelete
                     <BookOpen className="w-6 h-6" strokeWidth={2.5} />
                     <span className="text-lg font-bold">{cantoral.parishName}</span>
                   </div>
-                  {cantoral.status === 'Publicados' ? (
+                  {cantoral.statusLabel === 'Publicados' ? (
                     <span className="bg-green-500 text-white px-3 py-1 rounded-lg text-sm font-bold flex items-center gap-1">
                       <Eye className="w-4 h-4" />
                       Público
@@ -158,7 +133,7 @@ export function CantoralManager({ cantorals, onPublishCantoral, onEdit, onDelete
                   <span className="text-base font-bold">Editar</span>
                 </button>
                 
-                {cantoral.status === 'Publicados' && (
+                {cantoral.statusLabel === 'Publicados' && (
                   <button className="flex-1 bg-gradient-to-br from-green-600 to-green-700 text-white py-3 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg border-2 border-green-800 hover:shadow-xl">
                     <Share2 className="w-5 h-5" strokeWidth={2.5} />
                     <span className="text-base font-bold">Compartir</span>
@@ -194,13 +169,13 @@ export function CantoralManager({ cantorals, onPublishCantoral, onEdit, onDelete
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl p-4 border-2 border-blue-800 shadow-lg">
               <div className="text-lg sm:text-2xl font-bold text-white">
-                {allCantorals.filter(c => c.status === 'Publicados').length}
+                {cantoralsWithLabel.filter(c => c.statusLabel === 'Publicados').length}
               </div>
               <div className="text-sm text-blue-100 mt-1 font-bold">Publicados</div>
             </div>
             <div className="bg-gradient-to-br from-amber-600 to-orange-600 rounded-xl p-4 border-2 border-amber-700 shadow-lg">
               <div className="text-lg sm:text-2xl font-bold text-white">
-                {allCantorals.filter(c => c.status === 'Borradores').length}
+                {cantoralsWithLabel.filter(c => c.statusLabel === 'Borradores').length}
               </div>
               <div className="text-sm text-amber-50 mt-1 font-bold">Borradores</div>
             </div>
