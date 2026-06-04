@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Download, BookOpen, ArrowLeft, FileX } from 'lucide-react';
 import { PublishedCantoral } from '../types';
 import { getCantoralById } from '../services/cantorals';
+import { safeWindowOpen } from '../utils/safeUrl';
 
 interface CantoralDeepLinkProps {
   cantoralId: string;
@@ -48,9 +49,9 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
 
   const handleDownloadPDF = () => {
     if (!cantoral?.pdfUrl) return;
-    // Open in a new tab — the browser will either download or display the PDF
-    // depending on the user's settings (mobile: opens native PDF viewer).
-    window.open(cantoral.pdfUrl, '_blank', 'noopener,noreferrer');
+    // safeWindowOpen rejects javascript: / data: / file: protocols even if the
+    // DB row was tampered with. Falls back silently to no-op on unsafe URLs.
+    safeWindowOpen(cantoral.pdfUrl);
   };
 
   const handleOpenInApp = () => {

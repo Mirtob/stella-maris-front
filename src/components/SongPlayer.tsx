@@ -2,6 +2,7 @@ import { ArrowLeft, FileText, Music, ZoomIn, ZoomOut, Download, Printer, Chevron
 import { useState, useEffect } from 'react';
 import { Song, InstrumentType, UserRole } from '../types';
 import { PDFViewer } from './PDFViewer';
+import { safeUrl, safeWindowOpen } from '../utils/safeUrl';
 
 // Extrae el Drive file ID de una URL de Drive y construye la URL del proxy
 function getDriveProxyUrl(sheetMusicUrl: string): { proxyUrl: string; driveViewUrl: string } | null {
@@ -89,7 +90,7 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
 
   const handlePrint = () => {
     if (song.sheetMusicUrl) {
-      const printWindow = window.open(song.sheetMusicUrl, '_blank');
+      const printWindow = safeWindowOpen(song.sheetMusicUrl);
       if (printWindow) {
         printWindow.onload = () => {
           printWindow.print();
@@ -312,7 +313,7 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
                 return (
                   <div className="grid grid-cols-2 gap-2">
                     <a
-                      href={urls?.driveViewUrl ?? song.sheetMusicUrl}
+                      href={safeUrl(urls?.driveViewUrl ?? song.sheetMusicUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="bg-white text-blue-900 py-3 px-3 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-sm font-bold shadow-lg"
@@ -321,7 +322,7 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
                       Abrir en Drive
                     </a>
                     <a
-                      href={urls ? `/api/pdf?id=${urls.proxyUrl.split('id=')[1]}` : song.sheetMusicUrl}
+                      href={safeUrl(urls ? `/api/pdf?id=${urls.proxyUrl.split('id=')[1]}` : song.sheetMusicUrl)}
                       download={`${song.title} - Partitura.pdf`}
                       className="bg-white/20 hover:bg-white/30 text-white py-3 px-3 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-sm font-bold border border-white/30"
                     >

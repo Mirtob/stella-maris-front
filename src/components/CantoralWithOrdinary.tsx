@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Play, ChevronDown, ChevronUp, X, Music, FileText } from 'lucide-react';
 import { PublishedCantoral, Song } from '../types';
+import { safeUrl } from '../utils/safeUrl';
 import { massOrdinary, postureIcons, postureLabels, postureColors, MassSection } from '../data/massOrdinary';
 
 interface CantoralWithOrdinaryProps {
@@ -299,9 +300,9 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong }: CantoralW
                   </button>
 
                   {/* Ver Partitura */}
-                  {selectedSong.sheetMusicUrl && (
+                  {safeUrl(selectedSong.sheetMusicUrl) && (
                     <a
-                      href={selectedSong.sheetMusicUrl}
+                      href={safeUrl(selectedSong.sheetMusicUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="bg-gradient-to-br from-blue-900 to-blue-950 text-white p-6 rounded-2xl flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-transform shadow-lg border-2 border-blue-800"
