@@ -1,10 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { applyCors } from './_lib/cors';
+import { rateLimit } from './_lib/rateLimit';
 
 // Proxy que descarga el PDF de Drive y lo sirve desde nuestro dominio
 // Esto evita todos los problemas de CORS, cookies y CSP del iframe de Drive
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!applyCors(req, res)) return; // OPTIONS preflight handled
+
+  // 30 req/min per IP — expensive (Drive fetch + buffer streaming)
+  if (!rateLimit(req, res, 'pdf', 30, 60_000)) return;
 
   // Reject ID format that is not a Drive file id (alphanumeric + - _)
   const { id } = req.query;

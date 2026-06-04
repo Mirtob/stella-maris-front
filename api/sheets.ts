@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { applyCors } from './_lib/cors';
+import { rateLimit } from './_lib/rateLimit';
 
 /**
  * Lista archivos de la carpeta de partituras de Drive.
@@ -10,6 +11,9 @@ const API_KEY = process.env.VITE_GOOGLE_DRIVE_API_KEY || process.env.VITE_YOUTUB
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!applyCors(req, res)) return; // OPTIONS preflight handled
+
+  // 20 req/min per IP — cheap (cached 1h), but limits enumeration attempts
+  if (!rateLimit(req, res, 'sheets', 20, 60_000)) return;
 
   if (!API_KEY) {
     return res.status(500).json({ error: 'API key no configurada' });
