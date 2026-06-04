@@ -11,7 +11,7 @@ interface PublishCantoralModalProps {
   cantoral: Song[];
   parishName: string;
   onClose: () => void;
-  onPublish: (date: string, liturgicalDate: string, massTime: string) => void;
+  onPublish: (date: string, liturgicalDate: string, massTime: string) => Promise<void> | void;
   userInstruments?: InstrumentType[];
 }
 
@@ -32,6 +32,7 @@ export function PublishCantoralModal({ cantoral, parishName, onClose, onPublish,
   const [customDates, setCustomDates] = useState<CustomLiturgicalDate[]>([]);
   const [dateChangeSource, setDateChangeSource] = useState<'calendar' | 'liturgical' | null>(null);
   const [voiceSelection, setVoiceSelection] = useState<VoiceSelection>('Full Score');
+  const [isPublishing, setIsPublishing] = useState(false);
 
   // Efecto para sincronizar fecha con celebración litúrgica
   useEffect(() => {
@@ -112,15 +113,20 @@ export function PublishCantoralModal({ cantoral, parishName, onClose, onPublish,
     '08:00 PM',
   ];
 
-  const handlePublish = () => {
-    if (selectedDate && liturgicalDate && massTime && cantoral.length > 0) {
-      onPublish(selectedDate, liturgicalDate, massTime);
-      // Mostrar modal de confirmación después de publicar
-      setShowPostPublishModal(true);
+  const handlePublish = async () => {
+    if (!selectedDate || !liturgicalDate || !massTime || cantoral.length === 0) return;
+    if (isPublishing) return; // prevent double-click
+
+    setIsPublishing(true);
+    try {
+      // Await the full pipeline: DB insert + PDF gen + Storage upload + QR dialog
+      await onPublish(selectedDate, liturgicalDate, massTime);
+    } finally {
+      setIsPublishing(false);
     }
   };
 
-  const canPublish = selectedDate && liturgicalDate && massTime && cantoral.length > 0;
+  const canPublish = !isPublishing && !!selectedDate && !!liturgicalDate && !!massTime && cantoral.length > 0;
 
   // Detectar si el coro tiene instrumento "Coro" (polifónico)
   const isPolyChoirMode = userInstruments.includes('Coro');
@@ -283,7 +289,8 @@ export function PublishCantoralModal({ cantoral, parishName, onClose, onPublish,
               <div className="flex gap-3">
                 <button
                   onClick={onClose}
-                  className="flex-1 bg-white/50 dark:bg-white/20 text-blue-950 dark:text-white py-4 px-4 rounded-xl font-bold text-lg hover:bg-white/70 dark:hover:bg-white/30 transition-colors border-2 border-white/60 dark:border-white/30"
+                  disabled={isPublishing}
+                  className="flex-1 bg-white/50 dark:bg-white/20 text-blue-950 dark:text-white py-4 px-4 rounded-xl font-bold text-lg hover:bg-white/70 dark:hover:bg-white/30 transition-colors border-2 border-white/60 dark:border-white/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancelar
                 </button>
@@ -297,8 +304,20 @@ export function PublishCantoralModal({ cantoral, parishName, onClose, onPublish,
                   }`}
                 >
                   <div className="flex items-center justify-center gap-2">
-                    <Send className="w-5 h-5" />
-                    Publicar
+                    {isPublishing ? (
+                      <>
+                        <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                        </svg>
+                        Publicando…
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-5 h-5" />
+                        Publicar
+                      </>
+                    )}
                   </div>
                 </button>
               </div>

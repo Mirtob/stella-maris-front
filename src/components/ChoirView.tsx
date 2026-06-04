@@ -21,7 +21,7 @@ interface ChoirViewProps {
   onAddToCantoral: (song: Song) => void;
   onRemoveFromCantoral: (songId: string) => void;
   onPlaySong: (song: Song) => void;
-  onPublishCantoral: (cantoral: PublishedCantoral) => void;
+  onPublishCantoral: (cantoral: PublishedCantoral) => Promise<void> | void;
 }
 
 export function ChoirView({
@@ -83,9 +83,21 @@ export function ChoirView({
     }));
   };
 
-  const handlePublish = (date: string, liturgicalDate: string, massTime: string) => {
+  const handlePublish = async (date: string, liturgicalDate: string, massTime: string) => {
+    // ID must be a real UUID — the Supabase Storage policy `is_cantoral_pdf_owner`
+    // rejects any object name that doesn't match the UUID v4 shape, so the PDF
+    // upload silently fails if we use a custom `pc_${timestamp}` prefix.
+    const id = (crypto && 'randomUUID' in crypto)
+      ? crypto.randomUUID()
+      // Fallback for very old browsers — generates a v4-shaped string
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = Math.random() * 16 | 0;
+          const v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+
     const newCantoral: PublishedCantoral = {
-      id: `pc_${Date.now()}`,
+      id,
       choirId: 'current_user',
       choirName: 'Mi Coro',
       parishName: parishName,
@@ -96,16 +108,19 @@ export function ChoirView({
       publishedBy: 'Mi Coro',
       publishedAt: new Date().toISOString(),
       songs: cantoral,
-      status: 'published', // ✅ Marcar como publicado para que Pueblo Fiel lo vea
+      status: 'published',
     };
-    
-    onPublishCantoral(newCantoral);
-    toast.success('¡Cantoral publicado exitosamente! Los fieles recibirán una notificación.', {
-      duration: 5000,
-      description: `${liturgicalDate} - ${massTime}`
-    });
-    
-    // Cerrar modal
+
+    // Delegate to App.handlePublishCantoral which:
+    //   1. Inserts into Supabase (returns error if it fails)
+    //   2. Shows toast.success only after DB confirms
+    //   3. Generates PDF + uploads to Storage + shows QR dialog
+    //   4. Refreshes the list
+    // We deliberately do NOT show a toast here to avoid double toasts and to
+    // avoid the bug where the toast appeared even when publish failed.
+    await onPublishCantoral(newCantoral);
+
+    // Cerrar modal solo después del flujo completo
     setShowPublishModal(false);
   };
 
