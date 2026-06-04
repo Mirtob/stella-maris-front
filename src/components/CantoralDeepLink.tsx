@@ -29,6 +29,10 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
         if (cancelled) return;
         if (!c) {
           setError('No encontramos este cantoral. Puede haber sido eliminado.');
+        } else if (c.status !== 'published') {
+          // Defense in depth: even if RLS leaks a draft, the UI refuses to show it.
+          // Deep links should only ever resolve to publicly published cantorales.
+          setError('Este cantoral aún no está publicado. Volvé a intentar cuando el coro lo publique.');
         } else {
           setCantoral(c);
         }

@@ -47,10 +47,22 @@ import { isCurrentUserAdmin } from './services/admin';
 
 const PENDING_CANTORAL_KEY = 'stella_maris_pending_cantoral_id';
 
-/** Extract /c/:id from the current URL. Returns null if not a cantoral deep link. */
+const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+/** Returns the input only if it's a valid UUID; null otherwise. */
+function sanitizeCantoralId(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  return UUID_RE.test(raw) ? raw.toLowerCase() : null;
+}
+
+/**
+ * Extract /c/:id from the current URL. Returns null if not a cantoral deep link
+ * or if the id is not a valid UUID. Strict validation avoids passing arbitrary
+ * strings to Supabase queries and prevents path traversal-style abuse.
+ */
 function getCantoralIdFromPath(): string | null {
-  const match = window.location.pathname.match(/^\/c\/([a-zA-Z0-9_-]+)\/?$/);
-  return match ? match[1] : null;
+  const match = window.location.pathname.match(/^\/c\/([^/?#]+)\/?$/);
+  return match ? sanitizeCantoralId(match[1]) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -207,13 +219,17 @@ function AppContent() {
           setUserProfile(storedProfile);
           toast.success(`¡Bienvenido ${storedProfile.name}! 🎵`);
 
-          // Pick up a pending cantoral from a previous QR scan that required login
-          const pendingId = deepLinkCantoralId || localStorage.getItem(PENDING_CANTORAL_KEY);
+          // Pick up a pending cantoral from a previous QR scan that required login.
+          // sanitizeCantoralId() guards against tampered localStorage values.
+          const pendingId = deepLinkCantoralId
+            || sanitizeCantoralId(localStorage.getItem(PENDING_CANTORAL_KEY));
           if (pendingId) {
             localStorage.removeItem(PENDING_CANTORAL_KEY);
             setRoute({ screen: 'cantoral-link', cantoralId: pendingId });
             return;
           }
+          // Stale or invalid pending id — clear it
+          localStorage.removeItem(PENDING_CANTORAL_KEY);
 
           if (!storedProfile.activeRole) {
             setShowParishSelector(true);
