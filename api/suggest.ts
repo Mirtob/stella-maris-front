@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { applyCors } from './_lib/cors';
 
 const GEMINI_MODELS = [
   'gemini-1.5-flash',
@@ -41,6 +42,8 @@ async function callGemini(apiKey: string, prompt: string, model: string): Promis
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (!applyCors(req, res)) return; // OPTIONS preflight handled
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { applyCors } from './_lib/cors';
 
 /**
  * Lista archivos de la carpeta de partituras de Drive.
@@ -7,7 +8,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 const FOLDER_ID = process.env.VITE_GOOGLE_DRIVE_SHEET_MUSIC_FOLDER || '1AIUOrDiruV6_H8kPnBUEMONSdS91Ubhv';
 const API_KEY = process.env.VITE_GOOGLE_DRIVE_API_KEY || process.env.VITE_YOUTUBE_API_KEY || '';
 
-export default async function handler(_req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (!applyCors(req, res)) return; // OPTIONS preflight handled
+
   if (!API_KEY) {
     return res.status(500).json({ error: 'API key no configurada' });
   }
@@ -18,13 +21,14 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
     const data = await r.json();
 
     if (data.error) {
-      return res.status(data.error.code || 500).json({ error: data.error.message });
+      console.error('Drive list error:', data.error.message);
+      return res.status(data.error.code || 500).json({ error: 'No se pudo listar partituras' });
     }
 
     res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600');
-    res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(200).json({ files: data.files || [] });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    console.error('sheets list error:', err?.message);
+    return res.status(500).json({ error: 'Error interno' });
   }
 }
