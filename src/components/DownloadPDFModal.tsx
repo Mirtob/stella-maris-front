@@ -22,8 +22,15 @@ export function DownloadPDFModal({ onClose, onDownload, userInstruments }: Downl
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900 dark:to-emerald-900 rounded-3xl shadow-2xl max-w-lg w-full border-4 border-green-700 transition-colors">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+        onClick={onClose}
+      />
+      <div
+        className="relative bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900 dark:to-emerald-900 rounded-3xl shadow-2xl max-w-lg w-full border-4 border-green-700 transition-colors"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="sticky top-0 bg-gradient-to-r from-green-700 to-green-800 text-white p-6 rounded-t-3xl border-b-4 border-green-900">
           <div className="flex items-center justify-between mb-2">

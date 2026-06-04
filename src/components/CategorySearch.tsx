@@ -5,6 +5,7 @@ import { Song, InstrumentType } from '../types';
 import { useSongs } from '../hooks/useSongs';
 import { getCategoryColors } from '../utils/colors';
 import { getCurrentLiturgicalColor, getLiturgicalCrossColor } from '../utils/liturgicalColors';
+import { matchesSearch } from '../utils/textSearch';
 import { AddGloriaDialog } from './AddGloriaDialog';
 import { AddPadreNuestroDialog } from './AddPadreNuestroDialog';
 import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji } from '../utils/specialLiturgicalDays';
@@ -112,11 +113,13 @@ export function CategorySearch({
     });
   }
   
+  // Búsqueda insensible a acentos: "comunion" encuentra "Comunión",
+  // "tu reino" encuentra "Tú Reinarás", etc.
   const filteredSongs = categorySongs.filter(song =>
-    song.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (song.artist && song.artist.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (song.author && song.author.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (song.massName && song.massName.toLowerCase().includes(searchTerm.toLowerCase()))
+    matchesSearch(song.title, searchTerm) ||
+    matchesSearch(song.artist, searchTerm) ||
+    matchesSearch(song.author, searchTerm) ||
+    matchesSearch(song.massName, searchTerm)
   );
 
   const handleAddSong = (song: Song) => {

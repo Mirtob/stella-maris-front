@@ -3,6 +3,7 @@ import { Music, Search, ChevronDown, ChevronUp, Play, Calendar, FileText } from 
 import { Song } from '../types';
 import { useSongs } from '../hooks/useSongs';
 import { LyricsWithChords } from './LyricsWithChords';
+import { matchesSearch } from '../utils/textSearch';
 
 interface SheetMusicLibraryProps {
   onPlaySong: (song: Song) => void;
@@ -108,14 +109,11 @@ export function SheetMusicLibrary({ onPlaySong }: SheetMusicLibraryProps) {
   const filteredParts = MASS_PARTS.filter(part => {
     const songs = getSongsByPart(part.id);
     if (songs.length === 0) return false;
-    
     if (!searchTerm) return true;
-    
-    const search = searchTerm.toLowerCase();
-    return songs.some(song => 
-      song.title.toLowerCase().includes(search) ||
-      song.artist?.toLowerCase().includes(search) ||
-      song.author?.toLowerCase().includes(search)
+    return songs.some(song =>
+      matchesSearch(song.title, searchTerm) ||
+      matchesSearch(song.artist, searchTerm) ||
+      matchesSearch(song.author, searchTerm)
     );
   });
 
@@ -154,12 +152,10 @@ export function SheetMusicLibrary({ onPlaySong }: SheetMusicLibraryProps) {
 
   const filterSongsBySearch = (songs: Song[]): Song[] => {
     if (!searchTerm) return songs;
-    
-    const search = searchTerm.toLowerCase();
     return songs.filter(song =>
-      song.title.toLowerCase().includes(search) ||
-      song.artist?.toLowerCase().includes(search) ||
-      song.author?.toLowerCase().includes(search)
+      matchesSearch(song.title, searchTerm) ||
+      matchesSearch(song.artist, searchTerm) ||
+      matchesSearch(song.author, searchTerm)
     );
   };
 
