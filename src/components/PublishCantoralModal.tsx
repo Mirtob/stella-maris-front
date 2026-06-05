@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Send, Calendar, Church, Clock, Plus, Download, ChevronDown } from 'lucide-react';
 import { Song, InstrumentType } from '../types';
+import { getTodayLocal, formatYmdForDisplay } from '../utils/dateLocal';
 import { getLiturgicalDateForDate, getDateForLiturgicalName, isSunday, getLiturgicalDateNames } from '../utils/liturgicalCalendar';
 import { AddSolemnityModal } from './AddSolemnityModal';
 import { CantoralPDFPreview } from './CantoralPDFPreview';
@@ -23,7 +24,9 @@ interface CustomLiturgicalDate {
 type VoiceSelection = 'Soprano' | 'Contralto' | 'Tenor' | 'Bajo' | 'Full Score';
 
 export function PublishCantoralModal({ cantoral, parishName, onClose, onPublish, userInstruments = [] }: PublishCantoralModalProps) {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  // Use local-timezone today to avoid the user in a negative-offset TZ
+  // (Chile, México, Argentina) publishing for "tomorrow" when it's 22:00.
+  const [selectedDate, setSelectedDate] = useState(getTodayLocal());
   const [liturgicalDate, setLiturgicalDate] = useState('');
   const [massTime, setMassTime] = useState('');
   const [showAddSolemnityModal, setShowAddSolemnityModal] = useState(false);
@@ -82,7 +85,7 @@ export function PublishCantoralModal({ cantoral, parishName, onClose, onPublish,
       if (date) {
         setSelectedDate(date);
         toast.success('Fecha encontrada', {
-          description: new Date(date).toLocaleDateString('es-ES', {
+          description: formatYmdForDisplay(date, {
             weekday: 'long',
             year: 'numeric',
             month: 'long',

@@ -27,7 +27,10 @@ function cantoralToRow(c: PublishedCantoral): any {
     id: c.id,
     choir_id: c.choirId,
     choir_name: c.choirName,
-    parish_name: c.parishName,
+    // Trim defensivo: si el origen del nombre (mock data, profile setup,
+    // import de admin) deja whitespace en los extremos, el filtro de
+    // PublishedCantorals nunca encuentra la fila.
+    parish_name: c.parishName?.trim() ?? c.parishName,
     date: c.date,
     liturgical_date: c.liturgicalDate,
     mass_time: c.massTime,
@@ -40,12 +43,23 @@ function cantoralToRow(c: PublishedCantoral): any {
   };
 }
 
-/** Lista cantorales — opcionalmente filtra por parroquia. */
+/** Lista cantorales — opcionalmente filtra por parroquia.
+ *  Match insensible a mayúsculas y a whitespace en los extremos. Esto cubre
+ *  casos donde una fila vieja se guardó con trailing space, distinta
+ *  capitalización u origen mixto (mock data vs profile setup actual).
+ *  Sin esa tolerancia, el Pueblo fiel veía la lista vacía aunque sí
+ *  hubiera cantorales para su parroquia. */
 export async function listCantorals(parishName?: string): Promise<PublishedCantoral[]> {
   try {
     const sb = getSupabaseClient();
     let query = sb.from(TABLE).select('*').order('date', { ascending: false });
-    if (parishName) query = query.eq('parish_name', parishName);
+    const normalized = parishName?.trim();
+    if (normalized) {
+      // Escape PostgREST ilike wildcards in the literal so a name with `%` or
+      // `_` is matched as-is instead of as a pattern.
+      const escaped = normalized.replace(/[\\%_]/g, (m) => `\\${m}`);
+      query = query.ilike('parish_name', escaped);
+    }
 
     const { data, error } = await query;
     if (error) {

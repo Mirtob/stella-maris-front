@@ -356,6 +356,18 @@ function AppContent() {
   };
 
   const handlePublishCantoral = async (newCantoral: PublishedCantoral) => {
+    // Q16 — Validar sesión antes de tocar la red. Si el token de Supabase ya
+    // expiró y el auto-refresh falló, el insert respondería 401 con un mensaje
+    // críptico ("JWT expired"). Mejor frenarlo acá y guiar al usuario al login.
+    const session = await getStoredSession();
+    if (!session) {
+      toast.error('Sesión expirada', {
+        description: 'Tu sesión caducó. Iniciá sesión de nuevo para publicar el cantoral.',
+      });
+      setRoute({ screen: 'login' });
+      return;
+    }
+
     // Optimistic UI: show cantoral immediately while the request is in flight
     setPublishedCantorals(prev => [newCantoral, ...prev]);
 
@@ -363,7 +375,21 @@ function AppContent() {
     if (!result.ok) {
       // Revert the optimistic update — keep the draft intact so the coro doesn't lose work
       setPublishedCantorals(prev => prev.filter(c => c.id !== newCantoral.id));
-      toast.error('Error al publicar el cantoral. Revisa tu conexión.', { description: result.error });
+
+      // Q15 — Traducir errores de Supabase a mensajes humanos.
+      // RLS, JWT, network y "duplicate key" son los más comunes en producción.
+      const raw = (result.error ?? '').toLowerCase();
+      let humanMsg = 'No pudimos guardar el cantoral. Volvé a intentar.';
+      if (raw.includes('jwt') || raw.includes('unauthorized') || raw.includes('401')) {
+        humanMsg = 'Tu sesión caducó. Iniciá sesión de nuevo.';
+      } else if (raw.includes('row-level security') || raw.includes('rls') || raw.includes('permission denied')) {
+        humanMsg = 'No tenés permiso para publicar en esta parroquia.';
+      } else if (raw.includes('duplicate') || raw.includes('unique')) {
+        humanMsg = 'Ya existe un cantoral con esos datos para esta parroquia y horario.';
+      } else if (raw.includes('failed to fetch') || raw.includes('network')) {
+        humanMsg = 'Sin conexión a internet. Revisá tu red y volvé a intentar.';
+      }
+      toast.error('Error al publicar el cantoral', { description: humanMsg });
       return;
     }
 
