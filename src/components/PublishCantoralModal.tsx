@@ -146,11 +146,11 @@ export function PublishCantoralModal({ cantoral, parishName, onClose, onPublish,
             }}
           />
           <div
-            className="relative bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900 dark:to-orange-900 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border-4 border-blue-800 transition-colors"
+            className="relative bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900 dark:to-orange-900 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col border-4 border-blue-800 transition-colors overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="sticky top-0 bg-gradient-to-r from-blue-900 to-blue-950 text-white p-6 rounded-t-3xl z-10 border-b-4 border-blue-800">
+            {/* Header — fixed top of the flex column */}
+            <div className="flex-shrink-0 bg-gradient-to-r from-blue-900 to-blue-950 text-white p-6 z-10 border-b-4 border-blue-800">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <Send className="w-10 h-10" strokeWidth={2.5} />
@@ -168,8 +168,8 @@ export function PublishCantoralModal({ cantoral, parishName, onClose, onPublish,
               </div>
             </div>
 
-            {/* Content */}
-            <div className="p-3 sm:p-5 space-y-6">
+            {/* Content — scrollable middle region of the flex column */}
+            <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-6">
               {/* Parish Name */}
               <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
                 <div className="flex items-center gap-3 mb-2">
@@ -296,8 +296,11 @@ export function PublishCantoralModal({ cantoral, parishName, onClose, onPublish,
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Buttons */}
+            {/* Footer — fixed bottom of the flex column. Stays visible even
+                when the mobile virtual keyboard shrinks the viewport. */}
+            <div className="flex-shrink-0 bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-950 dark:to-orange-950 border-t-4 border-blue-800 p-3 sm:p-5" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
               <div className="flex gap-3">
                 <button
                   onClick={onClose}

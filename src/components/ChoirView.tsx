@@ -323,19 +323,30 @@ export function ChoirView({
           })}
         </div>
 
-        {/* Publish Button al final (evitar scroll innecesario) */}
-        {cantoral.length > 0 && (
-          <div className="mt-8 mb-6">
+        {/* Spacer so the last category isn't covered by the sticky CTA */}
+        {cantoral.length > 0 && <div aria-hidden className="h-24" />}
+      </div>
+
+      {/* Sticky Publish CTA — always visible at the bottom of the viewport
+          while there is at least one song in the draft. Respects iOS safe area. */}
+      {cantoral.length > 0 && (
+        <div
+          className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-amber-100 via-amber-100/95 to-amber-100/0 dark:from-slate-900 dark:via-slate-900/95 dark:to-slate-900/0 px-3 sm:px-4 pt-6"
+          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+        >
+          <div className="max-w-md md:max-w-2xl mx-auto">
             <button
               onClick={() => setShowPublishModal(true)}
-              className="w-full bg-gradient-to-br from-blue-900 to-blue-950 text-white py-4 px-3 sm:px-4 rounded-2xl shadow-xl hover:shadow-2xl active:scale-98 transition-all flex items-center justify-center gap-3 border-2 border-blue-800"
+              className="w-full bg-gradient-to-br from-blue-900 to-blue-950 text-white py-4 px-3 sm:px-4 rounded-2xl shadow-2xl active:scale-98 transition-all flex items-center justify-center gap-3 border-2 border-blue-800"
             >
               <Send className="w-6 h-6" />
-              <span className="text-xl font-bold">Publicar Cantoral para los Fieles</span>
+              <span className="text-base sm:text-lg font-bold">
+                Publicar Cantoral · {cantoral.length} {cantoral.length === 1 ? 'canto' : 'cantos'}
+              </span>
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Publish Modal */}
       {showPublishModal && (
