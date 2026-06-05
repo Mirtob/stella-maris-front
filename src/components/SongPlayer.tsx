@@ -269,8 +269,11 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
               )}
             </div>
 
-            {/* Lyrics Viewer */}
-            <div className="bg-white dark:bg-gray-900 p-6 overflow-auto transition-colors" style={{ maxHeight: '600px' }}>
+            {/* Lyrics Viewer — responsive height:
+                  Mobile (<640px): cap at 50% of viewport so the YouTube player
+                  stays visible above the fold.
+                  Tablet/desktop: 600px fixed cap. */}
+            <div className="bg-white dark:bg-gray-900 p-4 sm:p-6 overflow-auto transition-colors max-h-[50vh] sm:max-h-[600px]">
               {/* Pueblo Fiel: Solo letra sin acordes */}
               {isPuebloFiel && <LyricsOnly lyrics={displayedLyrics} />}
               

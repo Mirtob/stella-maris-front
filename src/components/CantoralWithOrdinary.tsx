@@ -50,37 +50,37 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong }: CantoralW
       }
 
       return (
-        <div key={section.id} className="bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-900/40 dark:to-blue-900/40 rounded-3xl p-6 border-4 border-purple-300 dark:border-purple-600 transition-colors">
+        <div key={section.id} className="bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-900/40 dark:to-blue-900/40 rounded-2xl sm:rounded-3xl p-3 sm:p-6 border-2 sm:border-4 border-purple-300 dark:border-purple-600 transition-colors">
           {/* Posture Indicator */}
-          <div className="flex items-center gap-3 mb-4">
-            <div className={`px-3 sm:px-4 py-3 rounded-2xl border-4 ${postureColors[section.posture]} font-bold text-xl`}>
-              <span className="text-3xl mr-2">{postureIcons[section.posture]}</span>
+          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+            <div className={`px-2 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl border-2 sm:border-4 ${postureColors[section.posture]} font-bold text-sm sm:text-xl`}>
+              <span className="text-xl sm:text-3xl mr-1 sm:mr-2">{postureIcons[section.posture]}</span>
               {postureLabels[section.posture]}
             </div>
           </div>
 
           {/* Song Title */}
-          <div className="flex items-center gap-3 mb-4">
-            <span className="text-4xl">{section.icon}</span>
-            <h3 className="text-lg sm:text-2xl font-bold text-purple-900 dark:text-purple-200">
+          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+            <span className="text-2xl sm:text-4xl">{section.icon}</span>
+            <h3 className="text-base sm:text-2xl font-bold text-purple-900 dark:text-purple-200">
               {section.title}
             </h3>
           </div>
 
           {/* Song Card */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 border-4 border-purple-200 dark:border-purple-700 shadow-xl transition-colors">
-            <div className="flex items-center gap-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl p-3 sm:p-5 border-2 sm:border-4 border-purple-200 dark:border-purple-700 shadow-xl transition-colors">
+            <div className="flex items-center gap-3 sm:gap-4">
               <button
                 onClick={() => setSelectedSong(song)}
-                className="w-16 h-16 flex-shrink-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform shadow-lg"
+                className="w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl sm:rounded-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform shadow-lg"
               >
-                <Music className="w-8 h-8" strokeWidth={2.5} />
+                <Music className="w-6 h-6 sm:w-8 sm:h-8" strokeWidth={2.5} />
               </button>
               <div className="flex-1 min-w-0">
-                <h4 className="text-2xl sm:text-lg sm:text-2xl font-bold text-gray-800 dark:text-white truncate">
+                <h4 className="text-base sm:text-2xl font-bold text-gray-800 dark:text-white truncate">
                   {song.title}
                 </h4>
-                <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400">
+                <p className="text-sm sm:text-xl text-gray-600 dark:text-gray-400 truncate">
                   {song.artist || 'Artista desconocido'}
                 </p>
               </div>
@@ -93,15 +93,15 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong }: CantoralW
     // Si es una instrucción postural
     if (section.type === 'instruction') {
       return (
-        <div key={section.id} className={`rounded-3xl p-6 border-4 ${section.color} transition-colors`}>
-          <div className="flex items-center gap-4">
-            <div className={`px-3 sm:px-4 py-3 rounded-2xl border-4 ${postureColors[section.posture]} font-bold text-xl sm:text-2xl`}>
-              <span className="text-4xl mr-3">{postureIcons[section.posture]}</span>
+        <div key={section.id} className={`rounded-2xl sm:rounded-3xl p-3 sm:p-6 border-2 sm:border-4 ${section.color} transition-colors`}>
+          <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+            <div className={`px-2 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl border-2 sm:border-4 ${postureColors[section.posture]} font-bold text-sm sm:text-2xl`}>
+              <span className="text-xl sm:text-4xl mr-1 sm:mr-3">{postureIcons[section.posture]}</span>
               {postureLabels[section.posture]}
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-4xl">{section.icon}</span>
-              <h3 className="text-2xl sm:text-lg sm:text-2xl font-bold">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <span className="text-2xl sm:text-4xl flex-shrink-0">{section.icon}</span>
+              <h3 className="text-base sm:text-2xl font-bold truncate">
                 {section.title}
               </h3>
             </div>

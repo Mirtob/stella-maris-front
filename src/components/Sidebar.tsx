@@ -1,4 +1,5 @@
 import { X, Home, BookOpen, GraduationCap, ShieldCheck, Music, LogOut, User, Settings, List, History, Calendar, Church, Book, Cross } from 'lucide-react';
+import { useEffect } from 'react';
 import { UserProfile, UserRole } from '../types';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
 
@@ -47,21 +48,40 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
   // Filter menu by the effective session role, not the permanent registration role
   const visibleMenuItems = menuItems.filter(item => item.roles.includes(effectiveRole));
 
+  // Close on ESC + lock body scroll while open
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   return (
     <>
-      {/* Overlay */}
+      {/* Overlay — must sit ABOVE the global ThemeToggle (z-50) so that taps
+          in the upper-right corner are captured by the overlay (not the toggle)
+          and dismiss the sidebar. */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60]"
           onClick={onClose}
+          aria-hidden
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar — above the overlay */}
       <div
-        className={`fixed top-0 left-0 h-full w-[85vw] max-w-xs sm:max-w-sm bg-white shadow-2xl z-50 transform transition-transform duration-300 flex flex-col ${ 
+        className={`fixed top-0 left-0 h-full w-[85vw] max-w-xs sm:max-w-sm bg-white shadow-2xl z-[70] transform transition-transform duration-300 flex flex-col ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
+        aria-hidden={!isOpen}
       >
         {/* Botón Cerrar - Posicionado de forma absoluta en la esquina superior derecha */}
         <button

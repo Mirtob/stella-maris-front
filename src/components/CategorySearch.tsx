@@ -473,9 +473,12 @@ export function CategorySearch({
                     opacity: 0
                   }}
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1 mr-3">
-                      <h3 className="text-lg font-bold text-blue-950 dark:text-white leading-tight mb-1 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
+                  <div className="flex items-start justify-between mb-3 gap-3">
+                    {/* min-w-0 lets the flex child shrink below its content's
+                        natural width, which lets the title truncate instead of
+                        forcing horizontal overflow on narrow phones. */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base sm:text-lg font-bold text-blue-950 dark:text-white leading-tight mb-1 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors line-clamp-2">
                         {song.title}
                       </h3>
                       

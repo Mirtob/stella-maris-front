@@ -98,13 +98,14 @@ export function CantoralQRDialog({
         className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 border-4 border-blue-800 animate-fadeInUp transition-colors max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close button */}
+        {/* Close button — 44x44 touch target per Apple HIG, with negative margin
+            offset so it sits in the safe corner without overlapping the QR. */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
+          className="absolute -top-2 -right-2 sm:top-3 sm:right-3 w-11 h-11 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 shadow-lg hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center transition-colors z-10"
           aria-label="Cerrar"
         >
-          <X className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+          <X className="w-5 h-5 text-slate-700 dark:text-slate-200" />
         </button>
 
         {/* Header */}
