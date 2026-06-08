@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Download, Share2, Copy, Check, X } from 'lucide-react';
+import { Download, Share2, Copy, Check, X, FileDown } from 'lucide-react';
 import QRCode from 'qrcode';
 import { toast } from 'sonner';
+import { safeWindowOpen } from '../utils/safeUrl';
 
 interface CantoralQRDialogProps {
   open: boolean;
   cantoralId: string;
   cantoralLabel?: string;  // e.g. "Domingo 5 de Pascua · 10:00 AM"
   parishName?: string;
+  pdfUrl?: string;          // URL pública del PDF del cantoral (Supabase Storage)
   onClose: () => void;
 }
 
@@ -22,6 +24,7 @@ export function CantoralQRDialog({
   cantoralId,
   cantoralLabel,
   parishName,
+  pdfUrl,
   onClose,
 }: CantoralQRDialogProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -149,7 +152,23 @@ export function CantoralQRDialog({
           </p>
         </div>
 
-        {/* Actions */}
+        {/* Descargar PDF del cantoral — botón prominente.
+            El coro lo necesita para tener el folleto en el teléfono offline
+            durante la Misa, sin depender de Supabase. */}
+        {pdfUrl && (
+          <button
+            onClick={() => {
+              const opened = safeWindowOpen(pdfUrl);
+              if (!opened) toast.error('No se pudo abrir el PDF.');
+            }}
+            className="w-full mb-3 py-3 px-4 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-700 text-white font-bold flex items-center justify-center gap-2 active:scale-95 hover:opacity-95 transition-all border-2 border-emerald-700 shadow-lg"
+          >
+            <FileDown className="w-5 h-5" />
+            Descargar PDF del cantoral
+          </button>
+        )}
+
+        {/* Acciones secundarias */}
         <div className="grid grid-cols-3 gap-2">
           <button
             onClick={handleCopyLink}

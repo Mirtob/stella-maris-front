@@ -593,6 +593,7 @@ function AppContent() {
         cantoralId={qrCantoral?.id ?? ''}
         cantoralLabel={qrCantoral ? `${qrCantoral.liturgicalDate} · ${qrCantoral.massTime}` : undefined}
         parishName={qrCantoral?.parishName}
+        pdfUrl={qrCantoral?.pdfUrl}
         onClose={() => setQrCantoral(null)}
       />
 
