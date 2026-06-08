@@ -24,6 +24,7 @@ import { SelectActiveParishDialog } from './components/SelectActiveParishDialog'
 import { RoleGuard } from './components/RoleGuard';
 import { CantoralQRDialog } from './components/CantoralQRDialog';
 import { CantoralDeepLink } from './components/CantoralDeepLink';
+import { OfflineBanner } from './components/OfflineBanner';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Song, UserProfile, UserRole, InstrumentType, PublishedCantoral } from './types';
@@ -127,7 +128,16 @@ type AppRoute =
 function App() {
   return (
     <ThemeProvider>
-      <Toaster position="top-center" richColors />
+      {/* Q28 — bottom-center en mobile evita tapado por el MenuButton de la
+          esquina superior; top-center vuelve en sm+ donde hay espacio.
+          Detectado por matchMedia en mount. */}
+      <Toaster
+        position={typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches ? 'bottom-center' : 'top-center'}
+        richColors
+        closeButton
+        offset={typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches ? 16 : undefined}
+      />
+      <OfflineBanner />
       <ThemeToggle />
       <AppContent />
     </ThemeProvider>
@@ -153,8 +163,23 @@ function AppContent() {
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
-  /** Navigate to a view inside the authenticated shell. */
+  /** Navigate to a view inside the authenticated shell.
+   *  Q19 — Si estábamos armando un cantoral (vista 'main' como Coro con cantos
+   *  en el draft) y nos vamos a otra vista, pedimos confirmación nativa.
+   *  Evita perder 15 minutos de armado por un tap accidental al sidebar. */
   function navigate(view: string) {
+    const isAbandoningDraft =
+      route.screen === 'app' &&
+      route.view === 'main' &&
+      cantoral.length > 0 &&
+      view !== 'main' &&
+      (userProfile?.activeRole || userProfile?.role) === 'Coro';
+    if (isAbandoningDraft) {
+      const ok = window.confirm(
+        `Tenés ${cantoral.length} ${cantoral.length === 1 ? 'canto' : 'cantos'} en el cantoral sin publicar. ¿Salir y perderlos?`
+      );
+      if (!ok) return;
+    }
     setRoute({ screen: 'app', view: view as ViewState });
   }
 

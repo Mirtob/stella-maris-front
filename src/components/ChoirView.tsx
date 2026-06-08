@@ -152,7 +152,10 @@ export function ChoirView({
             className="w-full bg-gradient-to-r from-purple-700 to-indigo-700 text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg border-2 border-purple-600 text-sm sm:text-base font-bold"
           >
             {geminiLoading ? <Loader className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            {geminiLoading ? 'Consultando IA...' : '✨ Sugerir cantos con IA'}
+            {/* Q22 — Texto explica tiempo estimado para que el coro no se
+                sienta perdido durante la espera. El timeout de 12s ya está
+                en el hook (Q18). */}
+            {geminiLoading ? 'Consultando IA… (hasta 10s)' : '✨ Sugerir cantos con IA'}
           </button>
 
           {showGeminiPanel && (

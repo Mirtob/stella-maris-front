@@ -139,42 +139,48 @@ export function PDFViewer({ proxyUrl, driveViewUrl, title }: PDFViewerProps) {
   return (
     <div className="bg-white rounded-lg overflow-hidden">
       {/* Toolbar */}
-      <div className="bg-gray-50 border-b border-gray-200 px-2 py-1.5 flex items-center justify-between gap-2">
+      {/* Q21 — Toolbar con tap targets >= 40px para mobile. Antes era p-1
+          + w-3.5 = ~22px, imposible de tocar con dedo sin errar. */}
+      <div className="bg-gray-50 border-b border-gray-200 px-3 py-2 flex items-center justify-between gap-2">
         {/* Paginación */}
         {numPages > 1 ? (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage <= 1}
-              className="p-1 rounded bg-blue-900 text-white disabled:opacity-40 active:scale-95"
+              aria-label="Página anterior"
+              className="w-10 h-10 rounded-lg bg-blue-900 text-white disabled:opacity-40 active:scale-95 flex items-center justify-center"
             >
-              <ChevronLeft className="w-3.5 h-3.5" />
+              <ChevronLeft className="w-5 h-5" />
             </button>
-            <span className="text-xs font-bold text-gray-700 px-1">{currentPage} / {numPages}</span>
+            <span className="text-sm font-bold text-gray-700 px-1 min-w-[44px] text-center">{currentPage} / {numPages}</span>
             <button
               onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))}
               disabled={currentPage >= numPages}
-              className="p-1 rounded bg-blue-900 text-white disabled:opacity-40 active:scale-95"
+              aria-label="Página siguiente"
+              className="w-10 h-10 rounded-lg bg-blue-900 text-white disabled:opacity-40 active:scale-95 flex items-center justify-center"
             >
-              <ChevronRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-5 h-5" />
             </button>
           </div>
         ) : <span className="text-xs text-gray-500">Pág. 1</span>}
 
         {/* Zoom */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setZoom(z => Math.max(0.5, z - 0.2))}
-            className="p-1 rounded bg-gray-200 text-gray-700 active:scale-95"
+            aria-label="Reducir zoom"
+            className="w-10 h-10 rounded-lg bg-gray-200 text-gray-700 active:scale-95 flex items-center justify-center"
           >
-            <ZoomOut className="w-3.5 h-3.5" />
+            <ZoomOut className="w-5 h-5" />
           </button>
-          <span className="text-xs font-bold text-gray-700 px-1">{Math.round(zoom * 100)}%</span>
+          <span className="text-sm font-bold text-gray-700 px-1 min-w-[48px] text-center">{Math.round(zoom * 100)}%</span>
           <button
             onClick={() => setZoom(z => Math.min(3, z + 0.2))}
-            className="p-1 rounded bg-gray-200 text-gray-700 active:scale-95"
+            aria-label="Aumentar zoom"
+            className="w-10 h-10 rounded-lg bg-gray-200 text-gray-700 active:scale-95 flex items-center justify-center"
           >
-            <ZoomIn className="w-3.5 h-3.5" />
+            <ZoomIn className="w-5 h-5" />
           </button>
         </div>
       </div>

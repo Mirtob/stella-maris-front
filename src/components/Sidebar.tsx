@@ -86,6 +86,7 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
         {/* Botón Cerrar - Posicionado de forma absoluta en la esquina superior derecha */}
         <button
           onClick={onClose}
+          aria-label="Cerrar menú"
           className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all active:scale-95 border-2 border-blue-900/20"
         >
           <X className="w-6 h-6 text-blue-950" strokeWidth={2.5} />
@@ -137,7 +138,9 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
             {activeParish && (
               <div className="mt-2 pt-2 border-t border-white/20 flex items-center gap-2 text-sm">
                 <span className="text-base">⛪</span>
-                <span className="font-medium truncate">{activeParish}</span>
+                {/* Q20 — title nativo del browser muestra el nombre completo
+                    cuando hover/long-press sobre el texto truncado. */}
+                <span className="font-medium truncate" title={activeParish}>{activeParish}</span>
               </div>
             )}
           </div>

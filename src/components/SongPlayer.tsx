@@ -147,16 +147,17 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
 
       {/* Content */}
       <div className="p-4 pb-24">
-        {/* YouTube Player Embebido */}
+        {/* YouTube Player Embebido — Q33: min-height en pantallas chicas
+            asegura que los controles del player tengan tap target usable. */}
         <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden mb-6 border-2 border-white/40 dark:border-white/20 transition-colors">
-          <div className="aspect-video bg-black">
+          <div className="aspect-video bg-black min-h-[200px]">
             <iframe
               width="100%"
               height="100%"
-              src={`https://www.youtube-nocookie.com/embed/${song.youtubeId}?rel=0`}
+              src={`https://www.youtube-nocookie.com/embed/${song.youtubeId}?rel=0&playsinline=1`}
               title={song.title}
               frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
               allowFullScreen
               className="w-full h-full"
             ></iframe>

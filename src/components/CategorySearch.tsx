@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Search, ChevronDown, ChevronUp, Music, Cross, CheckCircle, Play, AlertCircle, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Song, InstrumentType } from '../types';
@@ -339,8 +339,24 @@ export function CategorySearch({
   const liturgicalColor = getCurrentLiturgicalColor();
   const crossColor = getLiturgicalCrossColor(liturgicalColor);
 
+  // Q31 — Scroll-into-view del header al expandir esta categoría.
+  // Evita que el coro pierda referencia visual cuando la lista expandida
+  // empuja contenido hacia abajo.
+  const containerRef = useRef<HTMLDivElement>(null);
+  const wasExpandedRef = useRef(false);
+  useEffect(() => {
+    if (isExpanded && !wasExpandedRef.current && containerRef.current) {
+      // Delay 1 frame so the expansion animation comienza y el scroll
+      // queda alineado con el contenido final.
+      requestAnimationFrame(() => {
+        containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+    wasExpandedRef.current = isExpanded;
+  }, [isExpanded]);
+
   return (
-    <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border-2 border-white/40 dark:border-white/20 transition-all hover:shadow-xl">
+    <div ref={containerRef} className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border-2 border-white/40 dark:border-white/20 transition-all hover:shadow-xl scroll-mt-4">
       {/* Header */}
       <button
         onClick={onToggle}
@@ -443,6 +459,8 @@ export function CategorySearch({
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-900 dark:text-blue-300 pointer-events-none" />
             <input
               type="text"
+              role="searchbox"
+              aria-label={`Buscar cantos en categoría ${category}`}
               placeholder="Buscar por título, autor o misa..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -514,8 +532,9 @@ export function CategorySearch({
                       </p>
                     </div>
                     {isInCantoral(song.id) && (
-                      <div className="flex-shrink-0 bg-green-500/20 backdrop-blur-sm rounded-full p-2 border-2 border-green-500">
-                        <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" strokeWidth={2.5} />
+                      <div className="flex-shrink-0 flex items-center gap-1.5 bg-green-500/20 backdrop-blur-sm rounded-full pl-2 pr-3 py-1 border-2 border-green-500" aria-label="Agregado al cantoral">
+                        <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" strokeWidth={2.5} />
+                        <span className="text-xs font-bold text-green-700 dark:text-green-300">Agregado</span>
                       </div>
                     )}
                   </div>

@@ -331,9 +331,12 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, use
                               </div>
                             </div>
 
-                            {/* Botones de acción */}
+                            {/* Botones de acción — Q15ext: en 320px el grid de
+                                2 columnas dejaba botones de 130px que cortaban
+                                'Ver Ordinario'. Apilar verticalmente en
+                                pantallas muy chicas y en grid solo en sm+. */}
                             <div className="p-4 bg-white/40 dark:bg-white/10 backdrop-blur-sm border-b border-white/30 transition-colors">
-                              <div className="grid grid-cols-2 gap-3">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <button
                                   onClick={() => setViewingOrdinary(cantoral.id)}
                                   className="bg-gradient-to-br from-blue-900 to-blue-950 text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-blue-800"

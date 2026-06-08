@@ -15,9 +15,17 @@ export function CantoralPreview({ cantoral, onRemove, onPlaySong }: CantoralPrev
         <h3 className="text-sm font-bold text-blue-950 dark:text-white mb-1">
           Cantoral Vacío
         </h3>
+        {/* Q30 — Empty state accionable: indica explícitamente DÓNDE buscar
+            ('más abajo') y QUÉ paso sigue ('tocá +'). */}
         <p className="text-xs text-blue-900 dark:text-blue-100">
-          Comienza a buscar cantos por categoría para armar tu cantoral
+          Elegí cantos en las categorías de más abajo —
+          <br />
+          Entrada, Salmo, Aleluya, Comunión, etc.
         </p>
+        <p className="text-xs text-blue-700 dark:text-blue-300 mt-2 italic">
+          Tocá <span className="inline-block bg-blue-700 text-white rounded px-1.5 py-0.5 font-bold not-italic mx-0.5">+</span> en cualquier canto para agregarlo
+        </p>
+        <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-2 animate-bounce">↓ Categorías abajo ↓</p>
       </div>
     );
   }
@@ -136,10 +144,13 @@ export function CantoralPreview({ cantoral, onRemove, onPlaySong }: CantoralPrev
                       </div>
                     </div>
 
-                    {/* Remove Button */}
+                    {/* Q25 — Remove Button siempre visible. opacity-0 group-hover
+                        no funcionaba en touch devices y el coro no podía
+                        descubrir cómo sacar un canto. Min 44px de tap target. */}
                     <button
                       onClick={() => onRemove(song.id)}
-                      className="flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 active:scale-95 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center"
+                      aria-label={`Quitar ${song.title} del cantoral`}
+                      className="flex-shrink-0 w-11 h-11 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 active:scale-95 transition-all flex items-center justify-center"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
