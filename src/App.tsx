@@ -148,6 +148,8 @@ function AppContent() {
   const [qrCantoral, setQrCantoral] = useState<PublishedCantoral | null>(null);
   // Server-authoritative admin check (vs. trusting the role saved in localStorage)
   const [isVerifiedAdmin, setIsVerifiedAdmin] = useState(false);
+  // Q17 — flag para mostrar skeleton mientras Supabase responde con la lista
+  const [loadingCantorals, setLoadingCantorals] = useState(true);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -197,7 +199,10 @@ function AppContent() {
   useEffect(() => {
     if (route.screen !== 'app' || !userProfile) return;
     const parish = userProfile.activeParishName || userProfile.parishName;
-    listCantorals(parish).then(setPublishedCantorals);
+    setLoadingCantorals(true);
+    listCantorals(parish)
+      .then(setPublishedCantorals)
+      .finally(() => setLoadingCantorals(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route.screen, userProfile]);
 
@@ -586,6 +591,7 @@ function AppContent() {
         activeParishName,
         cantoral,
         publishedCantorals,
+        loadingCantorals,
         onAddToCantoral: handleAddToCantoral,
         onRemoveFromCantoral: handleRemoveFromCantoral,
         onPlaySong: handlePlaySong,
@@ -610,6 +616,7 @@ interface ViewProps {
   activeParishName: string;
   cantoral: Song[];
   publishedCantorals: PublishedCantoral[];
+  loadingCantorals: boolean;
   onAddToCantoral: (song: Song) => void;
   onRemoveFromCantoral: (songId: string) => void;
   onPlaySong: (song: Song) => void;
@@ -639,6 +646,7 @@ function renderView(p: ViewProps): JSX.Element | null {
         return (
           <PublishedCantorals
             cantorals={p.publishedCantorals}
+            loading={p.loadingCantorals}
             onPlaySong={p.onPlaySong}
             userRole={p.effectiveRole}
             userParishName={p.activeParishName}
@@ -664,6 +672,7 @@ function renderView(p: ViewProps): JSX.Element | null {
       return (
         <PublishedCantorals
           cantorals={p.publishedCantorals}
+          loading={p.loadingCantorals}
           onPlaySong={p.onPlaySong}
           userRole={p.effectiveRole}
           userParishName={p.activeParishName}

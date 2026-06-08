@@ -8,12 +8,13 @@ import { toast } from 'sonner';
 
 interface PublishedCantoralsProps {
   cantorals: PublishedCantoral[];
+  loading?: boolean;
   onPlaySong: (song: Song) => void;
   userRole?: 'Coro' | 'Pueblo fiel' | 'Admin';
   userParishName?: string; // Parroquia del usuario para filtrar
 }
 
-export function PublishedCantorals({ cantorals, onPlaySong, userRole, userParishName }: PublishedCantoralsProps) {
+export function PublishedCantorals({ cantorals, loading = false, onPlaySong, userRole, userParishName }: PublishedCantoralsProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewingOrdinary, setViewingOrdinary] = useState<string | null>(null);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
@@ -142,24 +143,50 @@ export function PublishedCantorals({ cantorals, onPlaySong, userRole, userParish
             <h1 className="text-xl font-bold text-blue-950 dark:text-white mb-1">Cantorales Publicados</h1>
           </div>
 
-          <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/40 dark:border-white/20 text-center transition-colors">
-            <MusicIcon className="w-10 h-10 mx-auto mb-2 text-blue-400 dark:text-blue-300" />
-            <h2 className="text-base font-bold text-blue-950 dark:text-white mb-2">No hay cantorales publicados</h2>
-            <p className="text-xs text-blue-900 dark:text-blue-100 mb-3">
-              Los cantorales que publiquen los coros de tu parroquia<br />
-              aparecerán aquí para que puedas verlos
-            </p>
-            {userParishName && (
-              <div className="mt-6 bg-blue-100/60 dark:bg-blue-900/40 rounded-xl p-4 border-2 border-blue-300 dark:border-blue-700">
-                <p className="text-sm text-blue-950 dark:text-blue-100 font-semibold mb-2">
-                  📍 Tu parroquia:
-                </p>
-                <p className="text-base text-blue-900 dark:text-blue-200">
-                  {userParishName.split(' - ')[0]}
-                </p>
-              </div>
-            )}
-          </div>
+          {loading ? (
+            /* Q17 — Skeleton mientras Supabase responde. Evita que el Pueblo
+               fiel vea 'No hay cantorales' durante 1-2s en una red 4G lenta
+               y crea que la app está vacía. */
+            <div className="space-y-3" aria-live="polite" aria-busy="true">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="bg-white/40 dark:bg-white/10 rounded-2xl p-4 border-2 border-white/40 dark:border-white/20 animate-pulse"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-200/60 dark:bg-blue-800/40" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 bg-blue-200/60 dark:bg-blue-800/40 rounded w-3/4" />
+                      <div className="h-2 bg-blue-200/40 dark:bg-blue-800/30 rounded w-1/2" />
+                    </div>
+                  </div>
+                  <div className="h-2 bg-blue-200/40 dark:bg-blue-800/30 rounded w-2/3" />
+                </div>
+              ))}
+              <p className="text-xs text-blue-700 dark:text-blue-300 text-center pt-2">
+                Buscando cantorales…
+              </p>
+            </div>
+          ) : (
+            <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/40 dark:border-white/20 text-center transition-colors">
+              <MusicIcon className="w-10 h-10 mx-auto mb-2 text-blue-400 dark:text-blue-300" />
+              <h2 className="text-base font-bold text-blue-950 dark:text-white mb-2">No hay cantorales publicados</h2>
+              <p className="text-xs text-blue-900 dark:text-blue-100 mb-3">
+                Los cantorales que publiquen los coros de tu parroquia<br />
+                aparecerán aquí para que puedas verlos
+              </p>
+              {userParishName && (
+                <div className="mt-6 bg-blue-100/60 dark:bg-blue-900/40 rounded-xl p-4 border-2 border-blue-300 dark:border-blue-700">
+                  <p className="text-sm text-blue-950 dark:text-blue-100 font-semibold mb-2">
+                    📍 Tu parroquia:
+                  </p>
+                  <p className="text-base text-blue-900 dark:text-blue-200">
+                    {userParishName.split(' - ')[0]}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     );
