@@ -356,7 +356,14 @@ export function CategorySearch({
   }, [isExpanded]);
 
   return (
-    <div ref={containerRef} className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border-2 border-white/40 dark:border-white/20 transition-all hover:shadow-xl scroll-mt-4">
+    <div
+      ref={containerRef}
+      className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border-2 border-white/40 dark:border-white/20 transition-all hover:shadow-xl scroll-mt-4"
+      // Q29 — contain: layout aísla el reflow de esta categoría del resto
+      // de la lista cuando expande/colapsa, reduciendo jank de scroll en
+      // dispositivos medios.
+      style={{ contain: 'layout' }}
+    >
       {/* Header */}
       <button
         onClick={onToggle}

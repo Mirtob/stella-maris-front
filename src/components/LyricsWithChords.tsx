@@ -1,3 +1,5 @@
+import { memo, useMemo } from 'react';
+
 interface LyricsWithChordsProps {
   lyrics: string;
 }
@@ -12,7 +14,12 @@ interface LyricsWithChordsProps {
  * Ejemplo:
  * "[C]Santo, [G]Santo, [Am]Santo\n[F]Es el Se[G]ñor"
  */
-export function LyricsWithChords({ lyrics }: LyricsWithChordsProps) {
+/**
+ * Q34 — memoizado con React.memo y useMemo para evitar re-render de 300+
+ * spans absolutamente posicionados cuando el padre re-renderiza por
+ * cualquier cambio. Re-rendea solo si cambia el prop `lyrics`.
+ */
+function LyricsWithChordsImpl({ lyrics }: LyricsWithChordsProps) {
   if (!lyrics) {
     return (
       <div className="text-center text-gray-600 dark:text-gray-400 py-4">
@@ -107,7 +114,9 @@ export function LyricsWithChords({ lyrics }: LyricsWithChordsProps) {
     );
   };
 
-  const lines = lyrics.split('\n');
+  // Q34 — memo del split para que no rompa la igualdad referencial cuando
+  // el padre re-renderiza con el mismo lyrics (común al cambiar transposition).
+  const lines = useMemo(() => lyrics.split('\n'), [lyrics]);
 
   return (
     <div className="bg-white/60 dark:bg-white/10 rounded-xl p-4 border-2 border-blue-200 dark:border-blue-700 font-mono">
@@ -117,3 +126,5 @@ export function LyricsWithChords({ lyrics }: LyricsWithChordsProps) {
     </div>
   );
 }
+
+export const LyricsWithChords = memo(LyricsWithChordsImpl);

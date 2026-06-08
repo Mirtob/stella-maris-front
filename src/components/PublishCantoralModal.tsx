@@ -23,6 +23,20 @@ interface CustomLiturgicalDate {
 
 type VoiceSelection = 'Soprano' | 'Contralto' | 'Tenor' | 'Bajo' | 'Full Score';
 
+/** Q38 — Normaliza horarios variados al formato 'HH:MM AM/PM' canónico. */
+function normalizeMassTime(raw: string): string {
+  const trimmed = raw.trim().toUpperCase().replace(/\s+/g, ' ');
+  if (!trimmed) return raw;
+  // Match HH:MM with optional AM/PM
+  const m = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/);
+  if (!m) return trimmed; // unknown format, leave as-is
+  const h = parseInt(m[1], 10);
+  const min = m[2].padStart(2, '0');
+  const period = m[3] ?? (h >= 12 ? 'PM' : 'AM');
+  const displayH = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+  return `${String(displayH).padStart(2, '0')}:${min} ${period}`;
+}
+
 export function PublishCantoralModal({ cantoral, parishName, onClose, onPublish, userInstruments = [] }: PublishCantoralModalProps) {
   // Use local-timezone today to avoid the user in a negative-offset TZ
   // (Chile, México, Argentina) publishing for "tomorrow" when it's 22:00.
@@ -120,10 +134,17 @@ export function PublishCantoralModal({ cantoral, parishName, onClose, onPublish,
     if (!selectedDate || !liturgicalDate || !massTime || cantoral.length === 0) return;
     if (isPublishing) return; // prevent double-click
 
+    // Q37 — Normalizar liturgicalDate y massTime antes de mandar a DB.
+    // Evita inconsistencias entre filas (mismas celebraciones con distinto
+    // whitespace o tipeo) que rompen el agrupamiento en CantoralHistory.
+    const cleanLiturgicalDate = liturgicalDate.trim();
+    // Q38 — Normalizar massTime: '08:00' -> '08:00 AM', '8:30 am' -> '08:30 AM'.
+    const cleanMassTime = normalizeMassTime(massTime);
+
     setIsPublishing(true);
     try {
       // Await the full pipeline: DB insert + PDF gen + Storage upload + QR dialog
-      await onPublish(selectedDate, liturgicalDate, massTime);
+      await onPublish(selectedDate, cleanLiturgicalDate, cleanMassTime);
     } finally {
       setIsPublishing(false);
     }
