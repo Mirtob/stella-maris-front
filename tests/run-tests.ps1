@@ -1,0 +1,211 @@
+# ============================================================================
+# Stella Maris - Runner de pruebas automatizadas (PowerShell)
+# ============================================================================
+#
+# Ejecuta los tests integrales y de estrés en secuencia, guardando los outputs
+# en tests/output/ para que después los pegues en el INFORME.md.
+#
+# Uso:
+#   cd "C:\Users\gusta\Downloads\Aplicación Móvil para Coros (front)"
+#   powershell -ExecutionPolicy Bypass -File tests/run-tests.ps1
+#
+# O simplemente:
+#   .\tests\run-tests.ps1
+#
+# ============================================================================
+
+$ErrorActionPreference = 'Stop'
+
+# Ir a la raíz del proyecto (dos niveles arriba del script si se ejecuta desde tests/)
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectRoot = Split-Path -Parent $scriptDir
+Set-Location $projectRoot
+
+# Carpeta para los outputs
+$outputDir = Join-Path $projectRoot 'tests/output'
+if (-not (Test-Path $outputDir)) {
+    New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+}
+
+$timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
+
+function Write-Header {
+    param([string]$Title)
+    Write-Host ''
+    Write-Host '════════════════════════════════════════════════════════════════' -ForegroundColor Cyan
+    Write-Host "  $Title" -ForegroundColor Cyan
+    Write-Host '════════════════════════════════════════════════════════════════' -ForegroundColor Cyan
+}
+
+function Write-Step {
+    param([string]$Message)
+    Write-Host "  → $Message" -ForegroundColor Yellow
+}
+
+function Write-Ok {
+    param([string]$Message)
+    Write-Host "  ✓ $Message" -ForegroundColor Green
+}
+
+function Write-Err {
+    param([string]$Message)
+    Write-Host "  ✗ $Message" -ForegroundColor Red
+}
+
+# ─────────────────────────────────────────────────────────────────────────
+# 1. Verificar dependencias
+# ─────────────────────────────────────────────────────────────────────────
+
+Write-Header 'Verificando entorno'
+
+# Node.js
+try {
+    $nodeVersion = node --version
+    Write-Ok "Node.js detectado: $nodeVersion"
+} catch {
+    Write-Err 'Node.js no está instalado o no está en el PATH.'
+    Write-Host '  Instalalo desde https://nodejs.org' -ForegroundColor White
+    exit 1
+}
+
+# .env.local existe
+$envLocal = Join-Path $projectRoot '.env.local'
+if (-not (Test-Path $envLocal)) {
+    Write-Err 'No se encontró .env.local en la raíz del proyecto.'
+    Write-Host '  Debe contener al menos VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.' -ForegroundColor White
+    exit 1
+}
+Write-Ok '.env.local encontrado'
+
+# node_modules
+$nodeModules = Join-Path $projectRoot 'node_modules'
+if (-not (Test-Path $nodeModules)) {
+    Write-Step 'node_modules no existe. Instalando dependencias…'
+    npm install
+}
+Write-Ok 'Dependencias instaladas'
+
+# ─────────────────────────────────────────────────────────────────────────
+# 2. Setup de tests/.env
+# ─────────────────────────────────────────────────────────────────────────
+
+Write-Header 'Configurando tests/.env'
+
+$testsEnv = Join-Path $projectRoot 'tests/.env'
+
+if (Test-Path $testsEnv) {
+    Write-Ok "tests/.env ya existe — usando el actual"
+} else {
+    Write-Step "Copiando .env.local → tests/.env"
+    Copy-Item $envLocal $testsEnv
+    Write-Ok "Archivo copiado"
+}
+
+# Verificar PUBLIC_BASE_URL
+$envContent = Get-Content $testsEnv -Raw
+if ($envContent -notmatch 'PUBLIC_BASE_URL\s*=\s*\S+') {
+    Write-Host ''
+    Write-Host '  PUBLIC_BASE_URL no está en tests/.env.' -ForegroundColor Yellow
+    Write-Host '  Necesario para probar los endpoints /api de Vercel.' -ForegroundColor Yellow
+    $baseUrl = Read-Host '  Pega la URL de producción (ej. https://stella-maris.vercel.app) o ENTER para saltar'
+
+    if ($baseUrl -and $baseUrl.Trim() -ne '') {
+        Add-Content -Path $testsEnv -Value "`nPUBLIC_BASE_URL=$baseUrl"
+        Write-Ok "PUBLIC_BASE_URL agregado: $baseUrl"
+    } else {
+        Write-Host '  ⚠ Los tests de /api se van a saltar.' -ForegroundColor Yellow
+    }
+} else {
+    Write-Ok 'PUBLIC_BASE_URL ya está configurado'
+}
+
+# ─────────────────────────────────────────────────────────────────────────
+# 3. Ejecutar pruebas integradas
+# ─────────────────────────────────────────────────────────────────────────
+
+Write-Header '1/2 — Pruebas integradas (Supabase + Vercel)'
+Write-Host '  Esto valida RLS, RPC, Storage policies y CORS.' -ForegroundColor White
+Write-Host '  No genera carga significativa.' -ForegroundColor White
+Write-Host ''
+
+$integrationLog = Join-Path $outputDir "integration_$timestamp.log"
+
+try {
+    node tests/integration/run-all.mjs 2>&1 | Tee-Object -FilePath $integrationLog
+    $integrationExit = $LASTEXITCODE
+} catch {
+    Write-Err "Error ejecutando run-all.mjs: $_"
+    $integrationExit = 99
+}
+
+if ($integrationExit -eq 0) {
+    Write-Ok "Pruebas integradas: TODAS pasaron"
+} elseif ($integrationExit -eq 1) {
+    Write-Err "Pruebas integradas: hay fallas — revisar el output arriba"
+} else {
+    Write-Err "Pruebas integradas: error fatal de ejecución"
+}
+
+Write-Host ''
+Write-Host "  📝 Output guardado en: $integrationLog" -ForegroundColor Cyan
+
+# ─────────────────────────────────────────────────────────────────────────
+# 4. Confirmar estrés
+# ─────────────────────────────────────────────────────────────────────────
+
+Write-Header '2/2 — Pruebas de estrés (carga BAJA: 35 req/min)'
+Write-Host '  Dispara 35 peticiones a /api/sheets durante 60 segundos.' -ForegroundColor White
+Write-Host '  Verifica que el rate limit responda con 429 cuando se excede.' -ForegroundColor White
+Write-Host ''
+
+$response = Read-Host '  ¿Ejecutar prueba de estrés? (s/N)'
+if ($response -match '^[sS]') {
+    $stressLog = Join-Path $outputDir "stress_$timestamp.log"
+
+    try {
+        node tests/stress/rate-limit.mjs 2>&1 | Tee-Object -FilePath $stressLog
+    } catch {
+        Write-Err "Error ejecutando rate-limit.mjs: $_"
+    }
+
+    Write-Host ''
+    Write-Host "  📝 Output guardado en: $stressLog" -ForegroundColor Cyan
+} else {
+    Write-Host '  Salteada.' -ForegroundColor DarkGray
+}
+
+# ─────────────────────────────────────────────────────────────────────────
+# 5. Próximos pasos manuales
+# ─────────────────────────────────────────────────────────────────────────
+
+Write-Header 'Pruebas completas — próximos pasos manuales'
+
+Write-Host @"
+
+  Para completar el ciclo de QA, falta correr:
+
+  3. Verificaciones SQL en el SQL Editor de Supabase
+     Abrí:  tests/sql/checks.sql
+     Pegá cada bloque (separados por ── ──) y ejecutá uno por uno.
+     Anotá los resultados de cada SELECT en INFORME.md sección 4.
+
+  4. Smoke test caja negra desde celular real
+     Abrí:  tests/smoke/CHECKLIST.md
+     Conectate al dominio de producción desde tu teléfono y marcá
+     cada [ ] mientras vas probando los 68 casos.
+
+  5. Armar el informe final
+     Abrí:  tests/INFORME.md
+     Pegá los outputs guardados en tests/output/:
+       - $integrationLog
+"@ -ForegroundColor White
+
+if ($response -match '^[sS]') {
+    Write-Host "       - $stressLog" -ForegroundColor White
+}
+
+Write-Host ''
+Write-Host '════════════════════════════════════════════════════════════════' -ForegroundColor Cyan
+Write-Host '  Listo. Outputs en: tests/output/' -ForegroundColor Cyan
+Write-Host '════════════════════════════════════════════════════════════════' -ForegroundColor Cyan
+Write-Host ''

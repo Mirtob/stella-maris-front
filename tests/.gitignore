@@ -1,0 +1,7 @@
+# No commitear credenciales locales
+.env
+.env.local
+
+# No commitear logs de pruebas (son output local del usuario)
+output/
+*.log
