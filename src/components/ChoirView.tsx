@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Send, AlertCircle, Sparkles, Loader } from 'lucide-react';
+import { Send, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Home } from './Home';
 import { CategorySearch } from './CategorySearch';
@@ -10,7 +10,6 @@ import { SelectInstrumentModal } from './SelectInstrumentModal';
 import { Song, InstrumentType, PublishedCantoral } from '../types';
 import { getGospelAcclamationName, getGospelAcclamationIcon, getCurrentLiturgicalSeason } from '../utils/liturgicalSeason';
 import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji } from '../utils/specialLiturgicalDays';
-import { useGeminiSuggestions } from '../hooks/useGeminiSuggestions';
 import { useSongs } from '../hooks/useSongs';
 
 interface ChoirViewProps {
@@ -38,8 +37,6 @@ export function ChoirView({
   const [showInstrumentModal, setShowInstrumentModal] = useState(false);
   const [selectedInstrumentForMass, setSelectedInstrumentForMass] = useState<InstrumentType>(preferredInstrument);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
-  const [showGeminiPanel, setShowGeminiPanel] = useState(false);
-  const { getSuggestions, loading: geminiLoading, result: geminiResult, error: geminiError } = useGeminiSuggestions();
   const { songs: allSongs } = useSongs();
   const currentSeason = getCurrentLiturgicalSeason();
 
@@ -143,74 +140,6 @@ export function ChoirView({
             onPlaySong={onPlaySong}
             cantoral={cantoral}
           />
-        </div>
-
-        {/* Sugerencias con IA (Gemini) */}
-        <div className="mt-2">
-          <button
-            onClick={() => { setShowGeminiPanel(v => !v); if (!showGeminiPanel) getSuggestions(allSongs, currentSeason, specialDayName || undefined); }}
-            className="w-full bg-gradient-to-r from-purple-700 to-indigo-700 text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg border-2 border-purple-600 text-sm sm:text-base font-bold"
-          >
-            {geminiLoading ? <Loader className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            {/* Q22 — Texto explica tiempo estimado para que el coro no se
-                sienta perdido durante la espera. El timeout de 12s ya está
-                en el hook (Q18). */}
-            {geminiLoading ? 'Consultando IA… (hasta 10s)' : '✨ Sugerir cantos con IA'}
-          </button>
-
-          {showGeminiPanel && (
-            <div className="mt-3 bg-white/40 dark:bg-white/10 backdrop-blur-sm rounded-2xl border-2 border-purple-300 dark:border-purple-700 p-3 sm:p-4">
-              {geminiError && (
-                <div className="text-red-600 dark:text-red-400 text-sm p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">
-                  <p className="font-bold mb-1">Error al conectar con Gemini</p>
-                  <p>{geminiError}</p>
-                </div>
-              )}
-
-              {geminiResult && (
-                <>
-                  {geminiResult.consejo && (
-                    <div className="mb-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl p-3 border border-purple-200 dark:border-purple-700">
-                      <p className="text-xs font-bold text-purple-700 dark:text-purple-300 mb-1">💡 Consejo litúrgico</p>
-                      <p className="text-sm text-purple-900 dark:text-purple-100">{geminiResult.consejo}</p>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    {geminiResult.sugerencias.map((s, i) => {
-                      const song = allSongs.find(song => song.title.toLowerCase() === s.titulo.toLowerCase());
-                      return (
-                        <div key={i} className="bg-white/60 dark:bg-white/10 rounded-xl p-3 border border-purple-200 dark:border-purple-700">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <span className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wide">{s.categoria}</span>
-                              <p className="text-sm font-bold text-blue-950 dark:text-white truncate">{s.titulo}</p>
-                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{s.razon}</p>
-                            </div>
-                            {song && (
-                              <button
-                                onClick={() => { onAddToCantoral(song); toast.success(`${song.title} agregado al cantoral`); }}
-                                className="flex-shrink-0 bg-purple-600 text-white text-xs px-2 py-1.5 rounded-lg font-bold active:scale-95 transition-all"
-                              >
-                                + Agregar
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <button
-                    onClick={() => getSuggestions(allSongs, currentSeason, specialDayName || undefined)}
-                    className="mt-3 w-full text-xs text-purple-600 dark:text-purple-400 py-2 border border-purple-300 dark:border-purple-600 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                  >
-                    🔄 Generar nuevas sugerencias
-                  </button>
-                </>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Info about preferred instrument */}

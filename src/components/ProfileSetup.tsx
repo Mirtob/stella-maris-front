@@ -61,9 +61,8 @@ export function ProfileSetup({ onComplete, userEmail }: ProfileSetupProps) {
           onComplete(selectedRole, undefined, selectedParishNames);
         }
       } else if (selectedRole === 'Admin') {
-        if (selectedParishNames.length > 0) {
-          onComplete(selectedRole, undefined, selectedParishNames);
-        }
+        // Admin no necesita parroquia — tiene CRUD sobre todas.
+        onComplete(selectedRole, undefined, undefined);
       } else {
         onComplete(selectedRole);
       }
@@ -75,8 +74,12 @@ export function ProfileSetup({ onComplete, userEmail }: ProfileSetupProps) {
     if (selectedRole === 'Coro') {
       return selectedInstruments.length > 0 && selectedDiocese && selectedParishes.size > 0;
     }
-    if (selectedRole === 'Pueblo fiel' || selectedRole === 'Admin') {
+    if (selectedRole === 'Pueblo fiel') {
       return selectedDiocese && selectedParishes.size > 0;
+    }
+    if (selectedRole === 'Admin') {
+      // Admin no requiere selección de parroquia
+      return true;
     }
     return true;
   };
@@ -178,7 +181,7 @@ export function ProfileSetup({ onComplete, userEmail }: ProfileSetupProps) {
         </div>
 
         {/* Parish Selection - For Coro and Pueblo fiel */}
-        {(selectedRole === 'Coro' || selectedRole === 'Pueblo fiel' || selectedRole === 'Admin') && (
+        {(selectedRole === 'Coro' || selectedRole === 'Pueblo fiel') && (
           <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl shadow-xl p-3 sm:p-4 border-2 border-white/40 dark:border-white/20 mb-4 sm:mb-6 transition-colors">
             <div className="flex items-center gap-4 mb-6">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-900 to-blue-950 rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-blue-800">

@@ -220,16 +220,21 @@ function AppContent() {
     return () => { cancelled = true; };
   }, [userProfile?.id, userProfile?.email]);
 
-  // Load cantorals whenever we enter the app shell or the profile changes
+  // Load cantorals whenever we enter the app shell or the profile changes.
+  // Admin VE TODOS los cantorales (sin filtro de parroquia).
   useEffect(() => {
     if (route.screen !== 'app' || !userProfile) return;
-    const parish = userProfile.activeParishName || userProfile.parishName;
+    const effectiveRoleForLoad = userProfile.activeRole || userProfile.role;
+    const isAdminLoad = effectiveRoleForLoad === 'Admin' || isVerifiedAdmin;
+    const parish = isAdminLoad
+      ? undefined  // sin filtro: trae todos los cantorales de todas las parroquias
+      : (userProfile.activeParishName || userProfile.parishName);
     setLoadingCantorals(true);
     listCantorals(parish)
       .then(setPublishedCantorals)
       .finally(() => setLoadingCantorals(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route.screen, userProfile]);
+  }, [route.screen, userProfile, isVerifiedAdmin]);
 
   // Auth initialization — runs once on mount
   useEffect(() => {
@@ -261,7 +266,10 @@ function AppContent() {
           // Stale or invalid pending id — clear it
           localStorage.removeItem(PENDING_CANTORAL_KEY);
 
-          if (!storedProfile.activeRole) {
+          // Admin no necesita parroquia/selector — entra directo.
+          // Para el resto: si no hay activeRole, mostrar selector.
+          const isAdminProfile = storedProfile.role === 'Admin';
+          if (!isAdminProfile && !storedProfile.activeRole) {
             setShowParishSelector(true);
           }
           setRoute({ screen: 'app', view: 'main' });
@@ -327,20 +335,21 @@ function AppContent() {
       role,
     };
     const hasSingleParish = parishes?.length === 1;
+    // Admin no tiene parroquia ni activeParishName — tiene CRUD global.
+    const isAdminSetup = role === 'Admin';
     const profile: UserProfile = {
       ...baseProfile,
       role,
       instruments,
       instrument: instruments?.[0] ?? baseProfile.instrument,
-      parishes,
-      parishName: parishes?.[0],
-      // For single parish: set active state immediately; for multiple: selector will handle it
-      activeParishName: hasSingleParish ? parishes![0] : undefined,
-      activeRole: hasSingleParish ? role : undefined,
+      parishes: isAdminSetup ? undefined : parishes,
+      parishName: isAdminSetup ? undefined : parishes?.[0],
+      activeParishName: isAdminSetup ? undefined : (hasSingleParish ? parishes![0] : undefined),
+      activeRole: isAdminSetup ? 'Admin' : (hasSingleParish ? role : undefined),
     };
     setUserProfile(profile);
     saveUserProfile(profile);
-    if (!hasSingleParish) setShowParishSelector(true);
+    if (!isAdminSetup && !hasSingleParish) setShowParishSelector(true);
     setRoute({ screen: 'app', view: 'main' });
   };
 
@@ -357,6 +366,8 @@ function AppContent() {
     setUserProfile(updated);
     saveUserProfile(updated);
     setShowParishSelector(false);
+    // Tras cambio de perfil, llevar siempre al inicio del nuevo perfil.
+    setRoute({ screen: 'app', view: 'main' });
   };
 
   const handleAddToCantoral = (song: Song) => {

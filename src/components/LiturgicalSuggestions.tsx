@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Sparkles, ChevronLeft, ChevronRight, Play, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { Song } from '../types';
-import { mockSongs } from '../data/songs';
+import { useSongs } from '../hooks/useSongs';
 import { getCurrentLiturgicalSeason } from '../utils/liturgicalSeason';
+import { matchesSearch } from '../utils/textSearch';
 
 interface LiturgicalSuggestionsProps {
   onAddToCantoral?: (song: Song) => void;
@@ -14,60 +16,114 @@ export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [autoScroll, setAutoScroll] = useState(true);
 
+  // Catálogo real desde Supabase (mismo origen que CategorySearch).
+  // Antes usaba mockSongs, lo que armaba 'cantorales aparte' con cantos
+  // que no existían en el canal real.
+  const { songs: realSongs } = useSongs();
+
+  /**
+   * Si el canto es un Kyrie con massName (ej. "Misa de los Ángeles"),
+   * intercepta el agregado y replica el flujo de CategorySearch:
+   * agrega el Kyrie + automáticamente Santo, Cordero y Gloria del
+   * mismo autor (mismo massName y misma version). Si no encuentra
+   * alguno, agrega los que sí existen.
+   *
+   * Para no mantener el dialog acá (CategorySearch ya lo tiene), el
+   * comportamiento es directo: si el coro elige un Kyrie sugerido,
+   * recibe la Misa completa sin preguntar, con toast informativo.
+   */
+  const handleAddWithMassFlow = (song: Song) => {
+    if (!onAddToCantoral) return;
+
+    if (song.category === 'Kyrie' && song.massName) {
+      onAddToCantoral(song);
+
+      const santo = realSongs.find(s =>
+        s.massName === song.massName &&
+        s.category === 'Santo' &&
+        s.version === song.version
+      );
+      const cordero = realSongs.find(s =>
+        s.massName === song.massName &&
+        s.category === 'Cordero de Dios' &&
+        s.version === song.version
+      );
+      const gloria = realSongs.find(s =>
+        s.massName === song.massName &&
+        s.category === 'Gloria' &&
+        s.version === song.version
+      );
+
+      const added: string[] = [];
+      if (santo)  { onAddToCantoral(santo);  added.push('Santo'); }
+      if (cordero){ onAddToCantoral(cordero);added.push('Cordero'); }
+      if (gloria) { onAddToCantoral(gloria); added.push('Gloria'); }
+
+      if (added.length > 0) {
+        toast.success(`Misa "${song.massName}" agregada`, {
+          description: `+ ${added.join(', ')} del mismo autor`,
+        });
+      }
+      return;
+    }
+
+    onAddToCantoral(song);
+  };
+
   // Obtener sugerencias según el tiempo litúrgico actual
   const liturgicalSeason = getCurrentLiturgicalSeason();
-  
+
   // Filtrar cantos que tengan tags relacionados con el tiempo litúrgico
-  // Y que NO estén ya agregados al cantoral
-  // En producción, esto vendrá de las etiquetas de YouTube
+  // Y que NO estén ya agregados al cantoral.
+  // matchesSearch hace la búsqueda insensible a acentos.
   const getSuggestedSongs = (): Song[] => {
     let filteredSongs: Song[] = [];
-    
+
     switch (liturgicalSeason) {
       case 'Adviento':
-        filteredSongs = mockSongs.filter(song => 
-          song.tags?.includes('Adviento') || 
+        filteredSongs = realSongs.filter(song =>
+          song.tags?.includes('Adviento') ||
           song.tags?.includes('Preparación') ||
           song.tags?.includes('Espera') ||
-          song.title.toLowerCase().includes('adviento') ||
-          song.title.toLowerCase().includes('prepara')
+          matchesSearch(song.title, 'adviento') ||
+          matchesSearch(song.title, 'prepara')
         );
         break;
       
       case 'Navidad':
-        filteredSongs = mockSongs.filter(song => 
-          song.tags?.includes('Navidad') || 
+        filteredSongs = realSongs.filter(song =>
+          song.tags?.includes('Navidad') ||
           song.tags?.includes('Nacimiento') ||
-          song.title.toLowerCase().includes('navidad') ||
-          song.title.toLowerCase().includes('nació')
+          matchesSearch(song.title, 'navidad') ||
+          matchesSearch(song.title, 'nació')
         );
         break;
-      
+
       case 'Cuaresma':
-        filteredSongs = mockSongs.filter(song => 
-          song.tags?.includes('Cuaresma') || 
+        filteredSongs = realSongs.filter(song =>
+          song.tags?.includes('Cuaresma') ||
           song.tags?.includes('Penitencia') ||
           song.tags?.includes('Conversión') ||
-          song.title.toLowerCase().includes('cuaresma') ||
-          song.title.toLowerCase().includes('perdón')
+          matchesSearch(song.title, 'cuaresma') ||
+          matchesSearch(song.title, 'perdón')
         );
         break;
-      
+
       case 'Pascua':
-        filteredSongs = mockSongs.filter(song => 
-          song.tags?.includes('Pascua') || 
+        filteredSongs = realSongs.filter(song =>
+          song.tags?.includes('Pascua') ||
           song.tags?.includes('Resurrección') ||
           song.tags?.includes('Aleluya') ||
-          song.title.toLowerCase().includes('pascua') ||
-          song.title.toLowerCase().includes('resucitó') ||
-          song.title.toLowerCase().includes('aleluya')
+          matchesSearch(song.title, 'pascua') ||
+          matchesSearch(song.title, 'resucitó') ||
+          matchesSearch(song.title, 'aleluya')
         );
         break;
       
       case 'Tiempo Ordinario':
       default:
         // Para Tiempo Ordinario, mostrar los más populares o recientes
-        filteredSongs = mockSongs.filter(song => 
+        filteredSongs = realSongs.filter(song =>
           song.tags?.includes('Ordinario') || 
           song.tags?.includes('Popular')
         );
@@ -82,7 +138,7 @@ export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = 
     
     // Si no hay suficientes cantos con tags, tomar los primeros cantos disponibles (que no estén en el cantoral)
     if (filteredSongs.length < 4) {
-      const remainingSongs = mockSongs
+      const remainingSongs = realSongs
         .filter(song => !cantoral.some(cs => cs.id === song.id))
         .slice(0, 4 - filteredSongs.length);
       filteredSongs = [...filteredSongs, ...remainingSongs];
@@ -236,7 +292,7 @@ export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = 
               )}
               {onAddToCantoral && (
                 <button
-                  onClick={() => onAddToCantoral(currentSong)}
+                  onClick={() => handleAddWithMassFlow(currentSong)}
                   disabled={isInCantoral(currentSong.id)}
                   className={`flex-1 py-2 px-3 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${
                     isInCantoral(currentSong.id)
