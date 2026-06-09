@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Song } from '../types';
 import { SongFilters, listSongs } from '../services/songs';
-import { mockSongs } from '../data/songs';
 
 interface UseSongsResult {
   songs: Song[];
@@ -10,22 +9,24 @@ interface UseSongsResult {
 
 /**
  * Returns the song catalog from Supabase with optional filters.
- * Falls back to local mock data if Supabase is unreachable or returns nothing.
  *
- * Step 4 note: YouTube API (songLoader.ts) is no longer the data source.
- * songLoader.ts is kept as a standalone import tool for admins.
+ * IMPORTANTE — sin fallback a mockSongs:
+ *   En desarrollo manteníamos mockSongs como fallback para no mostrar pantalla
+ *   vacía. Pero en producción eso es un bug serio: el coro podría agregar al
+ *   cantoral cantos con youtubeId ficticio (de mocks), publicarlos, y los
+ *   pueblos fieles abren el reproductor y nada funciona.
+ *   Ahora si Supabase devuelve vacío, devolvemos array vacío — los componentes
+ *   muestran su empty state real ("Aún no hay cantos sincronizados").
  */
 export function useSongs(filters?: SongFilters): UseSongsResult {
-  // Start with mockSongs so components always have data on first render
-  // (before the Supabase fetch completes or if it fails)
-  const [songs, setSongs] = useState<Song[]>(mockSongs);
+  const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Destructure filter primitives to avoid stale closure / infinite re-render
-  const massMoment      = filters?.massMoment;
+  const massMoment       = filters?.massMoment;
   const liturgicalSeason = filters?.liturgicalSeason;
-  const instrument      = filters?.instrument;
-  const search          = filters?.search;
+  const instrument       = filters?.instrument;
+  const search           = filters?.search;
 
   useEffect(() => {
     let cancelled = false;
@@ -34,13 +35,14 @@ export function useSongs(filters?: SongFilters): UseSongsResult {
     listSongs({ massMoment, liturgicalSeason, instrument, search })
       .then(result => {
         if (cancelled) return;
-        // If Supabase returns data, use it; otherwise fall back to mock
-        setSongs(result.length > 0 ? result : mockSongs);
+        // No fallback: si Supabase está vacío, mostramos vacío real.
+        setSongs(result);
         setLoading(false);
       })
-      .catch(() => {
+      .catch((err) => {
         if (cancelled) return;
-        setSongs(mockSongs);
+        console.error('Error cargando catálogo de cantos:', err?.message);
+        setSongs([]);
         setLoading(false);
       });
 

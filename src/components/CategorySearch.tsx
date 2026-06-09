@@ -481,8 +481,26 @@ export function CategorySearch({
             {filteredSongs.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4 opacity-50">🔍</div>
-                <p className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-2">No se encontraron cantos</p>
-                <p className="text-base text-blue-800 dark:text-blue-200">Intenta con otros términos de búsqueda</p>
+                {/* Distinguir 'catálogo vacío' (Supabase sin cantos) de 'sin resultados'.
+                    Si la categoría entera no tiene cantos disponibles, el problema no
+                    es el filtro de búsqueda — el catálogo está vacío y hay que
+                    sincronizar con YouTube primero. */}
+                {categorySongs.length === 0 ? (
+                  <>
+                    <p className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-2">
+                      Aún no hay cantos sincronizados
+                    </p>
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      Pídele al administrador que sincronice el canal de YouTube
+                      para cargar el catálogo.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-2">No se encontraron cantos</p>
+                    <p className="text-base text-blue-800 dark:text-blue-200">Intentá con otros términos de búsqueda</p>
+                  </>
+                )}
               </div>
             ) : (
               filteredSongs.map((song, index) => (
