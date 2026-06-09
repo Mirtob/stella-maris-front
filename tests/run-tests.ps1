@@ -16,6 +16,11 @@
 
 $ErrorActionPreference = 'Stop'
 
+# Forzar UTF-8 en la consola para que los logs no salgan en UTF-16
+# (compatible con PowerShell 5.1 y 7+).
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
 # Ir a la raiz del proyecto
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
@@ -129,8 +134,12 @@ $integrationLog = Join-Path $outputDir "integration_$timestamp.log"
 $integrationExit = 0
 
 try {
-    node tests/integration/run-all.mjs 2>&1 | Tee-Object -FilePath $integrationLog -Encoding utf8
+    # Capturar todo, mostrar en consola, y escribir a archivo con encoding UTF-8.
+    # Esto reemplaza Tee-Object -Encoding utf8 que solo existe en PowerShell 6+.
+    $rawOutput = node tests/integration/run-all.mjs 2>&1 | Out-String
     $integrationExit = $LASTEXITCODE
+    Write-Host $rawOutput
+    [System.IO.File]::WriteAllText($integrationLog, $rawOutput, [System.Text.Encoding]::UTF8)
 } catch {
     Write-Err "Error ejecutando run-all.mjs: $_"
     $integrationExit = 99
@@ -163,7 +172,9 @@ if ($response -match '^[sS]') {
     $stressLog = Join-Path $outputDir "stress_$timestamp.log"
 
     try {
-        node tests/stress/rate-limit.mjs 2>&1 | Tee-Object -FilePath $stressLog -Encoding utf8
+        $rawStress = node tests/stress/rate-limit.mjs 2>&1 | Out-String
+        Write-Host $rawStress
+        [System.IO.File]::WriteAllText($stressLog, $rawStress, [System.Text.Encoding]::UTF8)
     } catch {
         Write-Err "Error ejecutando rate-limit.mjs: $_"
     }
