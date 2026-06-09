@@ -129,7 +129,7 @@ $integrationLog = Join-Path $outputDir "integration_$timestamp.log"
 $integrationExit = 0
 
 try {
-    node tests/integration/run-all.mjs 2>&1 | Tee-Object -FilePath $integrationLog
+    node tests/integration/run-all.mjs 2>&1 | Tee-Object -FilePath $integrationLog -Encoding utf8
     $integrationExit = $LASTEXITCODE
 } catch {
     Write-Err "Error ejecutando run-all.mjs: $_"
@@ -163,7 +163,7 @@ if ($response -match '^[sS]') {
     $stressLog = Join-Path $outputDir "stress_$timestamp.log"
 
     try {
-        node tests/stress/rate-limit.mjs 2>&1 | Tee-Object -FilePath $stressLog
+        node tests/stress/rate-limit.mjs 2>&1 | Tee-Object -FilePath $stressLog -Encoding utf8
     } catch {
         Write-Err "Error ejecutando rate-limit.mjs: $_"
     }
