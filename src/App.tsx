@@ -45,6 +45,7 @@ import {
 import { uploadCantoralPDF } from './services/cantoralPDF';
 import { generateChoirCantoralPDF } from './utils/choirCantoralPDFGenerator';
 import { isCurrentUserAdmin } from './services/admin';
+import { upsertCurrentUserProfile } from './services/userProfiles';
 
 const PENDING_CANTORAL_KEY = 'stella_maris_pending_cantoral_id';
 
@@ -252,6 +253,8 @@ function AppContent() {
       if (storedSession) {
         if (storedProfile) {
           setUserProfile(storedProfile);
+          // Refresh last_seen_at + datos en Supabase. Fire-and-forget.
+          upsertCurrentUserProfile(storedProfile).catch(() => undefined);
           toast.success(`¡Bienvenido ${storedProfile.name}! 🎵`);
 
           // Pick up a pending cantoral from a previous QR scan that required login.
@@ -349,6 +352,9 @@ function AppContent() {
     };
     setUserProfile(profile);
     saveUserProfile(profile);
+    // Persistir el perfil en Supabase para que el admin pueda verlo en
+    // ProfileManager. Fire-and-forget; el flujo local sigue igual aunque falle.
+    upsertCurrentUserProfile(profile).catch(() => undefined);
     if (!isAdminSetup && !hasSingleParish) setShowParishSelector(true);
     setRoute({ screen: 'app', view: 'main' });
   };

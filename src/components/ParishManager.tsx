@@ -1,7 +1,8 @@
-import { Church, Search, Edit2, Trash2, MapPin, Users, Plus, Building2, ArrowLeft } from 'lucide-react';
-import { useState } from 'react';
+import { Church, Search, Edit2, Trash2, MapPin, Users, Plus, Building2, ArrowLeft, Activity, RefreshCw, Loader } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
 import { chileDioceses, Diocese, Parish, Chapel } from '../data/chileDioceses';
 import { toast } from 'sonner';
+import { listActiveParishes, ParishActivity } from '../services/parishStats';
 
 interface ExtendedParish extends Parish {
   choirCount?: number;
@@ -13,6 +14,21 @@ interface ExtendedParish extends Parish {
 export function ParishManager() {
   const [selectedDiocese, setSelectedDiocese] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  // Parroquias con actividad real (consulta Supabase: user_profiles + published_cantorals).
+  const [activeParishes, setActiveParishes] = useState<ParishActivity[]>([]);
+  const [loadingActive, setLoadingActive] = useState(true);
+
+  const loadActive = useCallback(async () => {
+    setLoadingActive(true);
+    try {
+      const data = await listActiveParishes();
+      setActiveParishes(data);
+    } finally {
+      setLoadingActive(false);
+    }
+  }, []);
+
+  useEffect(() => { loadActive(); }, [loadActive]);
   const [showAddChapelDialog, setShowAddChapelDialog] = useState(false);
   const [showAddParishDialog, setShowAddParishDialog] = useState(false);
   const [showEditParishDialog, setShowEditParishDialog] = useState(false);
@@ -142,6 +158,67 @@ export function ParishManager() {
           </div>
           <h1 className="text-4xl font-bold text-purple-900 dark:text-white mb-2">Gestión de Parroquias y Capillas</h1>
           <p className="text-xl text-purple-700 dark:text-purple-300">Base de datos de Chile</p>
+        </div>
+
+        {/* Parroquias activas en la app — datos reales de Supabase */}
+        <div className="mb-6 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 rounded-2xl shadow-lg p-5 border-2 border-emerald-300 dark:border-emerald-700">
+          <div className="flex items-center justify-between mb-3 gap-2">
+            <h2 className="text-lg sm:text-xl font-bold text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+              <Activity className="w-5 h-5" />
+              Parroquias activas en la app
+            </h2>
+            <button
+              onClick={loadActive}
+              disabled={loadingActive}
+              className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-200 active:scale-95 disabled:opacity-50"
+              aria-label="Refrescar parroquias activas"
+            >
+              {loadingActive ? <Loader className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            </button>
+          </div>
+
+          {loadingActive ? (
+            <div className="space-y-2" aria-busy="true">
+              {[0, 1].map(i => (
+                <div key={i} className="bg-white/60 dark:bg-white/5 rounded-xl p-3 animate-pulse h-14" />
+              ))}
+            </div>
+          ) : activeParishes.length === 0 ? (
+            <p className="text-sm text-emerald-800 dark:text-emerald-200 italic">
+              Aún no hay actividad de parroquias en la app. Aparecerán acá cuando se registren usuarios o se publiquen cantorales.
+            </p>
+          ) : (
+            <div className="space-y-2 max-h-72 overflow-y-auto">
+              {activeParishes.map(p => (
+                <div
+                  key={p.parishName}
+                  className="bg-white dark:bg-slate-800 rounded-xl p-3 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between gap-2"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-800 dark:text-white truncate" title={p.parishName}>
+                      {p.parishName}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0 text-xs">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 font-bold">
+                      <Users className="w-3 h-3" /> {p.userCount}
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-200 font-bold">
+                      📖 {p.publishedCount}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-3 italic">
+            👤 = usuarios registrados · 📖 = cantorales publicados
+          </p>
+        </div>
+
+        <div className="mb-4 text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+          Catálogo de parroquias
         </div>
 
         {/* Diocese Filter */}
