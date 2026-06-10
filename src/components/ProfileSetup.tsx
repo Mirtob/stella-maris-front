@@ -8,9 +8,13 @@ import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551
 interface ProfileSetupProps {
   onComplete: (role: UserRole, instruments?: InstrumentType[], parishes?: string[]) => void;
   userEmail?: string;
+  onShowTerms?: () => void;
+  onShowPrivacy?: () => void;
 }
 
-export function ProfileSetup({ onComplete, userEmail }: ProfileSetupProps) {
+export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy }: ProfileSetupProps) {
+  // Aceptación legal — Ley 19.628. Sin esto no se puede continuar.
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
   // Admin eligibility is decided server-side via the `is_admin()` Supabase RPC
   // (against the `admins` table). The previous hardcoded ADMIN_EMAILS was
   // bypassable from DevTools by manipulating React state.
@@ -70,6 +74,8 @@ export function ProfileSetup({ onComplete, userEmail }: ProfileSetupProps) {
   };
 
   const canContinue = () => {
+    // Aceptación legal obligatoria por Ley 19.628 (datos sensibles religiosos).
+    if (!acceptedLegal) return false;
     if (!selectedRole) return false;
     if (selectedRole === 'Coro') {
       return selectedInstruments.length > 0 && selectedDiocese && selectedParishes.size > 0;
@@ -301,6 +307,40 @@ export function ProfileSetup({ onComplete, userEmail }: ProfileSetupProps) {
           </div>
         )}
 
+        {/* Aceptación legal — Ley 19.628 (datos personales y sensibles).
+            Sin esto el botón Continuar queda deshabilitado. */}
+        <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-3 sm:p-4 border-2 border-white/40 dark:border-white/20 mb-4 sm:mb-6 transition-colors">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={acceptedLegal}
+              onChange={(e) => setAcceptedLegal(e.target.checked)}
+              className="mt-1 w-5 h-5 sm:w-6 sm:h-6 rounded border-2 border-blue-700 dark:border-blue-400 bg-white dark:bg-white/10 accent-blue-700 cursor-pointer flex-shrink-0"
+              aria-label="Acepto los términos y la política de privacidad"
+            />
+            <span className="text-sm sm:text-base text-blue-950 dark:text-blue-100 leading-relaxed">
+              He leído y acepto los{' '}
+              <button
+                type="button"
+                onClick={onShowTerms}
+                className="underline font-bold text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100"
+              >
+                Términos de Uso
+              </button>
+              {' '}y la{' '}
+              <button
+                type="button"
+                onClick={onShowPrivacy}
+                className="underline font-bold text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100"
+              >
+                Política de Privacidad
+              </button>
+              . Doy mi consentimiento expreso para el tratamiento de mis datos
+              personales y de mi afiliación parroquial, conforme a la Ley 19.628.
+            </span>
+          </label>
+        </div>
+
         {/* Continue Button */}
         <button
           onClick={handleContinue}
@@ -313,6 +353,12 @@ export function ProfileSetup({ onComplete, userEmail }: ProfileSetupProps) {
         >
           Continuar
         </button>
+
+        {!acceptedLegal && (
+          <p className="text-center text-xs sm:text-sm text-blue-800 dark:text-blue-200 mt-3 italic">
+            Marcá la casilla de aceptación legal para continuar
+          </p>
+        )}
       </div>
     </div>
   );

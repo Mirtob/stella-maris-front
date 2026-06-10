@@ -25,6 +25,8 @@ import { RoleGuard } from './components/RoleGuard';
 import { CantoralQRDialog } from './components/CantoralQRDialog';
 import { CantoralDeepLink } from './components/CantoralDeepLink';
 import { OfflineBanner } from './components/OfflineBanner';
+import { TermsOfService } from './components/legal/TermsOfService';
+import { PrivacyPolicy } from './components/legal/PrivacyPolicy';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Song, UserProfile, UserRole, InstrumentType, PublishedCantoral } from './types';
@@ -120,6 +122,8 @@ type AppRoute =
   | { screen: 'player'; song: Song; returnView: ViewState }
   | { screen: 'settings'; returnView: ViewState }
   | { screen: 'cantoral-link'; cantoralId: string }
+  | { screen: 'terms'; returnTo: AppRoute }
+  | { screen: 'privacy'; returnTo: AppRoute }
   | { screen: 'app'; view: ViewState };
 
 // ---------------------------------------------------------------------------
@@ -538,7 +542,22 @@ function AppContent() {
 
   if (route.screen === 'loading')       return <LoadingScreen message="Cargando Stella Maris..." />;
   if (route.screen === 'login')         return <Login onGoogleLogin={handleGoogleLogin} />;
-  if (route.screen === 'profile-setup') return <ProfileSetup onComplete={handleProfileSetup} userEmail={userProfile?.email} />;
+  if (route.screen === 'profile-setup') return (
+    <ProfileSetup
+      onComplete={handleProfileSetup}
+      userEmail={userProfile?.email}
+      onShowTerms={() => setRoute({ screen: 'terms', returnTo: { screen: 'profile-setup' } })}
+      onShowPrivacy={() => setRoute({ screen: 'privacy', returnTo: { screen: 'profile-setup' } })}
+    />
+  );
+
+  if (route.screen === 'terms') {
+    return <TermsOfService onBack={() => setRoute(route.returnTo)} />;
+  }
+
+  if (route.screen === 'privacy') {
+    return <PrivacyPolicy onBack={() => setRoute(route.returnTo)} />;
+  }
 
   if (route.screen === 'cantoral-link') {
     return (
