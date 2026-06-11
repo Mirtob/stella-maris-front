@@ -48,6 +48,7 @@ import { uploadCantoralPDF } from './services/cantoralPDF';
 import { generateChoirCantoralPDF } from './utils/choirCantoralPDFGenerator';
 import { isCurrentUserAdmin } from './services/admin';
 import { upsertCurrentUserProfile } from './services/userProfiles';
+import { setSentryUserContext, clearSentryUserContext } from './services/sentry';
 
 const PENDING_CANTORAL_KEY = 'stella_maris_pending_cantoral_id';
 
@@ -259,6 +260,8 @@ function AppContent() {
           setUserProfile(storedProfile);
           // Refresh last_seen_at + datos en Supabase. Fire-and-forget.
           upsertCurrentUserProfile(storedProfile).catch(() => undefined);
+          // Sentry: contexto sin PII — solo rol y ID anónimo (UUID Supabase).
+          setSentryUserContext(storedProfile.role, storedProfile.id);
           toast.success(`¡Bienvenido ${storedProfile.name}! 🎵`);
 
           // Pick up a pending cantoral from a previous QR scan that required login.
@@ -512,6 +515,7 @@ function AppContent() {
     setUserProfile(null);
     setCantoral([]);
     setShowParishSelector(false);
+    clearSentryUserContext();
     signOutOnly();
     setRoute({ screen: 'login' });
     toast.info('Sesión cerrada');
