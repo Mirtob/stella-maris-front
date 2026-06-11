@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Users, Church, Music, ShieldCheck, Lock, AlertTriangle, Database, Youtube } from 'lucide-react';
+import { Users, Church, Music, ShieldCheck, Lock, AlertTriangle, Database, Youtube, LifeBuoy } from 'lucide-react';
 import { ProfileManager } from './ProfileManager';
 import { ParishManager } from './ParishManager';
 import { SongManager } from './SongManager';
 import { CatalogMigration } from './CatalogMigration';
 import { YouTubeSyncDialog } from './YouTubeSyncDialog';
+import { RecoveryManager } from './RecoveryManager';
 
-type AdminView = 'menu' | 'users' | 'parishes' | 'songs' | 'migration' | 'youtube-sync';
+type AdminView = 'menu' | 'users' | 'parishes' | 'songs' | 'migration' | 'youtube-sync' | 'recovery';
 
 export function AdminDashboard() {
   const [currentView, setCurrentView] = useState<AdminView>('menu');
@@ -29,6 +30,10 @@ export function AdminDashboard() {
 
   if (currentView === 'youtube-sync') {
     return <YouTubeSyncDialog onBack={() => setCurrentView('menu')} />;
+  }
+
+  if (currentView === 'recovery') {
+    return <RecoveryManager onBack={() => setCurrentView('menu')} />;
   }
 
   return (
@@ -120,6 +125,25 @@ export function AdminDashboard() {
                 </p>
               </div>
               <div className="text-3xl">▶️</div>
+            </div>
+          </button>
+
+          {/* Recovery de cuentas */}
+          <button
+            onClick={() => setCurrentView('recovery')}
+            className="w-full bg-gradient-to-br from-green-700 to-emerald-800 rounded-2xl shadow-xl p-6 border-2 border-green-600 hover:border-green-400 active:scale-98 transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
+                <LifeBuoy className="w-9 h-9 text-white" strokeWidth={2.5} />
+              </div>
+              <div className="text-left flex-1">
+                <h2 className="text-2xl font-bold text-white mb-1">Recuperación de Cuentas</h2>
+                <p className="text-base text-green-100">
+                  Buscar perfiles por email principal o respaldo
+                </p>
+              </div>
+              <div className="text-3xl">🛟</div>
             </div>
           </button>
 

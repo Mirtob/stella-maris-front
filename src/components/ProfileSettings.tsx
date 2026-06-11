@@ -1,6 +1,8 @@
-import { User, Church, Music, Save, ArrowLeft } from 'lucide-react';
+import { User, Church, Music, Save, ArrowLeft, ShieldCheck, Loader, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { UserProfile, InstrumentType } from '../types';
+import { updateRecoveryEmail } from '../services/userProfiles';
 
 interface ProfileSettingsProps {
   userProfile: UserProfile;
@@ -15,8 +17,13 @@ export function ProfileSettings({ userProfile, onSave, onClose }: ProfileSetting
   const initialActive = userProfile.activeParishName || userProfile.parishName || '';
   const [activeParish, setActiveParish] = useState(initialActive);
   const [instrument, setInstrument] = useState<InstrumentType>(userProfile.instrument || 'Coro');
+  const [recoveryEmail, setRecoveryEmail] = useState(userProfile.recoveryEmail ?? '');
+  const [recoverySaving, setRecoverySaving] = useState(false);
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
 
   const canChangeInstrument = userProfile.role === 'Coro';
+  // El email de respaldo no aplica para Admin — su acceso lo gestionan vía la tabla `admins`
+  const canSetRecoveryEmail = userProfile.role !== 'Admin';
 
   // Build the list of parishes the user belongs to (from their saved profile)
   const userParishes: string[] = (userProfile.parishes && userProfile.parishes.length > 0)
@@ -40,6 +47,51 @@ export function ProfileSettings({ userProfile, onSave, onClose }: ProfileSetting
 
     onSave(updates);
     onClose();
+  };
+
+  /**
+   * El email de respaldo se guarda directo a Supabase (no espera al "Guardar Cambios"
+   * principal) para no mezclar persistencia local (perfil) con server-side (recovery).
+   * Esto evita inconsistencias: si el usuario configuró el email y cerró sin guardar,
+   * el resto de cambios queda atrás pero el email queda persistido en Supabase.
+   */
+  const handleSaveRecoveryEmail = async () => {
+    const trimmed = recoveryEmail.trim();
+    setRecoveryError(null);
+
+    // Validación: no debe coincidir con su email principal
+    if (trimmed.toLowerCase() === userProfile.email.toLowerCase()) {
+      setRecoveryError('El email de respaldo debe ser distinto del email de tu cuenta principal');
+      return;
+    }
+
+    setRecoverySaving(true);
+    const result = await updateRecoveryEmail(userProfile.id, trimmed || null);
+    setRecoverySaving(false);
+
+    if (!result.ok) {
+      setRecoveryError(result.error ?? 'No se pudo guardar');
+      toast.error('No se pudo guardar el email de respaldo', { description: result.error });
+      return;
+    }
+
+    // Actualizar el estado local del perfil también
+    onSave({ recoveryEmail: trimmed || undefined });
+    toast.success(trimmed ? 'Email de respaldo guardado' : 'Email de respaldo eliminado');
+  };
+
+  const handleRemoveRecoveryEmail = async () => {
+    setRecoveryEmail('');
+    setRecoveryError(null);
+    setRecoverySaving(true);
+    const result = await updateRecoveryEmail(userProfile.id, null);
+    setRecoverySaving(false);
+    if (!result.ok) {
+      toast.error('No se pudo eliminar el email de respaldo', { description: result.error });
+      return;
+    }
+    onSave({ recoveryEmail: undefined });
+    toast.success('Email de respaldo eliminado');
   };
 
   const getRoleColor = () => {
@@ -170,6 +222,88 @@ export function ProfileSettings({ userProfile, onSave, onClose }: ProfileSetting
             </div>
           </div>
         </div>
+
+        {/* T13 — Recovery Email (no aplica para admin) */}
+        {canSetRecoveryEmail && (
+          <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-green-200 mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                <ShieldCheck className="w-7 h-7 text-white" strokeWidth={2.5} />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800">Email de respaldo</h2>
+            </div>
+
+            <p className="text-base text-gray-700 mb-4">
+              Si perdés acceso a tu cuenta de Google, este email le permite al administrador verificar tu identidad y devolverte el acceso a tus cantorales.
+            </p>
+
+            <label className="text-base text-gray-600 mb-2 block" htmlFor="recovery-email">
+              Email alternativo (opcional)
+            </label>
+            <input
+              id="recovery-email"
+              type="email"
+              autoComplete="email"
+              inputMode="email"
+              value={recoveryEmail}
+              onChange={(e) => {
+                setRecoveryEmail(e.target.value);
+                setRecoveryError(null);
+              }}
+              placeholder="tu-otro-email@ejemplo.com"
+              disabled={recoverySaving}
+              aria-invalid={!!recoveryError}
+              aria-describedby={recoveryError ? 'recovery-email-error' : undefined}
+              className={`w-full px-4 py-4 text-lg rounded-xl border-2 bg-gray-50 text-gray-800 focus:outline-none focus:bg-white transition-all ${
+                recoveryError
+                  ? 'border-red-400 focus:border-red-500'
+                  : 'border-gray-200 focus:border-green-500'
+              }`}
+            />
+
+            {recoveryError && (
+              <p id="recovery-email-error" className="mt-2 text-sm font-bold text-red-700">
+                {recoveryError}
+              </p>
+            )}
+
+            <div className="mt-4 flex gap-2 flex-wrap">
+              <button
+                onClick={handleSaveRecoveryEmail}
+                disabled={recoverySaving || recoveryEmail === (userProfile.recoveryEmail ?? '')}
+                className="flex-1 min-w-[8rem] bg-gradient-to-r from-green-600 to-emerald-700 text-white py-3 rounded-xl flex items-center justify-center gap-2 font-bold disabled:opacity-50 active:scale-95 transition-all"
+              >
+                {recoverySaving ? (
+                  <Loader className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Save className="w-5 h-5" />
+                )}
+                {userProfile.recoveryEmail ? 'Actualizar' : 'Guardar email'}
+              </button>
+
+              {userProfile.recoveryEmail && (
+                <button
+                  onClick={handleRemoveRecoveryEmail}
+                  disabled={recoverySaving}
+                  aria-label="Eliminar email de respaldo"
+                  className="px-4 py-3 bg-white border-2 border-red-200 text-red-700 rounded-xl flex items-center gap-2 font-bold active:scale-95 transition-all"
+                >
+                  <Trash2 className="w-5 h-5" />
+                  Quitar
+                </button>
+              )}
+            </div>
+
+            <div className="mt-4 bg-green-50 border-2 border-green-200 rounded-xl p-4">
+              <div className="flex gap-2 text-green-800">
+                <div className="text-xl">🔐</div>
+                <p className="text-sm">
+                  <strong>Importante:</strong> Tu email de respaldo se usa SOLO para que el administrador te identifique en caso de recovery. Nunca recibirás emails automáticos a esta dirección.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Instrument Selection (Only for Choir members) */}
         {canChangeInstrument && (
