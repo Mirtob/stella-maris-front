@@ -448,6 +448,28 @@ function AppContent() {
     setRoute({ screen: 'app', view: 'main' });
   };
 
+  /**
+   * Cambio rápido de parroquia activa desde el menú lateral (Coro / Pueblo fiel con
+   * varias parroquias). Mantiene el rol de la sesión; solo cambia qué parroquia se ve.
+   * El effect de carga de cantorales depende de `userProfile`, así que al setear un
+   * nuevo perfil se recargan los cantorales de la parroquia elegida.
+   */
+  const handleSwitchActiveParish = (parish: string) => {
+    if (!userProfile) return;
+    if (parish === (userProfile.activeParishName || userProfile.parishName)) return;
+    const updated: UserProfile = {
+      ...userProfile,
+      activeParishName: parish,
+      lastSessionParish: parish,
+    };
+    setUserProfile(updated);
+    saveUserProfile(updated);
+    upsertCurrentUserProfile(updated).catch(() => undefined);
+    toast.success(`Parroquia: ${parish}`);
+    // No hace falta navegar: el effect de carga depende de userProfile y recarga los
+    // cantorales de la nueva parroquia en la vista actual (p. ej. Pueblo fiel en 'main').
+  };
+
   const handleAddToCantoral = (song: Song) => {
     setCantoral(prev => prev.find(s => s.id === song.id) ? prev : [...prev, song]);
   };
@@ -797,6 +819,7 @@ function AppContent() {
         onLogout={handleLogout}
         onOpenSettings={handleOpenSettings}
         effectiveRoleOverride={effectiveRole}
+        onSwitchParish={handleSwitchActiveParish}
       />
 
       <ConfirmDialog
