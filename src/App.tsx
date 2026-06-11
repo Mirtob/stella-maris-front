@@ -27,6 +27,7 @@ import { CantoralDeepLink } from './components/CantoralDeepLink';
 import { OfflineBanner } from './components/OfflineBanner';
 import { TermsOfService } from './components/legal/TermsOfService';
 import { PrivacyPolicy } from './components/legal/PrivacyPolicy';
+import { Onboarding } from './components/Onboarding';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Song, UserProfile, UserRole, InstrumentType, PublishedCantoral } from './types';
@@ -51,6 +52,23 @@ import { upsertCurrentUserProfile } from './services/userProfiles';
 import { setSentryUserContext, clearSentryUserContext } from './services/sentry';
 
 const PENDING_CANTORAL_KEY = 'stella_maris_pending_cantoral_id';
+const ONBOARDING_SEEN_KEY = 'stella_maris_onboarding_seen';
+
+function hasSeenOnboarding(): boolean {
+  try {
+    return localStorage.getItem(ONBOARDING_SEEN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function markOnboardingSeen() {
+  try {
+    localStorage.setItem(ONBOARDING_SEEN_KEY, '1');
+  } catch {
+    /* localStorage no disponible (modo privado iOS) — el onboarding se mostrará otra vez, no es bloqueante */
+  }
+}
 
 const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
@@ -119,6 +137,7 @@ type AppRoute =
   | { screen: 'loading' }
   | { screen: 'login' }
   | { screen: 'callback' }
+  | { screen: 'onboarding' }
   | { screen: 'profile-setup' }
   | { screen: 'player'; song: Song; returnView: ViewState }
   | { screen: 'settings'; returnView: ViewState }
@@ -289,7 +308,14 @@ function AppContent() {
           if (deepLinkCantoralId) {
             localStorage.setItem(PENDING_CANTORAL_KEY, deepLinkCantoralId);
           }
-          setRoute({ screen: 'profile-setup' });
+          // Primer login: mostrar onboarding antes del setup. En logins posteriores
+          // (perfil completo en localStorage) este ramo no se ejecuta — Onboarding
+          // solo se ve UNA vez por dispositivo.
+          if (!hasSeenOnboarding()) {
+            setRoute({ screen: 'onboarding' });
+          } else {
+            setRoute({ screen: 'profile-setup' });
+          }
         }
         return;
       }
@@ -546,6 +572,13 @@ function AppContent() {
 
   if (route.screen === 'loading')       return <LoadingScreen message="Cargando Stella Maris..." />;
   if (route.screen === 'login')         return <Login onGoogleLogin={handleGoogleLogin} />;
+  if (route.screen === 'onboarding') {
+    const goToSetup = () => {
+      markOnboardingSeen();
+      setRoute({ screen: 'profile-setup' });
+    };
+    return <Onboarding onComplete={goToSetup} onSkip={goToSetup} />;
+  }
   if (route.screen === 'profile-setup') return (
     <ProfileSetup
       onComplete={handleProfileSetup}
