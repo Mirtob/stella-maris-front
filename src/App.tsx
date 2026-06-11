@@ -29,6 +29,7 @@ import { TermsOfService } from './components/legal/TermsOfService';
 import { PrivacyPolicy } from './components/legal/PrivacyPolicy';
 import { Onboarding } from './components/Onboarding';
 import { ConfirmDialog } from './components/ConfirmDialog';
+import { NotFound } from './components/NotFound';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Song, UserProfile, UserRole, InstrumentType, PublishedCantoral } from './types';
@@ -89,6 +90,28 @@ function getCantoralIdFromPath(): string | null {
   return match ? sanitizeCantoralId(match[1]) : null;
 }
 
+/**
+ * V2 — Distinguir un deep link inválido de cantoral (`/c/<bad>`) de una URL
+ * desconocida (`/foo`). Antes ambos caían al Login sin avisar.
+ *
+ *   - /c/{uuid válido} → deep link OK (otra función se encarga)
+ *   - /c/{algo no UUID} → 'invalid-link'
+ *   - /c/ vacío → 'invalid-link'
+ *   - cualquier otro path desconocido → 'unknown-route'
+ *   - paths conocidos (/, /auth/callback) → null (continuar flujo normal)
+ */
+function classifyPath(): { kind: 'ok' } | { kind: 'invalid-link' | 'unknown-route' } {
+  const path = window.location.pathname;
+  // Paths conocidos del shell
+  if (path === '/' || path === '/auth/callback') return { kind: 'ok' };
+  // Deep link de cantoral
+  if (path.startsWith('/c/')) {
+    const id = getCantoralIdFromPath();
+    return id ? { kind: 'ok' } : { kind: 'invalid-link' };
+  }
+  return { kind: 'unknown-route' };
+}
+
 // ---------------------------------------------------------------------------
 // Routing types
 // ---------------------------------------------------------------------------
@@ -145,6 +168,7 @@ type AppRoute =
   | { screen: 'cantoral-link'; cantoralId: string }
   | { screen: 'terms'; returnTo: AppRoute }
   | { screen: 'privacy'; returnTo: AppRoute }
+  | { screen: 'not-found'; reason: 'invalid-link' | 'unknown-route'; attemptedPath: string }
   | { screen: 'app'; view: ViewState };
 
 // ---------------------------------------------------------------------------
@@ -268,6 +292,14 @@ function AppContent() {
   // Auth initialization — runs once on mount
   useEffect(() => {
     if (window.location.pathname === '/auth/callback') return;
+
+    // V1+V2 — Clasificar el path ANTES de cualquier auth check. URLs desconocidas
+    // o deep links inválidos van a NotFound, no al login silencioso.
+    const cls = classifyPath();
+    if (cls.kind !== 'ok') {
+      setRoute({ screen: 'not-found', reason: cls.kind, attemptedPath: window.location.pathname });
+      return;
+    }
 
     // Detect /c/:id deep link from QR scan
     const deepLinkCantoralId = getCantoralIdFromPath();
@@ -591,6 +623,19 @@ function AppContent() {
       onShowPrivacy={() => setRoute({ screen: 'privacy', returnTo: { screen: 'profile-setup' } })}
     />
   );
+
+  if (route.screen === 'not-found') {
+    return (
+      <NotFound
+        reason={route.reason}
+        attemptedPath={route.attemptedPath}
+        // Hard reload a "/" para volver a correr initializeAuth con un path
+        // limpio. Más simple y robusto que tratar de re-disparar el effect
+        // a mano. Mantiene la sesión (localStorage no se toca).
+        onGoHome={() => window.location.assign('/')}
+      />
+    );
+  }
 
   if (route.screen === 'terms') {
     return <TermsOfService onBack={() => setRoute(route.returnTo)} />;
