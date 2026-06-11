@@ -26,16 +26,16 @@ export function Login({ onGoogleLogin }: LoginProps) {
   };
 
   return (
-    <div className="w-full min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
+    <main className="w-full min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
       <div className="w-full max-w-2xl">
         {/* Header */}
-        <div className="text-center mb-4">
+        <header className="text-center mb-4">
           <div className="flex items-center justify-center mb-3">
             {/* Logo Stella Maris */}
             <div className="relative w-20 h-20 sm:w-28 sm:h-28 md:w-40 md:h-40">
               {/* Resplandor exterior animado */}
               <div className="absolute inset-0 rounded-full animate-pulse opacity-20 bg-gradient-to-br from-blue-400 via-yellow-400 to-blue-600 blur-3xl"></div>
-              
+
               <div className="w-full h-full rounded-full overflow-hidden relative z-10">
                 <img
                   src={logoStellaMaris}
@@ -48,17 +48,19 @@ export function Login({ onGoogleLogin }: LoginProps) {
               </div>
             </div>
           </div>
-          <p className="text-base sm:text-lg text-blue-900 dark:text-blue-100 font-medium mb-1">
+          {/* A2 — h1 explícito para que axe (page-has-heading-one) lo detecte.
+             Lo dejamos visualmente como párrafo para no romper el diseño actual. */}
+          <h1 className="text-base sm:text-lg text-blue-900 dark:text-blue-100 font-medium mb-1">
             Tu guía para la liturgia musical
-          </p>
+          </h1>
           <p className="text-sm text-blue-800 dark:text-blue-200">
             Cantos, partituras y cantorales de tu parroquia
           </p>
-        </div>
+        </header>
 
         {/* Login Card */}
-        <div className="bg-gradient-to-br from-blue-900 to-blue-950 rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-blue-800 transition-colors">
-          <h2 className="text-base font-bold text-white mb-3 text-center">
+        <section aria-labelledby="login-heading" className="bg-gradient-to-br from-blue-900 to-blue-950 rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-blue-800 transition-colors">
+          <h2 id="login-heading" className="text-base font-bold text-white mb-3 text-center">
             Iniciar sesión
           </h2>
 
@@ -104,10 +106,10 @@ export function Login({ onGoogleLogin }: LoginProps) {
               Accede a cantorales, cantos y partituras de tu parroquia.
             </p>
           </div>
-        </div>
+        </section>
 
         {/* Features — 3 columnas en móvil */}
-        <div className="mt-4 grid grid-cols-3 gap-2">
+        <section aria-label="Funcionalidades destacadas" className="mt-4 grid grid-cols-3 gap-2">
           <div className="bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl p-2 border border-blue-800 text-center">
             <div className="text-2xl mb-1">🎵</div>
             <h3 className="text-xs font-bold text-white mb-0.5">Cantos</h3>
@@ -123,9 +125,9 @@ export function Login({ onGoogleLogin }: LoginProps) {
             <h3 className="text-xs font-bold text-white mb-0.5">Parroquia</h3>
             <p className="text-xs text-blue-200 leading-tight">Cantorales publicados</p>
           </div>
-        </div>
+        </section>
       </div>
-      
+
       {/* CSS para animación personalizada */}
       <style>{`
         @keyframes pulse-glow {
@@ -146,6 +148,6 @@ export function Login({ onGoogleLogin }: LoginProps) {
           }
         }
       `}</style>
-    </div>
+    </main>
   );
 }
