@@ -152,9 +152,10 @@ export function CantoralQRDialog({
           </p>
         </div>
 
-        {/* Descargar PDF del cantoral — botón prominente.
-            El coro lo necesita para tener el folleto en el teléfono offline
-            durante la Misa, sin depender de Supabase. */}
+        {/* Descargar PDF del coro (Full Score con acordes) — botón prominente.
+            El coro lo necesita para tener el folleto en el teléfono offline durante
+            la Misa, sin depender de Supabase. Es DISTINTO del PDF que descarga la
+            comunidad desde el QR (ese es el folleto de letras del Pueblo fiel). */}
         {pdfUrl && (
           <button
             onClick={() => {
@@ -164,7 +165,7 @@ export function CantoralQRDialog({
             className="w-full mb-3 py-3 px-4 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-700 text-white font-bold flex items-center justify-center gap-2 active:scale-95 hover:opacity-95 transition-all border-2 border-emerald-700 shadow-lg"
           >
             <FileDown className="w-5 h-5" />
-            Descargar PDF del cantoral
+            Descargar PDF del coro (con acordes)
           </button>
         )}
 

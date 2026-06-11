@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Download, BookOpen, ArrowLeft, FileX } from 'lucide-react';
+import { toast } from 'sonner';
 import { PublishedCantoral } from '../types';
 import { getCantoralById } from '../services/cantorals';
-import { safeWindowOpen } from '../utils/safeUrl';
+import { generateCantoralPDF } from '../utils/cantoralPDFGenerator';
 
 interface CantoralDeepLinkProps {
   cantoralId: string;
@@ -22,6 +23,7 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
   const [cantoral, setCantoral] = useState<PublishedCantoral | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,11 +49,21 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
     return () => { cancelled = true; };
   }, [cantoralId]);
 
-  const handleDownloadPDF = () => {
-    if (!cantoral?.pdfUrl) return;
-    // safeWindowOpen rejects javascript: / data: / file: protocols even if the
-    // DB row was tampered with. Falls back silently to no-op on unsafe URLs.
-    safeWindowOpen(cantoral.pdfUrl);
+  // El PDF del QR/deep-link es para la COMUNIDAD (Pueblo fiel): folleto con las
+  // LETRAS de los cantos, sin acordes ni partituras. Se genera en el cliente desde
+  // cantoral.songs (mismo generador que ve el Pueblo fiel dentro de la app), NO se
+  // sirve el PDF Full Score del Coro (pdf_url) que se sube al publicar. Así el PDF
+  // que descarga la comunidad se distingue del que usa el Coro.
+  const handleDownloadPDF = async () => {
+    if (!cantoral || generatingPdf) return;
+    setGeneratingPdf(true);
+    try {
+      await generateCantoralPDF({ cantoral });
+    } catch (err: any) {
+      toast.error('No se pudo generar el PDF', { description: err?.message });
+    } finally {
+      setGeneratingPdf(false);
+    }
   };
 
   const handleOpenInApp = () => {
@@ -115,17 +127,18 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
 
             {/* Actions */}
             <div className="space-y-3 mb-6">
-              {cantoral.pdfUrl && (
+              {(cantoral.songs?.length ?? 0) > 0 && (
                 <button
                   onClick={handleDownloadPDF}
-                  className="w-full bg-gradient-to-br from-emerald-700 to-emerald-900 text-white p-5 rounded-2xl flex items-center gap-4 hover:opacity-95 active:scale-95 transition-all border-2 border-emerald-600 shadow-xl"
+                  disabled={generatingPdf}
+                  className="w-full bg-gradient-to-br from-emerald-700 to-emerald-900 text-white p-5 rounded-2xl flex items-center gap-4 hover:opacity-95 active:scale-95 transition-all border-2 border-emerald-600 shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
                     <Download className="w-7 h-7" />
                   </div>
                   <div className="text-left flex-1">
-                    <p className="font-bold text-lg">Descargar PDF</p>
-                    <p className="text-sm opacity-90">Sale de la app y abre el archivo</p>
+                    <p className="font-bold text-lg">{generatingPdf ? 'Generando PDF…' : 'Descargar PDF'}</p>
+                    <p className="text-sm opacity-90">Folleto con las letras de los cantos</p>
                   </div>
                 </button>
               )}
@@ -144,10 +157,10 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
               </button>
             </div>
 
-            {!cantoral.pdfUrl && (
+            {(cantoral.songs?.length ?? 0) === 0 && (
               <div className="bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-700 rounded-xl p-4 mb-6 text-center">
                 <p className="text-sm text-amber-800 dark:text-amber-200">
-                  Este cantoral aún no tiene PDF descargable. Solo puedes verlo en la app.
+                  Este cantoral aún no tiene cantos. Solo puedes verlo en la app.
                 </p>
               </div>
             )}
