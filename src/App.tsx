@@ -23,6 +23,7 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { SelectActiveParishDialog } from './components/SelectActiveParishDialog';
 import { RoleGuard } from './components/RoleGuard';
 import { CantoralQRDialog } from './components/CantoralQRDialog';
+import { MultiPublishSummary } from './components/MultiPublishSummary';
 import { CantoralDeepLink } from './components/CantoralDeepLink';
 import { OfflineBanner } from './components/OfflineBanner';
 import { TermsOfService } from './components/legal/TermsOfService';
@@ -206,6 +207,8 @@ function AppContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showParishSelector, setShowParishSelector] = useState(false);
   const [qrCantoral, setQrCantoral] = useState<PublishedCantoral | null>(null);
+  // Resumen tras publicar el mismo cantoral en varias parroquias (QR por parroquia).
+  const [publishedBatch, setPublishedBatch] = useState<PublishedCantoral[] | null>(null);
   // Server-authoritative admin check (vs. trusting the role saved in localStorage)
   const [isVerifiedAdmin, setIsVerifiedAdmin] = useState(false);
   // Q17 — flag para mostrar skeleton mientras Supabase responde con la lista
@@ -471,10 +474,33 @@ function AppContent() {
     setRoute({ screen: 'app', view: returnView });
   };
 
-  const handlePublishCantoral = async (newCantoral: PublishedCantoral) => {
-    // Q16 — Validar sesión antes de tocar la red. Si el token de Supabase ya
-    // expiró y el auto-refresh falló, el insert respondería 401 con un mensaje
-    // críptico ("JWT expired"). Mejor frenarlo acá y guiar al usuario al login.
+  // Q15 — Traducir errores de Supabase a mensajes humanos.
+  // RLS, JWT, network y "duplicate key" son los más comunes en producción.
+  const translatePublishError = (error?: string): string => {
+    const raw = (error ?? '').toLowerCase();
+    if (raw.includes('jwt') || raw.includes('unauthorized') || raw.includes('401')) {
+      return 'Tu sesión caducó. Iniciá sesión de nuevo.';
+    }
+    if (raw.includes('row-level security') || raw.includes('rls') || raw.includes('permission denied')) {
+      return 'No tenés permiso para publicar en esta parroquia.';
+    }
+    if (raw.includes('duplicate') || raw.includes('unique')) {
+      return 'Ya existe un cantoral con esos datos para esta parroquia y horario.';
+    }
+    if (raw.includes('failed to fetch') || raw.includes('network')) {
+      return 'Sin conexión a internet. Revisá tu red y volvé a intentar.';
+    }
+    return 'No pudimos guardar el cantoral. Volvé a intentar.';
+  };
+
+  // Publica uno o varios cantorales (uno por parroquia/horario), con los mismos cantos.
+  const handlePublishCantoral = async (newCantorals: PublishedCantoral[]) => {
+    if (newCantorals.length === 0) return;
+    const single = newCantorals.length === 1;
+
+    // Q16 — Validar sesión una sola vez antes de tocar la red. Si el token de Supabase
+    // ya expiró y el auto-refresh falló, el insert respondería 401 críptico ("JWT
+    // expired"). Mejor frenarlo acá y guiar al usuario al login.
     const session = await getStoredSession();
     if (!session) {
       toast.error('Sesión expirada', {
@@ -484,65 +510,84 @@ function AppContent() {
       return;
     }
 
-    // Optimistic UI: show cantoral immediately while the request is in flight
-    setPublishedCantorals(prev => [newCantoral, ...prev]);
+    // Optimistic UI: mostrar todos de inmediato mientras corren los inserts.
+    setPublishedCantorals(prev => [...newCantorals, ...prev]);
 
-    const result = await publishCantoralToDB(newCantoral);
-    if (!result.ok) {
-      // Revert the optimistic update — keep the draft intact so the coro doesn't lose work
-      setPublishedCantorals(prev => prev.filter(c => c.id !== newCantoral.id));
+    const succeeded: PublishedCantoral[] = [];
+    const failed: { parishName: string; error?: string }[] = [];
 
-      // Q15 — Traducir errores de Supabase a mensajes humanos.
-      // RLS, JWT, network y "duplicate key" son los más comunes en producción.
-      const raw = (result.error ?? '').toLowerCase();
-      let humanMsg = 'No pudimos guardar el cantoral. Volvé a intentar.';
-      if (raw.includes('jwt') || raw.includes('unauthorized') || raw.includes('401')) {
-        humanMsg = 'Tu sesión caducó. Iniciá sesión de nuevo.';
-      } else if (raw.includes('row-level security') || raw.includes('rls') || raw.includes('permission denied')) {
-        humanMsg = 'No tenés permiso para publicar en esta parroquia.';
-      } else if (raw.includes('duplicate') || raw.includes('unique')) {
-        humanMsg = 'Ya existe un cantoral con esos datos para esta parroquia y horario.';
-      } else if (raw.includes('failed to fetch') || raw.includes('network')) {
-        humanMsg = 'Sin conexión a internet. Revisá tu red y volvé a intentar.';
+    for (const newCantoral of newCantorals) {
+      const result = await publishCantoralToDB(newCantoral);
+      if (!result.ok) {
+        // Revertir SOLO este; el draft sigue intacto para no perder trabajo.
+        setPublishedCantorals(prev => prev.filter(c => c.id !== newCantoral.id));
+        failed.push({ parishName: newCantoral.parishName, error: result.error });
+        continue;
       }
-      toast.error('Error al publicar el cantoral', { description: humanMsg });
-      return;
+
+      // Generar PDF (sin descargar) y subir a Storage. Best-effort: si falla, el
+      // cantoral ya quedó publicado. Solo avisamos cuando es una única parroquia
+      // (evita spam de toasts en publicación múltiple).
+      let pdfUrl: string | undefined;
+      try {
+        const { blob } = generateChoirCantoralPDF(
+          newCantoral.songs,
+          newCantoral.parishName,
+          newCantoral.date,
+          newCantoral.liturgicalDate,
+          newCantoral.massTime,
+          userProfile?.instruments ?? [],
+          'Full Score',
+          { download: false }
+        );
+        const uploadResult = await uploadCantoralPDF(newCantoral.id, blob);
+        if (uploadResult.ok && uploadResult.publicUrl) {
+          pdfUrl = uploadResult.publicUrl;
+          await updateCantoralPdfUrl(newCantoral.id, pdfUrl);
+        } else if (single) {
+          toast.warning('Cantoral publicado, pero no pudimos generar el PDF compartible.', {
+            description: uploadResult.error,
+          });
+        }
+      } catch (err: any) {
+        if (single) {
+          toast.warning('Cantoral publicado, pero falló la generación del PDF.', {
+            description: err?.message,
+          });
+        }
+      }
+
+      succeeded.push({ ...newCantoral, pdfUrl });
     }
 
-    // Only clear the draft after DB confirms success
-    setCantoral([]);
-    toast.success('¡Cantoral publicado! 🎵');
-
-    // Generate PDF blob (without triggering local download) and upload to Storage
-    let pdfUrl: string | undefined;
-    try {
-      const { blob } = generateChoirCantoralPDF(
-        newCantoral.songs,
-        newCantoral.parishName,
-        newCantoral.date,
-        newCantoral.liturgicalDate,
-        newCantoral.massTime,
-        userProfile?.instruments ?? [],
-        'Full Score',
-        { download: false }
+    // Reportar fallos (si los hubo).
+    if (failed.length > 0) {
+      const parishList = failed.map(f => f.parishName).join(', ');
+      toast.error(
+        failed.length === newCantorals.length
+          ? 'Error al publicar el cantoral'
+          : `No se pudo publicar en ${failed.length} parroquia${failed.length === 1 ? '' : 's'}`,
+        { description: `${parishList}. ${translatePublishError(failed[0].error)}` }
       );
-      const uploadResult = await uploadCantoralPDF(newCantoral.id, blob);
-      if (uploadResult.ok && uploadResult.publicUrl) {
-        pdfUrl = uploadResult.publicUrl;
-        await updateCantoralPdfUrl(newCantoral.id, pdfUrl);
-      } else {
-        toast.warning('Cantoral publicado, pero no pudimos generar el PDF compartible.', {
-          description: uploadResult.error,
-        });
-      }
-    } catch (err: any) {
-      toast.warning('Cantoral publicado, pero falló la generación del PDF.', {
-        description: err?.message,
-      });
     }
 
-    // Show QR dialog with the final cantoral (with pdfUrl if upload succeeded)
-    setQrCantoral({ ...newCantoral, pdfUrl });
+    // Nada se publicó → conservar el draft para reintentar.
+    if (succeeded.length === 0) return;
+
+    // Al menos uno OK → limpiar el draft y avisar.
+    setCantoral([]);
+    toast.success(
+      succeeded.length === 1
+        ? '¡Cantoral publicado! 🎵'
+        : `¡Cantoral publicado en ${succeeded.length} parroquias! 🎵`
+    );
+
+    // QR: una sola → diálogo directo; varias → resumen con QR por parroquia.
+    if (succeeded.length === 1) {
+      setQrCantoral(succeeded[0]);
+    } else {
+      setPublishedBatch(succeeded);
+    }
 
     const fresh = await listCantorals(userProfile?.activeParishName || userProfile?.parishName);
     setPublishedCantorals(fresh);
@@ -588,6 +633,10 @@ function AppContent() {
     const updated = { ...userProfile, ...updates } as UserProfile;
     setUserProfile(updated);
     saveUserProfile(updated);
+    // Sincronizar a Supabase cuando cambian datos persistentes del perfil (p. ej. el
+    // conjunto de parroquias editado en Configuración). Fire-and-forget: el flujo local
+    // sigue aunque falle. activeParishName/activeRole son de sesión, pero no estorban.
+    upsertCurrentUserProfile(updated).catch(() => undefined);
   };
 
   const handleDeleteCantoral = async (id: string) => {
@@ -719,6 +768,14 @@ function AppContent() {
         onClose={() => setQrCantoral(null)}
       />
 
+      {publishedBatch && (
+        <MultiPublishSummary
+          cantorals={publishedBatch}
+          onViewQR={(c) => setQrCantoral(c)}
+          onClose={() => setPublishedBatch(null)}
+        />
+      )}
+
       <MenuButton onClick={() => setSidebarOpen(true)} />
 
       <Sidebar
@@ -784,7 +841,7 @@ interface ViewProps {
   onAddToCantoral: (song: Song) => void;
   onRemoveFromCantoral: (songId: string) => void;
   onPlaySong: (song: Song) => void;
-  onPublishCantoral: (cantoral: PublishedCantoral) => Promise<void>;
+  onPublishCantoral: (cantorals: PublishedCantoral[]) => Promise<void>;
   navigate: (view: string) => void;
   onDeleteCantoral: (id: string) => Promise<void>;
 }
@@ -798,6 +855,7 @@ function renderView(p: ViewProps): JSX.Element | null {
             preferredInstrument={p.userProfile.instrument || 'Coro'}
             userInstruments={p.userProfile.instruments}
             parishName={p.activeParishName}
+            parishes={p.userProfile.parishes}
             cantoral={p.cantoral}
             onAddToCantoral={p.onAddToCantoral}
             onRemoveFromCantoral={p.onRemoveFromCantoral}
@@ -824,6 +882,7 @@ function renderView(p: ViewProps): JSX.Element | null {
           preferredInstrument={p.userProfile.instrument || 'Coro'}
           userInstruments={p.userProfile.instruments}
           parishName={p.activeParishName}
+          parishes={p.userProfile.parishes}
           cantoral={p.cantoral}
           onAddToCantoral={p.onAddToCantoral}
           onRemoveFromCantoral={p.onRemoveFromCantoral}
@@ -877,7 +936,6 @@ function renderView(p: ViewProps): JSX.Element | null {
         >
           <CantoralManager
             cantorals={p.publishedCantorals}
-            onPublishCantoral={p.onPublishCantoral}
           />
         </RoleGuard>
       );

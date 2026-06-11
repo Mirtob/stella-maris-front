@@ -5,12 +5,11 @@ import { ConfirmDialog } from './ConfirmDialog';
 
 interface CantoralManagerProps {
   cantorals: PublishedCantoral[];
-  onPublishCantoral?: (cantoral: PublishedCantoral) => void;
   onEdit?: (cantoralId: string) => void;
   onDelete?: (cantoralId: string) => void;
 }
 
-export function CantoralManager({ cantorals, onPublishCantoral, onEdit, onDelete }: CantoralManagerProps) {
+export function CantoralManager({ cantorals, onEdit, onDelete }: CantoralManagerProps) {
   const [filterStatus, setFilterStatus] = useState<'Todos' | 'Publicados' | 'Borradores'>('Todos');
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const pendingDeleteCantoral = pendingDeleteId

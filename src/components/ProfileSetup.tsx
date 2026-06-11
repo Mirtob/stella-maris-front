@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Cross, Music, Users, ShieldCheck, Church } from 'lucide-react';
 import { UserRole, InstrumentType } from '../types';
-import { chileDioceses, getParishesByDiocese } from '../data/chileDioceses';
+import { ParishPicker } from './ParishPicker';
 import { isCurrentUserAdmin } from '../services/admin';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
 
@@ -25,8 +25,8 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
   }, [userEmail]);
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [selectedInstruments, setSelectedInstruments] = useState<InstrumentType[]>([]);
-  const [selectedDiocese, setSelectedDiocese] = useState('');
-  const [selectedParishes, setSelectedParishes] = useState<Set<string>>(new Set());
+  // Parroquias en formato canónico "<Nombre> - <Diócesis>" (lo que emite ParishPicker).
+  const [selectedParishes, setSelectedParishes] = useState<string[]>([]);
 
   const toggleInstrument = (instrument: InstrumentType) => {
     if (selectedInstruments.includes(instrument)) {
@@ -36,33 +36,15 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
     }
   };
 
-  const toggleParish = (parishId: string) => {
-    const newSet = new Set(selectedParishes);
-    if (newSet.has(parishId)) {
-      newSet.delete(parishId);
-    } else {
-      newSet.add(parishId);
-    }
-    setSelectedParishes(newSet);
-  };
-
   const handleContinue = () => {
     if (selectedRole) {
-      const selectedParishIds = Array.from(selectedParishes);
-      const diocese = chileDioceses.find(d => d.id === selectedDiocese);
-
-      const selectedParishNames = selectedParishIds.map(parishId => {
-        const parish = diocese?.parishes.find(p => p.id === parishId);
-        return `${parish?.name} - ${diocese?.name}`;
-      });
-
       if (selectedRole === 'Coro') {
-        if (selectedInstruments.length > 0 && selectedParishNames.length > 0) {
-          onComplete(selectedRole, selectedInstruments, selectedParishNames);
+        if (selectedInstruments.length > 0 && selectedParishes.length > 0) {
+          onComplete(selectedRole, selectedInstruments, selectedParishes);
         }
       } else if (selectedRole === 'Pueblo fiel') {
-        if (selectedParishNames.length > 0) {
-          onComplete(selectedRole, undefined, selectedParishNames);
+        if (selectedParishes.length > 0) {
+          onComplete(selectedRole, undefined, selectedParishes);
         }
       } else if (selectedRole === 'Admin') {
         // Admin no necesita parroquia — tiene CRUD sobre todas.
@@ -78,23 +60,16 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
     if (!acceptedLegal) return false;
     if (!selectedRole) return false;
     if (selectedRole === 'Coro') {
-      return selectedInstruments.length > 0 && selectedDiocese && selectedParishes.size > 0;
+      return selectedInstruments.length > 0 && selectedParishes.length > 0;
     }
     if (selectedRole === 'Pueblo fiel') {
-      return selectedDiocese && selectedParishes.size > 0;
+      return selectedParishes.length > 0;
     }
     if (selectedRole === 'Admin') {
       // Admin no requiere selección de parroquia
       return true;
     }
     return true;
-  };
-
-  const availableParishes = selectedDiocese ? getParishesByDiocese(selectedDiocese) : [];
-
-  const handleDioceseChange = (dioceseId: string) => {
-    setSelectedDiocese(dioceseId);
-    setSelectedParishes(new Set());
   };
 
   return (
@@ -203,44 +178,10 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
               </div>
             </div>
 
-            <select
-              value={selectedDiocese}
-              onChange={(e) => handleDioceseChange(e.target.value)}
-              className="w-full px-3 py-3 sm:px-4 sm:py-4 text-sm sm:text-base rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white font-bold shadow-lg transition-colors"
-            >
-              <option value="" className="bg-white dark:bg-slate-800 text-blue-950 dark:text-white">Elige una diócesis...</option>
-              {chileDioceses.map((diocese) => (
-                <option key={diocese.id} value={diocese.id} className="bg-white dark:bg-slate-800 text-blue-950 dark:text-white">
-                  {diocese.name}
-                </option>
-              ))}
-            </select>
-
-            {selectedDiocese && availableParishes.length > 0 && (
-              <div className="mt-5 space-y-3">
-                <p className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100">
-                  Parroquias disponibles:
-                </p>
-                <div className="space-y-2 max-h-64 overflow-y-auto bg-white/50 dark:bg-white/5 rounded-xl p-4">
-                  {availableParishes.map((parish) => (
-                    <label
-                      key={parish.id}
-                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/30 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedParishes.has(parish.id)}
-                        onChange={() => toggleParish(parish.id)}
-                        className="w-5 h-5 rounded border-2 border-blue-600 dark:border-blue-400 bg-white dark:bg-white/10 cursor-pointer accent-blue-600"
-                      />
-                      <span className="text-base sm:text-lg font-medium text-blue-900 dark:text-blue-100">
-                        {parish.name}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
+            <ParishPicker
+              selected={selectedParishes}
+              onChange={setSelectedParishes}
+            />
 
             <div className="mt-5 bg-white/40 dark:bg-white/10 backdrop-blur-sm border-2 border-white/50 dark:border-white/20 rounded-2xl p-5">
               <div className="flex gap-3">

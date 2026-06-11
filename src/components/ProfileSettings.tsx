@@ -1,8 +1,9 @@
-import { User, Church, Music, Save, ArrowLeft, ShieldCheck, Loader, Trash2 } from 'lucide-react';
+import { User, Church, Music, Save, ArrowLeft, ShieldCheck, Loader, Trash2, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { UserProfile, InstrumentType } from '../types';
 import { updateRecoveryEmail } from '../services/userProfiles';
+import { ParishPicker } from './ParishPicker';
 
 interface ProfileSettingsProps {
   userProfile: UserProfile;
@@ -24,18 +25,58 @@ export function ProfileSettings({ userProfile, onSave, onClose }: ProfileSetting
   const canChangeInstrument = userProfile.role === 'Coro';
   // El email de respaldo no aplica para Admin — su acceso lo gestionan vía la tabla `admins`
   const canSetRecoveryEmail = userProfile.role !== 'Admin';
+  // Coro y Pueblo fiel pueden gestionar su conjunto de parroquias. Admin no tiene
+  // parroquias (CRUD global), así que no ve esta gestión.
+  const canManageParishes = userProfile.role === 'Coro' || userProfile.role === 'Pueblo fiel';
 
-  // Build the list of parishes the user belongs to (from their saved profile)
-  const userParishes: string[] = (userProfile.parishes && userProfile.parishes.length > 0)
+  // Conjunto de parroquias del usuario, editable en esta pantalla. Se inicializa
+  // del perfil guardado (con fallback al campo legacy parishName).
+  const initialParishes: string[] = (userProfile.parishes && userProfile.parishes.length > 0)
     ? userProfile.parishes
     : (userProfile.parishName ? [userProfile.parishName] : []);
+  const [parishes, setParishes] = useState<string[]>(initialParishes);
+
+  // Flujo "Agregar parroquia": picker desplegable + selección pendiente de confirmar.
+  const [showAddParish, setShowAddParish] = useState(false);
+  const [parishesToAdd, setParishesToAdd] = useState<string[]>([]);
 
   const instruments: InstrumentType[] = ['Coro', 'Guitarra', 'Órgano'];
+
+  const handleRemoveParish = (parish: string) => {
+    // Regla de negocio: siempre debe quedar al menos una parroquia.
+    if (parishes.length <= 1) {
+      toast.error('Debés tener al menos una parroquia', {
+        description: 'Agregá otra antes de quitar esta.',
+      });
+      return;
+    }
+    const next = parishes.filter(p => p !== parish);
+    setParishes(next);
+    // Si quitaste la parroquia activa, la activa pasa a la primera restante.
+    if (parish === activeParish) {
+      setActiveParish(next[0]);
+    }
+  };
+
+  const handleConfirmAddParishes = () => {
+    if (parishesToAdd.length === 0) return;
+    // Merge sin duplicados.
+    const merged = Array.from(new Set([...parishes, ...parishesToAdd]));
+    setParishes(merged);
+    // Si el perfil no tenía activa aún, dejar la primera agregada como activa.
+    if (!activeParish) setActiveParish(merged[0]);
+    setParishesToAdd([]);
+    setShowAddParish(false);
+  };
 
   const handleSave = () => {
     const updates: Partial<UserProfile> = {};
 
-    // Update which parish is active in this session (not the saved set)
+    // Persistir el conjunto de parroquias editado + mantener el campo legacy en sync.
+    updates.parishes = parishes;
+    updates.parishName = parishes[0];
+
+    // Update which parish is active in this session
     if (activeParish) {
       updates.activeParishName = activeParish;
     }
@@ -167,31 +208,27 @@ export function ProfileSettings({ userProfile, onSave, onClose }: ProfileSetting
             <h2 className="text-2xl font-bold text-gray-800">Parroquia activa</h2>
           </div>
 
-          {userParishes.length === 0 && (
+          {parishes.length === 0 ? (
             <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4">
               <p className="text-base text-amber-900 font-semibold">
                 No tienes parroquias configuradas en tu perfil.
               </p>
               <p className="text-sm text-amber-800 mt-1">
-                Cierra sesión y vuelve a entrar para configurar tus parroquias desde el perfil inicial.
+                Agregá una con el botón de abajo.
               </p>
             </div>
-          )}
-
-          {userParishes.length === 1 && (
+          ) : parishes.length === 1 ? (
             <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
-              <p className="text-sm text-amber-800 mb-1">Tu parroquia:</p>
-              <p className="text-lg font-bold text-amber-900">{userParishes[0]}</p>
+              <p className="text-sm text-amber-800 mb-1">Tu parroquia activa:</p>
+              <p className="text-lg font-bold text-amber-900">{parishes[0]}</p>
             </div>
-          )}
-
-          {userParishes.length > 1 && (
+          ) : (
             <>
               <label className="text-base text-gray-600 mb-2 block">
-                Tienes {userParishes.length} parroquias. ¿Cuál usas ahora?
+                Tienes {parishes.length} parroquias. ¿Cuál usas ahora?
               </label>
               <div className="space-y-2">
-                {userParishes.map((parish) => (
+                {parishes.map((parish) => (
                   <button
                     key={parish}
                     onClick={() => setActiveParish(parish)}
@@ -211,6 +248,75 @@ export function ProfileSettings({ userProfile, onSave, onClose }: ProfileSetting
                 ))}
               </div>
             </>
+          )}
+
+          {/* Gestión del conjunto de parroquias (Coro y Pueblo fiel) */}
+          {canManageParishes && (
+            <div className="mt-5 border-t-2 border-amber-100 pt-5">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <h3 className="text-lg font-bold text-gray-800">Mis parroquias ({parishes.length})</h3>
+                {!showAddParish && (
+                  <button
+                    onClick={() => setShowAddParish(true)}
+                    className="inline-flex items-center gap-1 bg-gradient-to-r from-amber-500 to-orange-600 text-white px-3 py-2 rounded-xl font-bold text-sm active:scale-95 transition-all"
+                  >
+                    <Plus className="w-4 h-4" strokeWidth={3} /> Agregar
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                {parishes.map((parish) => (
+                  <div
+                    key={parish}
+                    className="flex items-center gap-2 bg-gray-50 border-2 border-gray-200 rounded-xl p-3"
+                  >
+                    <Church className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                    <span className="flex-1 text-base font-semibold text-gray-800 break-words">{parish}</span>
+                    <button
+                      onClick={() => handleRemoveParish(parish)}
+                      disabled={parishes.length <= 1}
+                      aria-label={`Quitar ${parish}`}
+                      className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-red-100 text-red-600 rounded-lg active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {parishes.length <= 1 && (
+                <p className="text-xs text-gray-500 mt-2 italic">
+                  Debés tener al menos una parroquia. Agregá otra para poder quitar esta.
+                </p>
+              )}
+
+              {showAddParish && (
+                <div className="mt-4 bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
+                  <p className="text-base font-bold text-gray-800 mb-3">Agregar parroquia</p>
+                  <ParishPicker
+                    selected={parishesToAdd}
+                    onChange={setParishesToAdd}
+                    alreadyAdded={parishes}
+                  />
+                  <div className="flex gap-2 mt-4">
+                    <button
+                      onClick={() => { setShowAddParish(false); setParishesToAdd([]); }}
+                      className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold active:scale-95 transition-all"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleConfirmAddParishes}
+                      disabled={parishesToAdd.length === 0}
+                      className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 text-white py-3 rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all"
+                    >
+                      Agregar{parishesToAdd.length > 0 ? ` (${parishesToAdd.length})` : ''}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           <div className="mt-4 bg-amber-50 border-2 border-amber-200 rounded-xl p-4">

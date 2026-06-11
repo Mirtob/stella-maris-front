@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Send, Calendar, Church, Clock, Plus, Download, ChevronDown } from 'lucide-react';
+import { X, Send, Calendar, Church, Clock, Plus } from 'lucide-react';
 import { Song, InstrumentType } from '../types';
 import { getTodayLocal, formatYmdForDisplay } from '../utils/dateLocal';
 import { getLiturgicalDateForDate, getDateForLiturgicalName, isSunday, getLiturgicalDateNames } from '../utils/liturgicalCalendar';
@@ -8,11 +8,22 @@ import { CantoralPDFPreview } from './CantoralPDFPreview';
 import { PostPublishModal } from './PostPublishModal';
 import { toast } from 'sonner';
 
+/** Destino de publicación: una parroquia con su propia fecha/celebración/horario. */
+export interface PublishTarget {
+  parishName: string;
+  date: string;
+  liturgicalDate: string;
+  massTime: string;
+}
+
 interface PublishCantoralModalProps {
   cantoral: Song[];
+  /** Parroquia activa — usada como destino por defecto y en el modo de una sola parroquia. */
   parishName: string;
+  /** Conjunto completo de parroquias del coro. Si tiene >1, se habilita el modo multi-parroquia. */
+  parishes?: string[];
   onClose: () => void;
-  onPublish: (date: string, liturgicalDate: string, massTime: string) => Promise<void> | void;
+  onPublish: (targets: PublishTarget[]) => Promise<void> | void;
   userInstruments?: InstrumentType[];
 }
 
@@ -21,7 +32,12 @@ interface CustomLiturgicalDate {
   date: string;
 }
 
-type VoiceSelection = 'Soprano' | 'Contralto' | 'Tenor' | 'Bajo' | 'Full Score';
+/** Estado por parroquia en el modo multi-parroquia. */
+interface ParishSchedule {
+  date: string;
+  liturgicalDate: string;
+  massTime: string;
+}
 
 /** Q38 — Normaliza horarios variados al formato 'HH:MM AM/PM' canónico. */
 function normalizeMassTime(raw: string): string {
@@ -37,124 +53,172 @@ function normalizeMassTime(raw: string): string {
   return `${String(displayH).padStart(2, '0')}:${min} ${period}`;
 }
 
-export function PublishCantoralModal({ cantoral, parishName, onClose, onPublish, userInstruments = [] }: PublishCantoralModalProps) {
+const MASS_TIME_SUGGESTIONS = [
+  '06:00 AM',
+  '07:00 AM',
+  '08:00 AM',
+  '09:00 AM',
+  '10:00 AM',
+  '11:00 AM',
+  '12:00 PM',
+  '06:00 PM',
+  '07:00 PM',
+  '08:00 PM',
+];
+
+export function PublishCantoralModal({ cantoral, parishName, parishes = [], onClose, onPublish, userInstruments = [] }: PublishCantoralModalProps) {
+  // Lista efectiva de parroquias (con fallback a la activa). >1 ⇒ modo multi-parroquia.
+  const allParishes = parishes.length > 0 ? parishes : (parishName ? [parishName] : []);
+  const isMulti = allParishes.length > 1;
+
+  // ── Estado modo una sola parroquia ────────────────────────────────────────
   // Use local-timezone today to avoid the user in a negative-offset TZ
   // (Chile, México, Argentina) publishing for "tomorrow" when it's 22:00.
   const [selectedDate, setSelectedDate] = useState(getTodayLocal());
   const [liturgicalDate, setLiturgicalDate] = useState('');
   const [massTime, setMassTime] = useState('');
+  const [dateChangeSource, setDateChangeSource] = useState<'calendar' | 'liturgical' | null>(null);
+
+  // ── Estado modo multi-parroquia ───────────────────────────────────────────
+  // Parroquias marcadas para publicar (por defecto, solo la activa).
+  const [selectedParishes, setSelectedParishes] = useState<Set<string>>(
+    () => new Set(parishName ? [parishName] : [])
+  );
+  // Fecha/celebración/horario por parroquia.
+  const [schedules, setSchedules] = useState<Record<string, ParishSchedule>>(() => {
+    const today = getTodayLocal();
+    // Auto-derivar la celebración de hoy (si es domingo/solemnidad del calendario)
+    // para no obligar a re-elegir la fecha cuando ya es la correcta.
+    const todayLiturgical = getLiturgicalDateForDate(today) || '';
+    const init: Record<string, ParishSchedule> = {};
+    allParishes.forEach(p => { init[p] = { date: today, liturgicalDate: todayLiturgical, massTime: '' }; });
+    return init;
+  });
+
+  // ── Estado compartido ─────────────────────────────────────────────────────
   const [showAddSolemnityModal, setShowAddSolemnityModal] = useState(false);
   const [showDownloadPDFModal, setShowDownloadPDFModal] = useState(false);
   const [showPostPublishModal, setShowPostPublishModal] = useState(false);
   const [customDates, setCustomDates] = useState<CustomLiturgicalDate[]>([]);
-  const [dateChangeSource, setDateChangeSource] = useState<'calendar' | 'liturgical' | null>(null);
-  const [voiceSelection, setVoiceSelection] = useState<VoiceSelection>('Full Score');
   const [isPublishing, setIsPublishing] = useState(false);
 
-  // Efecto para sincronizar fecha con celebración litúrgica
+  // ── Efectos de sincronización fecha ↔ celebración (solo modo una parroquia) ─
   useEffect(() => {
     if (dateChangeSource === 'calendar') {
-      // Usuario cambió la fecha del calendario
-      const currentYear = new Date(selectedDate).getFullYear();
       const liturgicalName = getLiturgicalDateForDate(selectedDate);
-      
+
       if (liturgicalName) {
-        // Se encontró la celebración litúrgica
         setLiturgicalDate(liturgicalName);
-        toast.success('Celebración encontrada', {
-          description: liturgicalName
-        });
+        toast.success('Celebración encontrada', { description: liturgicalName });
       } else if (isSunday(selectedDate)) {
-        // Es domingo pero no está en el calendario
         toast.info('Domingo no encontrado', {
           description: 'Agrega la celebración para este domingo',
-          action: {
-            label: 'Agregar',
-            onClick: () => setShowAddSolemnityModal(true)
-          }
+          action: { label: 'Agregar', onClick: () => setShowAddSolemnityModal(true) }
         });
         setLiturgicalDate('');
       } else {
-        // No es domingo
         toast.warning('Fecha no litúrgica', {
           description: 'La fecha seleccionada no corresponde a un domingo. Agrega la celebración especial.',
-          action: {
-            label: 'Agregar',
-            onClick: () => setShowAddSolemnityModal(true)
-          }
+          action: { label: 'Agregar', onClick: () => setShowAddSolemnityModal(true) }
         });
         setLiturgicalDate('');
       }
     }
     setDateChangeSource(null);
   }, [dateChangeSource, selectedDate]);
-  
-  // Efecto para sincronizar celebración litúrgica con fecha
+
   useEffect(() => {
     if (dateChangeSource === 'liturgical' && liturgicalDate) {
-      // Usuario cambió la celebración litúrgica
       const currentYear = new Date(selectedDate).getFullYear();
       const date = getDateForLiturgicalName(liturgicalDate, currentYear);
-      
+
       if (date) {
         setSelectedDate(date);
         toast.success('Fecha encontrada', {
-          description: formatYmdForDisplay(date, {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          })
+          description: formatYmdForDisplay(date, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
         });
       } else {
-        // Buscar en fechas personalizadas
         const customDate = customDates.find(cd => cd.name === liturgicalDate);
-        if (customDate) {
-          setSelectedDate(customDate.date);
-        }
+        if (customDate) setSelectedDate(customDate.date);
       }
     }
     setDateChangeSource(null);
   }, [dateChangeSource, liturgicalDate, customDates]);
 
-  const massTimeSuggestions = [
-    '06:00 AM',
-    '07:00 AM',
-    '08:00 AM',
-    '09:00 AM',
-    '10:00 AM',
-    '11:00 AM',
-    '12:00 PM',
-    '06:00 PM',
-    '07:00 PM',
-    '08:00 PM',
-  ];
+  // ── Helpers modo multi-parroquia ──────────────────────────────────────────
+  const toggleParish = (parish: string) => {
+    setSelectedParishes(prev => {
+      const next = new Set(prev);
+      if (next.has(parish)) next.delete(parish); else next.add(parish);
+      return next;
+    });
+  };
+
+  const allSelected = allParishes.length > 0 && allParishes.every(p => selectedParishes.has(p));
+  const toggleSelectAll = () => {
+    setSelectedParishes(allSelected ? new Set() : new Set(allParishes));
+  };
+
+  const updateSchedule = (parish: string, patch: Partial<ParishSchedule>) => {
+    setSchedules(prev => ({ ...prev, [parish]: { ...prev[parish], ...patch } }));
+  };
+
+  // Cambiar la fecha de una parroquia auto-deriva su celebración litúrgica (si existe
+  // en el calendario). Sin toasts para no spamear cuando hay varias parroquias.
+  const setParishDate = (parish: string, date: string) => {
+    const derived = getLiturgicalDateForDate(date);
+    updateSchedule(parish, { date, liturgicalDate: derived || schedules[parish]?.liturgicalDate || '' });
+  };
+
+  // ── Publicar ──────────────────────────────────────────────────────────────
+  const buildTargets = (): PublishTarget[] => {
+    if (isMulti) {
+      return Array.from(selectedParishes).map(parish => {
+        const s = schedules[parish];
+        return {
+          parishName: parish,
+          date: s.date,
+          liturgicalDate: s.liturgicalDate.trim(),
+          massTime: normalizeMassTime(s.massTime),
+        };
+      });
+    }
+    return [{
+      parishName: allParishes[0] || parishName,
+      date: selectedDate,
+      liturgicalDate: liturgicalDate.trim(),
+      massTime: normalizeMassTime(massTime),
+    }];
+  };
+
+  const canPublish = (() => {
+    if (isPublishing || cantoral.length === 0) return false;
+    if (isMulti) {
+      if (selectedParishes.size === 0) return false;
+      return Array.from(selectedParishes).every(p => {
+        const s = schedules[p];
+        return !!s && !!s.date && !!s.liturgicalDate && !!s.massTime;
+      });
+    }
+    return !!selectedDate && !!liturgicalDate && !!massTime;
+  })();
 
   const handlePublish = async () => {
-    if (!selectedDate || !liturgicalDate || !massTime || cantoral.length === 0) return;
-    if (isPublishing) return; // prevent double-click
-
-    // Q37 — Normalizar liturgicalDate y massTime antes de mandar a DB.
-    // Evita inconsistencias entre filas (mismas celebraciones con distinto
-    // whitespace o tipeo) que rompen el agrupamiento en CantoralHistory.
-    const cleanLiturgicalDate = liturgicalDate.trim();
-    // Q38 — Normalizar massTime: '08:00' -> '08:00 AM', '8:30 am' -> '08:30 AM'.
-    const cleanMassTime = normalizeMassTime(massTime);
-
+    if (!canPublish || isPublishing) return;
     setIsPublishing(true);
     try {
-      // Await the full pipeline: DB insert + PDF gen + Storage upload + QR dialog
-      await onPublish(selectedDate, cleanLiturgicalDate, cleanMassTime);
+      // Await the full pipeline: DB insert(s) + PDF gen + Storage upload + QR dialog
+      await onPublish(buildTargets());
     } finally {
       setIsPublishing(false);
     }
   };
 
-  const canPublish = !isPublishing && !!selectedDate && !!liturgicalDate && !!massTime && cantoral.length > 0;
-
-  // Detectar si el coro tiene instrumento "Coro" (polifónico)
-  const isPolyChoirMode = userInstruments.includes('Coro');
-  const isGuitarMode = userInstruments.includes('Guitarra');
+  // Opciones de celebración litúrgica para un año dado (+ solemnidades custom).
+  const liturgicalOptions = (year: number) => [
+    ...getLiturgicalDateNames(year),
+    ...customDates.map(cd => cd.name),
+  ];
 
   return (
     <>
@@ -194,102 +258,201 @@ export function PublishCantoralModal({ cantoral, parishName, onClose, onPublish,
 
             {/* Content — scrollable middle region of the flex column */}
             <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-6">
-              {/* Parish Name */}
-              <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800">
-                    <Church className="w-6 h-6 text-white" strokeWidth={2.5} />
+              {isMulti ? (
+                /* ── Modo multi-parroquia: elegir parroquias + fecha/horario por cada una ── */
+                <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-4 sm:p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800 flex-shrink-0">
+                      <Church className="w-6 h-6 text-white" strokeWidth={2.5} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-xl font-bold text-blue-950 dark:text-white">¿A qué parroquias?</div>
+                      <div className="text-sm text-blue-900 dark:text-blue-200">
+                        Mismos cantos; indicá fecha y horario de cada misa.
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-sm text-blue-900 dark:text-blue-200">Parroquia</div>
-                    <div className="text-xl font-bold text-blue-950 dark:text-white">{parishName}</div>
+
+                  <button
+                    onClick={toggleSelectAll}
+                    className="mb-3 text-sm font-bold text-blue-800 dark:text-blue-200 underline"
+                  >
+                    {allSelected ? 'Quitar todas' : 'Seleccionar todas'}
+                  </button>
+
+                  <div className="space-y-3">
+                    {allParishes.map((parish) => {
+                      const checked = selectedParishes.has(parish);
+                      const s = schedules[parish];
+                      const year = new Date(s?.date || getTodayLocal()).getFullYear();
+                      return (
+                        <div
+                          key={parish}
+                          className={`rounded-xl border-2 transition-colors ${
+                            checked
+                              ? 'border-blue-600 dark:border-blue-400 bg-white/60 dark:bg-white/10'
+                              : 'border-white/50 dark:border-white/20 bg-white/30 dark:bg-white/5'
+                          }`}
+                        >
+                          <label className="flex items-center gap-3 p-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleParish(parish)}
+                              className="w-5 h-5 rounded border-2 border-blue-600 dark:border-blue-400 accent-blue-600 cursor-pointer flex-shrink-0"
+                            />
+                            <span className="text-base font-bold text-blue-950 dark:text-white break-words">{parish}</span>
+                          </label>
+
+                          {checked && (
+                            <div className="px-3 pb-4 pt-1 space-y-3 border-t-2 border-white/50 dark:border-white/10">
+                              {/* Fecha */}
+                              <div>
+                                <label className="flex items-center gap-2 mb-1 text-sm font-bold text-blue-950 dark:text-white">
+                                  <Calendar className="w-4 h-4" /> Fecha de la Misa
+                                </label>
+                                <input
+                                  type="date"
+                                  value={s.date}
+                                  onChange={(e) => setParishDate(parish, e.target.value)}
+                                  className="w-full px-3 py-3 text-base rounded-lg border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 bg-white/70 dark:bg-white/10 text-blue-950 dark:text-white font-bold"
+                                />
+                              </div>
+                              {/* Celebración litúrgica */}
+                              <div>
+                                <label className="flex items-center gap-2 mb-1 text-sm font-bold text-blue-950 dark:text-white">
+                                  📖 Calendario Litúrgico
+                                </label>
+                                <select
+                                  value={s.liturgicalDate}
+                                  onChange={(e) => updateSchedule(parish, { liturgicalDate: e.target.value })}
+                                  className="w-full px-3 py-3 text-base rounded-lg border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 bg-white/70 dark:bg-white/10 text-blue-950 dark:text-white font-bold"
+                                >
+                                  <option value="">Seleccionar...</option>
+                                  {liturgicalOptions(year).map((name) => (
+                                    <option key={name} value={name}>{name}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              {/* Horario */}
+                              <div>
+                                <label className="flex items-center gap-2 mb-1 text-sm font-bold text-blue-950 dark:text-white">
+                                  <Clock className="w-4 h-4" /> Horario de la Misa
+                                </label>
+                                <select
+                                  value={s.massTime}
+                                  onChange={(e) => updateSchedule(parish, { massTime: e.target.value })}
+                                  className="w-full px-3 py-3 text-base rounded-lg border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 bg-white/70 dark:bg-white/10 text-blue-950 dark:text-white font-bold"
+                                >
+                                  <option value="">Seleccionar...</option>
+                                  {MASS_TIME_SUGGESTIONS.map((time) => (
+                                    <option key={time} value={time}>{time}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              </div>
-
-              {/* Date Selection */}
-              <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
-                <label className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800">
-                    <Calendar className="w-6 h-6 text-white" strokeWidth={2.5} />
+              ) : (
+                /* ── Modo una sola parroquia (comportamiento original) ── */
+                <>
+                  {/* Parish Name */}
+                  <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800">
+                        <Church className="w-6 h-6 text-white" strokeWidth={2.5} />
+                      </div>
+                      <div>
+                        <div className="text-sm text-blue-900 dark:text-blue-200">Parroquia</div>
+                        <div className="text-xl font-bold text-blue-950 dark:text-white">{parishName}</div>
+                      </div>
+                    </div>
                   </div>
-                  <span className="text-xl font-bold text-blue-950 dark:text-white">Fecha de la Misa</span>
-                </label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => {
-                    setSelectedDate(e.target.value);
-                    setDateChangeSource('calendar');
-                  }}
-                  className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white font-bold shadow-lg transition-colors"
-                />
-              </div>
 
-              {/* Liturgical Date Selection */}
-              <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
-                <label className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800">
-                    <span className="text-xl">📖</span>
+                  {/* Date Selection */}
+                  <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
+                    <label className="flex items-center gap-3 mb-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800">
+                        <Calendar className="w-6 h-6 text-white" strokeWidth={2.5} />
+                      </div>
+                      <span className="text-xl font-bold text-blue-950 dark:text-white">Fecha de la Misa</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => {
+                        setSelectedDate(e.target.value);
+                        setDateChangeSource('calendar');
+                      }}
+                      className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white font-bold shadow-lg transition-colors"
+                    />
                   </div>
-                  <span className="text-xl font-bold text-blue-950 dark:text-white">Calendario Litúrgico</span>
-                </label>
-                <select
-                  value={liturgicalDate}
-                  onChange={(e) => {
-                    setLiturgicalDate(e.target.value);
-                    setDateChangeSource('liturgical');
-                  }}
-                  className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white font-bold shadow-lg transition-colors"
-                >
-                  <option value="">Seleccionar...</option>
-                  {getLiturgicalDateNames(new Date(selectedDate).getFullYear()).map((date) => (
-                    <option key={date} value={date}>
-                      {date}
-                    </option>
-                  ))}
-                  {customDates.map((customDate) => (
-                    <option key={customDate.name} value={customDate.name}>
-                      {customDate.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-sm text-blue-900 dark:text-blue-200 mt-2 transition-colors">
-                  Selecciona el tiempo litúrgico correspondiente
-                </p>
-                <button
-                  onClick={() => setShowAddSolemnityModal(true)}
-                  className="flex items-center gap-2 text-sm text-blue-900 dark:text-blue-200 mt-2 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Agregar solemnidad
-                </button>
-              </div>
 
-              {/* Mass Time Selection */}
-              <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
-                <label className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800">
-                    <Clock className="w-6 h-6 text-white" strokeWidth={2.5} />
+                  {/* Liturgical Date Selection */}
+                  <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
+                    <label className="flex items-center gap-3 mb-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800">
+                        <span className="text-xl">📖</span>
+                      </div>
+                      <span className="text-xl font-bold text-blue-950 dark:text-white">Calendario Litúrgico</span>
+                    </label>
+                    <select
+                      value={liturgicalDate}
+                      onChange={(e) => {
+                        setLiturgicalDate(e.target.value);
+                        setDateChangeSource('liturgical');
+                      }}
+                      className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white font-bold shadow-lg transition-colors"
+                    >
+                      <option value="">Seleccionar...</option>
+                      {liturgicalOptions(new Date(selectedDate).getFullYear()).map((date) => (
+                        <option key={date} value={date}>
+                          {date}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-sm text-blue-900 dark:text-blue-200 mt-2 transition-colors">
+                      Selecciona el tiempo litúrgico correspondiente
+                    </p>
+                    <button
+                      onClick={() => setShowAddSolemnityModal(true)}
+                      className="flex items-center gap-2 text-sm text-blue-900 dark:text-blue-200 mt-2 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Agregar solemnidad
+                    </button>
                   </div>
-                  <span className="text-xl font-bold text-blue-950 dark:text-white">Horario de la Misa</span>
-                </label>
-                <select
-                  value={massTime}
-                  onChange={(e) => setMassTime(e.target.value)}
-                  className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white font-bold shadow-lg transition-colors"
-                >
-                  <option value="">Seleccionar...</option>
-                  {massTimeSuggestions.map((time) => (
-                    <option key={time} value={time}>
-                      {time}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-sm text-blue-900 dark:text-blue-200 mt-2 transition-colors">
-                  Indica la hora en que se celebrará la misa
-                </p>
-              </div>
+
+                  {/* Mass Time Selection */}
+                  <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
+                    <label className="flex items-center gap-3 mb-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800">
+                        <Clock className="w-6 h-6 text-white" strokeWidth={2.5} />
+                      </div>
+                      <span className="text-xl font-bold text-blue-950 dark:text-white">Horario de la Misa</span>
+                    </label>
+                    <select
+                      value={massTime}
+                      onChange={(e) => setMassTime(e.target.value)}
+                      className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white font-bold shadow-lg transition-colors"
+                    >
+                      <option value="">Seleccionar...</option>
+                      {MASS_TIME_SUGGESTIONS.map((time) => (
+                        <option key={time} value={time}>
+                          {time}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-sm text-blue-900 dark:text-blue-200 mt-2 transition-colors">
+                      Indica la hora en que se celebrará la misa
+                    </p>
+                  </div>
+                </>
+              )}
 
               {/* Preview */}
               <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-6 border-2 border-white/40 dark:border-white/20 transition-colors">
@@ -298,7 +461,9 @@ export function PublishCantoralModal({ cantoral, parishName, onClose, onPublish,
                   <div>
                     <h4 className="text-base font-bold text-blue-950 dark:text-white mb-1">Vista previa</h4>
                     <p className="text-sm text-blue-900 dark:text-blue-100">
-                      Este cantoral estará disponible para que los fieles de tu parroquia puedan seguir la liturgia con los cantos seleccionados.
+                      {isMulti
+                        ? `Se publicará el mismo cantoral en ${selectedParishes.size} parroquia${selectedParishes.size === 1 ? '' : 's'}, con la fecha y horario de cada misa.`
+                        : 'Este cantoral estará disponible para que los fieles de tu parroquia puedan seguir la liturgia con los cantos seleccionados.'}
                     </p>
                   </div>
                 </div>
@@ -313,8 +478,8 @@ export function PublishCantoralModal({ cantoral, parishName, onClose, onPublish,
                       Folleto Digital para el Coro
                     </h4>
                     <p className="text-base text-green-900 dark:text-green-200 leading-relaxed">
-                      Al publicar tu cantoral, podrás descargar un PDF con el esquema completo de cantos organizado por categorías litúrgicas. 
-                      Perfecto para compartir con los miembros del coro que prefieren tener el cantoral descargado 
+                      Al publicar tu cantoral, podrás descargar un PDF con el esquema completo de cantos organizado por categorías litúrgicas.
+                      Perfecto para compartir con los miembros del coro que prefieren tener el cantoral descargado
                       sin necesidad de entrar a la aplicación durante la Misa.
                     </p>
                   </div>
@@ -354,7 +519,7 @@ export function PublishCantoralModal({ cantoral, parishName, onClose, onPublish,
                     ) : (
                       <>
                         <Send className="w-5 h-5" />
-                        Publicar
+                        {isMulti ? `Publicar en ${selectedParishes.size || ''} ${selectedParishes.size === 1 ? 'parroquia' : 'parroquias'}` : 'Publicar'}
                       </>
                     )}
                   </div>
