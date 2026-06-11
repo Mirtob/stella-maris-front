@@ -72,13 +72,14 @@ export function ProfileSettings({ userProfile, onSave, onClose }: ProfileSetting
   const handleSave = () => {
     const updates: Partial<UserProfile> = {};
 
-    // Persistir el conjunto de parroquias editado + mantener el campo legacy en sync.
-    updates.parishes = parishes;
-    updates.parishName = parishes[0];
-
-    // Update which parish is active in this session
-    if (activeParish) {
-      updates.activeParishName = activeParish;
+    // Parroquias: solo roles con parroquia (Admin no tiene — CRUD global).
+    // Mantener el campo legacy parishName en sync + la parroquia activa de la sesión.
+    if (canManageParishes) {
+      updates.parishes = parishes;
+      updates.parishName = parishes[0];
+      if (activeParish) {
+        updates.activeParishName = activeParish;
+      }
     }
 
     // Only update instrument for choir members
@@ -199,7 +200,8 @@ export function ProfileSettings({ userProfile, onSave, onClose }: ProfileSetting
           </div>
         </div>
 
-        {/* Parish Selection */}
+        {/* Parish Selection — solo roles con parroquia (Admin no tiene: CRUD global) */}
+        {canManageParishes && (
         <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-amber-200 mb-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
@@ -328,6 +330,7 @@ export function ProfileSettings({ userProfile, onSave, onClose }: ProfileSetting
             </div>
           </div>
         </div>
+        )}
 
         {/* T13 — Recovery Email (no aplica para admin) */}
         {canSetRecoveryEmail && (
