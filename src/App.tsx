@@ -603,7 +603,11 @@ function AppContent() {
 
     const hasParishData = (profileToKeep.parishes?.length ?? 0) > 0 || !!profileToKeep.parishName;
 
-    if (hasParishData) {
+    // El Admin verificado tiene un perfil COMPLETO aunque no tenga parroquia (CRUD global).
+    // Debe ir al selector de rol/parroquia para cambiar de rol SIN reescribir su rol
+    // permanente (el diálogo solo toca activeRole). Sin esto caía al alta completa,
+    // que sobrescribía role='Admin' por el rol elegido.
+    if (hasParishData || isVerifiedAdmin) {
       // Batch both state updates together: profile cleared + selector shown
       setUserProfile(profileToKeep);
       setShowParishSelector(true);
@@ -724,9 +728,15 @@ function AppContent() {
 
   if (route.screen === 'settings') {
     if (!userProfile) return <Login onGoogleLogin={handleGoogleLogin} />;
+    // Mismo cálculo que el shell/sidebar: la config se perfila por el rol de sesión
+    // (con downgrade de Admin no verificado), no por el rol permanente.
+    const claimedSettingsRole = userProfile.activeRole || userProfile.role || 'Coro';
+    const settingsRole: UserRole =
+      claimedSettingsRole === 'Admin' && !isVerifiedAdmin ? 'Coro' : claimedSettingsRole;
     return (
       <ProfileSettings
         userProfile={userProfile}
+        effectiveRole={settingsRole}
         onClose={handleCloseSettings}
         onSave={handleUpdateProfile}
       />

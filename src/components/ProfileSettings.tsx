@@ -1,17 +1,24 @@
 import { User, Church, Music, Save, ArrowLeft, ShieldCheck, Loader, Trash2, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { UserProfile, InstrumentType } from '../types';
+import { UserProfile, InstrumentType, UserRole } from '../types';
 import { updateRecoveryEmail } from '../services/userProfiles';
 import { ParishPicker } from './ParishPicker';
 
 interface ProfileSettingsProps {
   userProfile: UserProfile;
+  /**
+   * Rol efectivo de la sesión (activeRole con el que el usuario está participando hoy,
+   * ya validado server-side para Admin). La pantalla se perfila según ESTE rol, no el
+   * permanente: si un Admin actúa como Coro/Pueblo fiel ve las opciones de ese rol
+   * (instrumento, gestión de parroquias), igual que el menú lateral.
+   */
+  effectiveRole: UserRole;
   onSave: (updates: Partial<UserProfile>) => void;
   onClose: () => void;
 }
 
-export function ProfileSettings({ userProfile, onSave, onClose }: ProfileSettingsProps) {
+export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }: ProfileSettingsProps) {
   // Settings only lets the user pick the ACTIVE parish from the ones already
   // in their profile. Adding/removing parishes from the set is done at the
   // initial ProfileSetup step.
@@ -22,12 +29,14 @@ export function ProfileSettings({ userProfile, onSave, onClose }: ProfileSetting
   const [recoverySaving, setRecoverySaving] = useState(false);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
 
-  const canChangeInstrument = userProfile.role === 'Coro';
-  // El email de respaldo no aplica para Admin — su acceso lo gestionan vía la tabla `admins`
+  // Se perfila por el rol EFECTIVO de la sesión, no el permanente (igual que el menú).
+  const canChangeInstrument = effectiveRole === 'Coro';
+  // El email de respaldo es de identidad de cuenta → depende del rol PERMANENTE.
+  // No aplica para Admin (su acceso lo gestiona la tabla `admins`).
   const canSetRecoveryEmail = userProfile.role !== 'Admin';
-  // Coro y Pueblo fiel pueden gestionar su conjunto de parroquias. Admin no tiene
+  // Coro y Pueblo fiel gestionan su conjunto de parroquias. Admin (efectivo) no tiene
   // parroquias (CRUD global), así que no ve esta gestión.
-  const canManageParishes = userProfile.role === 'Coro' || userProfile.role === 'Pueblo fiel';
+  const canManageParishes = effectiveRole === 'Coro' || effectiveRole === 'Pueblo fiel';
 
   // Conjunto de parroquias del usuario, editable en esta pantalla. Se inicializa
   // del perfil guardado (con fallback al campo legacy parishName).
@@ -137,7 +146,7 @@ export function ProfileSettings({ userProfile, onSave, onClose }: ProfileSetting
   };
 
   const getRoleColor = () => {
-    switch (userProfile.role) {
+    switch (effectiveRole) {
       case 'Admin':
         return 'from-red-600 to-red-700';
       case 'Coro':
@@ -194,7 +203,12 @@ export function ProfileSettings({ userProfile, onSave, onClose }: ProfileSetting
             <div>
               <label className="text-base text-gray-600 mb-1 block">Rol</label>
               <div className="text-xl font-bold text-gray-800 bg-gray-50 p-4 rounded-xl border-2 border-gray-200">
-                {userProfile.role}
+                {effectiveRole}
+                {effectiveRole !== userProfile.role && (
+                  <span className="ml-2 text-sm font-medium text-gray-500">
+                    · esta sesión (tu cuenta es {userProfile.role})
+                  </span>
+                )}
               </div>
             </div>
           </div>

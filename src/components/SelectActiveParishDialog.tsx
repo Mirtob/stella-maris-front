@@ -74,8 +74,9 @@ export function SelectActiveParishDialog({
           )}
         </div>
 
-        {/* ── No parish configured (safety fallback) ────────────────────── */}
-        {hasNoParish && (
+        {/* ── No parish configured (safety fallback) ──────────────────────
+            No aplica para Admin: legítimamente no tiene parroquia (CRUD global). */}
+        {hasNoParish && !isAdmin && (
           <div className="mb-4 bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-400 dark:border-amber-600 rounded-2xl p-4 text-center">
             <p className="text-base font-semibold text-amber-800 dark:text-amber-200 mb-1">
               Sin parroquia configurada
