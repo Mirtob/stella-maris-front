@@ -181,7 +181,13 @@ export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = 
     return null;
   }
 
-  const currentSong = suggestedSongs[currentIndex];
+  // El carrusel auto-avanza currentIndex, pero suggestedSongs se ACHICA cada vez
+  // que el coro agrega un canto (queda filtrado en getSuggestedSongs). Si el índice
+  // quedaba apuntando más allá del nuevo final, currentSong era undefined y el
+  // render crasheaba al leer currentSong.title ("Algo salió mal"). Clampear con
+  // módulo lo mantiene válido sin un useEffect extra. Acá length >= 1 (return null arriba).
+  const safeIndex = currentIndex % suggestedSongs.length;
+  const currentSong = suggestedSongs[safeIndex];
 
   // Obtener color según el tiempo litúrgico
   const getSeasonColor = () => {
@@ -232,8 +238,8 @@ export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = 
               <div
                 key={idx}
                 className={`h-1.5 rounded-full transition-all ${
-                  idx === currentIndex 
-                    ? 'w-6 bg-white' 
+                  idx === safeIndex
+                    ? 'w-6 bg-white'
                     : 'w-1.5 bg-white/40'
                 }`}
               />
@@ -329,7 +335,7 @@ export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = 
         {/* Counter */}
         <div className="text-center mt-1">
           <p className="text-xs text-blue-800 dark:text-blue-200 font-bold">
-            {currentIndex + 1} de {suggestedSongs.length}
+            {safeIndex + 1} de {suggestedSongs.length}
           </p>
         </div>
       </div>
