@@ -23,28 +23,15 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, use
 
   // Filtrar cantorales según el rol del usuario Y la parroquia
   let visibleCantorals = cantorals;
-  
-  console.log('🔍 PublishedCantorals - Filtrado de cantorales:');
-  console.log('  Total cantorales:', cantorals.length);
-  console.log('  userRole:', userRole);
-  console.log('  userParishName:', userParishName);
-  
+
   // Filtrar por estado (Pueblo fiel solo ve publicados)
   if (userRole === 'Pueblo fiel') {
     visibleCantorals = visibleCantorals.filter(c => c.status === 'published');
-    console.log('  Después de filtrar por status=published:', visibleCantorals.length);
   }
-  
+
   // Filtrar por parroquia (solo cantorales de la parroquia del usuario)
   if (userParishName) {
     visibleCantorals = visibleCantorals.filter(c => c.parishName === userParishName);
-    console.log('  Después de filtrar por parishName:', visibleCantorals.length);
-    console.log('  Cantorales visibles:', visibleCantorals.map(c => ({
-      id: c.id,
-      parishName: c.parishName,
-      status: c.status,
-      date: c.date
-    })));
   }
 
   const groupSongsByCategory = (songs: Song[]) => {

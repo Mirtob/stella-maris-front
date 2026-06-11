@@ -155,12 +155,6 @@ export function CategorySearch({
         s.version === song.version
       );
       
-      console.log('🔍 Autocompletar Misa:', song.massName);
-      console.log('  Kyrie:', song.title);
-      console.log('  Santo encontrado:', santo ? santo.title : 'NO ENCONTRADO');
-      console.log('  Cordero encontrado:', cordero ? cordero.title : 'NO ENCONTRADO');
-      console.log('  Gloria encontrado:', gloria ? gloria.title : 'NO ENCONTRADO');
-      
       setPendingSanto(santo || null);
       setPendingCordero(cordero || null);
       setPendingGloria(gloria || null);
@@ -229,52 +223,22 @@ export function CategorySearch({
   };
 
   const handleConfirmSantoCordero = () => {
-    // El usuario quiere el Santo y Cordero de la misma Misa
-    console.log('✅ Usuario confirmó agregar Santo y Cordero');
-    console.log('  pendingKyrie:', pendingKyrie ? pendingKyrie.title : 'NULL');
-    console.log('  pendingSanto:', pendingSanto ? pendingSanto.title : 'NULL');
-    console.log('  pendingCordero:', pendingCordero ? pendingCordero.title : 'NULL');
-    
     // Remover Santo y Cordero existentes PRIMERO
     const existingSanto = cantoral.filter(s => s.category === 'Santo');
     const existingCordero = cantoral.filter(s => s.category === 'Cordero de Dios');
-    console.log('  → Removiendo Santo existente:', existingSanto.length, 'cantos');
-    console.log('  → Removiendo Cordero existente:', existingCordero.length, 'cantos');
     existingSanto.forEach(s => onRemoveFromCantoral(s.id));
     existingCordero.forEach(s => onRemoveFromCantoral(s.id));
-    
+
     // Guardar referencias locales antes de cerrar el modal
     const kyrieToAdd = pendingKyrie;
     const santoToAdd = pendingSanto;
     const corderoToAdd = pendingCordero;
     const gloriaToAdd = pendingGloria;
-    
-    console.log('📝 Agregando cantos en orden:');
-    
-    // Ahora agregar todo junto EN ORDEN
-    if (kyrieToAdd) {
-      console.log('  1. Agregando Kyrie:', kyrieToAdd.title, '(ID:', kyrieToAdd.id + ')');
-      onAddToCantoral(kyrieToAdd);
-    } else {
-      console.log('  ✗ No hay Kyrie para agregar');
-    }
-    
-    if (santoToAdd) {
-      console.log('  2. Agregando Santo:', santoToAdd.title, '(ID:', santoToAdd.id + ')');
-      onAddToCantoral(santoToAdd);
-    } else {
-      console.log('  ✗ No hay Santo para agregar - REVISAR BÚSQUEDA');
-    }
-    
-    if (corderoToAdd) {
-      console.log('  3. Agregando Cordero:', corderoToAdd.title, '(ID:', corderoToAdd.id + ')');
-      onAddToCantoral(corderoToAdd);
-    } else {
-      console.log('  ✗ No hay Cordero para agregar - REVISAR BÚSQUEDA');
-    }
-    
-    console.log('✅ Proceso completado');
-    
+
+    if (kyrieToAdd) onAddToCantoral(kyrieToAdd);
+    if (santoToAdd) onAddToCantoral(santoToAdd);
+    if (corderoToAdd) onAddToCantoral(corderoToAdd);
+
     setShowSantoCordeloDialog(false);
     
     // Ahora preguntar por el Gloria
@@ -472,7 +436,6 @@ export function CategorySearch({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-12 pr-4 py-4 rounded-xl text-lg text-blue-950 dark:text-white bg-white/70 dark:bg-white/15 border-2 border-white/60 dark:border-white/20 focus:outline-none focus:ring-4 focus:ring-blue-400/30 focus:border-blue-600 dark:focus:border-blue-400 placeholder-blue-700/70 dark:placeholder-blue-300/70 transition-all"
-              aria-label="Buscar cantos"
             />
           </div>
 

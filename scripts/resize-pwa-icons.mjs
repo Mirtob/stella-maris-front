@@ -25,6 +25,12 @@ const TARGETS = [
   { src: 'public/icon-512.png',        out: 'public/icon-192.png',        size: 192 },
   { src: 'public/icon-512.png',        out: 'public/icon-512.png',        size: 512 },
   { src: 'public/icon-512.png',        out: 'public/apple-touch-icon.png', size: 180 },
+  // F3 — Logo importado via figma:asset/ por 8 componentes. Estaba en 1024x1024
+  // a 1.2MB, descargado por cada primer load. Se muestra a max 224px en
+  // Onboarding y 96px en otros. 384 con downscale de buena calidad es nítido
+  // hasta @2x DPR sin pesar como antes.
+  { src: 'src/assets/44767b9307cb7c59bba6fc5a03063ff51488551e.png',
+    out: 'src/assets/44767b9307cb7c59bba6fc5a03063ff51488551e.png', size: 384 },
 ];
 
 async function main() {

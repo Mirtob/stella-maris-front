@@ -76,13 +76,7 @@ export function ParishManager() {
   };
 
   const handleSaveChapel = () => {
-    // En producción, esto se enviaría al backend
-    console.log('✅ Agregar capilla:', {
-      parishId: selectedParishForChapel?.id,
-      name: newChapelName,
-      address: newChapelAddress
-    });
-    
+    // TODO: persistir en backend cuando exista endpoint /api/parishes/chapels
     toast.success('¡Capilla agregada exitosamente!', {
       description: `${newChapelName} ha sido agregada a ${selectedParishForChapel?.name}`,
       duration: 4000,
@@ -99,17 +93,9 @@ export function ParishManager() {
   };
 
   const handleSaveParish = () => {
-    // En producción, esto se enviaría al backend
+    // TODO: persistir en backend cuando exista endpoint /api/parishes
     const dioceseName = chileDioceses.find(d => d.id === newParishDiocese)?.name || '';
-    
-    console.log('✅ Agregar parroquia:', {
-      name: newParishName,
-      address: newParishAddress,
-      city: newParishCity,
-      dioceseId: newParishDiocese,
-      dioceseName: dioceseName
-    });
-    
+
     toast.success('¡Parroquia agregada exitosamente!', {
       description: `${newParishName} ha sido agregada a ${dioceseName}`,
       duration: 4000,
@@ -128,15 +114,8 @@ export function ParishManager() {
   };
 
   const handleSaveEditParish = () => {
-    // En producción, esto se enviaría al backend
-    console.log('✅ Editar parroquia:', {
-      id: selectedParishForEdit?.id,
-      name: selectedParishForEdit?.name,
-      address: selectedParishForEdit?.address,
-      city: selectedParishForEdit?.city,
-      dioceseId: selectedParishForEdit?.dioceseId
-    });
-    
+    // TODO: persistir en backend cuando exista endpoint PATCH /api/parishes/:id
+
     toast.success('¡Parroquia actualizada exitosamente!', {
       description: `Los cambios en ${selectedParishForEdit?.name} han sido guardados`,
       duration: 4000,

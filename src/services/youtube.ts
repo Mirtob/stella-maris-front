@@ -237,7 +237,6 @@ export async function getVideoMetadata(videoId: string): Promise<YouTubeVideoMet
 
   const useRealApi = hasRealYouTubeApiKey();
   if (!useRealApi) {
-    console.log('🔄 Fallback mock: Obtener metadata de video', videoId);
     const mockMetadata: YouTubeVideoMetadata = {
       id: videoId,
       title: 'Canto Litúrgico',
@@ -308,10 +307,7 @@ export async function getVideoMetadata(videoId: string): Promise<YouTubeVideoMet
  */
 export async function searchVideos(query: string, maxResults: number = 20): Promise<YouTubeSearchResult[]> {
   const useRealApi = hasRealYouTubeApiKey() && hasValidYouTubeChannelId();
-  if (!useRealApi) {
-    console.log('🔄 Fallback mock: Buscar videos', query);
-    return [];
-  }
+  if (!useRealApi) return [];
 
   try {
     const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${encodeURIComponent(YOUTUBE_CONFIG.channelId)}&q=${encodeURIComponent(query)}&type=video&maxResults=${maxResults}&order=date&key=${encodeURIComponent(YOUTUBE_CONFIG.apiKey)}`;
@@ -339,9 +335,7 @@ export async function searchVideos(query: string, maxResults: number = 20): Prom
 /**
  * Obtener videos de una playlist
  */
-export async function getPlaylistVideos(playlistId: string, maxResults: number = 50): Promise<YouTubeSearchResult[]> {
-  console.log('🔄 Mock: Obtener videos de playlist', playlistId);
-  
+export async function getPlaylistVideos(_playlistId: string, _maxResults: number = 50): Promise<YouTubeSearchResult[]> {
   return [];
   
   // TODO: Implementar con YouTube API real
@@ -468,7 +462,6 @@ export async function uploadVideo(
       xhr.addEventListener('load', () => {
         if (xhr.status === 200) {
           const response = JSON.parse(xhr.responseText);
-          console.log('✅ Video subido:', response.id);
           resolve({
             success: true,
             videoId: response.id,
@@ -559,8 +552,6 @@ export async function createPlaylist(
     }
 
     const data = await response.json();
-    console.log('✅ Playlist creada:', data.id);
-
     return {
       success: true,
       playlistId: data.id,
@@ -609,8 +600,6 @@ export async function addVideoToPlaylist(
     }
 
     const data = await response.json();
-    console.log('✅ Video agregado a playlist');
-
     return {
       success: true,
       itemId: data.id,

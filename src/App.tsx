@@ -28,6 +28,7 @@ import { OfflineBanner } from './components/OfflineBanner';
 import { TermsOfService } from './components/legal/TermsOfService';
 import { PrivacyPolicy } from './components/legal/PrivacyPolicy';
 import { Onboarding } from './components/Onboarding';
+import { ConfirmDialog } from './components/ConfirmDialog';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ThemeToggle } from './components/ThemeToggle';
 import { Song, UserProfile, UserRole, InstrumentType, PublishedCantoral } from './types';
@@ -185,13 +186,18 @@ function AppContent() {
   const [isVerifiedAdmin, setIsVerifiedAdmin] = useState(false);
   // Q17 — flag para mostrar skeleton mientras Supabase responde con la lista
   const [loadingCantorals, setLoadingCantorals] = useState(true);
+  // F2 — Vista pendiente cuando el coro intenta abandonar un draft de cantoral.
+  // null = no hay confirmación abierta; string = mostrar diálogo y, si confirma, navegar a esa vista.
+  const [pendingNavigateView, setPendingNavigateView] = useState<ViewState | null>(null);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
   /** Navigate to a view inside the authenticated shell.
    *  Q19 — Si estábamos armando un cantoral (vista 'main' como Coro con cantos
-   *  en el draft) y nos vamos a otra vista, pedimos confirmación nativa.
-   *  Evita perder 15 minutos de armado por un tap accidental al sidebar. */
+   *  en el draft) y nos vamos a otra vista, pedimos confirmación.
+   *  Evita perder 15 minutos de armado por un tap accidental al sidebar.
+   *  F2 — Usa <ConfirmDialog> en lugar del window.confirm nativo (iOS se ve OS-style,
+   *  rompe la sensación PWA). */
   function navigate(view: string) {
     const isAbandoningDraft =
       route.screen === 'app' &&
@@ -200,10 +206,8 @@ function AppContent() {
       view !== 'main' &&
       (userProfile?.activeRole || userProfile?.role) === 'Coro';
     if (isAbandoningDraft) {
-      const ok = window.confirm(
-        `Tenés ${cantoral.length} ${cantoral.length === 1 ? 'canto' : 'cantos'} en el cantoral sin publicar. ¿Salir y perderlos?`
-      );
-      if (!ok) return;
+      setPendingNavigateView(view as ViewState);
+      return;
     }
     setRoute({ screen: 'app', view: view as ViewState });
   }
@@ -681,6 +685,22 @@ function AppContent() {
         onLogout={handleLogout}
         onOpenSettings={handleOpenSettings}
         effectiveRoleOverride={effectiveRole}
+      />
+
+      <ConfirmDialog
+        open={pendingNavigateView !== null}
+        title="¿Salir del cantoral en armado?"
+        message={`Tenés ${cantoral.length} ${cantoral.length === 1 ? 'canto agregado' : 'cantos agregados'} en el cantoral. El borrador queda en esta sesión, pero si cerrás la app o cambiás de cuenta se va a perder.`}
+        confirmLabel="Sí, salir"
+        cancelLabel="Seguir armando"
+        variant="warning"
+        onConfirm={() => {
+          if (pendingNavigateView) {
+            setRoute({ screen: 'app', view: pendingNavigateView });
+            setPendingNavigateView(null);
+          }
+        }}
+        onCancel={() => setPendingNavigateView(null)}
       />
 
       {renderView({
