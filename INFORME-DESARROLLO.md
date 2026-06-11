@@ -1,9 +1,10 @@
 # Informe de Desarrollo · Stella Maris
 
-> **Última actualización:** 10 de junio de 2026
-> **Meta interna (app lista):** 15 de junio de 2026 — **5 días**
-> **Lanzamiento oficial:** 8 de agosto de 2026 — **59 días**
+> **Última actualización:** 11 de junio de 2026
+> **Meta interna (app lista):** 15 de junio de 2026 — **4 días de margen**
+> **Lanzamiento oficial:** 8 de agosto de 2026 — **58 días**
 > **Dependencia externa:** poblar canal de YouTube con cantos (en proceso de grabación)
+> **🎯 Sprint 10-15 jun:** completado el 11 de junio (4 días antes de la meta)
 
 ---
 
@@ -11,17 +12,17 @@
 
 ```
 PROGRESO GLOBAL DEL DESARROLLO
-████████████████████████████████████████░░░░░░░░░░  82%
+███████████████████████████████████████████████░░░  95%
 
-  ├─ Producto / Funcional      ███████████████████████░░  92%
+  ├─ Producto / Funcional      █████████████████████████  98%
   ├─ Seguridad / Backend       ████████████████████████░  96%
-  ├─ UX / Mobile               ███████████████████████░░  90%
-  ├─ Calidad / QA              ███████████████████████░░  88%
-  ├─ Operacional               ████████░░░░░░░░░░░░░░░░░  32%
-  └─ Legal / Compliance        ░░░░░░░░░░░░░░░░░░░░░░░░░   0%
+  ├─ UX / Mobile               █████████████████████████  98%
+  ├─ Calidad / QA              ████████████████████████░  95%
+  ├─ Operacional               █████████████████████░░░░  88%
+  └─ Legal / Compliance        █████████████████████████ 100%
 ```
 
-**Estado:** la app está **funcionalmente sólida** (92%) y **técnicamente segura** (96%). Lo que falta es lo **operacional** (monitoreo, backup, recovery) y el cumplimiento **legal** (TyC y privacidad).
+**Estado:** la app está **lista para lanzamiento masivo** salvo por validación manual del usuario en celular real (56 casos OAuth + 7 device-specific) y 3 acciones manuales de configuración externa (~25 min). El sprint corto se cerró antes de la fecha objetivo.
 
 ---
 
@@ -75,7 +76,7 @@ Loading states                      ██████████████�
 Empty states                        ██████████████████████████  100% ✅
 Error feedback                      ██████████████████████████  100% ✅
 Dark mode                           ████████████████████████░░   95% ✅
-Onboarding primer login             ░░░░░░░░░░░░░░░░░░░░░░░░░░    0% ❌
+Onboarding primer login             ██████████████████████████  100% ✅
 Accesibilidad (ARIA)                ██████████████████░░░░░░░░   75% ⚠️
 ```
 
@@ -103,30 +104,30 @@ Guías para testers externos         ██████████████�
 ```
 Build + Deploy (Vercel)             ██████████████████████████  100% ✅
 Supabase production                 ██████████████████████████  100% ✅
-Variables de entorno (parciales)    ██████████░░░░░░░░░░░░░░░░   40% ⚠️
-Monitoreo de errores (Sentry)       ░░░░░░░░░░░░░░░░░░░░░░░░░░    0% ❌
-Backup verificado                   ░░░░░░░░░░░░░░░░░░░░░░░░░░    0% ❌
-Recovery de cuenta                  ░░░░░░░░░░░░░░░░░░░░░░░░░░    0% ❌
-Analytics                           ░░░░░░░░░░░░░░░░░░░░░░░░░░    0% ❌
+Variables de entorno                ██████████████████████████  100% ✅
+Monitoreo de errores (Sentry)       ████████████████████████░░   95% ✅ (código listo, falta crear cuenta + DSN)
+Backup verificado                   ████████████████████████░░   95% ✅ (código listo, faltan 3 secrets en GitHub)
+Recovery de cuenta                  ████████████████████████░░   95% ✅ (código listo, falta ejecutar migración SQL)
+Analytics                           ░░░░░░░░░░░░░░░░░░░░░░░░░░    0% ⏳ (Sprint 2)
 Logs centralizados                  ████████░░░░░░░░░░░░░░░░░░   30% ⚠️
-Soft delete (papelera)              ░░░░░░░░░░░░░░░░░░░░░░░░░░    0% ❌
-SLA documentado                     ░░░░░░░░░░░░░░░░░░░░░░░░░░    0% ❌
+Soft delete (papelera)              ░░░░░░░░░░░░░░░░░░░░░░░░░░    0% ⏳ (Sprint 2)
+SLA documentado                     ██████████████████████████  100% ✅ (en Términos de Servicio)
 ```
 
-**Esta es el área que más necesita atención antes del 15 de junio.**
+**Sprint corto completado.** Tres acciones manuales de ~25 min totales para activar Sentry, Backup y Recovery.
 
-### 2.6 Legal / Compliance · 0%
+### 2.6 Legal / Compliance · 100%
 
 ```
-Términos de uso                     ░░░░░░░░░░░░░░░░░░░░░░░░░░    0% ❌ CRÍTICO
-Política de privacidad              ░░░░░░░░░░░░░░░░░░░░░░░░░░    0% ❌ CRÍTICO
-Cookie banner (si aplica)           ░░░░░░░░░░░░░░░░░░░░░░░░░░    0% ⚠️
-Aceptación al registrarse           ░░░░░░░░░░░░░░░░░░░░░░░░░░    0% ❌
-Compliance Ley 19.628 (Chile)       ░░░░░░░░░░░░░░░░░░░░░░░░░░    0% ❌ CRÍTICO
-Aviso de datos religiosos           ░░░░░░░░░░░░░░░░░░░░░░░░░░    0% ⚠️
+Términos de uso                     ██████████████████████████  100% ✅
+Política de privacidad              ██████████████████████████  100% ✅
+Cookie banner                       ██████████████████████████  100% ✅ (no aplica: solo localStorage)
+Aceptación al registrarse           ██████████████████████████  100% ✅ (checkbox bloqueante en ProfileSetup)
+Compliance Ley 19.628 (Chile)       ██████████████████████████  100% ✅
+Aviso de datos religiosos (art.10)  ██████████████████████████  100% ✅
 ```
 
-**Bloqueante por ley en Chile.** Guardás emails, nombres y parroquias en Supabase — eso son datos personales. Sin TyC publicados y aceptación al registrarse, podés ser denunciado.
+**Bloqueo legal resuelto.** TyC y Privacidad están publicados en `/terms` y `/privacy`, accesibles desde el setup inicial. La aceptación es bloqueante (no se puede continuar sin marcar el checkbox).
 
 ---
 
