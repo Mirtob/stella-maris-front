@@ -552,7 +552,8 @@ function AppContent() {
       // (evita spam de toasts en publicación múltiple).
       let pdfUrl: string | undefined;
       try {
-        const { blob } = generateChoirCantoralPDF(
+        // PDF liviano para el QR/Storage (sin partituras embebidas, publicación rápida).
+        const { blob } = await generateChoirCantoralPDF(
           newCantoral.songs,
           newCantoral.parishName,
           newCantoral.date,

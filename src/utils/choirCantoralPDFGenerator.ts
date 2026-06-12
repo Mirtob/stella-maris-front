@@ -1,14 +1,92 @@
 import jsPDF from 'jspdf';
 import { Song, InstrumentType } from '../types';
+import { getDrivePdfProxyUrl } from './driveProxy';
 
 type VoiceSelection = 'Soprano' | 'Contralto' | 'Tenor' | 'Bajo' | 'Full Score';
 
 interface GenerateOptions {
   /** Si true, dispara la descarga local del PDF. Default: true (compatibilidad). */
   download?: boolean;
+  /**
+   * Si true, además de la letra con acordes, embebe las páginas de la partitura
+   * (PDF de Drive) de cada canto, intercaladas en orden. Para instrumentistas (Coro).
+   * Requiere red (descarga cada partitura vía el proxy). Default: false.
+   */
+  embedScores?: boolean;
 }
 
-export const generateChoirCantoralPDF = (
+/**
+ * Embebe las páginas de la partitura (PDF de Drive) de un canto al final del documento.
+ * Renderiza cada página con PDF.js a un canvas y la agrega como imagen en una página A4.
+ * Si la partitura no existe o falla la descarga, agrega una página con un aviso.
+ */
+async function embedPartituraPages(
+  pdf: jsPDF,
+  song: Song,
+  layout: { pageWidth: number; pageHeight: number; margin: number }
+): Promise<void> {
+  const { pageWidth, pageHeight, margin } = layout;
+  const proxyUrl = getDrivePdfProxyUrl(song.sheetMusicUrl);
+  if (!proxyUrl) return;
+
+  const addErrorPage = (msg: string) => {
+    pdf.addPage();
+    pdf.setFontSize(11);
+    pdf.setFont('helvetica', 'italic');
+    pdf.setTextColor(156, 163, 175); // gray-400
+    pdf.text(msg, margin, margin + 10, { maxWidth: pageWidth - margin * 2 });
+  };
+
+  try {
+    const pdfjs: any = await import('pdfjs-dist');
+    // Worker servido desde nuestro propio dominio (mismo patrón que PDFViewer).
+    pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+    const doc = await pdfjs.getDocument({ url: proxyUrl }).promise;
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) { await doc.destroy(); return; }
+
+    for (let p = 1; p <= doc.numPages; p++) {
+      const page = await doc.getPage(p);
+      const viewport = page.getViewport({ scale: 2 }); // ~150-200 dpi, buen balance nitidez/peso
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      const imgData = canvas.toDataURL('image/jpeg', 0.85);
+
+      pdf.addPage();
+      // Encabezado solo en la primera página de la partitura del canto.
+      let topOffset = margin;
+      if (p === 1) {
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(30, 58, 138); // blue-900
+        pdf.text(`Partitura — ${song.title}`, margin, margin, { maxWidth: pageWidth - margin * 2 });
+        topOffset = margin + 6;
+      }
+
+      // Ajuste "contain" dentro del área útil de la A4.
+      const availW = pageWidth - margin * 2;
+      const availH = pageHeight - topOffset - margin;
+      const imgRatio = canvas.width / canvas.height;
+      let drawW = availW;
+      let drawH = drawW / imgRatio;
+      if (drawH > availH) {
+        drawH = availH;
+        drawW = drawH * imgRatio;
+      }
+      const x = (pageWidth - drawW) / 2;
+      pdf.addImage(imgData, 'JPEG', x, topOffset, drawW, drawH);
+    }
+
+    await doc.destroy();
+  } catch {
+    addErrorPage(`No se pudo cargar la partitura de "${song.title}".`);
+  }
+}
+
+export const generateChoirCantoralPDF = async (
   songs: Song[],
   parishName: string,
   date: string,
@@ -17,7 +95,7 @@ export const generateChoirCantoralPDF = (
   userInstruments: InstrumentType[] = [],
   voiceSelection: VoiceSelection = 'Full Score',
   options: GenerateOptions = { download: true }
-): { blob: Blob; fileName: string } => {
+): Promise<{ blob: Blob; fileName: string }> => {
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -286,7 +364,7 @@ export const generateChoirCantoralPDF = (
   };
 
   // Renderizar cantos por categoría
-  sortedCategories.forEach((category, index) => {
+  for (const category of sortedCategories) {
     const categorySongs = groupedSongs[category];
     
     // Ya no agregamos una página nueva para cada categoría
@@ -307,7 +385,8 @@ export const generateChoirCantoralPDF = (
     yPosition += 18;
 
     // Renderizar cada canto de la categoría
-    categorySongs.forEach((song, songIndex) => {
+    for (let songIndex = 0; songIndex < categorySongs.length; songIndex++) {
+      const song = categorySongs[songIndex];
       checkNewPage(40);
 
       // Cabecera del canto
@@ -422,11 +501,19 @@ export const generateChoirCantoralPDF = (
       }
 
       yPosition += 8; // Espacio entre cantos
-    });
+
+      // Embeber la partitura del canto (intercalado), para instrumentistas.
+      if (options.embedScores && song.sheetMusicUrl) {
+        await embedPartituraPages(pdf, song, { pageWidth, pageHeight, margin });
+        // La última página de la partitura quedó ocupada por la imagen: forzar que
+        // el contenido del siguiente canto arranque en una página nueva.
+        yPosition = pageHeight;
+      }
+    }
 
     // Espacio reducido entre categorías (no nueva página)
     yPosition += 5;
-  });
+  }
 
   // Pie de página en la última página
   pdf.addPage();

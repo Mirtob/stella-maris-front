@@ -15,6 +15,36 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedParish, setSelectedParish] = useState<string>('all');
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  // Descarga el folleto del Coro con letras, acordes y las partituras embebidas
+  // (intercaladas por canto). Puede tardar: baja cada partitura vía el proxy.
+  const handleDownload = async (cantoral: PublishedCantoral) => {
+    if (downloadingId) return;
+    setDownloadingId(cantoral.id);
+    try {
+      await generateChoirCantoralPDF(
+        cantoral.songs,
+        cantoral.parishName,
+        cantoral.date,
+        cantoral.liturgicalDate,
+        cantoral.massTime,
+        [],
+        'Full Score',
+        { embedScores: true }
+      );
+      toast.success('PDF Descargado', {
+        description: 'El cantoral con letras, acordes y partituras se ha descargado'
+      });
+    } catch (error) {
+      console.error('Error al generar PDF:', error);
+      toast.error('Error al descargar el PDF', {
+        description: 'Por favor intenta nuevamente'
+      });
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const pendingDeleteCantoral = pendingDeleteId
     ? cantorals.find(c => c.id === pendingDeleteId)
@@ -270,30 +300,25 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              try {
-                                generateChoirCantoralPDF(
-                                  cantoral.songs,
-                                  cantoral.parishName,
-                                  cantoral.date,
-                                  cantoral.liturgicalDate,
-                                  cantoral.massTime,
-                                  [], // userInstruments - por defecto sin instrumentos específicos
-                                  'Full Score'
-                                );
-                                toast.success('PDF Descargado', {
-                                  description: 'El cantoral se ha descargado correctamente'
-                                });
-                              } catch (error) {
-                                console.error('Error al generar PDF:', error);
-                                toast.error('Error al descargar el PDF', {
-                                  description: 'Por favor intenta nuevamente'
-                                });
-                              }
+                              handleDownload(cantoral);
                             }}
-                            className="w-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-3 border-green-200 dark:border-green-700 py-4 px-3 sm:px-4 rounded-2xl font-bold text-xl flex items-center justify-center gap-3 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                            disabled={downloadingId === cantoral.id}
+                            className="w-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-3 border-green-200 dark:border-green-700 py-4 px-3 sm:px-4 rounded-2xl font-bold text-xl flex items-center justify-center gap-3 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
                           >
-                            <Download className="w-6 h-6" strokeWidth={2.5} />
-                            Descargar Cantoral PDF
+                            {downloadingId === cantoral.id ? (
+                              <>
+                                <svg className="w-6 h-6 animate-spin" viewBox="0 0 24 24" fill="none">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                                </svg>
+                                Generando con partituras…
+                              </>
+                            ) : (
+                              <>
+                                <Download className="w-6 h-6" strokeWidth={2.5} />
+                                Descargar Cantoral PDF
+                              </>
+                            )}
                           </button>
 
                           {/* Songs by Category */}

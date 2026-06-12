@@ -27,6 +27,7 @@ export function CantoralPDFPreview({
 }: CantoralPDFPreviewProps) {
   const [voiceSelection, setVoiceSelection] = useState<VoiceSelection>('Full Score');
   const [showFormatSelector, setShowFormatSelector] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   // Determinar modo de instrumento
   const isGuitarMode = userInstruments.includes('Guitarra');
@@ -82,26 +83,34 @@ export function CantoralPDFPreview({
     'Salida': '⛪',
   };
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
+    if (downloading) return;
+    setShowFormatSelector(false);
+    setDownloading(true);
     try {
-      generateChoirCantoralPDF(
+      // embedScores: el folleto del Coro incluye, por canto, la letra con acordes y
+      // a continuación las páginas de su partitura (para instrumentistas). Descarga
+      // cada partitura vía el proxy, por eso puede tardar unos segundos.
+      await generateChoirCantoralPDF(
         cantoral,
         parishName,
         date,
         celebration,
         massTime,
         userInstruments,
-        voiceSelection
+        voiceSelection,
+        { embedScores: true }
       );
       toast.success('PDF Generado', {
-        description: 'El folleto digital se ha descargado correctamente'
+        description: 'El folleto con letras, acordes y partituras se ha descargado'
       });
-      setShowFormatSelector(false);
     } catch (error) {
       console.error('Error al generar PDF:', error);
       toast.error('Error al generar el PDF', {
         description: 'Por favor intenta nuevamente'
       });
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -326,11 +335,24 @@ export function CantoralPDFPreview({
             </button>
             <button
               onClick={handleDownloadPDF}
-              className="flex-1 bg-gradient-to-r from-green-700 to-green-800 text-white py-4 px-4 rounded-xl font-bold text-lg hover:shadow-lg active:scale-95 transition-all border-2 border-green-900"
+              disabled={downloading}
+              className="flex-1 bg-gradient-to-r from-green-700 to-green-800 text-white py-4 px-4 rounded-xl font-bold text-lg hover:shadow-lg active:scale-95 transition-all border-2 border-green-900 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               <div className="flex items-center justify-center gap-2">
-                <Download className="w-5 h-5" />
-                Descargar PDF
+                {downloading ? (
+                  <>
+                    <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                    </svg>
+                    Generando con partituras…
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-5 h-5" />
+                    Descargar PDF
+                  </>
+                )}
               </div>
             </button>
           </div>
