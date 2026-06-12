@@ -99,14 +99,21 @@ async function main() {
     page.on('pageerror', (e) => jsErrors.push(String(e)));
     await page.goto(`${URL_BASE}/c/hack`, { waitUntil: 'networkidle' });
     const html = await page.content();
-    const looksHealthy = /Continuar con Google|Iniciar sesi|Cargando Stella/i.test(html);
-    if (looksHealthy && jsErrors.length === 0) {
-      ok('E6 — /c/hack ignorada, app sana sin errores JS');
+    const crashed = /Algo sali[oó] mal/i.test(html); // ErrorBoundary de Sentry
+    // Comportamiento esperado (feat NotFound/classifyPath): un deep link malformado
+    // va a la pantalla "Este link de cantoral no es válido", NO al login silencioso.
+    // Se aceptan también login/cargando por compatibilidad con versiones previas.
+    const looksHealthy = /Continuar con Google|Iniciar sesi|Cargando Stella|Este link de cantoral no es válido|Página no encontrada|Ir al inicio/i.test(html);
+    const real = jsErrors.filter(e => !/ResizeObserver|Sentry/.test(e));
+    if (!crashed && looksHealthy && real.length === 0) {
+      ok('E6 — /c/hack → pantalla NotFound, app sana sin errores JS');
       add('E6', 'ok');
-    } else if (looksHealthy && jsErrors.length > 0) {
-      const real = jsErrors.filter(e => !/ResizeObserver|Sentry/.test(e));
-      if (real.length === 0) { ok('E6 — /c/hack ignorada (errores triviales)'); add('E6', 'ok'); }
-      else                   { fail(`E6 — /c/hack causó ${real.length} errores JS reales`); add('E6', 'fail', real[0]); }
+    } else if (crashed) {
+      fail('E6 — /c/hack crasheó (ErrorBoundary "Algo salió mal")');
+      add('E6', 'fail', 'ErrorBoundary');
+    } else if (real.length > 0) {
+      fail(`E6 — /c/hack causó ${real.length} errores JS reales`);
+      add('E6', 'fail', real[0]);
     } else {
       fail('E6 — /c/hack no llevó a un estado sano');
       add('E6', 'fail');
