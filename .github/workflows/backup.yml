@@ -10,6 +10,10 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # `gh release create`/`delete` necesita escribir Releases y tags. Sin esto, con el
+    # GITHUB_TOKEN restringido (default actual de GitHub) el paso falla con HTTP 403.
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -30,6 +34,10 @@ jobs:
         env:
           GPG_PASSPHRASE: ${{ secrets.BACKUP_GPG_PASSPHRASE }}
         run: |
+          if [ -z "$GPG_PASSPHRASE" ]; then
+            echo "❌ Falta el secret BACKUP_GPG_PASSPHRASE — no se puede encriptar el backup"
+            exit 1
+          fi
           # Tomar el archivo backup-*.json más reciente
           BACKUP_FILE=$(ls -t backup-*.json | head -1)
           echo "Backup file: $BACKUP_FILE"

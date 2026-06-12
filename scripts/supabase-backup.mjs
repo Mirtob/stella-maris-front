@@ -34,7 +34,12 @@ const TABLES = [
   'songs',
   'user_profiles',
   'published_cantorals',
+  'cantoral_songs',
 ];
+
+// Tablas cuyo fallo invalida el backup: si alguna de estas no se puede leer,
+// el backup quedó incompleto y debe fallar LOUD (no guardar un backup vacío en silencio).
+const CORE_TABLES = ['songs', 'user_profiles', 'published_cantorals'];
 
 async function fetchTable(table) {
   let allRows = [];
@@ -129,6 +134,14 @@ async function main() {
     } else {
       console.log(`  ${t}: ERROR (${data.error})`);
     }
+  }
+
+  // Falla LOUD si alguna tabla crítica no se pudo leer: un backup que silenciosamente
+  // no respalda los datos reales es peor que un backup que falla y avisa.
+  const failedCore = CORE_TABLES.filter((t) => !Array.isArray(backup.tables[t]));
+  if (failedCore.length > 0) {
+    console.error(`\n💥 Backup INCOMPLETO — tablas críticas fallaron: ${failedCore.join(', ')}`);
+    process.exit(1);
   }
 }
 

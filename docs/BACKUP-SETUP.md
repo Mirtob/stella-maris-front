@@ -59,16 +59,24 @@ Requiere agregar estos secrets en GitHub:
 
 ### 3. Restore manual
 
+El backup es un **JSON comprimido y encriptado**: `backup-<fecha-hora>.json.gz.gpg`
+(el tag del release es `backup-AAAA-MM-DD-HHMM`).
+
 ```bash
-# Descargar el último backup
-gh release download backup-2026-06-10 -p '*.sql.gpg'
+# Descargar el último backup (ver el tag exacto en GitHub -> Releases)
+gh release download backup-2026-06-10-0300 -p '*.json.gz.gpg'
 
-# Desencriptar
-gpg --decrypt backup-2026-06-10.sql.gpg > restore.sql
+# Desencriptar (pide la BACKUP_GPG_PASSPHRASE)
+gpg --decrypt backup-2026-06-10-0300.json.gz.gpg > backup.json.gz
 
-# Aplicar al proyecto Supabase
-psql "postgresql://..." -f restore.sql
+# Descomprimir
+gunzip backup.json.gz   # -> backup.json
 ```
+
+`backup.json` tiene la forma `{ timestamp, supabase_url, tables: { <tabla>: [filas...] }, storage }`.
+**No es un dump SQL** — es JSON por tabla. Para restaurar, reinsertá las filas por tabla
+(en orden: `admins`, `songs`, `user_profiles`, `published_cantorals`, `cantoral_songs`) con la
+SERVICE_ROLE_KEY vía REST/SDK, o convertilas a `INSERT`s.
 
 ---
 
