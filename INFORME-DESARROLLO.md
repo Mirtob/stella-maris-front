@@ -1,10 +1,10 @@
 # Informe de Desarrollo · Stella Maris
 
-> **Última actualización:** 11 de junio de 2026
-> **Meta interna (app lista):** 15 de junio de 2026 — **4 días de margen**
-> **Lanzamiento oficial:** 8 de agosto de 2026 — **58 días**
+> **Última actualización:** 13 de junio de 2026
+> **Meta interna (app lista):** 15 de junio de 2026 — **2 días de margen**
+> **Lanzamiento oficial:** 8 de agosto de 2026 — **56 días**
 > **Dependencia externa:** poblar canal de YouTube con cantos (en proceso de grabación)
-> **🎯 Sprint 10-15 jun:** completado el 11 de junio (4 días antes de la meta)
+> **🎯 Sprint 10-15 jun:** cerrado. **Lote adicional 12-13 jun:** multi-parroquia, perfilamiento por rol de sesión, PDFs por rol (letras vs letras+acordes+partituras), QR público anónimo + instalación, y hardening de seguridad de la base (advisors de Supabase) — todo en `main` y verificado.
 
 ---
 
@@ -12,23 +12,50 @@
 
 ```
 PROGRESO GLOBAL DEL DESARROLLO
-███████████████████████████████████████████████░░░  95%
+████████████████████████████████████████████████░░  96%
 
-  ├─ Producto / Funcional      █████████████████████████  98%
-  ├─ Seguridad / Backend       ████████████████████████░  96%
+  ├─ Producto / Funcional      ████████████████████████░  96%
+  ├─ Seguridad / Backend       █████████████████████████  99%  ↑ (hardening linter DB)
   ├─ UX / Mobile               █████████████████████████  98%
-  ├─ Calidad / QA              ████████████████████████░  95%
-  ├─ Operacional               █████████████████████░░░░  88%
-  └─ Legal / Compliance        █████████████████████████ 100%
+  ├─ Calidad / QA              ████████████████████████░  95%  (automatizable; manual pendiente)
+  ├─ Operacional               █████████████████████░░░░  86%
+  ├─ Legal / Compliance        █████████████████████████ 100%
+  └─ Contenido (catálogo)      ███░░░░░░░░░░░░░░░░░░░░░░░  ~10% ⚠️ dependencia externa
 ```
 
-**Estado:** la app está **lista para lanzamiento masivo** salvo por validación manual del usuario en celular real (56 casos OAuth + 7 device-specific) y 3 acciones manuales de configuración externa (~25 min). El sprint corto se cerró antes de la fecha objetivo.
+**Estado:** el **código está listo para beta** y encaminado al lanzamiento. Lo que queda NO es desarrollo, sino: (a) **poblar el catálogo de cantos** (dependencia externa, riesgo alto), (b) **2-3 acciones de configuración externa** (~25 min: Drive API key en Vercel, Sentry DSN, secrets de backup), y (c) **validación manual en celular real** (~56 casos OAuth + 7 device-specific). Suites automatizadas en verde (smoke 7/7, integración 17/17, axe 0 violaciones).
+
+---
+
+## 1.b Lote adicional 12-13 de junio (post-sprint)
+
+Trabajo entregado y verificado después del cierre del sprint corto. Todo en `main`.
+
+**Producto / funcional**
+- ✅ **Multi-parroquia**: alta/baja de parroquias desde la cuenta; publicación del mismo cantoral a varias parroquias (fecha/horario por parroquia); conmutador rápido de parroquia activa en el menú lateral.
+- ✅ **Perfilamiento por rol de sesión**: Configuración se adapta al `activeRole` (un Admin actuando como Coro/Pueblo fiel ve sus opciones); el Admin no tiene parroquia.
+- ✅ **PDFs diferenciados por rol**: Pueblo fiel = **solo letras**; Coro = **letras con acordes** + sección de **partituras** (PDF de Drive embebido) ordenadas por parte de la Misa.
+- ✅ **QR / deep link**: muestra **siempre** el cantoral en vista Pueblo fiel **sin login** (lectura anónima de publicados) + **sugerencia de instalar la app** + descarga del PDF de letras.
+- ✅ **Instrumento**: ahora solo **Guitarra / Órgano** (se eliminó "Coro" como instrumento).
+- ✅ Robustez: fix del crash al agregar canto como Coro; pantalla **NotFound** para rutas/deep links inválidos; semántica a11y en Login.
+
+**Seguridad / backend (advisors del linter de Supabase)**
+- ✅ Vista `songs_with_labels` con `security_invoker`.
+- ✅ `search_path` fijado en todas las funciones (incl. las `SECURITY DEFINER`).
+- ✅ `auth_rls_initplan`: `auth.*`/`is_admin()` envueltos en `(select …)` en todas las policies.
+- ✅ Bucket sin listado público + función interna `is_cantoral_pdf_owner` movida a esquema `private`.
+- ✅ Lectura pública de cantorales `status='published'` (habilita el QR anónimo).
+- ✅ Fix del **backup diario** (permisos del workflow + backup completo + fail-loud).
+- ⚪ Residuales aceptados: `is_admin` ejecutable por authenticated (intencional, RPC de la app) y `leaked-password protection` (toggle del dashboard; la app es solo Google OAuth).
+
+**Verificación (13-jun, backend ya migrado)**
+- ✅ Smoke headless **7/7**, integración **17/17** (anon **sí** lee publicados = 3 filas; anon **no** lista el bucket = 0), axe **0 violaciones**, `build` + `tsc` sin errores nuevos.
 
 ---
 
 ## 2. Progreso por área
 
-### 2.1 Producto / Funcional · 92%
+### 2.1 Producto / Funcional · 96%
 
 ```
 Flujo Coro publica cantoral         ██████████████████████████  100% ✅
@@ -46,7 +73,7 @@ Modo offline básico                 ██████████████�
 - ⚠️ Sincronización YouTube — endpoint funciona, falta `VITE_GOOGLE_DRIVE_API_KEY` en Vercel
 - ⚠️ Modo offline — banner avisa, pero no hay caché de cantorales para offline real
 
-### 2.2 Seguridad / Backend · 96%
+### 2.2 Seguridad / Backend · 99%
 
 ```
 RLS Supabase (4 tablas)             ██████████████████████████  100% ✅
@@ -64,6 +91,11 @@ Hallazgos críticos resueltos        ██████████████�
 **11 issues de seguridad cerrados** (S1-S11) + **2 hallazgos críticos** detectados y resueltos en QA SQL del 9-jun:
 - Policies legacy de `published_cantorals` que anulaban las nuevas
 - Función `is_cantoral_pdf_owner` rota por mismatch text/UUID
+
+**+ 5 advisors del linter de Supabase resueltos (13-jun):** `security_definer` view,
+function `search_path`, `auth_rls_initplan`, public bucket listing, y función
+`SECURITY DEFINER` interna movida fuera del esquema expuesto (`private`). Residuales
+aceptados: `is_admin` por `authenticated` (RPC de la app) y leaked-password (toggle dashboard).
 
 ### 2.3 UX / Mobile · 90%
 
@@ -96,8 +128,8 @@ Documentación QA                    ██████████████�
 Guías para testers externos         ██████████████████████████  100% ✅
 ```
 
-**Tests automatizados pasando:** 15/17 en integration suite (los 2 FAIL son falsos positivos del test, no bugs).
-**Lo que falta:** smoke test móvil real (18 casos NO VERIFICABLES, ~20 min).
+**Tests automatizados pasando:** **17/17** en integration suite (contra el backend migrado) y **7/7** en smoke headless. Los falsos positivos previos se corrigieron y los tests se actualizaron al comportamiento nuevo (deep link anónimo, bucket sin listado). Axe: 0 violaciones en las pantallas auditadas.
+**Lo que falta:** smoke test móvil real (~56 casos OAuth + 7 device-specific, NO automatizables) + verificación visual del PDF del Coro y del QR anónimo/instalación en dispositivo. Tests unitarios siguen en 0% (Sprint 2).
 
 ### 2.5 Operacional · 32%
 
@@ -106,15 +138,15 @@ Build + Deploy (Vercel)             ██████████████�
 Supabase production                 ██████████████████████████  100% ✅
 Variables de entorno                ██████████████████████████  100% ✅
 Monitoreo de errores (Sentry)       ████████████████████████░░   95% ✅ (código listo, falta crear cuenta + DSN)
-Backup verificado                   ████████████████████████░░   95% ✅ (código listo, faltan 3 secrets en GitHub)
-Recovery de cuenta                  ████████████████████████░░   95% ✅ (código listo, falta ejecutar migración SQL)
+Backup verificado                   ████████████████████████░░   95% ✅ (workflow arreglado 13-jun; faltan 3 secrets en GitHub + 1 corrida)
+Recovery de cuenta                  ██████████████████████████  100% ✅ (migración SQL aplicada)
 Analytics                           ░░░░░░░░░░░░░░░░░░░░░░░░░░    0% ⏳ (Sprint 2)
 Logs centralizados                  ████████░░░░░░░░░░░░░░░░░░   30% ⚠️
 Soft delete (papelera)              ░░░░░░░░░░░░░░░░░░░░░░░░░░    0% ⏳ (Sprint 2)
 SLA documentado                     ██████████████████████████  100% ✅ (en Términos de Servicio)
 ```
 
-**Sprint corto completado.** Tres acciones manuales de ~25 min totales para activar Sentry, Backup y Recovery.
+**Acciones manuales restantes (~25 min, sin código):** (1) **Drive API key** en Vercel — sin ella `/api/sheets` da 404 y las partituras del PDF del Coro no cargan; (2) **Sentry DSN**; (3) **3 secrets del Backup** en GitHub + correr el workflow una vez. Recovery: migración SQL ✅ aplicada.
 
 ### 2.6 Legal / Compliance · 100%
 
@@ -268,10 +300,16 @@ Mes 1 (8 ago - 8 sep)
 | Audiencia | Estado | Fecha |
 |---|---|---|
 | 🎯 Demo a inversores | ✅ LISTA | hoy mismo, con catálogo poblado |
-| 🤝 Beta cerrada (1-3 parroquias) | ✅ LISTA | después de Sprint 1 |
-| 📢 Beta abierta (50-200 usuarios) | ⚠️ LISTA condicional | **15 de junio** post sprint |
+| 🤝 Beta cerrada (1-3 parroquias) | ✅ LISTA | **ahora** (código + DB listos) |
+| 📢 Beta abierta (50-200 usuarios) | ⚠️ LISTA condicional | tras config externa + smoke móvil |
 | 🌍 Lanzamiento oficial masivo | 🟡 EN CAMINO | **8 de agosto** |
 
-**Confianza de cumplir la meta del 15 de junio:** **alta**, si el sprint corto se ejecuta sin imprevistos mayores.
+**Confianza de cumplir la meta del 15 de junio:** **alta** — lo que resta no es código, sino config externa (~25 min) y validación manual en celular.
 
-**Confianza de cumplir el lanzamiento oficial del 8 de agosto:** **alta**, salvo que el canal de YouTube no se pueble a tiempo.
+**Confianza de cumplir el lanzamiento oficial del 8 de agosto:** **alta**, salvo que el canal de YouTube no se pueble a tiempo (riesgo #1).
+
+**Pendientes reales para la entrega final:**
+1. 🔴 **Poblar el catálogo** de cantos (~1 hoy → meta ~100) — dependencia externa.
+2. 🟠 **Config externa** (~25 min): Drive API key en Vercel, Sentry DSN, secrets de Backup.
+3. 🟡 **Funcional opcional**: modo offline real (caché de cantorales); instalación PWA "de un toque" (hoy el SW se desregistra → fallback con instrucciones).
+4. 🧪 **QA manual**: smoke en celular real (OAuth) + verificación visual del PDF del Coro y del QR/instalación.
