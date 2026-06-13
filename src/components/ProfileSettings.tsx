@@ -24,7 +24,7 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
   // initial ProfileSetup step.
   const initialActive = userProfile.activeParishName || userProfile.parishName || '';
   const [activeParish, setActiveParish] = useState(initialActive);
-  const [instrument, setInstrument] = useState<InstrumentType>(userProfile.instrument || 'Coro');
+  const [instrument, setInstrument] = useState<InstrumentType>(userProfile.instrument || 'Guitarra');
   const [recoveryEmail, setRecoveryEmail] = useState(userProfile.recoveryEmail ?? '');
   const [recoverySaving, setRecoverySaving] = useState(false);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
@@ -49,7 +49,7 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
   const [showAddParish, setShowAddParish] = useState(false);
   const [parishesToAdd, setParishesToAdd] = useState<string[]>([]);
 
-  const instruments: InstrumentType[] = ['Coro', 'Guitarra', 'Órgano'];
+  const instruments: InstrumentType[] = ['Guitarra', 'Órgano'];
 
   const handleRemoveParish = (parish: string) => {
     // Regla de negocio: siempre debe quedar al menos una parroquia.
@@ -453,7 +453,6 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-3xl">
-                      {inst === 'Coro' && '👥'}
                       {inst === 'Guitarra' && '🎶'}
                       {inst === 'Órgano' && '🎹'}
                     </span>

@@ -192,7 +192,6 @@ export function ProfileManager() {
                       <span>
                         {user.instrument === 'Guitarra' && '🎶'}
                         {user.instrument === 'Órgano' && '🎹'}
-                        {user.instrument === 'Coro' && '👥'}
                       </span>
                       <span>{user.instrument}</span>
                     </div>

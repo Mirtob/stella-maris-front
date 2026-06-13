@@ -254,7 +254,7 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
                     </div>
                   </div>
                   <p className="text-sm opacity-90">
-                    💡 <strong>Tip:</strong> Usa los botones ↑↓ para encontrar la tonalidad más cómoda {userInstrument === 'Coro' ? 'para el coro' : 'para tu voz'}
+                    💡 <strong>Tip:</strong> Usa los botones ↑↓ para encontrar la tonalidad más cómoda para tu voz
                   </p>
                 </div>
               )}

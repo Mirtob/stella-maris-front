@@ -1,4 +1,4 @@
-import { X, Download, Music, ChevronDown } from 'lucide-react';
+import { X, Download, Music } from 'lucide-react';
 import { Song, InstrumentType } from '../types';
 import { useState } from 'react';
 import { generateChoirCantoralPDF } from '../utils/choirCantoralPDFGenerator';
@@ -14,8 +14,6 @@ interface CantoralPDFPreviewProps {
   onClose: () => void;
 }
 
-type VoiceSelection = 'Soprano' | 'Contralto' | 'Tenor' | 'Bajo' | 'Full Score';
-
 export function CantoralPDFPreview({
   cantoral,
   parishName,
@@ -25,13 +23,7 @@ export function CantoralPDFPreview({
   userInstruments = [],
   onClose
 }: CantoralPDFPreviewProps) {
-  const [voiceSelection, setVoiceSelection] = useState<VoiceSelection>('Full Score');
-  const [showFormatSelector, setShowFormatSelector] = useState(false);
   const [downloading, setDownloading] = useState(false);
-
-  // Determinar modo de instrumento
-  const isGuitarMode = userInstruments.includes('Guitarra');
-  const isOrganMode = userInstruments.includes('Órgano');
 
   // Agrupar cantos por categoría
   const categoryOrder = [
@@ -85,7 +77,6 @@ export function CantoralPDFPreview({
 
   const handleDownloadPDF = async () => {
     if (downloading) return;
-    setShowFormatSelector(false);
     setDownloading(true);
     try {
       // embedScores: el folleto del Coro incluye, por canto, la letra con acordes y
@@ -98,7 +89,7 @@ export function CantoralPDFPreview({
         celebration,
         massTime,
         userInstruments,
-        voiceSelection,
+        'Full Score',
         { embedScores: true }
       );
       toast.success('PDF Generado', {
@@ -112,13 +103,6 @@ export function CantoralPDFPreview({
     } finally {
       setDownloading(false);
     }
-  };
-
-  const getFormatLabel = () => {
-    if (isGuitarMode) return 'Letra con Acordes (Guitarra)';
-    if (isOrganMode) return 'Solo Letra (Órgano)';
-    if (voiceSelection === 'Full Score') return 'Partitura Completa (Director)';
-    return `Voz ${voiceSelection}`;
   };
 
   return (
@@ -235,7 +219,7 @@ export function CantoralPDFPreview({
                     {song.lyrics && song.lyrics.trim() && (
                       <div className="mt-3 bg-white/50 dark:bg-gray-900/50 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
                         <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold mb-1">
-                          {isGuitarMode ? '♫ Letra con Acordes' : isOrganMode ? '📖 Letra' : voiceSelection !== 'Full Score' ? `🎵 Voz ${voiceSelection}` : '🎼 Partitura Completa'}
+                          ♫ Letra con Acordes
                         </p>
                         <div className="text-sm text-gray-700 dark:text-gray-300 font-mono whitespace-pre-wrap max-h-32 overflow-y-auto">
                           {song.lyrics.split('\n').slice(0, 6).join('\n')}
@@ -262,69 +246,6 @@ export function CantoralPDFPreview({
 
         {/* Footer - Botones de Acción */}
         <div className="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 p-6 rounded-b-3xl border-t-4 border-blue-800 flex-shrink-0 space-y-3 transition-colors">
-          {/* Selector de Formato */}
-          {userInstruments.includes('Coro') && (
-            <div className="relative">
-              <button
-                onClick={() => setShowFormatSelector(!showFormatSelector)}
-                className="w-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white py-3 px-4 rounded-xl font-bold text-sm border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center justify-between"
-              >
-                <span>Formato: {getFormatLabel()}</span>
-                <ChevronDown className={`w-5 h-5 transition-transform ${showFormatSelector ? 'rotate-180' : ''}`} />
-              </button>
-
-              {showFormatSelector && (
-                <div className="absolute bottom-full mb-2 w-full bg-white dark:bg-gray-700 rounded-xl shadow-2xl border-2 border-blue-300 dark:border-blue-700 overflow-hidden z-10">
-                  <button
-                    onClick={() => {
-                      setVoiceSelection('Full Score');
-                      setShowFormatSelector(false);
-                    }}
-                    className="w-full px-4 py-3 text-left hover:bg-blue-50 dark:hover:bg-blue-900 transition-colors font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600"
-                  >
-                    🎼 Partitura Completa (Director)
-                  </button>
-                  <button
-                    onClick={() => {
-                      setVoiceSelection('Soprano');
-                      setShowFormatSelector(false);
-                    }}
-                    className="w-full px-4 py-3 text-left hover:bg-blue-50 dark:hover:bg-blue-900 transition-colors font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600"
-                  >
-                    🎵 Soprano
-                  </button>
-                  <button
-                    onClick={() => {
-                      setVoiceSelection('Contralto');
-                      setShowFormatSelector(false);
-                    }}
-                    className="w-full px-4 py-3 text-left hover:bg-blue-50 dark:hover:bg-blue-900 transition-colors font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600"
-                  >
-                    🎵 Contralto
-                  </button>
-                  <button
-                    onClick={() => {
-                      setVoiceSelection('Tenor');
-                      setShowFormatSelector(false);
-                    }}
-                    className="w-full px-4 py-3 text-left hover:bg-blue-50 dark:hover:bg-blue-900 transition-colors font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600"
-                  >
-                    🎵 Tenor
-                  </button>
-                  <button
-                    onClick={() => {
-                      setVoiceSelection('Bajo');
-                      setShowFormatSelector(false);
-                    }}
-                    className="w-full px-4 py-3 text-left hover:bg-blue-50 dark:hover:bg-blue-900 transition-colors font-semibold text-gray-900 dark:text-white"
-                  >
-                    🎵 Bajo
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Botones principales */}
           <div className="flex gap-3">
             <button

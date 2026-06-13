@@ -93,7 +93,7 @@ export interface Song {
 }
 
 export type UserRole = 'Coro' | 'Pueblo fiel' | 'Admin';
-export type InstrumentType = 'Coro' | 'Guitarra' | 'Órgano';
+export type InstrumentType = 'Guitarra' | 'Órgano';
 
 export interface UserProfile {
   id: string;

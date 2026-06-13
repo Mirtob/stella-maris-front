@@ -444,52 +444,20 @@ export const generateChoirCantoralPDF = async (
 
       yPosition += 3;
 
-      // **LETRA DEL CANTO**
+      // **LETRA DEL CANTO** — Sección 1: siempre letra con acordes (Guitarra y Órgano).
+      // El instrumento solo afecta el orden de los cantos en las búsquedas, no el
+      // formato del folleto. Las partituras van después, en la Sección 2.
       if (song.lyrics && song.lyrics.trim()) {
         checkNewPage(15);
-        
-        // ✅ Determinar cómo mostrar la letra según el instrumento
-        const hasGuitarraInstrument = userInstruments.includes('Guitarra');
-        const hasOrganoInstrument = userInstruments.includes('Órgano');
-        
-        if (hasGuitarraInstrument) {
-          // 🎸 Guitarra: Mostrar letra con acordes encima
-          pdf.setFontSize(9);
-          pdf.setFont('helvetica', 'bold');
-          pdf.setTextColor(22, 163, 74); // green-600
-          pdf.text('🎸 Letra con Acordes:', margin + 8, yPosition);
-          yPosition += 6;
-          
-          yPosition = renderLyricsWithChords(song.lyrics, yPosition);
-        } else if (hasOrganoInstrument) {
-          // 🎹 Órgano: Partitura (línea melódica) con acordes
-          pdf.setFontSize(9);
-          pdf.setFont('helvetica', 'bold');
-          pdf.setTextColor(30, 58, 138); // blue-900
-          
-          if (song.sheetMusicUrl) {
-            pdf.text('🎹 Partitura con acordes (ver enlace arriba):', margin + 8, yPosition);
-            yPosition += 6;
-            
-            // Mostrar letra con acordes para referencia
-            yPosition = renderLyricsWithChords(song.lyrics, yPosition);
-          } else {
-            pdf.text('🎹 Acordes y Letra:', margin + 8, yPosition);
-            yPosition += 6;
-            
-            yPosition = renderLyricsWithChords(song.lyrics, yPosition);
-          }
-        } else {
-          // Por defecto: Letra simple
-          pdf.setFontSize(9);
-          pdf.setFont('helvetica', 'bold');
-          pdf.setTextColor(107, 114, 128); // gray-500
-          pdf.text('📖 Letra:', margin + 8, yPosition);
-          yPosition += 6;
-          
-          yPosition = renderPlainLyrics(song.lyrics, yPosition);
-        }
-        
+
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(22, 163, 74); // green-600
+        pdf.text('Letra con acordes:', margin + 8, yPosition);
+        yPosition += 6;
+
+        yPosition = renderLyricsWithChords(song.lyrics, yPosition);
+
         yPosition += 5;
       } else {
         // Si no hay letra, agregar nota
@@ -501,18 +469,38 @@ export const generateChoirCantoralPDF = async (
       }
 
       yPosition += 8; // Espacio entre cantos
-
-      // Embeber la partitura del canto (intercalado), para instrumentistas.
-      if (options.embedScores && song.sheetMusicUrl) {
-        await embedPartituraPages(pdf, song, { pageWidth, pageHeight, margin });
-        // La última página de la partitura quedó ocupada por la imagen: forzar que
-        // el contenido del siguiente canto arranque en una página nueva.
-        yPosition = pageHeight;
-      }
     }
 
     // Espacio reducido entre categorías (no nueva página)
     yPosition += 5;
+  }
+
+  // ── Sección 2: Partituras (PDF de Drive) ordenadas por parte de la Misa ──
+  // Solo en el folleto del Coro (embedScores). Va DESPUÉS de todas las letras con
+  // acordes, en una sección aparte (mismo orden por categoría que la Sección 1).
+  if (options.embedScores) {
+    pdf.addPage();
+    yPosition = margin;
+    addLogo(8);
+    pdf.setFontSize(22);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(30, 58, 138); // blue-900
+    const secTitle = 'Partituras';
+    pdf.text(secTitle, (pageWidth - pdf.getTextWidth(secTitle)) / 2, yPosition);
+    yPosition += 9;
+    pdf.setFontSize(11);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(107, 114, 128); // gray-500
+    const secSub = 'Ordenadas por parte de la Misa';
+    pdf.text(secSub, (pageWidth - pdf.getTextWidth(secSub)) / 2, yPosition);
+
+    for (const category of sortedCategories) {
+      for (const song of groupedSongs[category]) {
+        if (song.sheetMusicUrl) {
+          await embedPartituraPages(pdf, song, { pageWidth, pageHeight, margin });
+        }
+      }
+    }
   }
 
   // Pie de página en la última página

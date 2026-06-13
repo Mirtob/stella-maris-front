@@ -81,7 +81,9 @@ async function main() {
     const stillOnDeepLink = await page.evaluate(() => location.pathname.startsWith('/c/'));
     const html = await page.content();
     const hasLogin = /Continuar con Google|Iniciar sesi/i.test(html);
-    const hasDeepLinkScreen = /Cantoral disponible|Ver en la app/i.test(html);
+    // Flujo nuevo (anónimo): el deep link muestra el cantoral (Pueblo fiel) sin login.
+    // Con un UUID inexistente, la pantalla esperada es "Cantoral no disponible".
+    const hasDeepLinkScreen = /Cantoral no disponible|Abrir en la app|Descargar PDF|Instalá Stella Maris|Cargando cantoral/i.test(html);
     if (hasLogin || hasDeepLinkScreen) {
       ok(`E2 — Deep link válido manejado (login=${hasLogin}, deeplink=${hasDeepLinkScreen}, path=${stillOnDeepLink ? '/c/' : '/'})`);
       add('E2', 'ok', `login=${hasLogin}, deeplink=${hasDeepLinkScreen}`);

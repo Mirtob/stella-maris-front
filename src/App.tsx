@@ -313,6 +313,21 @@ function AppContent() {
       const storedSession = await getStoredSession();
       const storedProfile = getStoredUserProfile();
 
+      // Deep link de QR: mostrar SIEMPRE el cantoral (vista Pueblo fiel), sin exigir
+      // login (lectura anónima de cantorales publicados). Si hay perfil guardado lo
+      // seteamos para que "Abrir en la app" funcione, pero la vista del cantoral no
+      // depende de la sesión.
+      if (deepLinkCantoralId) {
+        localStorage.removeItem(PENDING_CANTORAL_KEY);
+        if (storedSession && storedProfile) {
+          setUserProfile(storedProfile);
+          upsertCurrentUserProfile(storedProfile).catch(() => undefined);
+          setSentryUserContext(storedProfile.role, storedProfile.id);
+        }
+        setRoute({ screen: 'cantoral-link', cantoralId: deepLinkCantoralId });
+        return;
+      }
+
       if (storedSession) {
         if (storedProfile) {
           setUserProfile(storedProfile);
@@ -886,7 +901,7 @@ function renderView(p: ViewProps): JSX.Element | null {
       if (p.effectiveRole === 'Coro') {
         return (
           <ChoirView
-            preferredInstrument={p.userProfile.instrument || 'Coro'}
+            preferredInstrument={p.userProfile.instrument || 'Guitarra'}
             userInstruments={p.userProfile.instruments}
             parishName={p.activeParishName}
             parishes={p.userProfile.parishes}
@@ -913,7 +928,7 @@ function renderView(p: ViewProps): JSX.Element | null {
       // Fallback: perfil con rol desconocido o corrupto → tratar como Coro
       return (
         <ChoirView
-          preferredInstrument={p.userProfile.instrument || 'Coro'}
+          preferredInstrument={p.userProfile.instrument || 'Guitarra'}
           userInstruments={p.userProfile.instruments}
           parishName={p.activeParishName}
           parishes={p.userProfile.parishes}
