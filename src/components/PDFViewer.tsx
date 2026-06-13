@@ -1,29 +1,49 @@
 import { useEffect, useRef, useState } from 'react';
-import { ExternalLink, Download, Loader, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
+import { ExternalLink, Download, Loader, Play, Pause, RotateCcw, Plus, Minus, ZoomIn, ZoomOut } from 'lucide-react';
+import { useWakeLock } from '../hooks/useWakeLock';
 
 interface PDFViewerProps {
   proxyUrl: string;
   driveViewUrl: string;
   title: string;
+  /** Duración del canto en segundos (de YouTube) — estima la velocidad inicial del autoscroll. */
+  durationSeconds?: number;
 }
 
 // Worker servido desde nuestro propio dominio — más confiable que CDN
 const WORKER_URL = '/pdf.worker.min.mjs';
 
-export function PDFViewer({ proxyUrl, driveViewUrl, title }: PDFViewerProps) {
+// Velocidad de scroll por defecto cuando no hay duración conocida (px/s).
+const FALLBACK_PX_PER_SEC = 30;
+const SPEED_KEY = 'pdf_autoscroll_speed';
+
+function loadSavedSpeed(): number {
+  const saved = parseFloat(localStorage.getItem(SPEED_KEY) || '');
+  return Number.isFinite(saved) && saved >= 0.5 && saved <= 3 ? saved : 1;
+}
+
+export function PDFViewer({ proxyUrl, driveViewUrl, title, durationSeconds }: PDFViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const canvasesRef = useRef<HTMLCanvasElement[]>([]);
   const [pdf, setPdf] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
   const [zoom, setZoom] = useState(1);
+
+  // Autoscroll
+  const [isScrolling, setIsScrolling] = useState(false);
+  const [speed, setSpeed] = useState<number>(loadSavedSpeed);
+  const [scrollable, setScrollable] = useState(false);
+
+  // Evita que la pantalla se bloquee mientras el músico tiene la partitura
+  // abierta. Se libera solo al desmontar el visor (cerrar la partitura).
+  useWakeLock(true);
 
   // Cargar PDF cuando cambia la URL
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setIsScrolling(false);
 
     (async () => {
       try {
@@ -36,7 +56,6 @@ export function PDFViewer({ proxyUrl, driveViewUrl, title }: PDFViewerProps) {
 
         setPdf(loadedPdf);
         setLoading(false);
-        setCurrentPage(1);
       } catch (err: any) {
         if (cancelled) return;
         console.error('Error cargando PDF:', err);
@@ -48,58 +67,122 @@ export function PDFViewer({ proxyUrl, driveViewUrl, title }: PDFViewerProps) {
     return () => { cancelled = true; };
   }, [proxyUrl]);
 
-  // Renderizar la página actual
+  // Renderizar TODAS las páginas apiladas verticalmente (modo scroll continuo)
   useEffect(() => {
     if (!pdf || !containerRef.current) return;
     let cancelled = false;
+    const container = containerRef.current;
 
     (async () => {
       try {
-        const page = await pdf.getPage(currentPage);
-        if (cancelled) return;
-
-        const container = containerRef.current;
-        if (!container) return;
-
-        // Ancho disponible — ajustar al contenedor
+        container.innerHTML = '';
+        container.scrollTop = 0;
         const containerWidth = container.clientWidth - 16; // padding
-        const baseViewport = page.getViewport({ scale: 1 });
-        const baseScale = containerWidth / baseViewport.width;
-        const viewport = page.getViewport({ scale: baseScale * zoom });
 
-        // Crear o reutilizar canvas
-        let canvas = canvasesRef.current[0];
-        if (!canvas) {
-          canvas = document.createElement('canvas');
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+          const page = await pdf.getPage(pageNum);
+          if (cancelled) return;
+
+          const baseViewport = page.getViewport({ scale: 1 });
+          const baseScale = containerWidth / baseViewport.width;
+          const viewport = page.getViewport({ scale: baseScale * zoom });
+
+          const canvas = document.createElement('canvas');
           canvas.style.display = 'block';
-          canvas.style.margin = '0 auto';
+          canvas.style.margin = '0 auto 12px';
           canvas.style.maxWidth = '100%';
-          canvas.style.height = 'auto';
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) continue;
+
+          const dpr = window.devicePixelRatio || 1;
+          canvas.width = viewport.width * dpr;
+          canvas.height = viewport.height * dpr;
+          canvas.style.width = viewport.width + 'px';
+          canvas.style.height = viewport.height + 'px';
+          ctx.scale(dpr, dpr);
+
+          // Insertar antes de renderizar para que el layout crezca de inmediato
           container.appendChild(canvas);
-          canvasesRef.current[0] = canvas;
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          if (cancelled) return;
         }
 
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        // Ajustar resolución para pantallas Retina
-        const dpr = window.devicePixelRatio || 1;
-        canvas.width = viewport.width * dpr;
-        canvas.height = viewport.height * dpr;
-        canvas.style.width = viewport.width + 'px';
-        canvas.style.height = viewport.height + 'px';
-        ctx.scale(dpr, dpr);
-
-        await page.render({ canvasContext: ctx, viewport }).promise;
+        if (!cancelled) {
+          setScrollable(container.scrollHeight - container.clientHeight > 4);
+        }
       } catch (err) {
-        console.error('Error renderizando página:', err);
+        console.error('Error renderizando páginas:', err);
       }
     })();
 
     return () => { cancelled = true; };
-  }, [pdf, currentPage, zoom]);
+  }, [pdf, zoom]);
 
-  const numPages = pdf?.numPages || 0;
+  // Loop de autoscroll — anima scrollTop del contenedor interno.
+  useEffect(() => {
+    if (!isScrolling) return;
+    const container = containerRef.current;
+    if (!container) return;
+
+    if (container.scrollHeight - container.clientHeight <= 1) {
+      setIsScrolling(false);
+      return;
+    }
+
+    let raf = 0;
+    let lastTs: number | null = null;
+
+    const step = (ts: number) => {
+      if (lastTs == null) lastTs = ts;
+      const dt = (ts - lastTs) / 1000;
+      lastTs = ts;
+
+      // Recalcular cada frame para reaccionar al zoom en vivo
+      const distance = container.scrollHeight - container.clientHeight;
+      const basePxPerSec = durationSeconds && durationSeconds > 0
+        ? distance / durationSeconds
+        : FALLBACK_PX_PER_SEC;
+
+      container.scrollTop += basePxPerSec * speed * dt;
+
+      if (container.scrollTop + container.clientHeight >= container.scrollHeight - 1) {
+        setIsScrolling(false);
+        return;
+      }
+      raf = requestAnimationFrame(step);
+    };
+
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [isScrolling, speed, durationSeconds]);
+
+  // Pausa el autoscroll si el usuario interactúa (scroll manual / toque)
+  useEffect(() => {
+    if (!isScrolling) return;
+    const container = containerRef.current;
+    if (!container) return;
+    const pause = () => setIsScrolling(false);
+    container.addEventListener('wheel', pause, { passive: true });
+    container.addEventListener('touchstart', pause, { passive: true });
+    return () => {
+      container.removeEventListener('wheel', pause);
+      container.removeEventListener('touchstart', pause);
+    };
+  }, [isScrolling]);
+
+  const changeSpeed = (delta: number) => {
+    setSpeed((s) => {
+      const next = Math.min(3, Math.max(0.5, Math.round((s + delta) * 10) / 10));
+      localStorage.setItem(SPEED_KEY, String(next));
+      return next;
+    });
+  };
+
+  const backToTop = () => {
+    setIsScrolling(false);
+    containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   if (loading) {
     return (
@@ -139,53 +222,78 @@ export function PDFViewer({ proxyUrl, driveViewUrl, title }: PDFViewerProps) {
   return (
     <div className="bg-white rounded-lg overflow-hidden">
       {/* Toolbar */}
-      {/* Q21 — Toolbar con tap targets >= 40px para mobile. Antes era p-1
-          + w-3.5 = ~22px, imposible de tocar con dedo sin errar. */}
-      <div className="bg-gray-50 border-b border-gray-200 px-3 py-2 flex items-center justify-between gap-2">
-        {/* Paginación */}
-        {numPages > 1 ? (
+      <div className="bg-gray-50 border-b border-gray-200 px-3 py-2 space-y-2">
+        {/* Fila 1 — Autoscroll */}
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage <= 1}
-              aria-label="Página anterior"
+              onClick={() => setIsScrolling((v) => !v)}
+              disabled={!scrollable}
+              aria-label={isScrolling ? 'Pausar autoscroll' : 'Iniciar autoscroll'}
               className="w-10 h-10 rounded-lg bg-blue-900 text-white disabled:opacity-40 active:scale-95 flex items-center justify-center"
             >
-              <ChevronLeft className="w-5 h-5" />
+              {isScrolling ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
             </button>
-            <span className="text-sm font-bold text-gray-700 px-1 min-w-[44px] text-center">{currentPage} / {numPages}</span>
             <button
-              onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))}
-              disabled={currentPage >= numPages}
-              aria-label="Página siguiente"
-              className="w-10 h-10 rounded-lg bg-blue-900 text-white disabled:opacity-40 active:scale-95 flex items-center justify-center"
+              onClick={backToTop}
+              aria-label="Volver al inicio"
+              className="w-10 h-10 rounded-lg bg-gray-200 text-gray-700 active:scale-95 flex items-center justify-center"
             >
-              <ChevronRight className="w-5 h-5" />
+              <RotateCcw className="w-5 h-5" />
             </button>
           </div>
-        ) : <span className="text-xs text-gray-500">Pág. 1</span>}
 
-        {/* Zoom */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setZoom(z => Math.max(0.5, z - 0.2))}
-            aria-label="Reducir zoom"
-            className="w-10 h-10 rounded-lg bg-gray-200 text-gray-700 active:scale-95 flex items-center justify-center"
-          >
-            <ZoomOut className="w-5 h-5" />
-          </button>
-          <span className="text-sm font-bold text-gray-700 px-1 min-w-[48px] text-center">{Math.round(zoom * 100)}%</span>
-          <button
-            onClick={() => setZoom(z => Math.min(3, z + 0.2))}
-            aria-label="Aumentar zoom"
-            className="w-10 h-10 rounded-lg bg-gray-200 text-gray-700 active:scale-95 flex items-center justify-center"
-          >
-            <ZoomIn className="w-5 h-5" />
-          </button>
+          {/* Velocidad */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => changeSpeed(-0.1)}
+              disabled={speed <= 0.5}
+              aria-label="Reducir velocidad"
+              className="w-10 h-10 rounded-lg bg-gray-200 text-gray-700 disabled:opacity-40 active:scale-95 flex items-center justify-center"
+            >
+              <Minus className="w-5 h-5" />
+            </button>
+            <span className="text-sm font-bold text-gray-700 px-1 min-w-[44px] text-center">
+              {speed.toFixed(1)}×
+            </span>
+            <button
+              onClick={() => changeSpeed(0.1)}
+              disabled={speed >= 3}
+              aria-label="Aumentar velocidad"
+              className="w-10 h-10 rounded-lg bg-gray-200 text-gray-700 disabled:opacity-40 active:scale-95 flex items-center justify-center"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Fila 2 — Zoom + estado */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-gray-500">
+            {pdf.numPages} {pdf.numPages === 1 ? 'página' : 'páginas'}
+            {!scrollable && ' · cabe en pantalla'}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setZoom((z) => Math.max(0.5, z - 0.2))}
+              aria-label="Reducir zoom"
+              className="w-10 h-10 rounded-lg bg-gray-200 text-gray-700 active:scale-95 flex items-center justify-center"
+            >
+              <ZoomOut className="w-5 h-5" />
+            </button>
+            <span className="text-sm font-bold text-gray-700 px-1 min-w-[48px] text-center">{Math.round(zoom * 100)}%</span>
+            <button
+              onClick={() => setZoom((z) => Math.min(3, z + 0.2))}
+              aria-label="Aumentar zoom"
+              className="w-10 h-10 rounded-lg bg-gray-200 text-gray-700 active:scale-95 flex items-center justify-center"
+            >
+              <ZoomIn className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Canvas del PDF — scroll horizontal/vertical según zoom */}
+      {/* Canvas del PDF — scroll continuo de todas las páginas */}
       <div
         ref={containerRef}
         className="bg-gray-100 overflow-auto p-2"

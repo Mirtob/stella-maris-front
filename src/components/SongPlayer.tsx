@@ -2,6 +2,7 @@ import { ArrowLeft, FileText, Music, ZoomIn, ZoomOut, Download, Printer, Chevron
 import { useState, useEffect } from 'react';
 import { Song, InstrumentType, UserRole } from '../types';
 import { PDFViewer } from './PDFViewer';
+import { parseDurationToSeconds } from '../services/youtube';
 import { safeUrl, safeWindowOpen } from '../utils/safeUrl';
 
 // Extrae el Drive file ID de una URL de Drive y construye la URL del proxy
@@ -367,6 +368,7 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
                         proxyUrl={urls.proxyUrl}
                         driveViewUrl={urls.driveViewUrl}
                         title={song.title}
+                        durationSeconds={song.duration ? parseDurationToSeconds(song.duration) : undefined}
                       />
                     );
                   })()
