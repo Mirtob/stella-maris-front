@@ -44,3 +44,31 @@ export function formatYmdForDisplay(
     return ymd;
   }
 }
+
+/** Suma (o resta, con n negativo) días a un 'YYYY-MM-DD' respetando la TZ local. */
+export function addDaysLocal(ymd: string, n: number): string {
+  const d = parseYmdLocal(ymd);
+  d.setDate(d.getDate() + n);
+  return formatYmdLocal(d);
+}
+
+/**
+ * Rango de la semana (Lunes–Domingo) que contiene a `ref` (default hoy),
+ * como 'YYYY-MM-DD'. Se normaliza para que Lunes=0 … Domingo=6.
+ */
+export function getWeekRangeLocal(ref: Date = new Date()): { start: string; end: string } {
+  // getDay(): Domingo=0 … Sábado=6. (getDay()+6)%7 → Lunes=0 … Domingo=6.
+  const dayIdx = (ref.getDay() + 6) % 7;
+  const monday = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate() - dayIdx);
+  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+  return { start: formatYmdLocal(monday), end: formatYmdLocal(sunday) };
+}
+
+/**
+ * ¿Está `ymd` dentro de [startYmd, endYmd] inclusive?
+ * Compara strings 'YYYY-MM-DD' lexicográficamente (válido para fechas ISO ordenadas)
+ * para evitar el corrimiento de día de `new Date(str)`.
+ */
+export function isWithinInclusive(ymd: string, startYmd: string, endYmd: string): boolean {
+  return ymd >= startYmd && ymd <= endYmd;
+}

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { History, Calendar, Church, ChevronDown, ChevronUp, Play, Clock, Trash2, Filter, Download } from 'lucide-react';
 import { PublishedCantoral, Song } from '../types';
 import { generateChoirCantoralPDF } from '../utils/choirCantoralPDFGenerator';
+import { parseParishChapel } from '../utils/parish';
 import { toast } from 'sonner';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -14,6 +15,7 @@ interface CantoralHistoryProps {
 export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: CantoralHistoryProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedParish, setSelectedParish] = useState<string>('all');
+  const [selectedChapel, setSelectedChapel] = useState<string>('all');
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
@@ -50,13 +52,27 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
     ? cantorals.find(c => c.id === pendingDeleteId)
     : null;
 
-  // Obtener lista única de parroquias
-  const parishes = ['all', ...Array.from(new Set(cantorals.map(c => c.parishName)))];
+  // Opciones de parroquia (nivel 1) y capilla (nivel 2, dependiente de la parroquia)
+  const parishOptions = Array.from(
+    new Set(cantorals.map(c => parseParishChapel(c.parishName).parish).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
 
-  // Filtrar cantorales por parroquia seleccionada
-  const filteredCantorals = selectedParish === 'all' 
-    ? cantorals 
-    : cantorals.filter(c => c.parishName === selectedParish);
+  const chapelOptions = Array.from(
+    new Set(
+      cantorals
+        .filter(c => selectedParish === 'all' || parseParishChapel(c.parishName).parish === selectedParish)
+        .map(c => parseParishChapel(c.parishName).chapel)
+        .filter((x): x is string => Boolean(x))
+    )
+  ).sort((a, b) => a.localeCompare(b));
+
+  // Filtrar por parroquia y capilla seleccionadas
+  const filteredCantorals = cantorals.filter(c => {
+    const { parish, chapel } = parseParishChapel(c.parishName);
+    if (selectedParish !== 'all' && parish !== selectedParish) return false;
+    if (selectedChapel !== 'all' && chapel !== selectedChapel) return false;
+    return true;
+  });
 
   // Ordenar cantorales por fecha (más reciente primero)
   const sortedCantorals = [...filteredCantorals].sort((a, b) => {
@@ -199,20 +215,33 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
                 <Filter className="w-6 h-6 text-white" strokeWidth={2.5} />
               </div>
               <span className="text-xl font-bold text-purple-900 dark:text-purple-200">
-                Filtrar por Parroquia
+                Filtrar por Parroquia / Capilla
               </span>
             </label>
-            <select
-              value={selectedParish}
-              onChange={(e) => setSelectedParish(e.target.value)}
-              className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 dark:focus:border-purple-400 bg-white/60 dark:bg-white/10 text-purple-950 dark:text-white font-bold shadow-lg transition-colors"
-            >
-              {parishes.map(parish => (
-                <option key={parish} value={parish}>
-                  {parish === 'all' ? '🌍 Todas las Parroquias' : `⛪ ${parish}`}
-                </option>
-              ))}
-            </select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <select
+                value={selectedParish}
+                onChange={(e) => { setSelectedParish(e.target.value); setSelectedChapel('all'); }}
+                className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 dark:focus:border-purple-400 bg-white/60 dark:bg-white/10 text-purple-950 dark:text-white font-bold shadow-lg transition-colors"
+              >
+                <option value="all">🌍 Todas las Parroquias</option>
+                {parishOptions.map(parish => (
+                  <option key={parish} value={parish}>⛪ {parish}</option>
+                ))}
+              </select>
+              {selectedParish !== 'all' && chapelOptions.length > 0 && (
+                <select
+                  value={selectedChapel}
+                  onChange={(e) => setSelectedChapel(e.target.value)}
+                  className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 dark:focus:border-purple-400 bg-white/60 dark:bg-white/10 text-purple-950 dark:text-white font-bold shadow-lg transition-colors"
+                >
+                  <option value="all">Todas las Capillas</option>
+                  {chapelOptions.map(chapel => (
+                    <option key={chapel} value={chapel}>⛪ {chapel}</option>
+                  ))}
+                </select>
+              )}
+            </div>
           </div>
         </div>
 
