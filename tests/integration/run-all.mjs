@@ -165,12 +165,16 @@ async function testSupabaseBasics() {
 async function testStoragePolicies() {
   header('2. Storage — bucket cantorales-pdf');
 
-  // 2.1 — Anon puede leer un archivo público (si existe)
+  // 2.1 — Anon NO puede ENUMERAR el bucket. Se quitó la policy de SELECT amplia
+  //        (fix linter public_bucket_allows_listing). El acceso a un PDF es por su
+  //        URL pública directa, no por listado. RLS sin coincidencia → lista vacía.
   const list = await safe(() => sb.storage.from('cantorales-pdf').list('', { limit: 1 }));
   if (list.error) {
-    fail('storage', 'LIST bucket cantorales-pdf con anon', list.error);
+    pass('storage', 'LIST anon denegado por RLS', list.error);
+  } else if ((list.data?.length ?? 0) === 0) {
+    pass('storage', 'LIST anon no enumera archivos (vacío por RLS)', '0 objetos');
   } else {
-    pass('storage', 'LIST bucket accesible (read público)', `${list.data?.length ?? 0} objetos`);
+    fail('storage', 'LIST anon NO debería enumerar archivos', `${list.data.length} objetos visibles`);
   }
 
   // 2.2 — Anon NO puede subir un archivo (auth requerido)
