@@ -69,6 +69,66 @@ function rateLimit(req: VercelRequest, res: VercelResponse, endpoint: string, ma
 const FOLDER_ID = process.env.VITE_GOOGLE_DRIVE_SHEET_MUSIC_FOLDER || '1AIUOrDiruV6_H8kPnBUEMONSdS91Ubhv';
 const API_KEY = process.env.VITE_GOOGLE_DRIVE_API_KEY || process.env.VITE_YOUTUBE_API_KEY || '';
 
+const FOLDER_MIME = 'application/vnd.google-apps.folder';
+// Cotas de seguridad para que un Drive enorme (o un ciclo de atajos) no
+// dispare cientos de llamadas ni agote la quota de la API.
+const MAX_FOLDERS = 200;
+const MAX_FILES = 3000;
+
+interface SheetFile { id: string; name: string; mimeType: string; path?: string }
+
+/** Lista TODOS los hijos directos de una carpeta, paginando hasta agotar. */
+async function listFolderChildren(folderId: string, apiKey: string): Promise<any[]> {
+  const out: any[] = [];
+  let pageToken: string | undefined;
+  do {
+    const params = new URLSearchParams({
+      q: `'${folderId}' in parents and trashed=false`,
+      key: apiKey,
+      fields: 'nextPageToken,files(id,name,mimeType)',
+      pageSize: '1000',
+    });
+    if (pageToken) params.set('pageToken', pageToken);
+    const r = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`);
+    const data = await r.json();
+    if (data.error) throw new Error(data.error.message || 'Drive list error');
+    out.push(...(data.files || []));
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+  return out;
+}
+
+/**
+ * Recorre recursivamente (BFS) el árbol de carpetas desde `rootId` y devuelve
+ * todos los archivos NO-carpeta encontrados, con su ruta relativa en `path`.
+ * Protegido contra ciclos (set `seen`) y con cotas MAX_FOLDERS / MAX_FILES.
+ */
+async function walkDrive(rootId: string, apiKey: string): Promise<SheetFile[]> {
+  const files: SheetFile[] = [];
+  const queue: { id: string; path: string }[] = [{ id: rootId, path: '' }];
+  const seen = new Set<string>();
+  let foldersVisited = 0;
+
+  while (queue.length > 0 && foldersVisited < MAX_FOLDERS && files.length < MAX_FILES) {
+    const { id, path } = queue.shift()!;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    foldersVisited++;
+
+    const children = await listFolderChildren(id, apiKey);
+    for (const child of children) {
+      if (child.mimeType === FOLDER_MIME) {
+        const childPath = path ? `${path}/${child.name}` : child.name;
+        if (!seen.has(child.id)) queue.push({ id: child.id, path: childPath });
+      } else {
+        files.push({ id: child.id, name: child.name, mimeType: child.mimeType, path: path || undefined });
+        if (files.length >= MAX_FILES) break;
+      }
+    }
+  }
+  return files;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!applyCors(req, res)) return;
   if (!rateLimit(req, res, 'sheets', 20, 60_000)) return;
@@ -78,17 +138,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const url = `https://www.googleapis.com/drive/v3/files?q='${FOLDER_ID}'+in+parents&key=${API_KEY}&fields=files(id,name,mimeType)&pageSize=200`;
-    const r = await fetch(url);
-    const data = await r.json();
-    if (data.error) {
-      console.error('Drive list error:', data.error.message);
-      return res.status(data.error.code || 500).json({ error: 'No se pudo listar partituras' });
-    }
+    const files = await walkDrive(FOLDER_ID, API_KEY);
     res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600');
-    return res.status(200).json({ files: data.files || [] });
+    return res.status(200).json({ files });
   } catch (err: any) {
     console.error('sheets list error:', err?.message);
-    return res.status(500).json({ error: 'Error interno' });
+    return res.status(500).json({ error: 'No se pudo listar partituras' });
   }
 }
