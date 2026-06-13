@@ -70,7 +70,8 @@ Modo offline básico                 ██████████████�
 ```
 
 **Lo que falta:**
-- ⚠️ Sincronización YouTube — endpoint funciona, falta `VITE_GOOGLE_DRIVE_API_KEY` en Vercel
+- ✅ **Partituras de Drive operativas** (verificado 13-jun: `/api/sheets` 200 con archivos + `/api/pdf` sirve PDFs reales). Desbloquea las partituras en la app y las embebidas en el PDF del Coro.
+- ⚠️ Sincronización YouTube — la API funciona; depende de que el canal se pueble con cantos (dependencia externa).
 - ⚠️ Modo offline — banner avisa, pero no hay caché de cantorales para offline real
 
 ### 2.2 Seguridad / Backend · 99%
@@ -146,7 +147,7 @@ Soft delete (papelera)              ░░░░░░░░░░░░░░�
 SLA documentado                     ██████████████████████████  100% ✅ (en Términos de Servicio)
 ```
 
-**Acciones manuales restantes (~10 min, sin código):** (1) **Drive API key** en Vercel — sin ella `/api/sheets` da 404 y las partituras del PDF del Coro no cargan; (2) **Sentry DSN**. Backup: ✅ **verificado y operativo** (13-jun); Recovery: migración SQL ✅ aplicada.
+**Acciones manuales restantes (~5 min, sin código):** **Sentry DSN** (crear cuenta + pegar el DSN en Vercel). ✅ Backup verificado (13-jun) · ✅ Recovery migración aplicada · ✅ Drive/partituras operativas (13-jun: `/api/sheets` + `/api/pdf` en 200).
 
 ### 2.6 Legal / Compliance · 100%
 
