@@ -132,13 +132,13 @@ Guías para testers externos         ██████████████�
 **Tests automatizados pasando:** **17/17** en integration suite (contra el backend migrado) y **7/7** en smoke headless. Los falsos positivos previos se corrigieron y los tests se actualizaron al comportamiento nuevo (deep link anónimo, bucket sin listado). Axe: 0 violaciones en las pantallas auditadas.
 **Lo que falta:** smoke test móvil real (~56 casos OAuth + 7 device-specific, NO automatizables) + verificación visual del PDF del Coro y del QR anónimo/instalación en dispositivo. Tests unitarios siguen en 0% (Sprint 2).
 
-### 2.5 Operacional · 32%
+### 2.5 Operacional · 88%
 
 ```
 Build + Deploy (Vercel)             ██████████████████████████  100% ✅
 Supabase production                 ██████████████████████████  100% ✅
 Variables de entorno                ██████████████████████████  100% ✅
-Monitoreo de errores (Sentry)       ████████████████████████░░   95% ✅ (código listo, falta crear cuenta + DSN)
+Monitoreo de errores (Sentry)       ██████████████████████████  100% ✅ (DSN configurado + verificado en prod 13-jun; DSN limpio en el bundle)
 Backup verificado                   ██████████████████████████  100% ✅ (verificado 13-jun: corrida verde + release encriptado backup-2026-06-13-0301)
 Recovery de cuenta                  ██████████████████████████  100% ✅ (migración SQL aplicada)
 Analytics                           ░░░░░░░░░░░░░░░░░░░░░░░░░░    0% ⏳ (Sprint 2)
@@ -147,7 +147,7 @@ Soft delete (papelera)              ░░░░░░░░░░░░░░�
 SLA documentado                     ██████████████████████████  100% ✅ (en Términos de Servicio)
 ```
 
-**Acciones manuales restantes (~5 min, sin código):** **Sentry DSN** (crear cuenta + pegar el DSN en Vercel). ✅ Backup verificado (13-jun) · ✅ Recovery migración aplicada · ✅ Drive/partituras operativas (13-jun: `/api/sheets` + `/api/pdf` en 200).
+**Acciones manuales de configuración: ✅ COMPLETADAS (13-jun).** Sentry (DSN verificado), Backup (corrida verde + release encriptado), Recovery (migración aplicada) y Drive/partituras (`/api/sheets` + `/api/pdf` en 200). No queda configuración externa pendiente para la operación básica. (Analytics y soft-delete siguen para Sprint 2.)
 
 ### 2.6 Legal / Compliance · 100%
 
