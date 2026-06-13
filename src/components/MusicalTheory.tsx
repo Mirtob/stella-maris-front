@@ -1,4 +1,5 @@
 import { Music2, BookOpen, PlayCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { getChannelUrl } from '../services/youtube';
 
 interface MusicalTheoryProps {
   onBack?: () => void;
@@ -12,7 +13,7 @@ export function MusicalTheory({ onBack }: MusicalTheoryProps) {
       duration: '15 min',
       completed: false,
       topics: ['El pentagrama', 'Claves musicales', 'Notas musicales'],
-      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' // Reemplazar con URL real
+      videoUrl: '' // TODO: pegar URL real del video; vacío usa el canal oficial como respaldo
     },
     {
       id: 2,
@@ -20,7 +21,7 @@ export function MusicalTheory({ onBack }: MusicalTheoryProps) {
       duration: '20 min',
       completed: false,
       topics: ['Redonda, blanca, negra', 'Corcheas y semicorcheas', 'Silencios musicales'],
-      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' // Reemplazar con URL real
+      videoUrl: '' // TODO: pegar URL real del video; vacío usa el canal oficial como respaldo
     },
     {
       id: 3,
@@ -28,7 +29,7 @@ export function MusicalTheory({ onBack }: MusicalTheoryProps) {
       duration: '25 min',
       completed: false,
       topics: ['Compás binario y ternario', 'Compás de 4/4', 'Acentuación rítmica'],
-      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' // Reemplazar con URL real
+      videoUrl: '' // TODO: pegar URL real del video; vacío usa el canal oficial como respaldo
     },
     {
       id: 4,
@@ -36,7 +37,7 @@ export function MusicalTheory({ onBack }: MusicalTheoryProps) {
       duration: '30 min',
       completed: false,
       topics: ['Tonos y semitonos', 'Escala de Do Mayor', 'Escalas menores naturales'],
-      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' // Reemplazar con URL real
+      videoUrl: '' // TODO: pegar URL real del video; vacío usa el canal oficial como respaldo
     },
     {
       id: 5,
@@ -44,7 +45,7 @@ export function MusicalTheory({ onBack }: MusicalTheoryProps) {
       duration: '25 min',
       completed: false,
       topics: ['Intervalos melódicos', 'Intervalos armónicos', 'Clasificación de intervalos'],
-      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' // Reemplazar con URL real
+      videoUrl: '' // TODO: pegar URL real del video; vacío usa el canal oficial como respaldo
     },
     {
       id: 6,
@@ -52,12 +53,13 @@ export function MusicalTheory({ onBack }: MusicalTheoryProps) {
       duration: '30 min',
       completed: false,
       topics: ['Tríadas mayores y menores', 'Inversiones de acordes', 'Acordes en cantos litúrgicos'],
-      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' // Reemplazar con URL real
+      videoUrl: '' // TODO: pegar URL real del video; vacío usa el canal oficial como respaldo
     },
   ];
 
   const handleLessonClick = (videoUrl: string) => {
-    window.open(videoUrl, '_blank');
+    // Si la lección aún no tiene video propio, abrir el canal oficial como respaldo
+    window.open(videoUrl || getChannelUrl(), '_blank');
   };
 
   return (

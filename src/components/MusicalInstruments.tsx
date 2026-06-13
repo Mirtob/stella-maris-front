@@ -1,4 +1,5 @@
 import { Guitar, Music2, Users, PlayCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { getChannelUrl } from '../services/youtube';
 
 interface MusicalInstrumentsProps {
   onBack?: () => void;
@@ -14,12 +15,12 @@ export function MusicalInstruments({ onBack }: MusicalInstrumentsProps) {
       bgColor: 'bg-blue-50',
       textColor: 'text-blue-700',
       lessons: [
-        { name: 'Acordes básicos (Do, Re, Mi, Sol, La)', duration: '25 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Rasgueos litúrgicos', duration: '20 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Cambios de acordes suaves', duration: '30 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Acompañamiento de cantos marianos', duration: '35 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Canciones en tonalidad menor', duration: '30 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Técnicas de arpegio', duration: '25 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+        { name: 'Acordes básicos (Do, Re, Mi, Sol, La)', duration: '25 min', videoUrl: '' },
+        { name: 'Rasgueos litúrgicos', duration: '20 min', videoUrl: '' },
+        { name: 'Cambios de acordes suaves', duration: '30 min', videoUrl: '' },
+        { name: 'Acompañamiento de cantos marianos', duration: '35 min', videoUrl: '' },
+        { name: 'Canciones en tonalidad menor', duration: '30 min', videoUrl: '' },
+        { name: 'Técnicas de arpegio', duration: '25 min', videoUrl: '' },
       ]
     },
     {
@@ -30,12 +31,12 @@ export function MusicalInstruments({ onBack }: MusicalInstrumentsProps) {
       bgColor: 'bg-purple-50',
       textColor: 'text-purple-700',
       lessons: [
-        { name: 'Introducción al órgano de tubos', duration: '20 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Posición de manos y pedalera', duration: '30 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Registros básicos del órgano', duration: '25 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Preludio y postludio', duration: '35 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Acompañamiento de himnos', duration: '40 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Bach para principiantes', duration: '45 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+        { name: 'Introducción al órgano de tubos', duration: '20 min', videoUrl: '' },
+        { name: 'Posición de manos y pedalera', duration: '30 min', videoUrl: '' },
+        { name: 'Registros básicos del órgano', duration: '25 min', videoUrl: '' },
+        { name: 'Preludio y postludio', duration: '35 min', videoUrl: '' },
+        { name: 'Acompañamiento de himnos', duration: '40 min', videoUrl: '' },
+        { name: 'Bach para principiantes', duration: '45 min', videoUrl: '' },
       ]
     },
     {
@@ -46,12 +47,12 @@ export function MusicalInstruments({ onBack }: MusicalInstrumentsProps) {
       bgColor: 'bg-amber-50',
       textColor: 'text-amber-700',
       lessons: [
-        { name: 'Técnica de dirección básica', duration: '30 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Patrones de compás', duration: '25 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Entradas y cortes', duration: '20 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Calentamiento vocal del coro', duration: '35 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Ensayos efectivos', duration: '40 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Interpretación y expresión', duration: '35 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+        { name: 'Técnica de dirección básica', duration: '30 min', videoUrl: '' },
+        { name: 'Patrones de compás', duration: '25 min', videoUrl: '' },
+        { name: 'Entradas y cortes', duration: '20 min', videoUrl: '' },
+        { name: 'Calentamiento vocal del coro', duration: '35 min', videoUrl: '' },
+        { name: 'Ensayos efectivos', duration: '40 min', videoUrl: '' },
+        { name: 'Interpretación y expresión', duration: '35 min', videoUrl: '' },
       ]
     },
     {
@@ -62,18 +63,19 @@ export function MusicalInstruments({ onBack }: MusicalInstrumentsProps) {
       bgColor: 'bg-green-50',
       textColor: 'text-green-700',
       lessons: [
-        { name: 'Respiración diafragmática', duration: '20 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Postura y relajación', duration: '15 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Resonancia y proyección', duration: '25 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Vocalización y ejercicios', duration: '30 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Cuidado de la voz', duration: '20 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-        { name: 'Canto a varias voces', duration: '35 min', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+        { name: 'Respiración diafragmática', duration: '20 min', videoUrl: '' },
+        { name: 'Postura y relajación', duration: '15 min', videoUrl: '' },
+        { name: 'Resonancia y proyección', duration: '25 min', videoUrl: '' },
+        { name: 'Vocalización y ejercicios', duration: '30 min', videoUrl: '' },
+        { name: 'Cuidado de la voz', duration: '20 min', videoUrl: '' },
+        { name: 'Canto a varias voces', duration: '35 min', videoUrl: '' },
       ]
     },
   ];
 
   const handleLessonClick = (videoUrl: string) => {
-    window.open(videoUrl, '_blank');
+    // Si la lección aún no tiene video propio, abrir el canal oficial como respaldo
+    window.open(videoUrl || getChannelUrl(), '_blank');
   };
 
   return (

@@ -1,4 +1,5 @@
 import { Cross, BookOpen, PlayCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { getChannelUrl } from '../services/youtube';
 
 interface LiturgyProps {
   onBack?: () => void;
@@ -12,7 +13,7 @@ export function Liturgy({ onBack }: LiturgyProps) {
       duration: '20 min',
       completed: false,
       topics: ['Ritos iniciales', 'Liturgia de la Palabra', 'Liturgia Eucarística', 'Ritos finales'],
-      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' // Reemplazar con URL real
+      videoUrl: '' // TODO: pegar URL real del video; vacío usa el canal oficial como respaldo
     },
     {
       id: 2,
@@ -20,7 +21,7 @@ export function Liturgy({ onBack }: LiturgyProps) {
       duration: '25 min',
       completed: false,
       topics: ['Adviento', 'Navidad', 'Cuaresma', 'Pascua', 'Tiempo Ordinario'],
-      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' // Reemplazar con URL real
+      videoUrl: '' // TODO: pegar URL real del video; vacío usa el canal oficial como respaldo
     },
     {
       id: 3,
@@ -28,7 +29,7 @@ export function Liturgy({ onBack }: LiturgyProps) {
       duration: '30 min',
       completed: false,
       topics: ['Función de los cantos', 'Momentos apropiados', 'Criterios de selección'],
-      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' // Reemplazar con URL real
+      videoUrl: '' // TODO: pegar URL real del video; vacío usa el canal oficial como respaldo
     },
     {
       id: 4,
@@ -36,7 +37,7 @@ export function Liturgy({ onBack }: LiturgyProps) {
       duration: '20 min',
       completed: false,
       topics: ['Importancia del salmo', 'Cómo cantarlo', 'Respuesta del pueblo'],
-      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' // Reemplazar con URL real
+      videoUrl: '' // TODO: pegar URL real del video; vacío usa el canal oficial como respaldo
     },
     {
       id: 5,
@@ -44,7 +45,7 @@ export function Liturgy({ onBack }: LiturgyProps) {
       duration: '35 min',
       completed: false,
       topics: ['Kyrie eleison', 'Gloria', 'Santo', 'Cordero de Dios'],
-      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' // Reemplazar con URL real
+      videoUrl: '' // TODO: pegar URL real del video; vacío usa el canal oficial como respaldo
     },
     {
       id: 6,
@@ -52,7 +53,7 @@ export function Liturgy({ onBack }: LiturgyProps) {
       duration: '30 min',
       completed: false,
       topics: ['Historia', 'Características', 'Aplicación actual', 'Notación cuadrada'],
-      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' // Reemplazar con URL real
+      videoUrl: '' // TODO: pegar URL real del video; vacío usa el canal oficial como respaldo
     },
     {
       id: 7,
@@ -60,7 +61,7 @@ export function Liturgy({ onBack }: LiturgyProps) {
       duration: '25 min',
       completed: false,
       topics: ['Criterios pastorales', 'Participación activa', 'Selección de repertorio'],
-      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' // Reemplazar con URL real
+      videoUrl: '' // TODO: pegar URL real del video; vacío usa el canal oficial como respaldo
     },
     {
       id: 8,
@@ -68,12 +69,13 @@ export function Liturgy({ onBack }: LiturgyProps) {
       duration: '15 min',
       completed: false,
       topics: ['Morado', 'Blanco', 'Rojo', 'Verde', 'Significados'],
-      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' // Reemplazar con URL real
+      videoUrl: '' // TODO: pegar URL real del video; vacío usa el canal oficial como respaldo
     },
   ];
 
   const handleLessonClick = (videoUrl: string) => {
-    window.open(videoUrl, '_blank');
+    // Si la lección aún no tiene video propio, abrir el canal oficial como respaldo
+    window.open(videoUrl || getChannelUrl(), '_blank');
   };
 
   return (

@@ -94,6 +94,14 @@ export function getVideoUrl(videoId: string): string {
 }
 
 /**
+ * Obtener la URL del canal oficial de YouTube.
+ * Se usa como respaldo cuando una lección aún no tiene video propio.
+ */
+export function getChannelUrl(): string {
+  return `https://www.youtube.com/channel/${YOUTUBE_CONFIG.channelId}`;
+}
+
+/**
  * Obtener URL de embed
  */
 export function getEmbedUrl(videoId: string, params?: Record<string, any>): string {
@@ -621,6 +629,7 @@ export default {
   isValidVideoId,
   getThumbnailUrl,
   getVideoUrl,
+  getChannelUrl,
   getEmbedUrl,
   formatDuration,
   parseDurationToSeconds,
