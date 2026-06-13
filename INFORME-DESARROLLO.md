@@ -138,7 +138,7 @@ Build + Deploy (Vercel)             ██████████████�
 Supabase production                 ██████████████████████████  100% ✅
 Variables de entorno                ██████████████████████████  100% ✅
 Monitoreo de errores (Sentry)       ████████████████████████░░   95% ✅ (código listo, falta crear cuenta + DSN)
-Backup verificado                   ████████████████████████░░   95% ✅ (workflow arreglado 13-jun; faltan 3 secrets en GitHub + 1 corrida)
+Backup verificado                   ██████████████████████████  100% ✅ (verificado 13-jun: corrida verde + release encriptado backup-2026-06-13-0301)
 Recovery de cuenta                  ██████████████████████████  100% ✅ (migración SQL aplicada)
 Analytics                           ░░░░░░░░░░░░░░░░░░░░░░░░░░    0% ⏳ (Sprint 2)
 Logs centralizados                  ████████░░░░░░░░░░░░░░░░░░   30% ⚠️
@@ -146,7 +146,7 @@ Soft delete (papelera)              ░░░░░░░░░░░░░░�
 SLA documentado                     ██████████████████████████  100% ✅ (en Términos de Servicio)
 ```
 
-**Acciones manuales restantes (~25 min, sin código):** (1) **Drive API key** en Vercel — sin ella `/api/sheets` da 404 y las partituras del PDF del Coro no cargan; (2) **Sentry DSN**; (3) **3 secrets del Backup** en GitHub + correr el workflow una vez. Recovery: migración SQL ✅ aplicada.
+**Acciones manuales restantes (~10 min, sin código):** (1) **Drive API key** en Vercel — sin ella `/api/sheets` da 404 y las partituras del PDF del Coro no cargan; (2) **Sentry DSN**. Backup: ✅ **verificado y operativo** (13-jun); Recovery: migración SQL ✅ aplicada.
 
 ### 2.6 Legal / Compliance · 100%
 
