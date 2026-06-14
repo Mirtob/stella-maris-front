@@ -3,6 +3,8 @@ import { X, Send, Calendar, Church, Clock, Plus } from 'lucide-react';
 import { Song, InstrumentType } from '../types';
 import { getTodayLocal, formatYmdForDisplay } from '../utils/dateLocal';
 import { getLiturgicalDateForDate, getDateForLiturgicalName, isSunday, getLiturgicalDateNames } from '../utils/liturgicalCalendar';
+import { LiturgicalColorBadge } from './LiturgicalColorBadge';
+import { validateCantoral, LiturgicalWarning } from '../utils/liturgicalValidation';
 import { AddSolemnityModal } from './AddSolemnityModal';
 import { CantoralPDFPreview } from './CantoralPDFPreview';
 import { PostPublishModal } from './PostPublishModal';
@@ -220,6 +222,22 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
     ...customDates.map(cd => cd.name),
   ];
 
+  // Revisión litúrgica (avisos no bloqueantes) para la(s) fecha(s) destino.
+  const liturgicalWarnings: LiturgicalWarning[] = (() => {
+    const dates = isMulti
+      ? Array.from(new Set(Array.from(selectedParishes).map(p => schedules[p]?.date).filter(Boolean)))
+      : (selectedDate ? [selectedDate] : []);
+    const seen = new Set<string>();
+    const merged: LiturgicalWarning[] = [];
+    for (const d of dates) {
+      for (const w of validateCantoral(cantoral, { date: d as string })) {
+        const key = `${w.code}|${w.message}`;
+        if (!seen.has(key)) { seen.add(key); merged.push(w); }
+      }
+    }
+    return merged;
+  })();
+
   return (
     <>
       {!showDownloadPDFModal && !showAddSolemnityModal && (
@@ -415,9 +433,12 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                         </option>
                       ))}
                     </select>
-                    <p className="text-sm text-blue-900 dark:text-blue-200 mt-2 transition-colors">
-                      Selecciona el tiempo litúrgico correspondiente
-                    </p>
+                    <div className="flex items-center justify-between gap-2 mt-2">
+                      <p className="text-sm text-blue-900 dark:text-blue-200 transition-colors">
+                        Selecciona el tiempo litúrgico correspondiente
+                      </p>
+                      {selectedDate && <LiturgicalColorBadge date={selectedDate} />}
+                    </div>
                     <button
                       onClick={() => setShowAddSolemnityModal(true)}
                       className="flex items-center gap-2 text-sm text-blue-900 dark:text-blue-200 mt-2 transition-colors"
@@ -452,6 +473,27 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                     </p>
                   </div>
                 </>
+              )}
+
+              {/* Revisión litúrgica — avisos no bloqueantes */}
+              {liturgicalWarnings.length > 0 && (
+                <div className="bg-amber-50 dark:bg-amber-950/40 rounded-2xl p-4 border-2 border-amber-300 dark:border-amber-700 transition-colors">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-2xl">📋</span>
+                    <h4 className="text-base font-bold text-amber-950 dark:text-amber-100">Revisión litúrgica</h4>
+                  </div>
+                  <ul className="space-y-1.5">
+                    {liturgicalWarnings.map((w, i) => (
+                      <li key={i} className="flex gap-2 text-sm text-amber-900 dark:text-amber-200">
+                        <span>{w.level === 'warn' ? '⚠️' : 'ℹ️'}</span>
+                        <span>{w.message}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-amber-800 dark:text-amber-300 mt-2">
+                    Son sugerencias; puedes publicar igualmente.
+                  </p>
+                </div>
               )}
 
               {/* Preview */}
