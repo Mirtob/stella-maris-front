@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { History, Calendar, Church, ChevronDown, ChevronUp, Play, Clock, Trash2, Filter, Download } from 'lucide-react';
 import { PublishedCantoral, Song } from '../types';
 import { generateChoirCantoralPDF } from '../utils/choirCantoralPDFGenerator';
-import { parseParishChapel } from '../utils/parish';
+import { parseParishChapel, splitActiveParish } from '../utils/parish';
+import { parseYmdLocal, formatYmdForDisplay } from '../utils/dateLocal';
 import { LiturgicalColorBadge } from './LiturgicalColorBadge';
 import { toast } from 'sonner';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -53,24 +54,24 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
     ? cantorals.find(c => c.id === pendingDeleteId)
     : null;
 
-  // Opciones de parroquia (nivel 1) y capilla (nivel 2, dependiente de la parroquia)
+  // Opciones de parroquia (nivel 1 = parishFull) y capilla (nivel 2, separador ' · ')
   const parishOptions = Array.from(
-    new Set(cantorals.map(c => parseParishChapel(c.parishName).parish).filter(Boolean))
+    new Set(cantorals.map(c => splitActiveParish(c.parishName).parishFull).filter(Boolean))
   ).sort((a, b) => a.localeCompare(b));
 
   const chapelOptions = Array.from(
     new Set(
       cantorals
-        .filter(c => selectedParish === 'all' || parseParishChapel(c.parishName).parish === selectedParish)
-        .map(c => parseParishChapel(c.parishName).chapel)
+        .filter(c => selectedParish === 'all' || splitActiveParish(c.parishName).parishFull === selectedParish)
+        .map(c => splitActiveParish(c.parishName).chapel)
         .filter((x): x is string => Boolean(x))
     )
   ).sort((a, b) => a.localeCompare(b));
 
   // Filtrar por parroquia y capilla seleccionadas
   const filteredCantorals = cantorals.filter(c => {
-    const { parish, chapel } = parseParishChapel(c.parishName);
-    if (selectedParish !== 'all' && parish !== selectedParish) return false;
+    const { parishFull, chapel } = splitActiveParish(c.parishName);
+    if (selectedParish !== 'all' && parishFull !== selectedParish) return false;
     if (selectedChapel !== 'all' && chapel !== selectedChapel) return false;
     return true;
   });
@@ -90,9 +91,9 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
     return acc;
   }, {} as Record<string, PublishedCantoral[]>);
 
-  // Agrupar por año y mes
+  // Agrupar por año y mes (TZ-safe: parseYmdLocal evita el corrimiento de día)
   const groupedByMonth = sortedCantorals.reduce((acc, cantoral) => {
-    const date = new Date(cantoral.date);
+    const date = parseYmdLocal(cantoral.date);
     const monthYear = date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long' });
     if (!acc[monthYear]) {
       acc[monthYear] = [];
@@ -101,15 +102,8 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
     return acc;
   }, {} as Record<string, PublishedCantoral[]>);
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('es-ES', { 
-      weekday: 'long', 
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-  };
+  const formatDate = (dateStr: string) =>
+    formatYmdForDisplay(dateStr, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   const categoryOrder = ['Entrada', 'Kyrie', 'Gloria', 'Salmo', 'Aleluya', 'Post Evangelio', 'Ofertorio', 'Santo', 'Padre Nuestro', 'Cordero de Dios', 'Comunión', 'Salida'];
 
@@ -227,7 +221,7 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
               >
                 <option value="all">🌍 Todas las Parroquias</option>
                 {parishOptions.map(parish => (
-                  <option key={parish} value={parish}>⛪ {parish}</option>
+                  <option key={parish} value={parish}>⛪ {parseParishChapel(parish).parish}</option>
                 ))}
               </select>
               {selectedParish !== 'all' && chapelOptions.length > 0 && (

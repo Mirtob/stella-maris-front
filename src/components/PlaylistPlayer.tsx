@@ -64,7 +64,13 @@ export function PlaylistPlayer({ cantoral, onBack }: PlaylistPlayerProps) {
 
     loadYouTubeApi().then((YT) => {
       if (destroyed || !mountRef.current) return;
-      playerRef.current = new YT.Player(mountRef.current, {
+      // Montar el player en un nodo hijo CREADO A MANO (no en el div que controla
+      // React). YouTube reemplaza ese nodo por un iframe; al no estar rastreado por
+      // React, evitamos el "removeChild" al desmontar la pantalla.
+      const host = document.createElement('div');
+      host.className = 'w-full h-full';
+      mountRef.current.appendChild(host);
+      playerRef.current = new YT.Player(host, {
         host: 'https://www.youtube-nocookie.com',
         videoId: tracks[0].youtubeId,
         playerVars: { rel: 0, playsinline: 1, autoplay: 1, modestbranding: 1 },

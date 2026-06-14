@@ -5,7 +5,7 @@ import { getCategoryColors } from '../utils/colors';
 import { CantoralWithOrdinary } from './CantoralWithOrdinary';
 import { generateCantoralPDF } from '../utils/cantoralPDFGenerator';
 import { getTodayLocal, addDaysLocal, getWeekRangeLocal, isWithinInclusive, parseYmdLocal, formatYmdForDisplay } from '../utils/dateLocal';
-import { parseParishChapel } from '../utils/parish';
+import { parseParishChapel, splitActiveParish } from '../utils/parish';
 import { LiturgicalColorBadge } from './LiturgicalColorBadge';
 import { toast } from 'sonner';
 
@@ -64,22 +64,23 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
     .sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : 0)); // más reciente primero
 
   // ── Filtros del archivo (parroquia → capilla → búsqueda) ───────────────────
+  // Nivel 1 = parishFull ("Parroquia - Diócesis"); nivel 2 = capilla real (sep. ' · ').
   const archiveParishOptions = Array.from(
-    new Set(archivo.map(c => parseParishChapel(c.parishName).parish).filter(Boolean))
+    new Set(archivo.map(c => splitActiveParish(c.parishName).parishFull).filter(Boolean))
   ).sort((a, b) => a.localeCompare(b));
 
   const archiveChapelOptions = Array.from(
     new Set(
       archivo
-        .filter(c => archiveParish === 'all' || parseParishChapel(c.parishName).parish === archiveParish)
-        .map(c => parseParishChapel(c.parishName).chapel)
+        .filter(c => archiveParish === 'all' || splitActiveParish(c.parishName).parishFull === archiveParish)
+        .map(c => splitActiveParish(c.parishName).chapel)
         .filter((x): x is string => Boolean(x))
     )
   ).sort((a, b) => a.localeCompare(b));
 
   const archivoFiltered = archivo.filter(c => {
-    const { parish, chapel } = parseParishChapel(c.parishName);
-    if (archiveParish !== 'all' && parish !== archiveParish) return false;
+    const { parishFull, chapel } = splitActiveParish(c.parishName);
+    if (archiveParish !== 'all' && parishFull !== archiveParish) return false;
     if (archiveChapel !== 'all' && chapel !== archiveChapel) return false;
     const q = archiveSearch.trim().toLowerCase();
     if (q) {
@@ -474,7 +475,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                     className="w-full px-3 py-2 text-sm rounded-lg border border-white/60 dark:border-white/20 bg-white/70 dark:bg-white/10 text-blue-950 dark:text-white font-semibold focus:outline-none focus:border-blue-600"
                   >
                     <option value="all">🌍 Todas</option>
-                    {archiveParishOptions.map(p => <option key={p} value={p}>⛪ {p}</option>)}
+                    {archiveParishOptions.map(p => <option key={p} value={p}>⛪ {parseParishChapel(p).parish}</option>)}
                   </select>
                 </div>
                 {archiveParish !== 'all' && archiveChapelOptions.length > 0 && (
