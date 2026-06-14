@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, Calendar, Church, Play, Music as MusicIcon, Clock, BookText, ChevronDown, ChevronUp, Download, Filter, Search } from 'lucide-react';
+import { BookOpen, Calendar, Church, Play, Music as MusicIcon, Clock, BookText, ChevronDown, ChevronUp, Download, Filter, Search, Headphones } from 'lucide-react';
 import { PublishedCantoral, Song } from '../types';
 import { getCategoryColors } from '../utils/colors';
 import { CantoralWithOrdinary } from './CantoralWithOrdinary';
@@ -13,6 +13,7 @@ interface PublishedCantoralsProps {
   cantorals: PublishedCantoral[];
   loading?: boolean;
   onPlaySong: (song: Song) => void;
+  onListen?: (cantoral: PublishedCantoral) => void; // Abrir reproductor "modo radio"
   userRole?: 'Coro' | 'Pueblo fiel' | 'Admin';
   userParishName?: string; // Parroquia del usuario para filtrar
 }
@@ -20,7 +21,7 @@ interface PublishedCantoralsProps {
 // Pueblo fiel solo ve hasta 2 semanas adelante en el dashboard.
 const PUEBLO_FIEL_WINDOW_DAYS = 14;
 
-export function PublishedCantorals({ cantorals, loading = false, onPlaySong, userRole, userParishName }: PublishedCantoralsProps) {
+export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onListen, userRole, userParishName }: PublishedCantoralsProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewingOrdinary, setViewingOrdinary] = useState<string | null>(null);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
@@ -181,6 +182,15 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, use
         {/* Botones de acción */}
         <div className="p-4 bg-white/40 dark:bg-white/10 backdrop-blur-sm border-b border-white/30 transition-colors">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {onListen && (
+              <button
+                onClick={() => onListen(cantoral)}
+                className="bg-gradient-to-br from-rose-600 to-red-700 text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-rose-800 col-span-1 sm:col-span-2"
+              >
+                <Headphones className="w-5 h-5" strokeWidth={2.5} />
+                Escuchar cantos
+              </button>
+            )}
             <button
               onClick={() => setViewingOrdinary(cantoral.id)}
               className="bg-gradient-to-br from-blue-900 to-blue-950 text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-blue-800"

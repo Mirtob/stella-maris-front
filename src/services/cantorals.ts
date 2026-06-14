@@ -4,7 +4,7 @@ import { getSupabaseClient } from './supabaseClient';
 const TABLE = 'published_cantorals';
 
 // Map de DB row → PublishedCantoral (snake_case → camelCase)
-function rowToCantoral(row: any): PublishedCantoral {
+export function rowToCantoral(row: any): PublishedCantoral {
   return {
     id: row.id,
     choirId: row.choir_id,

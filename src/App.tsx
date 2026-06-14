@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Toaster, toast } from 'sonner';
 import { Login } from './components/Login';
 import { AuthCallback } from './components/AuthCallback';
@@ -7,12 +7,14 @@ import { ChoirView } from './components/ChoirView';
 import { PublishedCantorals } from './components/PublishedCantorals';
 import { Sidebar } from './components/Sidebar';
 import { MenuButton } from './components/MenuButton';
+import { NotificationBell } from './components/NotificationBell';
 import { SolemnityAlerts } from './components/SolemnityAlerts';
 
 // Vistas pesadas / no iniciales — carga diferida (code-splitting) para aligerar
 // el bundle inicial. Son exports nombrados, de ahí el `.then(m => ({ default }))`.
 const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const SongPlayer = lazy(() => import('./components/SongPlayer').then(m => ({ default: m.SongPlayer })));
+const PlaylistPlayer = lazy(() => import('./components/PlaylistPlayer').then(m => ({ default: m.PlaylistPlayer })));
 const CoursesMenu = lazy(() => import('./components/CoursesMenu').then(m => ({ default: m.CoursesMenu })));
 const MusicalTheory = lazy(() => import('./components/MusicalTheory').then(m => ({ default: m.MusicalTheory })));
 const Liturgy = lazy(() => import('./components/Liturgy').then(m => ({ default: m.Liturgy })));
@@ -50,7 +52,9 @@ import {
   publishCantoral as publishCantoralToDB,
   deleteCantoral as deleteCantoralFromDB,
   updateCantoralPdfUrl,
+  rowToCantoral,
 } from './services/cantorals';
+import { getSupabaseClient } from './services/supabaseClient';
 import { uploadCantoralPDF } from './services/cantoralPDF';
 import { cacheCantoralsForOffline, getOfflineCantorals } from './services/offlineCache';
 import { listChapels } from './services/chapels';
@@ -171,6 +175,7 @@ type AppRoute =
   | { screen: 'onboarding' }
   | { screen: 'profile-setup' }
   | { screen: 'player'; song: Song; returnView: ViewState }
+  | { screen: 'playlist'; cantoral: PublishedCantoral; returnView: ViewState }
   | { screen: 'settings'; returnView: ViewState }
   | { screen: 'cantoral-link'; cantoralId: string }
   | { screen: 'terms'; returnTo: AppRoute }
@@ -422,30 +427,41 @@ function AppContent() {
     return () => { if (timer) clearTimeout(timer); };
   }, []);
 
-  // Notify Pueblo fiel when a new cantoral is published for their parish
-  const lastSeenCount = useRef(0);
+  // Aviso EN VIVO (Supabase Realtime) cuando se publica un cantoral de la
+  // parroquia del Pueblo fiel. Reemplaza el toast frágil basado en conteo.
   useEffect(() => {
     const effectiveRole = userProfile?.activeRole || userProfile?.role;
-    if (effectiveRole !== 'Pueblo fiel') {
-      lastSeenCount.current = publishedCantorals.length;
-      return;
-    }
-    if (publishedCantorals.length > lastSeenCount.current && lastSeenCount.current > 0) {
-      const newest = publishedCantorals[0];
-      const userParish = userProfile!.activeParishName || userProfile!.parishName;
-      // Only notify if the cantoral belongs to the user's configured parish.
-      // If no parish is set, skip — user hasn't finished setup and shouldn't
-      // receive notifications for cantorals they don't belong to.
-      if (userParish && newest.parishName === userParish) {
-        toast.success('¡Nuevo cantoral publicado! 📖', {
-          description: `${newest.parishName} · ${newest.liturgicalDate} · ${newest.massTime}`,
-          duration: 8000,
-          action: { label: 'Ver cantorales', onClick: () => navigate('cantorals') },
-        });
-      }
-    }
-    lastSeenCount.current = publishedCantorals.length;
-  }, [publishedCantorals, userProfile]);
+    if (effectiveRole !== 'Pueblo fiel') return;
+    const parish = userProfile?.activeParishName || userProfile?.parishName;
+    if (!parish) return;
+
+    const sb = getSupabaseClient();
+    const channel = sb
+      .channel('cantorals-notif')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'published_cantorals' },
+        (payload: any) => {
+          const row = payload?.new;
+          if (!row || row.status !== 'published' || row.parish_name !== parish) return;
+          // Refrescar la lista para que aparezca en el dashboard y la campana.
+          listCantorals(parish).then(setPublishedCantorals);
+          const cantoral = rowToCantoral(row);
+          toast.success('¡Nuevo cantoral publicado! 📖', {
+            description: `${row.liturgical_date} · ${row.mass_time}`,
+            duration: 9000,
+            action: {
+              label: '🎧 Escuchar cantos',
+              onClick: () => setRoute({ screen: 'playlist', cantoral, returnView: currentView() }),
+            },
+          });
+        }
+      )
+      .subscribe();
+
+    return () => { sb.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.activeRole, userProfile?.role, userProfile?.activeParishName, userProfile?.parishName]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -533,6 +549,16 @@ function AppContent() {
 
   const handleBackFromPlayer = () => {
     const returnView = route.screen === 'player' ? route.returnView : 'main';
+    setRoute({ screen: 'app', view: returnView });
+  };
+
+  // Abrir el reproductor "modo radio" con todos los cantos del cantoral.
+  const handleListen = (cantoral: PublishedCantoral) => {
+    setRoute({ screen: 'playlist', cantoral, returnView: currentView() });
+  };
+
+  const handleBackFromPlaylist = () => {
+    const returnView = route.screen === 'playlist' ? route.returnView : 'main';
     setRoute({ screen: 'app', view: returnView });
   };
 
@@ -800,6 +826,14 @@ function AppContent() {
     );
   }
 
+  if (route.screen === 'playlist') {
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <PlaylistPlayer cantoral={route.cantoral} onBack={handleBackFromPlaylist} />
+      </Suspense>
+    );
+  }
+
   if (route.screen === 'settings') {
     if (!userProfile) return <Login onGoogleLogin={handleGoogleLogin} />;
     // Mismo cálculo que el shell/sidebar: la config se perfila por el rol de sesión
@@ -865,6 +899,13 @@ function AppContent() {
 
       <MenuButton onClick={() => setSidebarOpen(true)} />
 
+      {effectiveRole === 'Pueblo fiel' && (
+        <NotificationBell
+          cantorals={publishedCantorals.filter(c => c.status === 'published')}
+          onListen={handleListen}
+        />
+      )}
+
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -908,6 +949,7 @@ function AppContent() {
           onPublishCantoral: handlePublishCantoral,
           navigate,
           onDeleteCantoral: handleDeleteCantoral,
+          onListen: handleListen,
         })}
       </Suspense>
 
@@ -934,6 +976,7 @@ interface ViewProps {
   onPublishCantoral: (cantorals: PublishedCantoral[]) => Promise<void>;
   navigate: (view: string) => void;
   onDeleteCantoral: (id: string) => Promise<void>;
+  onListen: (cantoral: PublishedCantoral) => void;
 }
 
 function renderView(p: ViewProps): JSX.Element | null {
@@ -960,6 +1003,7 @@ function renderView(p: ViewProps): JSX.Element | null {
             cantorals={p.publishedCantorals}
             loading={p.loadingCantorals}
             onPlaySong={p.onPlaySong}
+            onListen={p.onListen}
             userRole={p.effectiveRole}
             userParishName={p.activeParishName}
           />
@@ -987,6 +1031,7 @@ function renderView(p: ViewProps): JSX.Element | null {
           cantorals={p.publishedCantorals}
           loading={p.loadingCantorals}
           onPlaySong={p.onPlaySong}
+          onListen={p.onListen}
           userRole={p.effectiveRole}
           userParishName={p.activeParishName}
         />
