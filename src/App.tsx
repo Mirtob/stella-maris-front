@@ -53,6 +53,7 @@ import {
 } from './services/cantorals';
 import { uploadCantoralPDF } from './services/cantoralPDF';
 import { cacheCantoralsForOffline, getOfflineCantorals } from './services/offlineCache';
+import { listChapels } from './services/chapels';
 import { getTodayLocal, addDaysLocal, isWithinInclusive } from './utils/dateLocal';
 import { generateChoirCantoralPDF } from './utils/choirCantoralPDFGenerator';
 import { isCurrentUserAdmin } from './services/admin';
@@ -209,6 +210,8 @@ function AppContent() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [cantoral, setCantoral] = useState<Song[]>([]);
   const [publishedCantorals, setPublishedCantorals] = useState<PublishedCantoral[]>([]);
+  // Catálogo global de capillas (parishFull → capillas) para el selector de sesión.
+  const [chapelsByParish, setChapelsByParish] = useState<Record<string, { id: string; name: string }[]>>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showParishSelector, setShowParishSelector] = useState(false);
   const [qrCantoral, setQrCantoral] = useState<PublishedCantoral | null>(null);
@@ -307,6 +310,21 @@ function AppContent() {
       .finally(() => setLoadingCantorals(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route.screen, userProfile, isVerifiedAdmin]);
+
+  // Cargar el catálogo de capillas una vez que hay sesión (para el selector de parroquia).
+  useEffect(() => {
+    if (!userProfile) return;
+    let cancelled = false;
+    listChapels().then((list) => {
+      if (cancelled) return;
+      const map: Record<string, { id: string; name: string }[]> = {};
+      for (const c of list) {
+        (map[c.parishFull] ??= []).push({ id: c.id, name: c.name });
+      }
+      setChapelsByParish(map);
+    });
+    return () => { cancelled = true; };
+  }, [userProfile?.id]);
 
   // Auth initialization — runs once on mount
   useEffect(() => {
@@ -822,6 +840,7 @@ function AppContent() {
           userRole={isVerifiedAdmin ? 'Admin' : (userProfile.role === 'Admin' ? 'Coro' : userProfile.role)}
           lastSessionRole={userProfile.lastSessionRole}
           lastSessionParish={userProfile.lastSessionParish}
+          chapelsByParish={chapelsByParish}
           onSelect={handleSelectActiveParish}
           onSignOut={handleGoogleSignOut}
         />

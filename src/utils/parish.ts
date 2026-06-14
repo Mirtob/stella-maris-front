@@ -28,3 +28,29 @@ export function parseParishChapel(parishName?: string | null): ParishChapel {
   const chapel = raw.slice(idx + 3).trim();
   return chapel ? { parish, chapel } : { parish };
 }
+
+// ===========================================================================
+// Capilla como unidad de "parroquia activa"
+// ===========================================================================
+//
+// Una capilla seleccionada en la sesión se identifica con el string
+// "<parishFull> · <Capilla>", donde parishFull es "<Parroquia> - <Diócesis>".
+// El separador ' · ' (espacio + punto medio + espacio) no colisiona con ' - '.
+
+export const CHAPEL_SEP = ' · ';
+
+/** Construye el string de parroquia activa para una capilla. */
+export function buildChapelParish(parishFull: string, chapelName: string): string {
+  return `${parishFull.trim()}${CHAPEL_SEP}${chapelName.trim()}`;
+}
+
+/** Separa un string de parroquia activa en parroquia madre y (opcional) capilla. */
+export function splitActiveParish(active?: string | null): { parishFull: string; chapel?: string } {
+  const raw = (active ?? '').trim();
+  if (!raw) return { parishFull: '' };
+  const idx = raw.indexOf(CHAPEL_SEP);
+  if (idx === -1) return { parishFull: raw };
+  const parishFull = raw.slice(0, idx).trim();
+  const chapel = raw.slice(idx + CHAPEL_SEP.length).trim();
+  return chapel ? { parishFull, chapel } : { parishFull };
+}

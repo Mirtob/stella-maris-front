@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { chileDioceses, Diocese, Parish, Chapel } from '../data/chileDioceses';
 import { toast } from 'sonner';
 import { listActiveParishes, ParishActivity } from '../services/parishStats';
+import { listChapels, addChapel, deleteChapel, Chapel as AdminChapel } from '../services/chapels';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface ExtendedParish extends Parish {
   choirCount?: number;
@@ -29,6 +31,21 @@ export function ParishManager() {
   }, []);
 
   useEffect(() => { loadActive(); }, [loadActive]);
+
+  // Capillas administradas (Supabase). Agrupadas por parish_full para mostrarlas
+  // bajo su parroquia madre.
+  const [adminChapels, setAdminChapels] = useState<AdminChapel[]>([]);
+  const [savingChapel, setSavingChapel] = useState(false);
+  const [pendingDeleteChapel, setPendingDeleteChapel] = useState<AdminChapel | null>(null);
+
+  const loadChapels = useCallback(async () => {
+    setAdminChapels(await listChapels());
+  }, []);
+  useEffect(() => { loadChapels(); }, [loadChapels]);
+
+  const chapelsForParish = (parishFull: string) =>
+    adminChapels.filter((c) => c.parishFull === parishFull);
+
   const [showAddChapelDialog, setShowAddChapelDialog] = useState(false);
   const [showAddParishDialog, setShowAddParishDialog] = useState(false);
   const [showEditParishDialog, setShowEditParishDialog] = useState(false);
@@ -75,17 +92,43 @@ export function ParishManager() {
     setShowAddChapelDialog(true);
   };
 
-  const handleSaveChapel = () => {
-    // TODO: persistir en backend cuando exista endpoint /api/parishes/chapels
+  const handleSaveChapel = async () => {
+    if (!selectedParishForChapel || !newChapelName.trim() || savingChapel) return;
+    setSavingChapel(true);
+    // parishFull debe coincidir con el formato del perfil: "<Parroquia> - <Diócesis>".
+    const parishFull = `${selectedParishForChapel.name} - ${selectedParishForChapel.dioceseName ?? ''}`.trim();
+    const res = await addChapel({
+      name: newChapelName,
+      parishFull,
+      diocese: selectedParishForChapel.dioceseName,
+      address: newChapelAddress,
+    });
+    setSavingChapel(false);
+
+    if (!res.ok) {
+      toast.error('No se pudo agregar la capilla', { description: res.error });
+      return;
+    }
+
     toast.success('¡Capilla agregada exitosamente!', {
-      description: `${newChapelName} ha sido agregada a ${selectedParishForChapel?.name}`,
+      description: `${newChapelName} ha sido agregada a ${selectedParishForChapel.name}`,
       duration: 4000,
     });
-    
+    await loadChapels();
     setShowAddChapelDialog(false);
     setNewChapelName('');
     setNewChapelAddress('');
     setSelectedParishForChapel(null);
+  };
+
+  const handleDeleteChapel = async (chapel: AdminChapel) => {
+    const res = await deleteChapel(chapel.id);
+    if (!res.ok) {
+      toast.error('No se pudo eliminar la capilla', { description: res.error });
+      return;
+    }
+    toast.success('Capilla eliminada', { description: chapel.name });
+    await loadChapels();
   };
 
   const handleAddParish = () => {
@@ -279,6 +322,35 @@ export function ParishManager() {
                 </div>
               )}
 
+              {/* Capillas administradas (Supabase) */}
+              {chapelsForParish(`${parish.name} - ${parish.dioceseName}`).length > 0 && (
+                <div className="p-5 bg-green-50 dark:bg-slate-700 border-b-2 border-green-100 dark:border-slate-600 transition-colors">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Building2 className="w-5 h-5 text-green-700 dark:text-green-300" />
+                    <h4 className="font-bold text-green-900 dark:text-green-200">
+                      Capillas administradas ({chapelsForParish(`${parish.name} - ${parish.dioceseName}`).length})
+                    </h4>
+                  </div>
+                  <div className="space-y-2">
+                    {chapelsForParish(`${parish.name} - ${parish.dioceseName}`).map((chapel) => (
+                      <div key={chapel.id} className="bg-white dark:bg-slate-600 p-3 rounded-lg border border-green-200 dark:border-slate-500 flex items-center justify-between gap-2 transition-colors">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-gray-900 dark:text-white truncate">{chapel.name}</div>
+                          {chapel.address && <div className="text-sm text-gray-600 dark:text-gray-300 truncate">{chapel.address}</div>}
+                        </div>
+                        <button
+                          onClick={() => setPendingDeleteChapel(chapel)}
+                          className="p-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex-shrink-0"
+                          aria-label="Eliminar capilla"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Actions */}
               <div className="p-4 flex gap-2 flex-wrap">
                 <button className="flex-1 min-w-[140px] bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white py-3 rounded-xl flex items-center justify-center gap-2 active:scale-98 transition-all"
@@ -390,9 +462,9 @@ export function ParishManager() {
               <button
                 className="flex-1 bg-gradient-to-r from-green-600 to-green-700 text-white px-3 sm:px-4 py-3 rounded-xl font-bold hover:from-green-700 hover:to-green-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 onClick={handleSaveChapel}
-                disabled={!newChapelName.trim()}
+                disabled={!newChapelName.trim() || savingChapel}
               >
-                Guardar Capilla
+                {savingChapel ? 'Guardando…' : 'Guardar Capilla'}
               </button>
             </div>
           </div>
@@ -565,6 +637,21 @@ export function ParishManager() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!pendingDeleteChapel}
+        title="Eliminar capilla"
+        message="¿Seguro que quieres eliminar esta capilla? Los usuarios dejarán de poder seleccionarla."
+        details={pendingDeleteChapel ? `${pendingDeleteChapel.name} · ${pendingDeleteChapel.parishFull}` : undefined}
+        confirmLabel="Sí, eliminar"
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={() => {
+          if (pendingDeleteChapel) handleDeleteChapel(pendingDeleteChapel);
+          setPendingDeleteChapel(null);
+        }}
+        onCancel={() => setPendingDeleteChapel(null)}
+      />
     </div>
   );
 }

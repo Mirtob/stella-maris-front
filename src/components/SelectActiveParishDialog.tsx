@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { UserRole } from '../types';
+import { buildChapelParish } from '../utils/parish';
 
 interface SelectActiveParishDialogProps {
   parishes: string[];
@@ -8,6 +9,8 @@ interface SelectActiveParishDialogProps {
   userRole: UserRole;              // permanent role — determines if Admin option is shown
   lastSessionRole?: UserRole;      // role chosen in the previous session (for "Último uso" badge)
   lastSessionParish?: string;      // parish chosen in the previous session
+  /** Capillas por parroquia madre (parishFull → capillas). Habilita el paso de capilla. */
+  chapelsByParish?: Record<string, { id: string; name: string }[]>;
   onSelect: (parish: string, role: UserRole) => void;
   onSignOut: () => void;           // for full Google sign-out
 }
@@ -27,10 +30,12 @@ export function SelectActiveParishDialog({
   userRole,
   lastSessionRole,
   lastSessionParish,
+  chapelsByParish = {},
   onSelect,
   onSignOut,
 }: SelectActiveParishDialogProps) {
   const [chosenRole, setChosenRole] = useState<UserRole | null>(null);
+  const [chosenParish, setChosenParish] = useState<string | null>(null);
 
   // Render a small "Último uso" badge when this option matches the previous session
   const LastUseBadge = () => (
@@ -44,12 +49,29 @@ export function SelectActiveParishDialog({
   const multiParish = effectiveParishes.length > 1;
   const hasNoParish = effectiveParishes.length === 0;
 
+  const chapelsOf = (parishFull: string) => chapelsByParish[parishFull] ?? [];
+
   const handleRoleSelect = (role: UserRole) => {
-    if (!multiParish) {
-      // Single or no parish: confirm immediately with whatever parish is available
-      onSelect(effectiveParishes[0] ?? '', role);
-    } else {
+    if (multiParish) {
       setChosenRole(role);
+      return;
+    }
+    // Una sola parroquia: si tiene capillas, pasar al paso de capilla; si no, confirmar.
+    const only = effectiveParishes[0] ?? '';
+    if (only && chapelsOf(only).length > 0) {
+      setChosenRole(role);
+      setChosenParish(only);
+    } else {
+      onSelect(only, role);
+    }
+  };
+
+  // En el paso de parroquia: si la elegida tiene capillas, avanzar al paso de capilla.
+  const handleParishSelect = (parish: string) => {
+    if (chapelsOf(parish).length > 0) {
+      setChosenParish(parish);
+    } else if (chosenRole) {
+      onSelect(parish, chosenRole);
     }
   };
 
@@ -65,7 +87,7 @@ export function SelectActiveParishDialog({
         <div className="mb-7 text-center">
           <div className="text-5xl mb-3">✝️</div>
           <h2 className="text-xl sm:text-2xl font-bold text-blue-950 dark:text-white">
-            {!chosenRole ? '¿Cómo participas hoy?' : '¿A cuál parroquia vas?'}
+            {!chosenRole ? '¿Cómo participas hoy?' : chosenParish ? '¿A cuál capilla vas?' : '¿A cuál parroquia vas?'}
           </h2>
           {!chosenRole && (
             <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
@@ -147,7 +169,7 @@ export function SelectActiveParishDialog({
         )}
 
         {/* ── Step 2: Parish selection (multi-parish only) ───────────────── */}
-        {chosenRole && multiParish && (
+        {chosenRole && multiParish && !chosenParish && (
           <div className="mb-4">
             <button
               onClick={() => setChosenRole(null)}
@@ -168,7 +190,7 @@ export function SelectActiveParishDialog({
                   return (
                     <button
                       key={parish}
-                      onClick={() => onSelect(parish, chosenRole)}
+                      onClick={() => handleParishSelect(parish)}
                       className={`w-full bg-white/60 dark:bg-white/10 border-2 p-4 rounded-2xl text-left hover:bg-white/80 dark:hover:bg-white/20 active:scale-95 transition-all ${
                         isLast
                           ? 'border-amber-400 ring-2 ring-amber-300'
@@ -183,6 +205,47 @@ export function SelectActiveParishDialog({
                     </button>
                   );
                 })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 3: Chapel selection (cuando la parroquia elegida tiene capillas) ── */}
+        {chosenRole && chosenParish && (
+          <div className="mb-4">
+            <button
+              onClick={() => {
+                setChosenParish(null);
+                if (!multiParish) setChosenRole(null);
+              }}
+              className="flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 mb-4 hover:opacity-70 transition-opacity"
+            >
+              ← Volver
+            </button>
+            <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+              {chosenParish.split(' - ')[0]}
+            </p>
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              <button
+                onClick={() => onSelect(chosenParish, chosenRole)}
+                className="w-full bg-white/60 dark:bg-white/10 border-2 border-blue-200 dark:border-blue-700 p-4 rounded-2xl text-left hover:bg-white/80 dark:hover:bg-white/20 active:scale-95 transition-all"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100 flex-1">⛪ Toda la parroquia</span>
+                  <span className="text-blue-500 dark:text-blue-400 text-lg">→</span>
+                </div>
+              </button>
+              {chapelsOf(chosenParish).map((chapel) => (
+                <button
+                  key={chapel.id}
+                  onClick={() => onSelect(buildChapelParish(chosenParish, chapel.name), chosenRole)}
+                  className="w-full bg-white/60 dark:bg-white/10 border-2 border-blue-200 dark:border-blue-700 p-4 rounded-2xl text-left hover:bg-white/80 dark:hover:bg-white/20 active:scale-95 transition-all"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100 flex-1">🏠 {chapel.name}</span>
+                    <span className="text-blue-500 dark:text-blue-400 text-lg">→</span>
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
         )}
