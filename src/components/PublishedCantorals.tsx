@@ -6,6 +6,7 @@ import { CantoralWithOrdinary } from './CantoralWithOrdinary';
 import { generateCantoralPDF } from '../utils/cantoralPDFGenerator';
 import { getTodayLocal, addDaysLocal, getWeekRangeLocal, isWithinInclusive, parseYmdLocal, formatYmdForDisplay } from '../utils/dateLocal';
 import { parseParishChapel } from '../utils/parish';
+import { LiturgicalColorBadge } from './LiturgicalColorBadge';
 import { toast } from 'sonner';
 
 interface PublishedCantoralsProps {
@@ -283,6 +284,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, use
                   <div className="text-left">
                     <div className="text-sm opacity-90 mb-1">{formatDateShort(date).toUpperCase()}</div>
                     <div className="text-xl font-bold">{cantoralsOnDate[0].liturgicalDate}</div>
+                    <div className="mt-1"><LiturgicalColorBadge date={date} /></div>
                     {hasMultipleMasses && (
                       <div className="text-xs opacity-80">
                         {cantoralsOnDate.length} {cantoralsOnDate.length === 1 ? 'Misa' : 'Misas'}

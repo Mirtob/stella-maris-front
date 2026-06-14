@@ -3,6 +3,7 @@ import { History, Calendar, Church, ChevronDown, ChevronUp, Play, Clock, Trash2,
 import { PublishedCantoral, Song } from '../types';
 import { generateChoirCantoralPDF } from '../utils/choirCantoralPDFGenerator';
 import { parseParishChapel } from '../utils/parish';
+import { LiturgicalColorBadge } from './LiturgicalColorBadge';
 import { toast } from 'sonner';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -285,9 +286,10 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
                             </div>
 
                             {/* Calendario Litúrgico */}
-                            <div className="flex items-center gap-2 text-lg text-purple-700 dark:text-purple-300 mb-2">
+                            <div className="flex items-center flex-wrap gap-2 text-lg text-purple-700 dark:text-purple-300 mb-2">
                               <span className="text-2xl">📖</span>
                               <span className="font-bold">{cantoral.liturgicalDate}</span>
+                              <LiturgicalColorBadge date={cantoral.date} />
                             </div>
 
                             {/* Horario */}
