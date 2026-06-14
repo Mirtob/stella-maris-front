@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ExternalLink, Download, Loader, Play, Pause, RotateCcw, Plus, Minus, ZoomIn, ZoomOut } from 'lucide-react';
 import { useWakeLock } from '../hooks/useWakeLock';
+import { getOfflinePdf } from '../services/offlineCache';
 
 interface PDFViewerProps {
   proxyUrl: string;
@@ -38,33 +39,57 @@ export function PDFViewer({ proxyUrl, driveViewUrl, title, durationSeconds }: PD
   // abierta. Se libera solo al desmontar el visor (cerrar la partitura).
   useWakeLock(true);
 
-  // Cargar PDF cuando cambia la URL
+  // Cargar PDF cuando cambia la URL (con fallback a la copia offline cacheada)
   useEffect(() => {
     let cancelled = false;
+    let objectUrl: string | null = null;
     setLoading(true);
     setError(null);
     setIsScrolling(false);
 
     (async () => {
+      let pdfjsLib: any;
       try {
-        const pdfjsLib: any = await import('pdfjs-dist');
+        pdfjsLib = await import('pdfjs-dist');
         pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_URL;
+      } catch {
+        if (!cancelled) { setError('No se pudo cargar el visor'); setLoading(false); }
+        return;
+      }
 
-        const loadingTask = pdfjsLib.getDocument({ url: proxyUrl });
-        const loadedPdf = await loadingTask.promise;
+      const load = async (url: string) => (await pdfjsLib.getDocument({ url }).promise);
+
+      try {
+        const loadedPdf = await load(proxyUrl);
         if (cancelled) return;
-
         setPdf(loadedPdf);
         setLoading(false);
-      } catch (err: any) {
+      } catch (netErr: any) {
+        // Sin red: intentar la copia offline cacheada (Modo Misa offline)
+        try {
+          objectUrl = await getOfflinePdf(proxyUrl);
+          if (objectUrl) {
+            const loadedPdf = await load(objectUrl);
+            if (cancelled) return;
+            setPdf(loadedPdf);
+            setLoading(false);
+            return;
+          }
+        } catch {
+          /* cae al error general */
+        }
         if (cancelled) return;
-        console.error('Error cargando PDF:', err);
-        setError(err?.message || 'No se pudo cargar la partitura');
+        console.error('Error cargando PDF:', netErr);
+        setError(netErr?.message || 'No se pudo cargar la partitura');
         setLoading(false);
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      // Revocar al cambiar de PDF/desmontar (ya no se necesita el blob).
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
   }, [proxyUrl]);
 
   // Renderizar TODAS las páginas apiladas verticalmente (modo scroll continuo)

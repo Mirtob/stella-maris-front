@@ -1,24 +1,27 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Toaster, toast } from 'sonner';
 import { Login } from './components/Login';
 import { AuthCallback } from './components/AuthCallback';
 import { ProfileSetup } from './components/ProfileSetup';
 import { ChoirView } from './components/ChoirView';
 import { PublishedCantorals } from './components/PublishedCantorals';
-import { AdminDashboard } from './components/AdminDashboard';
-import { SongPlayer } from './components/SongPlayer';
 import { Sidebar } from './components/Sidebar';
 import { MenuButton } from './components/MenuButton';
-import { CoursesMenu } from './components/CoursesMenu';
-import { MusicalTheory } from './components/MusicalTheory';
-import { Liturgy } from './components/Liturgy';
-import { MusicalInstruments } from './components/MusicalInstruments';
-import { CantoralManager } from './components/CantoralManager';
-import { ProfileSettings } from './components/ProfileSettings';
-import { CantoralHistory } from './components/CantoralHistory';
-import { LiturgicalCalendar } from './components/LiturgicalCalendar';
 import { SolemnityAlerts } from './components/SolemnityAlerts';
-import { SheetMusicLibrary } from './components/SheetMusicLibrary';
+
+// Vistas pesadas / no iniciales — carga diferida (code-splitting) para aligerar
+// el bundle inicial. Son exports nombrados, de ahí el `.then(m => ({ default }))`.
+const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const SongPlayer = lazy(() => import('./components/SongPlayer').then(m => ({ default: m.SongPlayer })));
+const CoursesMenu = lazy(() => import('./components/CoursesMenu').then(m => ({ default: m.CoursesMenu })));
+const MusicalTheory = lazy(() => import('./components/MusicalTheory').then(m => ({ default: m.MusicalTheory })));
+const Liturgy = lazy(() => import('./components/Liturgy').then(m => ({ default: m.Liturgy })));
+const MusicalInstruments = lazy(() => import('./components/MusicalInstruments').then(m => ({ default: m.MusicalInstruments })));
+const CantoralManager = lazy(() => import('./components/CantoralManager').then(m => ({ default: m.CantoralManager })));
+const ProfileSettings = lazy(() => import('./components/ProfileSettings').then(m => ({ default: m.ProfileSettings })));
+const CantoralHistory = lazy(() => import('./components/CantoralHistory').then(m => ({ default: m.CantoralHistory })));
+const LiturgicalCalendar = lazy(() => import('./components/LiturgicalCalendar').then(m => ({ default: m.LiturgicalCalendar })));
+const SheetMusicLibrary = lazy(() => import('./components/SheetMusicLibrary').then(m => ({ default: m.SheetMusicLibrary })));
 import { LoadingScreen } from './components/LoadingScreen';
 import { SelectActiveParishDialog } from './components/SelectActiveParishDialog';
 import { RoleGuard } from './components/RoleGuard';
@@ -49,6 +52,8 @@ import {
   updateCantoralPdfUrl,
 } from './services/cantorals';
 import { uploadCantoralPDF } from './services/cantoralPDF';
+import { cacheCantoralsForOffline, getOfflineCantorals } from './services/offlineCache';
+import { getTodayLocal, addDaysLocal, isWithinInclusive } from './utils/dateLocal';
 import { generateChoirCantoralPDF } from './utils/choirCantoralPDFGenerator';
 import { isCurrentUserAdmin } from './services/admin';
 import { upsertCurrentUserProfile } from './services/userProfiles';
@@ -287,7 +292,18 @@ function AppContent() {
       : (userProfile.activeParishName || userProfile.parishName);
     setLoadingCantorals(true);
     listCantorals(parish)
-      .then(setPublishedCantorals)
+      .then((list) => {
+        // Sin red y sin datos del backend: usar lo cacheado para la Misa.
+        if (list.length === 0 && typeof navigator !== 'undefined' && navigator.onLine === false) {
+          setPublishedCantorals(getOfflineCantorals());
+          return;
+        }
+        setPublishedCantorals(list);
+        // Cachear en segundo plano la ventana próxima (hoy → hoy+14) para uso offline.
+        const today = getTodayLocal();
+        const upcoming = list.filter((c) => isWithinInclusive(c.date, today, addDaysLocal(today, 14)));
+        if (upcoming.length) void cacheCantoralsForOffline(upcoming);
+      })
       .finally(() => setLoadingCantorals(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route.screen, userProfile, isVerifiedAdmin]);
@@ -755,12 +771,14 @@ function AppContent() {
 
   if (route.screen === 'player') {
     return (
-      <SongPlayer
-        song={route.song}
-        onBack={handleBackFromPlayer}
-        userInstrument={userProfile?.instrument}
-        userRole={userProfile?.role}
-      />
+      <Suspense fallback={<LoadingScreen />}>
+        <SongPlayer
+          song={route.song}
+          onBack={handleBackFromPlayer}
+          userInstrument={userProfile?.instrument}
+          userRole={userProfile?.role}
+        />
+      </Suspense>
     );
   }
 
@@ -772,12 +790,14 @@ function AppContent() {
     const settingsRole: UserRole =
       claimedSettingsRole === 'Admin' && !isVerifiedAdmin ? 'Coro' : claimedSettingsRole;
     return (
-      <ProfileSettings
-        userProfile={userProfile}
-        effectiveRole={settingsRole}
-        onClose={handleCloseSettings}
-        onSave={handleUpdateProfile}
-      />
+      <Suspense fallback={<LoadingScreen />}>
+        <ProfileSettings
+          userProfile={userProfile}
+          effectiveRole={settingsRole}
+          onClose={handleCloseSettings}
+          onSave={handleUpdateProfile}
+        />
+      </Suspense>
     );
   }
 
@@ -854,21 +874,23 @@ function AppContent() {
         onCancel={() => setPendingNavigateView(null)}
       />
 
-      {renderView({
-        view,
-        userProfile,
-        effectiveRole,
-        activeParishName,
-        cantoral,
-        publishedCantorals,
-        loadingCantorals,
-        onAddToCantoral: handleAddToCantoral,
-        onRemoveFromCantoral: handleRemoveFromCantoral,
-        onPlaySong: handlePlaySong,
-        onPublishCantoral: handlePublishCantoral,
-        navigate,
-        onDeleteCantoral: handleDeleteCantoral,
-      })}
+      <Suspense fallback={<LoadingScreen />}>
+        {renderView({
+          view,
+          userProfile,
+          effectiveRole,
+          activeParishName,
+          cantoral,
+          publishedCantorals,
+          loadingCantorals,
+          onAddToCantoral: handleAddToCantoral,
+          onRemoveFromCantoral: handleRemoveFromCantoral,
+          onPlaySong: handlePlaySong,
+          onPublishCantoral: handlePublishCantoral,
+          navigate,
+          onDeleteCantoral: handleDeleteCantoral,
+        })}
+      </Suspense>
 
       <SolemnityAlerts />
     </div>
