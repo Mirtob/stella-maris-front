@@ -120,7 +120,7 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
 
   return (
     <div className="w-full max-w-2xl mx-auto min-h-screen p-4 sm:p-6 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
-      <div className="pt-10 sm:pt-14 pb-16">
+      <main className="pt-10 sm:pt-14 pb-16">
 
         {loading && (
           <div className="flex flex-col items-center gap-4 py-20">
@@ -250,7 +250,7 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
             </button>
           </>
         )}
-      </div>
+      </main>
     </div>
   );
 }
