@@ -53,6 +53,7 @@ import {
   deleteCantoral as deleteCantoralFromDB,
   updateCantoralPdfUrl,
   rowToCantoral,
+  findDuplicate,
 } from './services/cantorals';
 import { getSupabaseClient } from './services/supabaseClient';
 import { uploadCantoralPDF } from './services/cantoralPDF';
@@ -614,6 +615,16 @@ function AppContent() {
     const failed: { parishName: string; error?: string }[] = [];
 
     for (const newCantoral of newCantorals) {
+      // Un cantoral por Misa: si ya hay uno para esa parroquia + fecha + horario,
+      // no publicar otro. (El índice UNIQUE en la BD es la red de seguridad.)
+      const dup = await findDuplicate(newCantoral.parishName, newCantoral.date, newCantoral.massTime);
+      if (dup) {
+        setPublishedCantorals(prev => prev.filter(c => c.id !== newCantoral.id));
+        // 'duplicate' → translatePublishError lo mapea al mensaje amigable de duplicado.
+        failed.push({ parishName: newCantoral.parishName, error: 'duplicate' });
+        continue;
+      }
+
       const result = await publishCantoralToDB(newCantoral);
       if (!result.ok) {
         // Revertir SOLO este; el draft sigue intacto para no perder trabajo.
@@ -861,8 +872,14 @@ function AppContent() {
   // Ensure effectiveRole always falls back to a valid UserRole so renderView never returns null.
   // If localStorage claims 'Admin' but Supabase hasn't verified it, downgrade to 'Coro'.
   const claimedRole = userProfile.activeRole || userProfile.role || 'Coro';
-  const effectiveRole: UserRole =
+  let effectiveRole: UserRole =
     claimedRole === 'Admin' && !isVerifiedAdmin ? 'Coro' : claimedRole;
+  // Solo un perfil Coro (o Admin) puede actuar como Coro y publicar. Si un perfil
+  // Pueblo fiel tuviera activeRole='Coro' persistido (de antes), se fuerza a Pueblo
+  // fiel — red de seguridad por si el selector de sesión no se mostró.
+  if (effectiveRole === 'Coro' && userProfile.role === 'Pueblo fiel') {
+    effectiveRole = 'Pueblo fiel';
+  }
 
   return (
     <div>

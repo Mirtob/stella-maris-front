@@ -118,19 +118,23 @@ export function SelectActiveParishDialog({
         {/* ── Step 1: Role selection ─────────────────────────────────────── */}
         {!chosenRole && (
           <div className="space-y-3 mb-6">
-            <button
-              onClick={() => handleRoleSelect('Coro')}
-              className={`w-full bg-gradient-to-br from-blue-900 to-blue-950 text-white p-4 rounded-2xl flex items-center gap-4 hover:opacity-90 active:scale-95 transition-all border-2 shadow-lg ${
-                lastSessionRole === 'Coro' ? 'border-amber-400 ring-2 ring-amber-300' : 'border-blue-800'
-              }`}
-            >
-              <span className="text-3xl">🎵</span>
-              <div className="text-left">
-                <p className="font-bold text-lg">Como Coro</p>
-                <p className="text-sm text-blue-200">Preparar y publicar cantorales</p>
-              </div>
-              {lastSessionRole === 'Coro' && <LastUseBadge />}
-            </button>
+            {/* "Como Coro" solo para quien tiene perfil de Coro (o Admin como
+                superusuario). Un Pueblo fiel NO puede publicar cantorales. */}
+            {(userRole === 'Coro' || isAdmin) && (
+              <button
+                onClick={() => handleRoleSelect('Coro')}
+                className={`w-full bg-gradient-to-br from-blue-900 to-blue-950 text-white p-4 rounded-2xl flex items-center gap-4 hover:opacity-90 active:scale-95 transition-all border-2 shadow-lg ${
+                  lastSessionRole === 'Coro' ? 'border-amber-400 ring-2 ring-amber-300' : 'border-blue-800'
+                }`}
+              >
+                <span className="text-3xl">🎵</span>
+                <div className="text-left">
+                  <p className="font-bold text-lg">Como Coro</p>
+                  <p className="text-sm text-blue-200">Preparar y publicar cantorales</p>
+                </div>
+                {lastSessionRole === 'Coro' && <LastUseBadge />}
+              </button>
+            )}
 
             <button
               onClick={() => handleRoleSelect('Pueblo fiel')}

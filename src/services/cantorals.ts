@@ -89,7 +89,8 @@ export async function publishCantoral(cantoral: PublishedCantoral): Promise<{ ok
   }
 }
 
-/** Busca cantoral existente para misma parroquia + fecha + hora. */
+/** Busca un cantoral PUBLICADO existente para la misma parroquia + fecha + hora.
+ *  (Los borradores no cuentan: un cantoral por Misa = uno publicado.) */
 export async function findDuplicate(parishName: string, date: string, massTime: string): Promise<PublishedCantoral | null> {
   try {
     const sb = getSupabaseClient();
@@ -98,6 +99,7 @@ export async function findDuplicate(parishName: string, date: string, massTime: 
       .eq('parish_name', parishName)
       .eq('date', date)
       .eq('mass_time', massTime)
+      .eq('status', 'published')
       .limit(1);
     if (error || !data || data.length === 0) return null;
     return rowToCantoral(data[0]);
