@@ -156,7 +156,7 @@ export function RecoveryManager({ onBack }: Props) {
             <div className="text-5xl mb-2">🔍</div>
             <p className="text-base text-gray-700 dark:text-gray-300 font-bold">Sin resultados</p>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Probá con el email principal o el email de respaldo del usuario.
+              Prueba con el email principal o el email de respaldo del usuario.
             </p>
           </div>
         )}

@@ -54,8 +54,8 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
   const handleRemoveParish = (parish: string) => {
     // Regla de negocio: siempre debe quedar al menos una parroquia.
     if (parishes.length <= 1) {
-      toast.error('Debés tener al menos una parroquia', {
-        description: 'Agregá otra antes de quitar esta.',
+      toast.error('Debes tener al menos una parroquia', {
+        description: 'Agrega otra antes de quitar esta.',
       });
       return;
     }
@@ -230,7 +230,7 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
                 No tienes parroquias configuradas en tu perfil.
               </p>
               <p className="text-sm text-amber-800 mt-1">
-                Agregá una con el botón de abajo.
+                Agrega una con el botón de abajo.
               </p>
             </div>
           ) : parishes.length === 1 ? (
@@ -303,7 +303,7 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
 
               {parishes.length <= 1 && (
                 <p className="text-xs text-gray-500 mt-2 italic">
-                  Debés tener al menos una parroquia. Agregá otra para poder quitar esta.
+                  Debes tener al menos una parroquia. Agrega otra para poder quitar esta.
                 </p>
               )}
 

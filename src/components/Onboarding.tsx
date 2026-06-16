@@ -31,15 +31,15 @@ const SLIDES: Slide[] = [
   },
   {
     icon: <Users className="w-7 h-7" strokeWidth={2.5} />,
-    title: 'Tres formas de usar la app',
-    description: 'Elegirás tu rol al crear tu perfil. Podés cambiar entre roles en cualquier momento desde el menú.',
+    title: 'Dos formas de usar la app',
+    description: 'Elegirás tu rol al crear tu perfil. Puedes cambiar de rol cuando quieras desde el menú.',
     visual: (
       <div className="space-y-3 mb-6">
         <div className="bg-gradient-to-r from-blue-900 to-blue-950 text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg border-2 border-blue-800">
           <Music className="w-7 h-7 flex-shrink-0" strokeWidth={2.5} />
           <div className="text-left flex-1">
             <p className="font-bold text-base">Como Coro</p>
-            <p className="text-xs sm:text-sm text-blue-200">Armás y publicás cantorales</p>
+            <p className="text-xs sm:text-sm text-blue-200">Armas y publicas cantorales</p>
           </div>
         </div>
         <div className="bg-white/50 dark:bg-white/10 border-2 border-blue-300 dark:border-blue-600 text-blue-900 dark:text-blue-100 p-4 rounded-2xl flex items-center gap-3">

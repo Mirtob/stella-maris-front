@@ -165,7 +165,7 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
                       <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${parishMenuOpen ? 'rotate-180' : ''}`} />
                     </button>
                     {!parishMenuOpen && (
-                      <p className="text-[11px] text-white/60 mt-0.5 ml-7">Tocá para cambiar de parroquia</p>
+                      <p className="text-[11px] text-white/60 mt-0.5 ml-7">Toca para cambiar de parroquia</p>
                     )}
                     {parishMenuOpen && (
                       <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">

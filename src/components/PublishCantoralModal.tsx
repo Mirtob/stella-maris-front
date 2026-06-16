@@ -286,7 +286,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                     <div className="flex-1">
                       <div className="text-xl font-bold text-blue-950 dark:text-white">¿A qué parroquias?</div>
                       <div className="text-sm text-blue-900 dark:text-blue-200">
-                        Mismos cantos; indicá fecha y horario de cada misa.
+                        Mismos cantos; indica fecha y horario de cada misa.
                       </div>
                     </div>
                   </div>

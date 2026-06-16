@@ -577,18 +577,18 @@ function AppContent() {
   const translatePublishError = (error?: string): string => {
     const raw = (error ?? '').toLowerCase();
     if (raw.includes('jwt') || raw.includes('unauthorized') || raw.includes('401')) {
-      return 'Tu sesión caducó. Iniciá sesión de nuevo.';
+      return 'Tu sesión caducó. Inicia sesión de nuevo.';
     }
     if (raw.includes('row-level security') || raw.includes('rls') || raw.includes('permission denied')) {
-      return 'No tenés permiso para publicar en esta parroquia.';
+      return 'No tienes permiso para publicar en esta parroquia.';
     }
     if (raw.includes('duplicate') || raw.includes('unique')) {
       return 'Ya existe un cantoral con esos datos para esta parroquia y horario.';
     }
     if (raw.includes('failed to fetch') || raw.includes('network')) {
-      return 'Sin conexión a internet. Revisá tu red y volvé a intentar.';
+      return 'Sin conexión a internet. Revisa tu red y vuelve a intentar.';
     }
-    return 'No pudimos guardar el cantoral. Volvé a intentar.';
+    return 'No pudimos guardar el cantoral. Vuelve a intentar.';
   };
 
   // Publica uno o varios cantorales (uno por parroquia/horario), con los mismos cantos.
@@ -602,7 +602,7 @@ function AppContent() {
     const session = await getStoredSession();
     if (!session) {
       toast.error('Sesión expirada', {
-        description: 'Tu sesión caducó. Iniciá sesión de nuevo para publicar el cantoral.',
+        description: 'Tu sesión caducó. Inicia sesión de nuevo para publicar el cantoral.',
       });
       setRoute({ screen: 'login' });
       return;
@@ -938,7 +938,7 @@ function AppContent() {
       <ConfirmDialog
         open={pendingNavigateView !== null}
         title="¿Salir del cantoral en armado?"
-        message={`Tenés ${cantoral.length} ${cantoral.length === 1 ? 'canto agregado' : 'cantos agregados'} en el cantoral. El borrador queda en esta sesión, pero si cerrás la app o cambiás de cuenta se va a perder.`}
+        message={`Tienes ${cantoral.length} ${cantoral.length === 1 ? 'canto agregado' : 'cantos agregados'} en el cantoral. El borrador queda en esta sesión, pero si cierras la app o cambias de cuenta se va a perder.`}
         confirmLabel="Sí, salir"
         cancelLabel="Seguir armando"
         variant="warning"

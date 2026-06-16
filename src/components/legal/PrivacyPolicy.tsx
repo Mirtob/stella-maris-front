@@ -35,7 +35,7 @@ export function PrivacyPolicy({ onBack }: PrivacyPolicyProps) {
 
             <div className="bg-amber-50 dark:bg-amber-950/30 border-l-4 border-amber-500 dark:border-amber-600 p-4 mb-6 rounded-r-lg">
               <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-sm">
-                <strong>Resumen rápido:</strong> recolectamos tu email, nombre y parroquia para que puedas armar o ver cantorales. No los compartimos con terceros con fines publicitarios. Podés pedir borrar tu cuenta en cualquier momento.
+                <strong>Resumen rápido:</strong> recolectamos tu email, nombre y parroquia para que puedas armar o ver cantorales. No los compartimos con terceros con fines publicitarios. Puedes pedir borrar tu cuenta en cualquier momento.
               </p>
             </div>
 
@@ -48,8 +48,8 @@ export function PrivacyPolicy({ onBack }: PrivacyPolicyProps) {
             <p className="text-slate-700 dark:text-slate-200 leading-relaxed">Al registrarte y usar la Aplicación recolectamos:</p>
             <ul className="list-disc pl-6 text-slate-700 dark:text-slate-200 leading-relaxed">
               <li><strong>Datos de tu cuenta de Google:</strong> email, nombre completo y foto de perfil (visible públicamente en tu cuenta).</li>
-              <li><strong>Datos de tu perfil en la Aplicación:</strong> rol elegido (Coro / Pueblo fiel / Administrador), parroquia(s) seleccionada(s) e instrumento(s) (si sos parte de un coro).</li>
-              <li><strong>Datos de actividad:</strong> cantorales que publicás (si sos coro), cantos que agregás, fecha de tu último acceso.</li>
+              <li><strong>Datos de tu perfil en la Aplicación:</strong> rol elegido (Coro / Pueblo fiel / Administrador), parroquia(s) seleccionada(s) e instrumento(s) (si eres parte de un coro).</li>
+              <li><strong>Datos de actividad:</strong> cantorales que publicas (si eres coro), cantos que agregas, fecha de tu último acceso.</li>
               <li><strong>Datos técnicos:</strong> dirección IP, tipo de navegador, modelo de dispositivo (solo para diagnosticar errores).</li>
             </ul>
 
@@ -66,8 +66,8 @@ export function PrivacyPolicy({ onBack }: PrivacyPolicyProps) {
             <h2 className="text-xl font-bold text-blue-900 dark:text-blue-200 mt-6 mb-3">4. Para qué usamos tus datos</h2>
             <ul className="list-disc pl-6 text-slate-700 dark:text-slate-200 leading-relaxed">
               <li>Identificarte al iniciar sesión.</li>
-              <li>Permitirte ver los cantorales de tu parroquia (o todos, si sos administrador).</li>
-              <li>Permitirte armar y publicar cantorales (si sos coro).</li>
+              <li>Permitirte ver los cantorales de tu parroquia (o todos, si eres administrador).</li>
+              <li>Permitirte armar y publicar cantorales (si eres coro).</li>
               <li>Notificarte cuando hay un cantoral nuevo de tu parroquia.</li>
               <li>Diagnosticar errores técnicos (sin asociar la información a tu identidad personal cuando es posible).</li>
             </ul>
@@ -103,7 +103,7 @@ export function PrivacyPolicy({ onBack }: PrivacyPolicyProps) {
             </ul>
 
             <h2 className="text-xl font-bold text-blue-900 dark:text-blue-200 mt-6 mb-3">8. Tus derechos (ARCO)</h2>
-            <p className="text-slate-700 dark:text-slate-200 leading-relaxed">Conforme a la Ley 19.628, tenés derecho a:</p>
+            <p className="text-slate-700 dark:text-slate-200 leading-relaxed">Conforme a la Ley 19.628, tienes derecho a:</p>
             <ul className="list-disc pl-6 text-slate-700 dark:text-slate-200 leading-relaxed">
               <li><strong>Acceso:</strong> saber qué datos tuyos guardamos.</li>
               <li><strong>Rectificación:</strong> corregir datos inexactos.</li>
@@ -111,7 +111,7 @@ export function PrivacyPolicy({ onBack }: PrivacyPolicyProps) {
               <li><strong>Oposición:</strong> oponerte al uso de tus datos para fines distintos de los originales.</li>
             </ul>
             <p className="text-slate-700 dark:text-slate-200 leading-relaxed mt-3">
-              Para ejercer cualquiera de estos derechos, escribinos a <a href="mailto:stellamarismusicacatolica@gmail.com" className="text-blue-700 dark:text-blue-300 underline">stellamarismusicacatolica@gmail.com</a> desde el email asociado a tu cuenta. Respondemos en máximo 15 días hábiles.
+              Para ejercer cualquiera de estos derechos, escríbenos a <a href="mailto:stellamarismusicacatolica@gmail.com" className="text-blue-700 dark:text-blue-300 underline">stellamarismusicacatolica@gmail.com</a> desde el email asociado a tu cuenta. Respondemos en máximo 15 días hábiles.
             </p>
 
             <h2 className="text-xl font-bold text-blue-900 dark:text-blue-200 mt-6 mb-3">9. Cookies y almacenamiento local</h2>
@@ -121,7 +121,7 @@ export function PrivacyPolicy({ onBack }: PrivacyPolicyProps) {
 
             <h2 className="text-xl font-bold text-blue-900 dark:text-blue-200 mt-6 mb-3">10. Menores de edad</h2>
             <p className="text-slate-700 dark:text-slate-200 leading-relaxed">
-              La Aplicación no está dirigida a menores de 13 años. Si sos menor de 18, te recomendamos que un adulto responsable revise estos términos contigo.
+              La Aplicación no está dirigida a menores de 13 años. Si eres menor de 18, te recomendamos que un adulto responsable revise estos términos contigo.
             </p>
 
             <h2 className="text-xl font-bold text-blue-900 dark:text-blue-200 mt-6 mb-3">11. Seguridad</h2>
@@ -136,7 +136,7 @@ export function PrivacyPolicy({ onBack }: PrivacyPolicyProps) {
 
             <h2 className="text-xl font-bold text-blue-900 dark:text-blue-200 mt-6 mb-3">13. Reclamos</h2>
             <p className="text-slate-700 dark:text-slate-200 leading-relaxed">
-              Si considerás que vulneramos tus derechos, podés escribirnos primero a nosotros. Si no recibís respuesta satisfactoria, podés presentar un reclamo ante el <strong>Consejo para la Transparencia</strong> (Chile) o iniciar acciones judiciales conforme a la Ley 19.628.
+              Si consideras que vulneramos tus derechos, puedes escribirnos primero a nosotros. Si no recibes respuesta satisfactoria, puedes presentar un reclamo ante el <strong>Consejo para la Transparencia</strong> (Chile) o iniciar acciones judiciales conforme a la Ley 19.628.
             </p>
 
             <h2 className="text-xl font-bold text-blue-900 dark:text-blue-200 mt-6 mb-3">14. Contacto</h2>

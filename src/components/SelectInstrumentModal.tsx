@@ -74,7 +74,7 @@ export function SelectInstrumentModal({ userInstruments, selectedInstrument, onS
           ))}
 
           <p className="text-xs text-center text-gray-500 dark:text-gray-400 pt-1">
-            Podés cambiar el instrumento para cada Misa
+            Puedes cambiar el instrumento para cada Misa
           </p>
         </div>
       </div>

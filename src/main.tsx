@@ -56,7 +56,7 @@ async function cleanupAndRender() {
           </h1>
           <p style={{ color: '#1e40af', maxWidth: '420px', marginBottom: '24px', lineHeight: 1.6 }}>
             La aplicación encontró un error inesperado. Ya lo notificamos al equipo.
-            Tocá el botón para volver a intentar.
+            Toca el botón para volver a intentar.
           </p>
           <button
             onClick={resetError}

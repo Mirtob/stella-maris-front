@@ -226,7 +226,7 @@ export function SongManager() {
                 <p className="text-base text-gray-600 dark:text-gray-300">No se encontraron cantos</p>
                 {songs.length === 0 && (
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                    Subí cantos al canal de YouTube y usá "Sincronizar YouTube" para poblar el catálogo.
+                    Sube cantos al canal de YouTube y usa "Sincronizar YouTube" para poblar el catálogo.
                   </p>
                 )}
               </div>

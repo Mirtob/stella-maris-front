@@ -38,7 +38,7 @@ export function AdminUploadSong({ onSongUploaded }: AdminUploadSongProps) {
           </h2>
           <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 mt-1">
             Por seguridad, la app no maneja tokens de Google con permisos de
-            subida. Usá el flujo manual de tres pasos.
+            subida. Usa el flujo manual de tres pasos.
           </p>
         </div>
       </div>

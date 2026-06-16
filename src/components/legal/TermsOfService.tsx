@@ -65,10 +65,10 @@ export function TermsOfService({ onBack }: TermsOfServiceProps) {
 
             <h2 className="text-xl font-bold text-blue-900 dark:text-blue-200 mt-6 mb-3">5. Contenido</h2>
             <p className="text-slate-700 dark:text-slate-200 leading-relaxed">
-              Los videos del catálogo de cantos son embebidos desde el canal oficial de YouTube. Las letras y partituras pueden ser de dominio público, propias o utilizadas bajo licencia. Si considerás que algún canto infringe tus derechos de autor, escribinos para retirarlo.
+              Los videos del catálogo de cantos son embebidos desde el canal oficial de YouTube. Las letras y partituras pueden ser de dominio público, propias o utilizadas bajo licencia. Si consideras que algún canto infringe tus derechos de autor, escríbenos para retirarlo.
             </p>
             <p className="text-slate-700 dark:text-slate-200 leading-relaxed">
-              Los cantorales que vos publicás como parte de un coro siguen siendo tuyos. Al publicarlos, nos concedés una licencia limitada y revocable para mostrarlos en la Aplicación a los miembros del pueblo fiel de tu parroquia.
+              Los cantorales que publicas como parte de un coro siguen siendo tuyos. Al publicarlos, nos concedes una licencia limitada y revocable para mostrarlos en la Aplicación a los miembros del pueblo fiel de tu parroquia.
             </p>
 
             <h2 className="text-xl font-bold text-blue-900 dark:text-blue-200 mt-6 mb-3">6. Datos personales y sensibles</h2>
@@ -76,7 +76,7 @@ export function TermsOfService({ onBack }: TermsOfServiceProps) {
               La Aplicación recolecta datos personales (email, nombre, parroquia de pertenencia) que incluyen información sobre tu afiliación religiosa. Conforme a la Ley 19.628, estos datos son considerados <strong>datos sensibles</strong> y requieren tu consentimiento expreso.
             </p>
             <p className="text-slate-700 dark:text-slate-200 leading-relaxed">
-              Tu aceptación de estos Términos al registrarte constituye dicho consentimiento. Podés conocer en detalle qué datos recolectamos, para qué los usamos y cómo ejercer tus derechos ARCO (acceso, rectificación, cancelación, oposición) en nuestra Política de Privacidad.
+              Tu aceptación de estos Términos al registrarte constituye dicho consentimiento. Puedes conocer en detalle qué datos recolectamos, para qué los usamos y cómo ejercer tus derechos ARCO (acceso, rectificación, cancelación, oposición) en nuestra Política de Privacidad.
             </p>
 
             <h2 className="text-xl font-bold text-blue-900 dark:text-blue-200 mt-6 mb-3">7. Disponibilidad del servicio</h2>
@@ -91,7 +91,7 @@ export function TermsOfService({ onBack }: TermsOfServiceProps) {
 
             <h2 className="text-xl font-bold text-blue-900 dark:text-blue-200 mt-6 mb-3">9. Terminación</h2>
             <p className="text-slate-700 dark:text-slate-200 leading-relaxed">
-              Podés cerrar tu cuenta en cualquier momento desde "Configuración" o cerrando sesión y solicitando la eliminación de tu perfil. Podemos suspender o cerrar cuentas que infrinjan estos Términos.
+              Puedes cerrar tu cuenta en cualquier momento desde "Configuración" o cerrando sesión y solicitando la eliminación de tu perfil. Podemos suspender o cerrar cuentas que infrinjan estos Términos.
             </p>
 
             <h2 className="text-xl font-bold text-blue-900 dark:text-blue-200 mt-6 mb-3">10. Limitación de responsabilidad</h2>
@@ -112,7 +112,7 @@ export function TermsOfService({ onBack }: TermsOfServiceProps) {
 
             <h2 className="text-xl font-bold text-blue-900 dark:text-blue-200 mt-6 mb-3">12. Contacto</h2>
             <p className="text-slate-700 dark:text-slate-200 leading-relaxed">
-              Por cualquier consulta sobre estos Términos, podés escribirnos a <a href="mailto:stellamarismusicacatolica@gmail.com" className="text-blue-700 dark:text-blue-300 underline">stellamarismusicacatolica@gmail.com</a>.
+              Por cualquier consulta sobre estos Términos, puedes escribirnos a <a href="mailto:stellamarismusicacatolica@gmail.com" className="text-blue-700 dark:text-blue-300 underline">stellamarismusicacatolica@gmail.com</a>.
             </p>
           </section>
         </article>

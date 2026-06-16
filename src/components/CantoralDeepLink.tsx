@@ -78,7 +78,7 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
           setError('No encontramos este cantoral. Puede haber sido eliminado.');
         } else if (c.status !== 'published') {
           // Defensa en profundidad: aunque RLS filtre un borrador, la UI lo rechaza.
-          setError('Este cantoral aún no está publicado. Volvé a intentar cuando el coro lo publique.');
+          setError('Este cantoral aún no está publicado. Vuelve a intentar cuando el coro lo publique.');
         } else {
           setCantoral(c);
         }
@@ -86,7 +86,7 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
       })
       .catch(() => {
         if (cancelled) return;
-        setError('Error al cargar el cantoral. Revisá tu conexión.');
+        setError('Error al cargar el cantoral. Revisa tu conexión.');
         setLoading(false);
       });
     return () => { cancelled = true; };
@@ -160,7 +160,7 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
                   <Smartphone className="w-8 h-8 flex-shrink-0" />
                   <div className="flex-1">
                     <p className="font-bold text-base">Instalá Stella Maris</p>
-                    <p className="text-sm text-blue-200">Tené los cantorales de tu parroquia siempre a mano.</p>
+                    <p className="text-sm text-blue-200">Ten los cantorales de tu parroquia siempre a mano.</p>
                   </div>
                   <button
                     onClick={handleInstall}
@@ -174,12 +174,12 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
                   <div className="mt-3 pt-3 border-t border-white/20 text-sm text-blue-100 space-y-1">
                     {ios ? (
                       <p className="flex items-center gap-2">
-                        Tocá <Share className="inline w-4 h-4" /> <strong>Compartir</strong> y luego
+                        Toca <Share className="inline w-4 h-4" /> <strong>Compartir</strong> y luego
                         <strong>“Agregar a inicio”</strong>.
                       </p>
                     ) : (
                       <p>
-                        Abrí el menú del navegador (⋮) y elegí <strong>“Instalar app”</strong> o
+                        Abre el menú del navegador (⋮) y elige <strong>“Instalar app”</strong> o
                         <strong> “Agregar a pantalla de inicio”</strong>.
                       </p>
                     )}

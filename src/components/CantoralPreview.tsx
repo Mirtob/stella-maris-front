@@ -16,14 +16,14 @@ export function CantoralPreview({ cantoral, onRemove, onPlaySong }: CantoralPrev
           Cantoral Vacío
         </h3>
         {/* Q30 — Empty state accionable: indica explícitamente DÓNDE buscar
-            ('más abajo') y QUÉ paso sigue ('tocá +'). */}
+            ('más abajo') y QUÉ paso sigue ('toca +'). */}
         <p className="text-xs text-blue-900 dark:text-blue-100">
-          Elegí cantos en las categorías de más abajo —
+          Elige cantos en las categorías de más abajo —
           <br />
           Entrada, Salmo, Aleluya, Comunión, etc.
         </p>
         <p className="text-xs text-blue-700 dark:text-blue-300 mt-2 italic">
-          Tocá <span className="inline-block bg-blue-700 text-white rounded px-1.5 py-0.5 font-bold not-italic mx-0.5">+</span> en cualquier canto para agregarlo
+          Toca <span className="inline-block bg-blue-700 text-white rounded px-1.5 py-0.5 font-bold not-italic mx-0.5">+</span> en cualquier canto para agregarlo
         </p>
         <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-2 animate-bounce">↓ Categorías abajo ↓</p>
       </div>
