@@ -15,13 +15,14 @@ interface PublishedCantoralsProps {
   onPlaySong: (song: Song) => void;
   onListen?: (cantoral: PublishedCantoral) => void; // Abrir reproductor "modo radio"
   userRole?: 'Coro' | 'Pueblo fiel' | 'Admin';
+  userInstrument?: 'Guitarra' | 'Órgano'; // Para mostrar acordes/partitura según corresponda
   userParishName?: string; // Parroquia del usuario para filtrar
 }
 
 // Pueblo fiel solo ve hasta 2 semanas adelante en el dashboard.
 const PUEBLO_FIEL_WINDOW_DAYS = 14;
 
-export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onListen, userRole, userParishName }: PublishedCantoralsProps) {
+export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onListen, userRole, userInstrument, userParishName }: PublishedCantoralsProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewingOrdinary, setViewingOrdinary] = useState<string | null>(null);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
@@ -331,6 +332,8 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
           cantoral={cantoral}
           onBack={() => setViewingOrdinary(null)}
           onPlaySong={onPlaySong}
+          userRole={userRole}
+          userInstrument={userInstrument}
         />
       );
     }

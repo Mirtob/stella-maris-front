@@ -1047,6 +1047,7 @@ function renderView(p: ViewProps): JSX.Element | null {
             onPlaySong={p.onPlaySong}
             onListen={p.onListen}
             userRole={p.effectiveRole}
+            userInstrument={p.userProfile.instrument}
             userParishName={p.activeParishName}
           />
         );
@@ -1075,6 +1076,7 @@ function renderView(p: ViewProps): JSX.Element | null {
           onPlaySong={p.onPlaySong}
           onListen={p.onListen}
           userRole={p.effectiveRole}
+          userInstrument={p.userProfile.instrument}
           userParishName={p.activeParishName}
         />
       );

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { ArrowLeft, Play, ChevronDown, ChevronUp, X, Music, FileText, ExternalLink } from 'lucide-react';
-import { PublishedCantoral, Song } from '../../types';
+import { PublishedCantoral, Song, UserRole, InstrumentType } from '../../types';
 import { safeUrl } from '../../utils/safeUrl';
 import { massOrdinary, postureIcons, postureLabels, postureColors, MassSection } from '../../data/massOrdinary';
 import { PDFViewer } from '../common/PDFViewer';
 import { LyricsOnly } from '../songs/LyricsOnly';
+import { LyricsWithChords } from '../songs/LyricsWithChords';
 
 // Extrae el Drive file ID de una URL de Drive y arma la URL del proxy (PDF embebido).
 function getDriveProxyUrl(sheetMusicUrl?: string): { proxyUrl: string; driveViewUrl: string } | null {
@@ -22,11 +23,18 @@ interface CantoralWithOrdinaryProps {
   cantoral: PublishedCantoral;
   onBack: () => void;
   onPlaySong: (song: Song) => void;
+  userRole?: UserRole;
+  userInstrument?: InstrumentType;
 }
 
-export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong }: CantoralWithOrdinaryProps) {
+export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, userInstrument }: CantoralWithOrdinaryProps) {
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
+
+  // Pueblo fiel: SOLO la letra (sin partitura). Coro/Admin: letra (con acordes si
+  // toca guitarra) + partitura.
+  const isPuebloFiel = userRole === 'Pueblo fiel';
+  const showChords = !isPuebloFiel && userInstrument === 'Guitarra';
 
   const toggleSection = (id: string) => {
     if (expandedSections.includes(id)) {
@@ -329,13 +337,15 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong }: CantoralW
                       <h4 className="text-xl font-bold text-blue-950 dark:text-white">Letra</h4>
                     </div>
                     <div className="bg-white dark:bg-gray-900 rounded-xl p-4 max-h-[40vh] overflow-auto transition-colors">
-                      <LyricsOnly lyrics={selectedSong.lyrics} />
+                      {showChords
+                        ? <LyricsWithChords lyrics={selectedSong.lyrics} />
+                        : <LyricsOnly lyrics={selectedSong.lyrics} />}
                     </div>
                   </div>
                 )}
 
-                {/* Partitura embebida del momento — visible para todos los roles */}
-                {(() => {
+                {/* Partitura embebida — solo Coro/Admin (el Pueblo fiel ve solo la letra) */}
+                {!isPuebloFiel && (() => {
                   const urls = getDriveProxyUrl(selectedSong.sheetMusicUrl);
                   if (!urls) return null;
                   return (
@@ -377,7 +387,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong }: CantoralW
                       <p className="text-lg text-blue-900 dark:text-blue-100">
                         Toca <strong>"Reproducir Audio"</strong> para escuchar el canto desde YouTube.
                         {selectedSong.lyrics && ' La letra aparece aquí mismo para seguir el canto.'}
-                        {selectedSong.sheetMusicUrl && ' La partitura se muestra embebida (o ábrela en Drive).'}
+                        {!isPuebloFiel && selectedSong.sheetMusicUrl && ' La partitura se muestra embebida (o ábrela en Drive).'}
                       </p>
                     </div>
                   </div>
