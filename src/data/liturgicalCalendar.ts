@@ -34,6 +34,16 @@ export const liturgicalCalendar2026: LiturgicalEvent[] = [
     importance: 'medium'
   },
   {
+    id: 'inmaculada',
+    name: 'Inmaculada Concepción de la Virgen María',
+    date: '2025-12-08',
+    type: 'Solemnidad',
+    color: 'Blanco',
+    season: 'Adviento',
+    importance: 'high',
+    description: 'La Inmaculada Concepción de la Bienaventurada Virgen María'
+  },
+  {
     id: 'adv3',
     name: '3° Domingo de Adviento (Gaudete)',
     date: '2025-12-14',

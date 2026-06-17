@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Plus, Calendar, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatYmdForDisplay } from '../../utils/dateLocal';
 
 interface AddSolemnityModalProps {
   selectedDate: string;
@@ -22,15 +23,8 @@ export function AddSolemnityModal({ selectedDate, onClose, onAdd }: AddSolemnity
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('es-ES', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-  };
+  const formatDate = (dateStr: string) =>
+    formatYmdForDisplay(dateStr, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   const canSave = solemnityName.trim().length > 0;
 
@@ -178,8 +172,8 @@ export function AddSolemnityModal({ selectedDate, onClose, onAdd }: AddSolemnity
               }`}
             >
               <div className="flex items-center justify-center gap-2">
-                <Plus className="w-5 h-5" />
-                Agregar
+                <Plus className="w-5 h-5 flex-shrink-0" />
+                Agregar celebración
               </div>
             </button>
           </div>

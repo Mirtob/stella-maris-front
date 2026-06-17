@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Calendar, Church, ChevronDown, ChevronUp, Bell, Plus, BookOpen, X } from 'lucide-react';
 import { liturgicalCalendar2026, LiturgicalEvent } from '../../data/liturgicalCalendar';
 import { getLiturgicalCardClasses, getLiturgicalSolidColor } from '../../utils/liturgicalColors';
+import { parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
 
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -33,21 +34,24 @@ export function LiturgicalCalendar({ onCreateCantoral }: LiturgicalCalendarProps
   // Combinar eventos del calendario oficial con eventos personalizados
   const allEvents = [...liturgicalCalendar2026, ...customEvents];
 
-  // Agrupar eventos por mes
+  // Agrupar eventos por mes y ORDENAR cronológicamente dentro de cada mes.
+  // parseYmdLocal evita el corrimiento de día/mes de `new Date('YYYY-MM-DD')`,
+  // que se interpreta como UTC y en Chile cae un día antes.
   const eventsByMonth = MONTHS.map((_, index) => {
-    return allEvents.filter(event => {
-      const eventDate = new Date(event.date);
-      return eventDate.getMonth() === index;
-    });
+    return allEvents
+      .filter(event => parseYmdLocal(event.date).getMonth() === index)
+      .sort((a, b) => a.date.localeCompare(b.date));
   });
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('es-ES', { 
-      day: 'numeric',
-      month: 'short'
-    });
-  };
+  const formatDate = (dateStr: string) =>
+    formatYmdForDisplay(dateStr, { day: 'numeric', month: 'short' });
+
+  // El 8 de diciembre (Inmaculada Concepción) es la única celebración con estilo
+  // especial: fondo blanco con letras celestes. El resto usa su color litúrgico.
+  const cardClasses = (event: LiturgicalEvent) =>
+    event.date.slice(5) === '12-08'
+      ? 'bg-white dark:bg-slate-900 border-sky-300 dark:border-sky-700 text-sky-600 dark:text-sky-300'
+      : getLiturgicalCardClasses(event.color);
 
   const getImportanceIcon = (importance: string) => {
     if (importance === 'high') return <Bell className="w-6 h-6 text-amber-500" strokeWidth={2.5} />;
@@ -181,7 +185,7 @@ export function LiturgicalCalendar({ onCreateCantoral }: LiturgicalCalendarProps
           className="w-full p-6 mb-8 flex items-center justify-center gap-3 bg-gradient-to-br from-purple-600 to-purple-700 border-4 border-purple-500 rounded-3xl shadow-xl hover:shadow-2xl active:scale-98 transition-all"
         >
           <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={2.5} />
-          <span className="text-2xl font-bold text-white">Agregar Fiesta o Solemnidad</span>
+          <span className="text-2xl font-bold text-white">Agregar celebración</span>
         </button>
 
         {/* Add Event Modal */}
@@ -190,7 +194,7 @@ export function LiturgicalCalendar({ onCreateCantoral }: LiturgicalCalendarProps
             <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-2xl border-4 border-purple-300 dark:border-purple-700 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
               {/* Header - Fixed */}
               <div className="flex items-center justify-between p-6 border-b-2 border-gray-200 dark:border-gray-700">
-                <h2 className="text-2xl sm:text-lg sm:text-2xl font-bold text-gray-800 dark:text-white">Agregar Fiesta o Solemnidad</h2>
+                <h2 className="text-2xl sm:text-lg sm:text-2xl font-bold text-gray-800 dark:text-white">Agregar celebración</h2>
                 <button
                   onClick={() => setShowAddEventModal(false)}
                   className="w-10 h-10 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
@@ -300,7 +304,7 @@ export function LiturgicalCalendar({ onCreateCantoral }: LiturgicalCalendarProps
                   onClick={handleAddEvent}
                   className="flex-1 px-3 sm:px-4 py-4 bg-gradient-to-br from-purple-600 to-purple-700 text-white rounded-xl text-lg font-bold hover:shadow-xl active:scale-98 transition-all"
                 >
-                  Guardar Fiesta
+                  Agregar celebración
                 </button>
               </div>
             </div>
@@ -488,7 +492,7 @@ export function LiturgicalCalendar({ onCreateCantoral }: LiturgicalCalendarProps
                     {events.map((event) => (
                       <div
                         key={event.id}
-                        className={`p-5 rounded-2xl border-4 ${getLiturgicalCardClasses(event.color)} transition-colors`}
+                        className={`p-5 rounded-2xl border-4 ${cardClasses(event)} transition-colors`}
                       >
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <div className="flex-1">
