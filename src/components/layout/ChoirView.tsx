@@ -9,7 +9,7 @@ import { LiturgicalSuggestions } from '../liturgy/LiturgicalSuggestions';
 import { SelectInstrumentModal } from '../cantoral/SelectInstrumentModal';
 import { Song, InstrumentType, PublishedCantoral } from '../../types';
 import { getGospelAcclamationName, getGospelAcclamationIcon, getCurrentLiturgicalSeason } from '../../utils/liturgicalSeason';
-import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji } from '../../utils/specialLiturgicalDays';
+import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji, getBuildableCelebrations, SpecialLiturgicalDay } from '../../utils/specialLiturgicalDays';
 import { useSongs } from '../../hooks/useSongs';
 
 interface ChoirViewProps {
@@ -46,14 +46,27 @@ export function ChoirView({
   const [showAspersionDialog, setShowAspersionDialog] = useState(false);
   const { songs: allSongs } = useSongs();
   const currentSeason = getCurrentLiturgicalSeason();
-  const isEaster = currentSeason === 'Pascua';
+
+  // Celebraciones que se pueden armar ahora. En Cuaresma/Semana Santa surgen los
+  // oficios del Triduo para prepararlos con anticipación. El constructor se
+  // adapta (orden y categorías) a la celebración elegida; por defecto la de hoy.
+  const celebrations = getBuildableCelebrations();
+  const [selectedCelebration, setSelectedCelebration] = useState<SpecialLiturgicalDay | 'normal'>(
+    () => getSpecialLiturgicalDay() ?? 'normal'
+  );
+  const specialDay = selectedCelebration === 'normal' ? null : selectedCelebration;
+
+  // La aspersión aplica en tiempo pascual; si se está preparando la Vigilia o el
+  // Domingo de Resurrección, también (aunque hoy aún sea Cuaresma).
+  const isEaster = currentSeason === 'Pascua'
+    || selectedCelebration === 'DomingoResurreccion'
+    || selectedCelebration === 'VigiliaPascual';
 
   // Obtener el nombre dinámico del Aleluya (cambia en Cuaresma)
   const gospelAcclamationName = getGospelAcclamationName();
   const gospelAcclamationIcon = getGospelAcclamationIcon();
 
-  // **NUEVO: Detectar día litúrgico especial**
-  const specialDay = getSpecialLiturgicalDay();
+  // Día litúrgico especial = la celebración elegida en el constructor.
   const specialDayName = getSpecialDayName(specialDay);
   const specialDayEmoji = getSpecialDayEmoji(specialDay);
   const categoryConfig = getCategoriesForSpecialDay(specialDay);
@@ -144,6 +157,42 @@ export function ChoirView({
     <>
       <div className="w-full max-w-md md:max-w-2xl mx-auto min-h-screen p-3 sm:p-4 md:p-6 pb-24 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
         <Home />
+
+        {/* Selector de celebración — el constructor se adapta a la liturgia elegida.
+            En Cuaresma/Semana Santa aparecen los oficios del Triduo para prepararlos. */}
+        {celebrations.length > 1 && (
+          <div className="mt-4 bg-white/40 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-4 border-2 border-purple-300/60 dark:border-purple-700/60 transition-colors">
+            <h3 className="text-base font-bold text-purple-950 dark:text-purple-100 mb-1 flex items-center gap-2">
+              <span className="text-xl flex-shrink-0">📅</span>
+              <span className="min-w-0">¿Para qué celebración armas el cantoral?</span>
+            </h3>
+            <p className="text-sm text-purple-800 dark:text-purple-200 mb-3">
+              El orden de la Misa y los cantos se ajustan a la liturgia que elijas.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {celebrations.map((c) => {
+                const active = c.key === selectedCelebration;
+                return (
+                  <button
+                    key={c.key}
+                    onClick={() => {
+                      setSelectedCelebration(c.key);
+                      setExpandedCategories({});
+                      setPenitentialChoice(null);
+                    }}
+                    className={`px-3 py-2 rounded-xl text-sm font-bold border-2 transition-all active:scale-95 ${
+                      active
+                        ? 'bg-gradient-to-br from-purple-600 to-purple-700 text-white border-purple-800 shadow-lg'
+                        : 'bg-white/70 dark:bg-white/10 text-purple-900 dark:text-purple-100 border-purple-300 dark:border-purple-700 hover:bg-white dark:hover:bg-white/20'
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Cantoral Preview */}
         <CantoralPreview

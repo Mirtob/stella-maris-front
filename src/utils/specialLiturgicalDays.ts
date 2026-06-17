@@ -89,6 +89,64 @@ export function getSpecialLiturgicalDay(date: Date = new Date()): SpecialLiturgi
   return null;
 }
 
+/** Celebración elegible en el constructor de cantorales. */
+export interface BuildableCelebration {
+  key: SpecialLiturgicalDay | 'normal';
+  label: string;
+  date?: string; // Fecha de la próxima ocurrencia (YYYY-MM-DD), informativa
+}
+
+function ymdLocal(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const CELEBRATION_LABELS: Record<Exclude<SpecialLiturgicalDay, null>, string> = {
+  JuevesSanto: 'Jueves Santo — Cena del Señor',
+  ViernesSanto: 'Viernes Santo — Pasión',
+  VigiliaPascual: 'Vigilia Pascual',
+  DomingoResurreccion: 'Domingo de Resurrección',
+  Pentecostes: 'Pentecostés',
+  CorpusChristi: 'Corpus Christi',
+  Nochebuena: 'Nochebuena',
+  Navidad: 'Navidad',
+};
+
+/**
+ * Devuelve las celebraciones para las que tiene sentido armar un cantoral en
+ * este momento del año. Siempre incluye la Misa dominical normal; durante la
+ * Cuaresma y la Semana Santa surgen los oficios del Triduo para poder
+ * prepararlos con anticipación (orden y liturgia propios de cada uno).
+ */
+export function getBuildableCelebrations(today: Date = new Date()): BuildableCelebration[] {
+  const list: BuildableCelebration[] = [{ key: 'normal', label: 'Misa dominical' }];
+
+  const year = today.getFullYear();
+  const easter = calculateEaster(year);
+  const ashWednesday = new Date(easter);
+  ashWednesday.setDate(easter.getDate() - 46);
+
+  // Ventana de preparación de Semana Santa: desde Miércoles de Ceniza hasta Pascua.
+  if (today >= ashWednesday && today <= easter) {
+    const jueves = new Date(easter); jueves.setDate(easter.getDate() - 3);
+    const viernes = new Date(easter); viernes.setDate(easter.getDate() - 2);
+    const vigilia = new Date(easter); vigilia.setDate(easter.getDate() - 1);
+    list.push(
+      { key: 'JuevesSanto', label: CELEBRATION_LABELS.JuevesSanto, date: ymdLocal(jueves) },
+      { key: 'ViernesSanto', label: CELEBRATION_LABELS.ViernesSanto, date: ymdLocal(viernes) },
+      { key: 'VigiliaPascual', label: CELEBRATION_LABELS.VigiliaPascual, date: ymdLocal(vigilia) },
+      { key: 'DomingoResurreccion', label: CELEBRATION_LABELS.DomingoResurreccion, date: ymdLocal(easter) },
+    );
+  }
+
+  // Si hoy es un día especial que no está en la lista, ofrécelo también.
+  const todaySpecial = getSpecialLiturgicalDay(today);
+  if (todaySpecial && !list.some(c => c.key === todaySpecial)) {
+    list.splice(1, 0, { key: todaySpecial, label: CELEBRATION_LABELS[todaySpecial], date: ymdLocal(today) });
+  }
+
+  return list;
+}
+
 /**
  * Obtiene las categorías de la Misa que deben mostrarse según el día especial
  */
