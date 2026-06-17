@@ -41,12 +41,60 @@ function applyCors(req: VercelRequest, res: VercelResponse): boolean {
 interface Hit { count: number; resetAt: number; }
 const hits = new Map<string, Hit>();
 
-function rateLimit(req: VercelRequest, res: VercelResponse, endpoint: string, maxRequests: number, windowMs: number): boolean {
+function clientIp(req: VercelRequest): string {
   const fwd = req.headers['x-forwarded-for'];
-  const ip = typeof fwd === 'string' ? fwd.split(',')[0].trim()
+  return typeof fwd === 'string' ? fwd.split(',')[0].trim()
     : Array.isArray(fwd) ? fwd[0]
     : (typeof req.headers['x-real-ip'] === 'string' ? req.headers['x-real-ip'] as string : 'unknown');
-  const key = `${endpoint}:${ip}`;
+}
+
+// Limiter distribuido (compartido entre instancias serverless) vía RPC
+// SECURITY DEFINER en Supabase. Fail-open: ante cualquier error/timeout/env
+// ausente devuelve null y el llamador cae al limiter en memoria por instancia.
+// No agrega dependencias (fetch directo a PostgREST con la anon key).
+async function distributedCheck(key: string, limit: number, windowSeconds: number): Promise<{ allowed: boolean; remaining: number } | null> {
+  const url = process.env.VITE_SUPABASE_URL;
+  const anon = process.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !anon) return null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 800);
+  try {
+    const r = await fetch(`${url}/rest/v1/rpc/api_rate_limit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: anon, Authorization: `Bearer ${anon}` },
+      body: JSON.stringify({ p_key: key, p_limit: limit, p_window_seconds: windowSeconds }),
+      signal: ctrl.signal,
+    });
+    if (!r.ok) return null;
+    const data = await r.json();
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row || typeof row.allowed !== 'boolean') return null;
+    return { allowed: row.allowed, remaining: Number(row.remaining) || 0 };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function rateLimit(req: VercelRequest, res: VercelResponse, endpoint: string, maxRequests: number, windowMs: number): Promise<boolean> {
+  const key = `${endpoint}:${clientIp(req)}`;
+  const windowSeconds = Math.ceil(windowMs / 1000);
+
+  // 1) Distribuido: fuente de verdad si Supabase responde.
+  const dist = await distributedCheck(key, maxRequests, windowSeconds);
+  if (dist) {
+    res.setHeader('X-RateLimit-Limit', String(maxRequests));
+    res.setHeader('X-RateLimit-Remaining', String(Math.max(0, dist.remaining)));
+    if (!dist.allowed) {
+      res.setHeader('Retry-After', String(windowSeconds));
+      res.status(429).json({ error: 'Demasiadas peticiones.' });
+      return false;
+    }
+    return true;
+  }
+
+  // 2) Fallback en memoria (por instancia) si el distribuido no está disponible.
   const now = Date.now();
   let hit = hits.get(key);
   if (!hit || hit.resetAt < now) {
@@ -58,8 +106,7 @@ function rateLimit(req: VercelRequest, res: VercelResponse, endpoint: string, ma
   res.setHeader('X-RateLimit-Remaining', String(Math.max(0, maxRequests - hit.count)));
   res.setHeader('X-RateLimit-Reset', String(Math.ceil(hit.resetAt / 1000)));
   if (hit.count > maxRequests) {
-    const retryAfter = Math.ceil((hit.resetAt - now) / 1000);
-    res.setHeader('Retry-After', String(retryAfter));
+    res.setHeader('Retry-After', String(Math.ceil((hit.resetAt - now) / 1000)));
     res.status(429).json({ error: 'Demasiadas peticiones.' });
     return false;
   }
@@ -111,7 +158,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // 10 req/min per IP — most expensive endpoint (each Gemini call costs $$$
   // and counts against the Google AI Studio quota)
-  if (!rateLimit(req, res, 'suggest', 10, 60_000)) return;
+  if (!(await rateLimit(req, res, 'suggest', 10, 60_000))) return;
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
