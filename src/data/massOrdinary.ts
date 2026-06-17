@@ -39,6 +39,23 @@ export const massOrdinary: MassSection[] = [
     color: 'bg-purple-100 dark:bg-purple-900/30 border-purple-400 dark:border-purple-600'
   },
   {
+    id: 'aspersion',
+    title: 'Rito de Aspersión (Tiempo Pascual)',
+    text: 'En el Tiempo Pascual, en lugar del acto penitencial, puede hacerse la bendición y aspersión del agua en memoria del Bautismo (IGMR 51). El sacerdote rocía al pueblo mientras se entona el canto de aspersión; se omite el Kyrie.',
+    type: 'liturgy',
+    posture: 'standing',
+    icon: '💧',
+    color: 'bg-sky-100 dark:bg-sky-900/30 border-sky-400 dark:border-sky-600'
+  },
+  {
+    id: 'aspersion-song',
+    title: 'Canto de Aspersión',
+    type: 'song',
+    posture: 'standing',
+    category: 'Rito de Aspersión',
+    icon: '💧'
+  },
+  {
     id: 'penitential',
     title: 'Acto Penitencial',
     text: 'Sacerdote: Hermanos: Para celebrar dignamente estos sagrados misterios, reconozcamos nuestros pecados.\n\n(Breve silencio)\n\nYo confieso ante Dios todopoderoso y ante ustedes, hermanos, que he pecado mucho de pensamiento, palabra, obra y omisión.\n\nPor mi culpa, por mi culpa, por mi gran culpa.\n\nPor eso ruego a santa María siempre Virgen, a los ángeles, a los santos y a ustedes, hermanos, que intercedan por mí ante Dios, nuestro Señor.',

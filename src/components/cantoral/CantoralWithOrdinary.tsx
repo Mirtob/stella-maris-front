@@ -235,7 +235,17 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong }: CantoralW
 
         {/* Mass Ordinary with Songs */}
         <div className="space-y-6">
-          {massOrdinary.map(section => renderSection(section))}
+          {(() => {
+            // Si el cantoral trae canto de aspersión (Pascua), se muestra el Rito
+            // de Aspersión y se ocultan el Acto Penitencial y el Kyrie; si no, al revés.
+            const hasAspersion = cantoral.songs.some(s => s.category === 'Rito de Aspersión');
+            const sections = massOrdinary.filter(s =>
+              hasAspersion
+                ? s.id !== 'penitential' && s.id !== 'kyrie-song'
+                : s.id !== 'aspersion' && s.id !== 'aspersion-song'
+            );
+            return sections.map(section => renderSection(section));
+          })()}
         </div>
 
         {/* Footer */}

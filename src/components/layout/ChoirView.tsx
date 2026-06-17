@@ -39,8 +39,14 @@ export function ChoirView({
   const [showInstrumentModal, setShowInstrumentModal] = useState(false);
   const [selectedInstrumentForMass, setSelectedInstrumentForMass] = useState<InstrumentType>(preferredInstrument);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  // Tiempo Pascual: en lugar del acto penitencial puede hacerse el rito de
+  // aspersión (IGMR 51), que cambia el canto de ese momento (y omite el Kyrie).
+  // 'null' = aún no se preguntó; al tocar el Kyrie en Pascua preguntamos.
+  const [penitentialChoice, setPenitentialChoice] = useState<'kyrie' | 'aspersion' | null>(null);
+  const [showAspersionDialog, setShowAspersionDialog] = useState(false);
   const { songs: allSongs } = useSongs();
   const currentSeason = getCurrentLiturgicalSeason();
+  const isEaster = currentSeason === 'Pascua';
 
   // Obtener el nombre dinámico del Aleluya (cambia en Cuaresma)
   const gospelAcclamationName = getGospelAcclamationName();
@@ -80,6 +86,14 @@ export function ChoirView({
       ...prev,
       [category]: false
     }));
+  };
+
+  // Respuesta a la pregunta de Pascua: acto penitencial (Kyrie) o rito de aspersión.
+  const handleChoosePenitential = (mode: 'kyrie' | 'aspersion') => {
+    setPenitentialChoice(mode);
+    setShowAspersionDialog(false);
+    const cat = mode === 'aspersion' ? 'Rito de Aspersión' : 'Kyrie';
+    setExpandedCategories(prev => ({ ...prev, [cat]: true }));
   };
 
   // Genera un UUID v4 real. La policy de Storage `is_cantoral_pdf_owner` rechaza
@@ -204,12 +218,18 @@ export function ChoirView({
 
         {/* Category Searches - DINÁMICAS según el día litúrgico */}
         <div className="mt-8 space-y-6">
-          {categoryConfig.categories.map((category) => {
+          {categoryConfig.categories.map((rawCategory) => {
+            // En Pascua, el Kyrie puede convertirse en el Rito de Aspersión según
+            // lo que elija el coro (se le pregunta al tocar el Kyrie).
+            const category = (isEaster && rawCategory === 'Kyrie' && penitentialChoice === 'aspersion')
+              ? 'Rito de Aspersión'
+              : rawCategory;
             // Obtener el ícono según la categoría
             const getCategoryIcon = (cat: string): string => {
               const icons: Record<string, string> = {
                 'Entrada': '⛪',
                 'Kyrie': '🙏',
+                'Rito de Aspersión': '💧',
                 'Gloria': '✨',
                 'Salmo': '📖',
                 'Aleluya': '🎺',
@@ -242,13 +262,16 @@ export function ChoirView({
 
             const icon = getCategoryIcon(category);
 
+            // Al tocar el Kyrie en Pascua, preguntar primero: acto penitencial o aspersión.
+            const askFirst = isEaster && rawCategory === 'Kyrie' && penitentialChoice === null;
+
             return (
               <CategorySearch
-                key={category}
+                key={rawCategory}
                 category={category}
                 icon={icon}
                 isExpanded={expandedCategories[category] || false}
-                onToggle={() => handleToggleCategory(category)}
+                onToggle={askFirst ? () => setShowAspersionDialog(true) : () => handleToggleCategory(category)}
                 onClose={() => handleCloseCategory(category)}
                 onAddToCantoral={onAddToCantoral}
                 onRemoveFromCantoral={onRemoveFromCantoral}
@@ -305,6 +328,55 @@ export function ChoirView({
           onClose={() => setShowInstrumentModal(false)}
           onSelect={handleSelectInstrument}
         />
+      )}
+
+      {/* Pregunta de Pascua: acto penitencial vs rito de aspersión (IGMR 51) */}
+      {showAspersionDialog && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowAspersionDialog(false)}
+        >
+          <div
+            className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border-4 border-sky-700 dark:border-sky-600"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-gradient-to-br from-sky-600 to-blue-700 text-white p-6 border-b-4 border-sky-800">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl flex-shrink-0">💧</span>
+                <div className="min-w-0">
+                  <h3 className="text-xl font-bold leading-tight">Tiempo Pascual</h3>
+                  <p className="text-sm text-sky-100 mt-1">¿Cómo será el inicio de la Misa?</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-6 space-y-3">
+              <p className="text-base text-blue-950 dark:text-blue-100 mb-2 leading-relaxed">
+                En Pascua puede hacerse el <strong>Rito de Aspersión</strong> en lugar del acto
+                penitencial. Eso cambia el canto de este momento (y se omite el Kyrie).
+              </p>
+              <button
+                onClick={() => handleChoosePenitential('kyrie')}
+                className="w-full bg-white dark:bg-slate-700 text-blue-950 dark:text-white p-4 rounded-2xl flex items-center gap-3 border-2 border-blue-300 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-slate-600 active:scale-95 transition-all text-left"
+              >
+                <span className="text-2xl flex-shrink-0">🙏</span>
+                <span className="min-w-0">
+                  <span className="block font-bold">Acto penitencial (Kyrie)</span>
+                  <span className="block text-sm text-blue-700 dark:text-blue-300">Señor, ten piedad</span>
+                </span>
+              </button>
+              <button
+                onClick={() => handleChoosePenitential('aspersion')}
+                className="w-full bg-gradient-to-br from-sky-600 to-blue-700 text-white p-4 rounded-2xl flex items-center gap-3 border-2 border-sky-800 hover:opacity-90 active:scale-95 transition-all text-left"
+              >
+                <span className="text-2xl flex-shrink-0">💧</span>
+                <span className="min-w-0">
+                  <span className="block font-bold">Rito de aspersión</span>
+                  <span className="block text-sm text-sky-100">Canto de aspersión (memoria del Bautismo)</span>
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
