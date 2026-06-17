@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { ArrowLeft, Play, ChevronDown, ChevronUp, X, Music, FileText, ExternalLink } from 'lucide-react';
 import { PublishedCantoral, Song, UserRole, InstrumentType } from '../../types';
 import { safeUrl } from '../../utils/safeUrl';
-import { massOrdinary, postureIcons, postureLabels, postureColors, MassSection } from '../../data/massOrdinary';
+import { postureIcons, postureLabels, postureColors, MassSection } from '../../data/massOrdinary';
+import { getOrdinaryForCantoral } from '../../data/massOrdinaryVariants';
 import { PDFViewer } from '../common/PDFViewer';
 import { LyricsOnly } from '../songs/LyricsOnly';
 import { LyricsWithChords } from '../songs/LyricsWithChords';
@@ -35,6 +36,10 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
   // toca guitarra) + partitura.
   const isPuebloFiel = userRole === 'Pueblo fiel';
   const showChords = !isPuebloFiel && userInstrument === 'Guitarra';
+
+  // Ordinario según la celebración: Triduo (por fecha), Exequias/Ordenación
+  // (por el texto) o la Misa normal.
+  const variant = getOrdinaryForCantoral(cantoral);
 
   const toggleSection = (id: string) => {
     if (expandedSections.includes(id)) {
@@ -194,7 +199,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
           <div className="flex items-center gap-4 mb-4">
             <span className="text-2xl sm:text-3xl">⛪</span>
             <div>
-              <h1 className="text-4xl sm:text-2xl sm:text-lg sm:text-base sm:text-lg font-bold mb-1">Santa Misa</h1>
+              <h1 className="text-4xl sm:text-2xl sm:text-lg sm:text-base sm:text-lg font-bold mb-1">{variant.label ?? 'Santa Misa'}</h1>
               <h2 className="text-2xl sm:text-3xl opacity-90">{cantoral.parishName}</h2>
             </div>
           </div>
@@ -247,7 +252,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
             // Si el cantoral trae canto de aspersión (Pascua), se muestra el Rito
             // de Aspersión y se ocultan el Acto Penitencial y el Kyrie; si no, al revés.
             const hasAspersion = cantoral.songs.some(s => s.category === 'Rito de Aspersión');
-            const sections = massOrdinary.filter(s =>
+            const sections = variant.sections.filter(s =>
               hasAspersion
                 ? s.id !== 'penitential' && s.id !== 'kyrie-song'
                 : s.id !== 'aspersion' && s.id !== 'aspersion-song'
