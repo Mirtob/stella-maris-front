@@ -10,13 +10,36 @@ parroquia: ver las letras, escucharlos cuando quieras y enterarte cuando hay un 
 
 ## 1. Instalar la app en tu celular (opcional pero recomendado)
 
-No necesitas la tienda de aplicaciones; se instala desde el navegador:
+No necesitas la tienda de aplicaciones: Stella Maris se instala **desde el navegador** y queda como
+una app más, con su ícono en la pantalla de inicio.
 
-- **Android (Chrome):** abre el enlace → toca el menú **⋮** → **"Instalar app"** / **"Agregar a
-  pantalla de inicio"**.
-- **iPhone (Safari):** abre el enlace → toca **Compartir** ⬆️ → **"Agregar a inicio"**.
+### 📱 iPhone / iPad (paso a paso)
 
-Quedará el ícono de Stella Maris en tu pantalla, como cualquier app.
+> En iPhone la app se instala **desde Safari**. No se baja de la App Store.
+
+1. **Abre el enlace en Safari.** Toca el enlace de Stella Maris y verifica que se abra en **Safari**
+   (el navegador de Apple).
+   👉 Si lo tocaste dentro de WhatsApp o Instagram y se abrió ahí, toca **⋯** → **"Abrir en Safari"**
+   primero.
+2. **Toca el botón Compartir** — el ícono de un **cuadrado con una flecha hacia arriba** ⬆️, abajo al
+   centro (o arriba a la derecha en iPad).
+3. Desliza el menú hacia abajo y toca **"Agregar a pantalla de inicio"**.
+   👉 Si no ves esa opción, casi seguro no estás en Safari (vuelve al paso 1).
+4. Arriba a la derecha toca **"Agregar"**.
+5. Listo: toca el **ícono nuevo** en tu pantalla de inicio y la app abre **a pantalla completa**. 🎉
+
+### 🤖 Android (paso a paso)
+
+1. **Abre el enlace en Chrome.**
+   👉 Si lo abriste dentro de WhatsApp, toca **⋮** → **"Abrir en Chrome"**.
+2. Toca el menú **⋮** (arriba a la derecha).
+3. Toca **"Instalar app"** (o **"Agregar a pantalla de inicio"**).
+4. Confirma con **"Instalar"**.
+5. Listo: el ícono de Stella Maris queda en tu pantalla de inicio.
+
+> **Importante (iPhone):** tiene que ser **Safari** — Chrome o el navegador de WhatsApp en iPhone no
+> permiten instalarla. Para recibir **avisos** de cantorales nuevos necesitas **iOS 16.4 o más nuevo**
+> y tener la app ya agregada a la pantalla de inicio.
 
 ---
 
