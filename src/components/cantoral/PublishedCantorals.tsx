@@ -153,11 +153,11 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
         {/* Cantoral Header */}
         <div className="bg-gradient-to-br from-green-600 to-green-700 text-white p-3 border-b border-green-800">
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center border border-white/30">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-8 h-8 flex-shrink-0 bg-white/20 rounded-lg flex items-center justify-center border border-white/30">
                 <Clock className="w-4 h-4" strokeWidth={2.5} />
               </div>
-              <div>
+              <div className="min-w-0">
                 {showDate && (
                   <div className="text-xs opacity-90 mb-0.5 capitalize">
                     {formatDateShort(cantoral.date)} · {cantoral.liturgicalDate}
@@ -288,11 +288,11 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
               className="w-full bg-gradient-to-r from-blue-900 to-blue-950 text-white rounded-xl p-3 shadow border-2 border-blue-800 active:scale-98 transition-all"
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center border border-white/30">
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                  <div className="w-8 h-8 flex-shrink-0 bg-white/20 rounded-lg flex items-center justify-center border border-white/30">
                     <Calendar className="w-4 h-4" strokeWidth={2.5} />
                   </div>
-                  <div className="text-left">
+                  <div className="text-left min-w-0">
                     <div className="text-sm opacity-90 mb-1">{formatDateShort(date).toUpperCase()}</div>
                     <div className="text-xl font-bold">{cantoralsOnDate[0].liturgicalDate}</div>
                     <div className="mt-1"><LiturgicalColorBadge date={date} /></div>

@@ -228,12 +228,12 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
                   opacity: 0
                 }}
               >
-                <Icon className={`w-6 h-6 ${isActive ? 'text-white' : 'text-blue-900'}`} strokeWidth={2.5} />
-                <span className="text-lg font-bold">{item.label}</span>
-                
+                <Icon className={`w-6 h-6 flex-shrink-0 ${isActive ? 'text-white' : 'text-blue-900'}`} strokeWidth={2.5} />
+                <span className="text-lg font-bold text-left leading-tight break-words min-w-0 flex-1">{item.label}</span>
+
                 {/* Active indicator */}
                 {isActive && (
-                  <div className="ml-auto w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+                  <div className="ml-auto flex-shrink-0 w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
                 )}
               </button>
             );

@@ -111,7 +111,7 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
           >
             <div className="flex items-center gap-5">
               <Music className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0" strokeWidth={2.5} />
-              <div className="text-left flex-1">
+              <div className="text-left flex-1 min-w-0">
                 <div className="text-lg sm:text-xl font-bold mb-1">Coro</div>
                 <div className={`text-lg sm:text-xl ${selectedRole === 'Coro' ? 'opacity-90' : 'text-gray-600 dark:text-gray-400'}`}>
                   Armar y publicar cantorales para la parroquia
@@ -130,7 +130,7 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
           >
             <div className="flex items-center gap-5">
               <Users className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0" strokeWidth={2.5} />
-              <div className="text-left flex-1">
+              <div className="text-left flex-1 min-w-0">
                 <div className="text-lg sm:text-xl font-bold mb-1">Pueblo fiel</div>
                 <div className={`text-lg sm:text-xl ${selectedRole === 'Pueblo fiel' ? 'opacity-90' : ''}`}>
                   Ver cantorales publicados por mi parroquia
@@ -150,7 +150,7 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
           >
             <div className="flex items-center gap-5">
               <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0" strokeWidth={2.5} />
-              <div className="text-left flex-1">
+              <div className="text-left flex-1 min-w-0">
                 <div className="text-lg sm:text-xl font-bold mb-1">Administrador</div>
                 <div className={`text-lg sm:text-xl ${selectedRole === 'Admin' ? 'opacity-90' : ''}`}>
                   Gestionar cantos y administrar la plataforma

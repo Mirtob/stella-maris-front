@@ -335,16 +335,16 @@ export function CategorySearch({
         aria-expanded={isExpanded}
         aria-label={`${isExpanded ? 'Cerrar' : 'Abrir'} categoría ${category}`}
       >
-        <div className="flex items-center gap-3">
-          <span className="text-2xl sm:text-3xl transform group-hover:scale-110 transition-transform">{icon}</span>
-          <div className="text-left">
-            <div className="text-base sm:text-xl font-bold">{category}</div>
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <span className="text-2xl sm:text-3xl flex-shrink-0 transform group-hover:scale-110 transition-transform">{icon}</span>
+          <div className="text-left min-w-0">
+            <div className="text-base sm:text-xl font-bold leading-tight break-words">{category}</div>
             <div className="text-base opacity-90">
               {categorySongs.length} {categorySongs.length === 1 ? 'canto disponible' : 'cantos disponibles'}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {filteredSongs.length > 0 && cantoral.filter(s => categorySongs.some(cs => cs.id === s.id)).length > 0 && (
             <span className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-bold border border-white/30">
               {cantoral.filter(s => categorySongs.some(cs => cs.id === s.id)).length} añadido{cantoral.filter(s => categorySongs.some(cs => cs.id === s.id)).length !== 1 ? 's' : ''}

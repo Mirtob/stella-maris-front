@@ -127,8 +127,8 @@ export function SelectActiveParishDialog({
                   lastSessionRole === 'Coro' ? 'border-amber-400 ring-2 ring-amber-300' : 'border-blue-800'
                 }`}
               >
-                <span className="text-3xl">🎵</span>
-                <div className="text-left">
+                <span className="text-3xl flex-shrink-0">🎵</span>
+                <div className="text-left min-w-0 flex-1">
                   <p className="font-bold text-lg">Como Coro</p>
                   <p className="text-sm text-blue-200">Preparar y publicar cantorales</p>
                 </div>
@@ -161,8 +161,8 @@ export function SelectActiveParishDialog({
                     : 'border-blue-300 dark:border-blue-600'
                 }`}
               >
-                <span className="text-3xl">🛡️</span>
-                <div className="text-left">
+                <span className="text-3xl flex-shrink-0">🛡️</span>
+                <div className="text-left min-w-0 flex-1">
                   <p className="font-bold text-lg">Como Administrador</p>
                   <p className="text-sm text-blue-700 dark:text-blue-300">Gestionar cantos y usuarios</p>
                 </div>
@@ -202,7 +202,7 @@ export function SelectActiveParishDialog({
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100 flex-1">{parish}</span>
+                        <span className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100 flex-1 min-w-0 break-words">{parish}</span>
                         {isLast && <LastUseBadge />}
                         <span className="text-blue-500 dark:text-blue-400 text-lg">→</span>
                       </div>
@@ -234,7 +234,7 @@ export function SelectActiveParishDialog({
                 className="w-full bg-white/60 dark:bg-white/10 border-2 border-blue-200 dark:border-blue-700 p-4 rounded-2xl text-left hover:bg-white/80 dark:hover:bg-white/20 active:scale-95 transition-all"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100 flex-1">⛪ Toda la parroquia</span>
+                  <span className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100 flex-1 min-w-0 break-words">⛪ Toda la parroquia</span>
                   <span className="text-blue-500 dark:text-blue-400 text-lg">→</span>
                 </div>
               </button>
@@ -245,7 +245,7 @@ export function SelectActiveParishDialog({
                   className="w-full bg-white/60 dark:bg-white/10 border-2 border-blue-200 dark:border-blue-700 p-4 rounded-2xl text-left hover:bg-white/80 dark:hover:bg-white/20 active:scale-95 transition-all"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100 flex-1">🏠 {chapel.name}</span>
+                    <span className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100 flex-1 min-w-0 break-words">🏠 {chapel.name}</span>
                     <span className="text-blue-500 dark:text-blue-400 text-lg">→</span>
                   </div>
                 </button>

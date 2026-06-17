@@ -276,8 +276,8 @@ export function ChoirView({
               onClick={() => setShowPublishModal(true)}
               className="w-full bg-gradient-to-br from-blue-900 to-blue-950 text-white py-4 px-3 sm:px-4 rounded-2xl shadow-2xl active:scale-98 transition-all flex items-center justify-center gap-3 border-2 border-blue-800"
             >
-              <Send className="w-6 h-6" />
-              <span className="text-base sm:text-lg font-bold">
+              <Send className="w-6 h-6 flex-shrink-0" />
+              <span className="text-base sm:text-lg font-bold min-w-0 leading-tight">
                 Publicar Cantoral · {cantoral.length} {cantoral.length === 1 ? 'canto' : 'cantos'}
               </span>
             </button>
