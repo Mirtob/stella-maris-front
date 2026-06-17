@@ -7,7 +7,7 @@
 
 import { Song, MassMoment, LiturgicalSeason } from '../types';
 import { getSupabaseClient } from '../services/supabaseClient';
-import { mockSongs } from './songs';
+import { mockSongs } from '../data/mockSongs';
 import { loadSongsFromYouTube } from '../services/songLoader';
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeft, Youtube, CheckCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
-import { syncYouTubeToSupabase, MigrationResult } from '../data/migrateSongsToSupabase';
+import { syncYouTubeToSupabase, MigrationResult } from '../scripts/migrateSongsToSupabase';
 
 interface YouTubeSyncDialogProps {
   onBack: () => void;

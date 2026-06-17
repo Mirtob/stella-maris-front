@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeft, Database, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { migrateMockSongsToSupabase, MigrationResult } from '../data/migrateSongsToSupabase';
+import { migrateMockSongsToSupabase, MigrationResult } from '../scripts/migrateSongsToSupabase';
 
 interface CatalogMigrationProps {
   onBack: () => void;

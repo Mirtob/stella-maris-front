@@ -34,7 +34,7 @@
  */
 
 import { Song } from '../types';
-import { mockSongs } from '../data/songs';
+import { mockSongs } from '../data/mockSongs';
 import { YOUTUBE_CONFIG } from '../config/api';
 
 const CACHE_KEY = 'stella_maris_songs_cache';
