@@ -51,9 +51,12 @@ export function ChoirView({
   // oficios del Triduo para prepararlos con anticipación. El constructor se
   // adapta (orden y categorías) a la celebración elegida; por defecto la de hoy.
   const celebrations = getBuildableCelebrations();
-  const [selectedCelebration, setSelectedCelebration] = useState<SpecialLiturgicalDay | 'normal'>(
-    () => getSpecialLiturgicalDay() ?? 'normal'
-  );
+  // Por defecto, la celebración de hoy solo si está entre las ofrecidas
+  // (Misa normal u oficios de Semana Santa); si no, Misa normal.
+  const [selectedCelebration, setSelectedCelebration] = useState<SpecialLiturgicalDay | 'normal'>(() => {
+    const todaySpecial = getSpecialLiturgicalDay();
+    return todaySpecial && celebrations.some(c => c.key === todaySpecial) ? todaySpecial : 'normal';
+  });
   const specialDay = selectedCelebration === 'normal' ? null : selectedCelebration;
 
   // La aspersión aplica en tiempo pascual; si se está preparando la Vigilia o el

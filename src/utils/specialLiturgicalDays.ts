@@ -138,12 +138,8 @@ export function getBuildableCelebrations(today: Date = new Date()): BuildableCel
     );
   }
 
-  // Si hoy es un día especial que no está en la lista, ofrécelo también.
-  const todaySpecial = getSpecialLiturgicalDay(today);
-  if (todaySpecial && !list.some(c => c.key === todaySpecial)) {
-    list.splice(1, 0, { key: todaySpecial, label: CELEBRATION_LABELS[todaySpecial], date: ymdLocal(today) });
-  }
-
+  // Por ahora el constructor solo ofrece la Misa normal y los oficios de Semana
+  // Santa. Otros días especiales (Pentecostés, Corpus, Navidad…) no se listan.
   return list;
 }
 
