@@ -159,7 +159,7 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
                 <div className="flex items-center gap-3">
                   <Smartphone className="w-8 h-8 flex-shrink-0" />
                   <div className="flex-1">
-                    <p className="font-bold text-base">Instalá Stella Maris</p>
+                    <p className="font-bold text-base">Instala Stella Maris</p>
                     <p className="text-sm text-blue-200">Ten los cantorales de tu parroquia siempre a mano.</p>
                   </div>
                   <button
