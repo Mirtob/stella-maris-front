@@ -64,7 +64,10 @@ const t0 = Date.now();
 for (let i = 1; i <= TOTAL_REQUESTS; i++) {
   const reqStart = Date.now();
   try {
-    const r = await fetch(`${BASE}${TARGET_PATH}`, {
+    // cache-buster: cada URL es única → cache MISS en el CDN de Vercel → la
+    // función serverless SÍ ejecuta y el rate limit cuenta (sin esto, las
+    // respuestas cacheadas no pasan por el limiter y el 429 nunca se observa).
+    const r = await fetch(`${BASE}${TARGET_PATH}?cb=${Date.now()}-${i}`, {
       headers: { Origin: BASE, 'User-Agent': 'StellaMarisStressTest/1.0' },
     });
     const elapsed = Date.now() - reqStart;
@@ -141,3 +144,7 @@ for (const v of verdicts) console.log(`  ${v}`);
 
 console.log('\n--- JSON ---');
 console.log(JSON.stringify({ stats, totalElapsed, avgMs, verdicts }, null, 2));
+
+// Gate de regresión (QA-1): con el limiter distribuido debe haber ≥1 429 y cero 5xx.
+const regressionFail = stats.rate429 === 0 || stats.server5xx > 0;
+process.exit(regressionFail ? 1 : 0);

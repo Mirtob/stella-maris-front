@@ -103,7 +103,7 @@ Estado:    abierto / en review / cerrado
 
 | # | Hallazgo | Sev | Acción | Prueba a agregar |
 |---|---|---|---|---|
-| QA-1 | **Rate limit no enforce en serverless** — `const hits = new Map()` por instancia en `api/{pdf,sheets,suggest}.ts`; el límite real es `20 × nº instancias`. | P2 | Migrar el contador a store compartido (Vercel KV / Upstash Redis) o aceptar best-effort y documentarlo. | Tras el fix, en `rate-limit.mjs`: **assert de ≥1 respuesta 429** y `remaining` que llegue a 0. Hoy ese assert fallaría a propósito. |
+| ~~QA-1~~ ✅ | **Rate limit no enforce en serverless** — `const hits = new Map()` por instancia. | P2 | **RESUELTO 2026-06-17**: limiter distribuido vía RPC `api_rate_limit` (Supabase, migración `20260617`), fail-open al de memoria. Verificado en prod: 20×200 + 15×429. | ✅ `rate-limit.mjs` ahora usa cache-buster y **gate de regresión** (exit 1 si no hay 429 o hay 5xx). |
 | QA-2 | **Catálogo casi vacío** (2 cantos). Riesgo #1 de marcha blanca. | P1 | Poblar catálogo (etiquetar videos + sync YouTube, Manual del Canal). | En `run-all.mjs`: WARN si `search_songs sin filtros` < umbral (ej. 30). |
 | QA-3 | **5 respuestas 4xx intermitentes** en `/api/sheets` bajo carga (30×200, 5×4xx, 0×5xx). | P3 | Instrumentar: loguear el código/causa exacta de esos 4xx (¿403 Drive? ¿cuota?). | Ampliar `rate-limit.mjs` para registrar el desglose de status 4xx. |
 
@@ -111,4 +111,4 @@ Estado:    abierto / en review / cerrado
 
 ## 6. Estado del último QA
 
-**2026-06-17** — Build ✅ · Integración 17/17 ✅ · Smoke 7/7 ✅ · Rate-limit ⚠️ (QA-1) · Catálogo ⚠️ (QA-2, 2 cantos).
+**2026-06-17** — Build ✅ · Integración 17/17 ✅ · Smoke 7/7 ✅ · Rate-limit ✅ (QA-1 resuelto: 20×200 + 15×429) · Catálogo ⚠️ (QA-2, 2 cantos).
