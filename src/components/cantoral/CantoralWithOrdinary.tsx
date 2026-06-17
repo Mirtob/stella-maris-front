@@ -1,8 +1,22 @@
 import { useState } from 'react';
-import { ArrowLeft, Play, ChevronDown, ChevronUp, X, Music, FileText } from 'lucide-react';
+import { ArrowLeft, Play, ChevronDown, ChevronUp, X, Music, FileText, ExternalLink } from 'lucide-react';
 import { PublishedCantoral, Song } from '../../types';
 import { safeUrl } from '../../utils/safeUrl';
 import { massOrdinary, postureIcons, postureLabels, postureColors, MassSection } from '../../data/massOrdinary';
+import { PDFViewer } from '../common/PDFViewer';
+import { LyricsOnly } from '../songs/LyricsOnly';
+
+// Extrae el Drive file ID de una URL de Drive y arma la URL del proxy (PDF embebido).
+function getDriveProxyUrl(sheetMusicUrl?: string): { proxyUrl: string; driveViewUrl: string } | null {
+  if (!sheetMusicUrl) return null;
+  const match = sheetMusicUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (!match) return null;
+  const fileId = match[1];
+  return {
+    proxyUrl: `/api/pdf?id=${fileId}`,
+    driveViewUrl: `https://drive.google.com/file/d/${fileId}/view`,
+  };
+}
 
 interface CantoralWithOrdinaryProps {
   cantoral: PublishedCantoral;
@@ -285,33 +299,62 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong }: CantoralW
                   )}
                 </div>
 
-                {/* Botones de Acción */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Reproducir Audio */}
-                  <button
-                    onClick={() => {
-                      onPlaySong(selectedSong);
-                      setSelectedSong(null);
-                    }}
-                    className="bg-gradient-to-br from-blue-900 to-blue-950 text-white p-6 rounded-2xl flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-transform shadow-lg border-2 border-blue-800"
-                  >
-                    <Play className="w-8 h-8" fill="currentColor" strokeWidth={2} />
-                    <span className="text-2xl font-bold">Reproducir Audio</span>
-                  </button>
+                {/* Reproducir Audio */}
+                <button
+                  onClick={() => {
+                    onPlaySong(selectedSong);
+                    setSelectedSong(null);
+                  }}
+                  className="w-full bg-gradient-to-br from-blue-900 to-blue-950 text-white p-5 rounded-2xl flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-transform shadow-lg border-2 border-blue-800"
+                >
+                  <Play className="w-7 h-7 flex-shrink-0" fill="currentColor" strokeWidth={2} />
+                  <span className="text-xl font-bold">Reproducir Audio</span>
+                </button>
 
-                  {/* Ver Partitura */}
-                  {safeUrl(selectedSong.sheetMusicUrl) && (
-                    <a
-                      href={safeUrl(selectedSong.sheetMusicUrl)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-gradient-to-br from-blue-900 to-blue-950 text-white p-6 rounded-2xl flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-transform shadow-lg border-2 border-blue-800"
-                    >
-                      <FileText className="w-8 h-8" strokeWidth={2.5} />
-                      <span className="text-2xl font-bold">Ver Partitura</span>
-                    </a>
-                  )}
-                </div>
+                {/* Letra del canto del momento — visible para todos los roles */}
+                {selectedSong.lyrics && (
+                  <div className="bg-white/40 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-4 border-2 border-white/40 dark:border-white/20 transition-colors">
+                    <div className="flex items-center gap-2 mb-3">
+                      <FileText className="w-6 h-6 text-blue-900 dark:text-blue-200 flex-shrink-0" strokeWidth={2.5} />
+                      <h4 className="text-xl font-bold text-blue-950 dark:text-white">Letra</h4>
+                    </div>
+                    <div className="bg-white dark:bg-gray-900 rounded-xl p-4 max-h-[40vh] overflow-auto transition-colors">
+                      <LyricsOnly lyrics={selectedSong.lyrics} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Partitura embebida del momento — visible para todos los roles */}
+                {(() => {
+                  const urls = getDriveProxyUrl(selectedSong.sheetMusicUrl);
+                  if (!urls) return null;
+                  return (
+                    <div className="bg-white/40 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-4 border-2 border-white/40 dark:border-white/20 transition-colors">
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Music className="w-6 h-6 text-blue-900 dark:text-blue-200 flex-shrink-0" strokeWidth={2.5} />
+                          <h4 className="text-xl font-bold text-blue-950 dark:text-white">Partitura</h4>
+                        </div>
+                        <a
+                          href={safeUrl(urls.driveViewUrl)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-shrink-0 inline-flex items-center gap-1.5 bg-blue-900 text-white px-3 py-1.5 rounded-lg text-sm font-bold"
+                        >
+                          <ExternalLink className="w-4 h-4" strokeWidth={2.5} />
+                          Drive
+                        </a>
+                      </div>
+                      <div className="bg-gray-100 dark:bg-gray-800 rounded-xl overflow-auto" style={{ maxHeight: '500px' }}>
+                        <PDFViewer
+                          proxyUrl={urls.proxyUrl}
+                          driveViewUrl={urls.driveViewUrl}
+                          title={selectedSong.title}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Instrucciones */}
                 <div className="bg-white/30 backdrop-blur-sm rounded-2xl p-3 sm:p-4 border-2 border-white/40 transition-colors">
@@ -322,8 +365,9 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong }: CantoralW
                         Cómo usar
                       </h4>
                       <p className="text-lg text-blue-900 dark:text-blue-100">
-                        Toca <strong>"Reproducir Audio"</strong> para escuchar el canto desde YouTube. 
-                        {selectedSong.sheetMusicUrl && ' Toca "Ver Partitura" para ver la partitura en línea.'}
+                        Toca <strong>"Reproducir Audio"</strong> para escuchar el canto desde YouTube.
+                        {selectedSong.lyrics && ' La letra aparece aquí mismo para seguir el canto.'}
+                        {selectedSong.sheetMusicUrl && ' La partitura se muestra embebida (o ábrela en Drive).'}
                       </p>
                     </div>
                   </div>
