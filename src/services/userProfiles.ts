@@ -61,6 +61,27 @@ export async function upsertCurrentUserProfile(profile: UserProfile): Promise<{ 
   }
 }
 
+/**
+ * Lee el perfil PERMANENTE del usuario actual desde Supabase por su id.
+ * La RLS (`user_profiles_self_select`) permite a cada usuario leer su propia fila.
+ *
+ * Se usa al iniciar sesión en un dispositivo nuevo: el localStorage está vacío,
+ * pero el perfil ya existe en el servidor → lo recuperamos en vez de pedir el
+ * setup inicial otra vez. Devuelve null si el usuario aún no tiene perfil.
+ */
+export async function getCurrentUserProfile(
+  userId: string
+): Promise<(UserProfile & { createdAt?: string; lastSeenAt?: string }) | null> {
+  try {
+    const sb = getSupabaseClient();
+    const { data, error } = await sb.from(TABLE).select('*').eq('id', userId).maybeSingle();
+    if (error || !data) return null;
+    return rowToProfile(data as UserProfileRow);
+  } catch {
+    return null;
+  }
+}
+
 /** Lista todos los perfiles (solo accesible por admin gracias a la policy). */
 export async function listUserProfiles(): Promise<(UserProfile & { createdAt?: string; lastSeenAt?: string })[]> {
   try {

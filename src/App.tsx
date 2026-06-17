@@ -62,7 +62,7 @@ import { listChapels } from './services/chapels';
 import { getTodayLocal, addDaysLocal, isWithinInclusive } from './utils/dateLocal';
 import { generateChoirCantoralPDF } from './utils/choirCantoralPDFGenerator';
 import { isCurrentUserAdmin } from './services/admin';
-import { upsertCurrentUserProfile } from './services/userProfiles';
+import { upsertCurrentUserProfile, getCurrentUserProfile } from './services/userProfiles';
 import { setSentryUserContext, clearSentryUserContext } from './services/sentry';
 
 const PENDING_CANTORAL_KEY = 'stella_maris_pending_cantoral_id';
@@ -398,13 +398,38 @@ function AppContent() {
           setRoute({ screen: 'app', view: 'main' });
         } else {
           const baseProfile = sessionToUserProfile(storedSession);
+
+          // El perfil PERMANENTE vive en Supabase. En un dispositivo nuevo el
+          // localStorage está vacío, pero si el usuario ya completó su perfil
+          // antes (en otro equipo) lo recuperamos y NO le pedimos el setup inicial
+          // de nuevo: solo la elección de sesión (rol + parroquia).
+          const remoteProfile = await getCurrentUserProfile(baseProfile.id);
+          if (remoteProfile) {
+            setUserProfile(remoteProfile);
+            saveUserProfile(remoteProfile);
+            upsertCurrentUserProfile(remoteProfile).catch(() => undefined);
+            setSentryUserContext(remoteProfile.role, remoteProfile.id);
+            toast.success(`¡Bienvenido ${remoteProfile.name}! 🎵`);
+
+            const pendingId = deepLinkCantoralId
+              || sanitizeCantoralId(localStorage.getItem(PENDING_CANTORAL_KEY));
+            localStorage.removeItem(PENDING_CANTORAL_KEY);
+            if (pendingId) {
+              setRoute({ screen: 'cantoral-link', cantoralId: pendingId });
+              return;
+            }
+            // Admin entra directo; el resto elige rol + parroquia de la sesión.
+            if (remoteProfile.role !== 'Admin') setShowParishSelector(true);
+            setRoute({ screen: 'app', view: 'main' });
+            return;
+          }
+
+          // Sin perfil remoto: es un usuario nuevo de verdad → onboarding + setup.
           setUserProfile(baseProfile);
           if (deepLinkCantoralId) {
             localStorage.setItem(PENDING_CANTORAL_KEY, deepLinkCantoralId);
           }
-          // Primer login: mostrar onboarding antes del setup. En logins posteriores
-          // (perfil completo en localStorage) este ramo no se ejecuta — Onboarding
-          // solo se ve UNA vez por dispositivo.
+          // Onboarding solo se ve UNA vez por dispositivo.
           if (!hasSeenOnboarding()) {
             setRoute({ screen: 'onboarding' });
           } else {
