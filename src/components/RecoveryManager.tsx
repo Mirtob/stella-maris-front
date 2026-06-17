@@ -39,7 +39,7 @@ export function RecoveryManager({ onBack }: Props) {
   const handleSearch = async () => {
     const trimmed = query.trim();
     if (trimmed.length < 3) {
-      toast.info('Escribí al menos 3 caracteres para buscar');
+      toast.info('Escribe al menos 3 caracteres para buscar');
       return;
     }
     setSearching(true);
@@ -106,9 +106,9 @@ export function RecoveryManager({ onBack }: Props) {
             <div className="text-sm text-amber-900 dark:text-amber-100 space-y-1">
               <p className="font-bold">Antes de tocar nada:</p>
               <ol className="list-decimal list-inside space-y-0.5 text-xs sm:text-sm">
-                <li>Verificá la identidad del usuario fuera de banda (WhatsApp con el párroco).</li>
-                <li>Confirmá que el email que te dio coincide con su email principal o recovery_email.</li>
-                <li>Solo entonces decidí si borrás el perfil viejo o transferís cantorales.</li>
+                <li>Verifica la identidad del usuario fuera de banda (WhatsApp con el párroco).</li>
+                <li>Confirma que el email que te dio coincide con su email principal o recovery_email.</li>
+                <li>Solo entonces decide si borras el perfil viejo o transfieres cantorales.</li>
               </ol>
               <p className="text-xs italic mt-2">
                 Doc completo: <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">docs/RECOVERY-PROCEDURE.md</code>

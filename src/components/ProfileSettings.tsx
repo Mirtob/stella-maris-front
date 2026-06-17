@@ -357,7 +357,7 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
             </div>
 
             <p className="text-base text-gray-700 mb-4">
-              Si perdés acceso a tu cuenta de Google, este email le permite al administrador verificar tu identidad y devolverte el acceso a tus cantorales.
+              Si pierdes acceso a tu cuenta de Google, este email le permite al administrador verificar tu identidad y devolverte el acceso a tus cantorales.
             </p>
 
             <label className="text-base text-gray-600 mb-2 block" htmlFor="recovery-email">

@@ -60,7 +60,7 @@ export function TermsOfService({ onBack }: TermsOfServiceProps) {
 
             <h2 className="text-xl font-bold text-blue-900 dark:text-blue-200 mt-6 mb-3">4. Cuentas y autenticación</h2>
             <p className="text-slate-700 dark:text-slate-200 leading-relaxed">
-              La Aplicación utiliza autenticación OAuth 2.0 con Google. Sos responsable de mantener la seguridad de tu cuenta de Google. No nos hacemos responsables por accesos no autorizados que resulten del compromiso de tu cuenta de Google.
+              La Aplicación utiliza autenticación OAuth 2.0 con Google. Eres responsable de mantener la seguridad de tu cuenta de Google. No nos hacemos responsables por accesos no autorizados que resulten del compromiso de tu cuenta de Google.
             </p>
 
             <h2 className="text-xl font-bold text-blue-900 dark:text-blue-200 mt-6 mb-3">5. Contenido</h2>

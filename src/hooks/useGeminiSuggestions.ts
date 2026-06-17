@@ -67,7 +67,7 @@ export function useGeminiSuggestions() {
       setResult(data);
     } catch (err: any) {
       if (err?.name === 'AbortError') {
-        setError('Gemini tardó demasiado en responder. Podés armar el cantoral manualmente.');
+        setError('Gemini tardó demasiado en responder. Puedes armar el cantoral manualmente.');
       } else {
         setError('No se pudo conectar con el servicio de sugerencias.');
       }

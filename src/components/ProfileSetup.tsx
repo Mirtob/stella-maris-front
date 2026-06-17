@@ -297,7 +297,7 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
 
         {!acceptedLegal && (
           <p className="text-center text-xs sm:text-sm text-blue-800 dark:text-blue-200 mt-3 italic">
-            Marcá la casilla de aceptación legal para continuar
+            Marca la casilla de aceptación legal para continuar
           </p>
         )}
       </div>
