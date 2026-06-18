@@ -183,28 +183,31 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
 
         {/* Botones de acción */}
         <div className="p-4 bg-white/40 dark:bg-white/10 backdrop-blur-sm border-b border-white/30 transition-colors">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Mismo acomodo en celular y tablet: 2 por fila (las de fila completa
+              llevan col-span-2). Íconos flex-shrink-0 y texto que ajusta para que
+              no se desborde aunque queden angostos en móvil. */}
+          <div className="grid grid-cols-2 gap-3">
             {onListen && (
               <button
                 onClick={() => onListen(cantoral)}
-                className="bg-gradient-to-br from-rose-600 to-red-700 text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-rose-800 col-span-1 sm:col-span-2"
+                className="bg-gradient-to-br from-rose-600 to-red-700 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-rose-800 col-span-2"
               >
-                <Headphones className="w-5 h-5" strokeWidth={2.5} />
+                <Headphones className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
                 Escuchar cantos
               </button>
             )}
             <button
               onClick={() => setViewingOrdinary(cantoral.id)}
-              className="bg-gradient-to-br from-blue-900 to-blue-950 text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-blue-800"
+              className="bg-gradient-to-br from-blue-900 to-blue-950 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-sm sm:text-base font-bold shadow-lg border-2 border-blue-800 leading-tight text-center"
             >
-              <BookText className="w-5 h-5" strokeWidth={2.5} />
+              <BookText className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
               Ver Ordinario
             </button>
             <button
               onClick={() => setExpandedId(isExpandedCantoral ? null : cantoral.id)}
-              className="bg-gradient-to-br from-green-600 to-green-700 text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-green-800"
+              className="bg-gradient-to-br from-green-600 to-green-700 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-sm sm:text-base font-bold shadow-lg border-2 border-green-800 leading-tight text-center"
             >
-              <BookOpen className="w-5 h-5" strokeWidth={2.5} />
+              <BookOpen className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
               {isExpandedCantoral ? 'Ocultar' : 'Ver'} Cantos
             </button>
             <button
@@ -214,9 +217,9 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                   description: 'Tu cantoral se descargará en unos momentos'
                 });
               }}
-              className="bg-gradient-to-br from-purple-600 to-purple-700 text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-purple-800 col-span-2"
+              className="bg-gradient-to-br from-purple-600 to-purple-700 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-purple-800 col-span-2"
             >
-              <Download className="w-5 h-5" strokeWidth={2.5} />
+              <Download className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
               Descargar Cantoral PDF
             </button>
           </div>
