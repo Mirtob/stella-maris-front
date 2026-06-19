@@ -3,6 +3,7 @@ import { LogIn, User, Lock, Church, Loader } from 'lucide-react';
 import { toast } from 'sonner';
 import { loginWithGoogle } from '../../services/googleAuth';
 import { signInWithUsernamePassword } from '../../services/supabaseClient';
+import { ForgotPassword } from './ForgotPassword';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
 
 interface LoginProps {
@@ -15,6 +16,7 @@ export function Login({ onGoogleLogin }: LoginProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
 
   const handleGoogleLogin = async () => {
     try {
@@ -188,9 +190,13 @@ export function Login({ onGoogleLogin }: LoginProps) {
                   {submitting ? <Loader className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />}
                   {submitting ? 'Entrando...' : 'Entrar'}
                 </button>
-                <p className="text-xs text-white/70 text-center">
-                  ¿Olvidaste tu clave? Pídele al encargado de tu parroquia que te la restablezca.
-                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowForgot(true)}
+                  className="w-full text-xs text-white/80 hover:text-white text-center underline"
+                >
+                  ¿Olvidaste tu clave?
+                </button>
               </form>
             )}
           </div>
@@ -215,6 +221,8 @@ export function Login({ onGoogleLogin }: LoginProps) {
           </div>
         </section>
       </div>
+
+      {showForgot && <ForgotPassword onClose={() => setShowForgot(false)} />}
 
       {/* CSS para animación personalizada */}
       <style>{`
