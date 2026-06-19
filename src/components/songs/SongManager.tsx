@@ -1,10 +1,26 @@
-import { Music, Search, Trash2, FileText, Youtube, Loader, RefreshCw } from 'lucide-react';
+import { Music, Search, Trash2, FileText, Youtube, Loader, RefreshCw, Pencil, X, Check, Ban } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Song } from '../../types';
-import { listSongs, deleteSong } from '../../services/songs';
+import { Song, MassMoment } from '../../types';
+import { listSongs, deleteSong, updateSong, approveSong, rejectSong } from '../../services/songs';
+import { getSupabaseClient } from '../../services/supabaseClient';
 import { matchesSearch } from '../../utils/textSearch';
 import { ConfirmDialog } from '../common/ConfirmDialog';
+
+const MOMENT_OPTIONS: { value: MassMoment; label: string }[] = [
+  { value: 'entrada', label: 'Entrada' },
+  { value: 'kyrie', label: 'Kyrie' },
+  { value: 'gloria', label: 'Gloria' },
+  { value: 'salmo', label: 'Salmo' },
+  { value: 'aleluya', label: 'Aleluya' },
+  { value: 'ofertorio', label: 'Ofertorio' },
+  { value: 'santo', label: 'Santo' },
+  { value: 'cordero', label: 'Cordero de Dios' },
+  { value: 'comunion', label: 'Comunión' },
+  { value: 'final', label: 'Final / Salida' },
+  { value: 'exposicion', label: 'Exposición' },
+  { value: 'no-liturgico', label: 'No litúrgico' },
+];
 
 /**
  * Admin SongManager — conectado a la tabla `songs` de Supabase.
@@ -20,6 +36,11 @@ export function SongManager() {
   const [filterCategory, setFilterCategory] = useState<string>('Todos');
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const pendingDeleteSong = pendingDeleteId ? songs.find(s => s.id === pendingDeleteId) : null;
+
+  // Editar canto
+  const [editSong, setEditSong] = useState<Song | null>(null);
+  const [savingSong, setSavingSong] = useState(false);
+  const [f, setF] = useState({ title: '', author: '', artist: '', massMoment: 'entrada' as MassMoment, youtubeId: '', driveFileId: '', duration: '', originalKey: '', massName: '', lyrics: '' });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -73,6 +94,63 @@ export function SongManager() {
       'Salida': 'bg-gray-100 text-gray-700 border-gray-300',
     };
     return colors[category] ?? 'bg-slate-100 text-slate-700 border-slate-300';
+  };
+
+  const openEditSong = (song: Song) => {
+    setEditSong(song);
+    setF({
+      title: song.title || '',
+      author: song.author || '',
+      artist: song.artist || '',
+      massMoment: (song.massMoment as MassMoment) || 'entrada',
+      youtubeId: song.youtubeId || '',
+      driveFileId: song.driveFileId || '',
+      duration: song.duration || '',
+      originalKey: song.originalKey || '',
+      massName: song.massName || '',
+      lyrics: song.lyrics || '',
+    });
+  };
+
+  const handleSaveSong = async () => {
+    if (!editSong) return;
+    if (!f.title.trim()) { toast.error('El título es obligatorio'); return; }
+    setSavingSong(true);
+    const r = await updateSong(editSong.id, {
+      title: f.title.trim(),
+      author: f.author.trim() || undefined,
+      artist: f.artist.trim() || undefined,
+      massMoment: f.massMoment,
+      youtubeId: f.youtubeId.trim() || undefined,
+      driveFileId: f.driveFileId.trim() || undefined,
+      duration: f.duration.trim() || undefined,
+      originalKey: f.originalKey.trim() || undefined,
+      massName: f.massName.trim() || undefined,
+      lyrics: f.lyrics || undefined,
+    });
+    setSavingSong(false);
+    if (!r.ok) { toast.error('No se pudo guardar', { description: r.error }); return; }
+    setEditSong(null);
+    toast.success('Canto actualizado');
+    load();
+  };
+
+  const handleApprove = async (song: Song) => {
+    const { data } = await getSupabaseClient().auth.getSession();
+    const who = data.session?.user?.email || 'admin';
+    const r = await approveSong(song.id, who);
+    if (!r.ok) { toast.error('No se pudo aprobar', { description: r.error }); return; }
+    setSongs(prev => prev.map(s => s.id === song.id ? { ...s, approvalStatus: 'approved' } : s));
+    toast.success('Canto aprobado');
+  };
+
+  const handleReject = async (song: Song) => {
+    const reason = window.prompt('Motivo del rechazo (opcional):');
+    if (reason === null) return;
+    const r = await rejectSong(song.id, reason || 'Sin motivo');
+    if (!r.ok) { toast.error('No se pudo rechazar', { description: r.error }); return; }
+    setSongs(prev => prev.map(s => s.id === song.id ? { ...s, approvalStatus: 'rejected' } : s));
+    toast.success('Canto rechazado');
   };
 
   const handleDelete = async () => {
@@ -206,14 +284,51 @@ export function SongManager() {
                   </div>
                 </div>
 
+                {/* Estado de aprobación (solo si no está aprobado) */}
+                {song.approvalStatus && song.approvalStatus !== 'approved' && (
+                  <div className={`mb-2 inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold border-2 ${
+                    song.approvalStatus === 'rejected'
+                      ? 'bg-red-100 text-red-700 border-red-300'
+                      : 'bg-amber-100 text-amber-800 border-amber-300'
+                  }`}>
+                    {song.approvalStatus === 'rejected' ? '🚫 Rechazado' : '⏳ Pendiente de aprobación'}
+                  </div>
+                )}
+
                 {/* Actions */}
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  {song.approvalStatus !== 'approved' && (
+                    <button
+                      onClick={() => handleApprove(song)}
+                      className="flex-1 min-w-[110px] bg-green-600 text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-green-700 active:scale-95 transition-all"
+                    >
+                      <Check className="w-4 h-4 flex-shrink-0" />
+                      <span className="text-sm font-bold">Aprobar</span>
+                    </button>
+                  )}
+                  {song.approvalStatus !== 'rejected' && (
+                    <button
+                      onClick={() => handleReject(song)}
+                      className="flex-1 min-w-[110px] bg-amber-600 text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-amber-700 active:scale-95 transition-all"
+                    >
+                      <Ban className="w-4 h-4 flex-shrink-0" />
+                      <span className="text-sm font-bold">Rechazar</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => openEditSong(song)}
+                    aria-label={`Editar ${song.title}`}
+                    className="flex-1 min-w-[110px] bg-blue-600 text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-blue-700 active:scale-95 transition-all"
+                  >
+                    <Pencil className="w-4 h-4 flex-shrink-0" />
+                    <span className="text-sm font-bold">Editar</span>
+                  </button>
                   <button
                     onClick={() => setPendingDeleteId(song.id)}
                     aria-label={`Eliminar ${song.title}`}
-                    className="flex-1 bg-red-600 text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-red-700 active:scale-95 transition-all"
+                    className="flex-1 min-w-[110px] bg-red-600 text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-red-700 active:scale-95 transition-all"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4 flex-shrink-0" />
                     <span className="text-sm font-bold">Eliminar</span>
                   </button>
                 </div>
@@ -253,6 +368,63 @@ export function SongManager() {
           </div>
         )}
       </div>
+
+      {/* Modal: editar canto */}
+      {editSong && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEditSong(null)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-lg w-full border-4 border-blue-800 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-gradient-to-br from-blue-900 to-blue-950 text-white p-5 flex items-center justify-between border-b-4 border-blue-800 z-10">
+              <div className="flex items-center gap-3 min-w-0"><Pencil className="w-6 h-6 flex-shrink-0" strokeWidth={2.5} /><h2 className="text-xl font-bold min-w-0 truncate">Editar canto</h2></div>
+              <button onClick={() => setEditSong(null)} className="p-2 hover:bg-white/20 rounded-xl flex-shrink-0"><X className="w-6 h-6" strokeWidth={2.5} /></button>
+            </div>
+            <div className="p-6 space-y-3">
+              {([
+                ['Título', 'title'],
+                ['Autor', 'author'],
+                ['Artista / Intérprete', 'artist'],
+                ['ID de YouTube', 'youtubeId'],
+                ['ID de archivo en Drive (partitura)', 'driveFileId'],
+                ['Duración (ej. 3:45)', 'duration'],
+                ['Tonalidad (ej. Sol, Re m)', 'originalKey'],
+                ['Nombre de la Misa (agrupa Kyrie/Gloria/Santo/Cordero)', 'massName'],
+              ] as [string, keyof typeof f][]).map(([label, key]) => (
+                <div key={key}>
+                  <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">{label}</label>
+                  <input
+                    value={f[key] as string}
+                    onChange={(e) => setF(prev => ({ ...prev, [key]: e.target.value }))}
+                    className="w-full px-4 py-2.5 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium"
+                  />
+                </div>
+              ))}
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Momento de la Misa</label>
+                <select
+                  value={f.massMoment}
+                  onChange={(e) => setF(prev => ({ ...prev, massMoment: e.target.value as MassMoment }))}
+                  className="w-full px-4 py-2.5 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium"
+                >
+                  {MOMENT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Letra</label>
+                <textarea
+                  value={f.lyrics}
+                  onChange={(e) => setF(prev => ({ ...prev, lyrics: e.target.value }))}
+                  rows={5}
+                  className="w-full px-4 py-2.5 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium"
+                />
+              </div>
+              <button onClick={handleSaveSong} disabled={savingSong} className="w-full bg-gradient-to-br from-blue-700 to-blue-900 text-white py-3 rounded-xl flex items-center justify-center gap-2 font-bold active:scale-95 disabled:opacity-50">
+                {savingSong ? <Loader className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />}
+                {savingSong ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         open={!!pendingDeleteSong}
