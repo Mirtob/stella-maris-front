@@ -1,12 +1,22 @@
-import { Users, Search, Trash2, Shield, Music, UserCircle, RefreshCw, Loader } from 'lucide-react';
+import { Users, Search, Trash2, Shield, Music, UserCircle, RefreshCw, Loader, UserPlus, Pencil, X, Copy, Check, RotateCw } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { UserRole, UserProfile } from '../../types';
-import { listUserProfiles, updateUserRole, deleteUserProfile } from '../../services/userProfiles';
+import { UserRole, UserProfile, InstrumentType } from '../../types';
+import { listUserProfiles, updateUserRole, deleteUserProfile, adminUpdateUserProfile } from '../../services/userProfiles';
+import { createUserAccount } from '../../services/adminUsers';
 import { matchesSearch } from '../../utils/textSearch';
 import { ConfirmDialog } from '../common/ConfirmDialog';
+import { ParishPicker } from './ParishPicker';
 
 type ProfileRow = UserProfile & { createdAt?: string; lastSeenAt?: string };
+
+// Clave legible (sin caracteres ambiguos) para entregar al usuario.
+function generatePassword(): string {
+  const chars = 'abcdefghijkmnpqrstuvwxyz23456789';
+  const arr = new Uint32Array(8);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, (n) => chars[n % chars.length]).join('');
+}
 
 /**
  * Admin ProfileManager — conectado a la tabla `user_profiles` de Supabase.
@@ -24,6 +34,22 @@ export function ProfileManager() {
   const [filterRole, setFilterRole] = useState<UserRole | 'Todos'>('Todos');
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const pendingDeleteUser = pendingDeleteId ? users.find(u => u.id === pendingDeleteId) : null;
+
+  // Crear cuenta usuario/clave
+  const [showCreate, setShowCreate] = useState(false);
+  const [cUser, setCUser] = useState('');
+  const [cName, setCName] = useState('');
+  const [cPass, setCPass] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [createdCreds, setCreatedCreds] = useState<{ username: string; password: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // Editar perfil
+  const [editUser, setEditUser] = useState<ProfileRow | null>(null);
+  const [eName, setEName] = useState('');
+  const [eInstrument, setEInstrument] = useState<InstrumentType | ''>('');
+  const [eParishes, setEParishes] = useState<string[]>([]);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -74,6 +100,47 @@ export function ProfileManager() {
     }
   };
 
+  const handleCreate = async () => {
+    const u = cUser.trim().toLowerCase();
+    if (!/^[a-z0-9._-]{3,30}$/.test(u)) { toast.error('Usuario inválido (3-30: letras, números, . _ -)'); return; }
+    if (cPass.length < 6) { toast.error('La clave debe tener al menos 6 caracteres'); return; }
+    setCreating(true);
+    const r = await createUserAccount(u, cPass, cName.trim() || undefined);
+    setCreating(false);
+    if (!r.ok) { toast.error('No se pudo crear', { description: r.error }); return; }
+    setCreatedCreds({ username: u, password: cPass });
+    setCUser(''); setCName(''); setCPass('');
+    toast.success('Cuenta creada');
+  };
+
+  const openEdit = (user: ProfileRow) => {
+    setEditUser(user);
+    setEName(user.name || '');
+    setEInstrument((user.instrument as InstrumentType) || '');
+    setEParishes(user.parishes && user.parishes.length ? user.parishes : (user.parishName ? [user.parishName] : []));
+  };
+
+  const handleEditSave = async () => {
+    if (!editUser) return;
+    setSavingEdit(true);
+    const fields: { name?: string; instruments?: string[]; parishes?: string[]; parishName?: string } = {
+      name: eName.trim() || editUser.email,
+      parishes: eParishes,
+      parishName: eParishes[0],
+    };
+    if (editUser.role === 'Coro') fields.instruments = eInstrument ? [eInstrument] : [];
+    const r = await adminUpdateUserProfile(editUser.id, fields);
+    setSavingEdit(false);
+    if (!r.ok) { toast.error('No se pudo guardar', { description: r.error }); return; }
+    // Reflejar en la lista sin recargar todo.
+    setUsers(prev => prev.map(x => x.id === editUser.id ? {
+      ...x, name: fields.name!, parishes: eParishes, parishName: eParishes[0],
+      instrument: editUser.role === 'Coro' ? (eInstrument || undefined) : x.instrument,
+    } : x));
+    setEditUser(null);
+    toast.success('Perfil actualizado');
+  };
+
   const handleDelete = async () => {
     if (!pendingDeleteId) return;
     const id = pendingDeleteId;
@@ -112,6 +179,15 @@ export function ProfileManager() {
         >
           {loading ? <Loader className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
           Refrescar desde Supabase
+        </button>
+
+        {/* Crear cuenta usuario/clave */}
+        <button
+          onClick={() => { setShowCreate(true); setCreatedCreds(null); }}
+          className="w-full mb-4 py-3 bg-gradient-to-br from-blue-700 to-blue-900 text-white rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-all shadow"
+        >
+          <UserPlus className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
+          Crear cuenta (usuario y clave)
         </button>
 
         {/* Search */}
@@ -213,14 +289,24 @@ export function ProfileManager() {
                       <option value="Admin">Admin</option>
                     </select>
                   </div>
-                  <button
-                    onClick={() => setPendingDeleteId(user.id)}
-                    aria-label={`Eliminar perfil de ${user.name}`}
-                    className="w-full bg-red-600 text-white py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-red-700 active:scale-95 transition-all"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span className="text-sm font-bold">Eliminar perfil</span>
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => openEdit(user)}
+                      aria-label={`Editar perfil de ${user.name}`}
+                      className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 active:scale-95 transition-all"
+                    >
+                      <Pencil className="w-4 h-4 flex-shrink-0" />
+                      <span className="text-sm font-bold">Editar</span>
+                    </button>
+                    <button
+                      onClick={() => setPendingDeleteId(user.id)}
+                      aria-label={`Eliminar perfil de ${user.name}`}
+                      className="flex-1 bg-red-600 text-white py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-red-700 active:scale-95 transition-all"
+                    >
+                      <Trash2 className="w-4 h-4 flex-shrink-0" />
+                      <span className="text-sm font-bold">Eliminar</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -238,6 +324,86 @@ export function ProfileManager() {
           </div>
         )}
       </div>
+
+      {/* Modal: crear cuenta usuario/clave */}
+      {showCreate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowCreate(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full border-4 border-blue-800 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-gradient-to-br from-blue-900 to-blue-950 text-white p-5 flex items-center justify-between border-b-4 border-blue-800">
+              <div className="flex items-center gap-3 min-w-0"><UserPlus className="w-7 h-7 flex-shrink-0" strokeWidth={2.5} /><h2 className="text-xl font-bold min-w-0">Crear cuenta</h2></div>
+              <button onClick={() => setShowCreate(false)} className="p-2 hover:bg-white/20 rounded-xl flex-shrink-0"><X className="w-6 h-6" strokeWidth={2.5} /></button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                El usuario entra con estas credenciales y elige su rol (Coro o Pueblo fiel) en su primer ingreso. Aparecerá en la lista cuando inicie sesión.
+              </p>
+              <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Usuario</label>
+              <input value={cUser} onChange={(e) => setCUser(e.target.value)} autoCapitalize="none" placeholder="ej: coro.sanjose" className="w-full px-4 py-3 mb-3 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium" />
+              <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Nombre (opcional)</label>
+              <input value={cName} onChange={(e) => setCName(e.target.value)} placeholder="Nombre para mostrar" className="w-full px-4 py-3 mb-3 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium" />
+              <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Clave</label>
+              <div className="flex gap-2 mb-4">
+                <input value={cPass} onChange={(e) => setCPass(e.target.value)} placeholder="Clave" className="w-full px-4 py-3 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium" />
+                <button type="button" onClick={() => setCPass(generatePassword())} title="Generar clave" className="flex-shrink-0 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-blue-950"><RotateCw className="w-5 h-5" strokeWidth={2.5} /></button>
+              </div>
+              <button onClick={handleCreate} disabled={creating || !cUser || !cPass} className="w-full bg-gradient-to-br from-blue-700 to-blue-900 text-white py-3 rounded-xl flex items-center justify-center gap-2 font-bold active:scale-95 disabled:opacity-50">
+                {creating ? <Loader className="w-5 h-5 animate-spin" /> : <UserPlus className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />}
+                {creating ? 'Creando...' : 'Crear cuenta'}
+              </button>
+              {createdCreds && (
+                <div className="mt-4 bg-green-50 border-2 border-green-300 rounded-xl p-4">
+                  <p className="text-sm font-bold text-green-900 mb-2">✅ Entrega estas credenciales:</p>
+                  <div className="font-mono text-base text-gray-900"><div>Usuario: <strong>{createdCreds.username}</strong></div><div>Clave: <strong>{createdCreds.password}</strong></div></div>
+                  <button onClick={() => { navigator.clipboard?.writeText(`Usuario: ${createdCreds.username}\nClave: ${createdCreds.password}`); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="mt-3 inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm font-bold">
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}{copied ? 'Copiado' : 'Copiar'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: editar perfil */}
+      {editUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEditUser(null)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full border-4 border-blue-800 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-gradient-to-br from-blue-900 to-blue-950 text-white p-5 flex items-center justify-between border-b-4 border-blue-800">
+              <div className="flex items-center gap-3 min-w-0"><Pencil className="w-6 h-6 flex-shrink-0" strokeWidth={2.5} /><h2 className="text-xl font-bold min-w-0 truncate">Editar perfil</h2></div>
+              <button onClick={() => setEditUser(null)} className="p-2 hover:bg-white/20 rounded-xl flex-shrink-0"><X className="w-6 h-6" strokeWidth={2.5} /></button>
+            </div>
+            <div className="p-6">
+              <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Nombre</label>
+              <input value={eName} onChange={(e) => setEName(e.target.value)} className="w-full px-4 py-3 mb-3 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium" />
+
+              {editUser.role === 'Coro' && (
+                <>
+                  <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Instrumento</label>
+                  <select value={eInstrument} onChange={(e) => setEInstrument(e.target.value as InstrumentType | '')} className="w-full px-4 py-3 mb-3 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium">
+                    <option value="">Sin instrumento</option>
+                    <option value="Guitarra">Guitarra</option>
+                    <option value="Órgano">Órgano</option>
+                  </select>
+                </>
+              )}
+
+              {editUser.role !== 'Admin' && (
+                <>
+                  <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Parroquias</label>
+                  <div className="mb-4"><ParishPicker selected={eParishes} onChange={setEParishes} /></div>
+                </>
+              )}
+
+              <button onClick={handleEditSave} disabled={savingEdit} className="w-full bg-gradient-to-br from-blue-700 to-blue-900 text-white py-3 rounded-xl flex items-center justify-center gap-2 font-bold active:scale-95 disabled:opacity-50">
+                {savingEdit ? <Loader className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />}
+                {savingEdit ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         open={!!pendingDeleteUser}

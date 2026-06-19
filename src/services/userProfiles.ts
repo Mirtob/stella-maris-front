@@ -98,6 +98,30 @@ export async function listUserProfiles(): Promise<(UserProfile & { createdAt?: s
   }
 }
 
+/**
+ * Edita campos del perfil de cualquier usuario (solo admin).
+ * La policy `user_profiles_admin_all` (is_admin()) permite el UPDATE server-side.
+ */
+export async function adminUpdateUserProfile(
+  id: string,
+  fields: { name?: string; instruments?: string[]; parishes?: string[]; parishName?: string }
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const sb = getSupabaseClient();
+    const row: Record<string, unknown> = {};
+    if (fields.name !== undefined) row.name = fields.name;
+    if (fields.instruments !== undefined) row.instruments = fields.instruments;
+    if (fields.parishes !== undefined) row.parishes = fields.parishes;
+    if (fields.parishName !== undefined) row.parish_name = fields.parishName;
+    if (Object.keys(row).length === 0) return { ok: true };
+    const { error } = await sb.from(TABLE).update(row).eq('id', id);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err?.message };
+  }
+}
+
 /** Cambia el rol de un usuario (solo admin). */
 export async function updateUserRole(id: string, role: UserProfile['role']): Promise<{ ok: boolean; error?: string }> {
   try {
