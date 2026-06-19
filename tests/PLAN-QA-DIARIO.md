@@ -112,3 +112,5 @@ Estado:    abierto / en review / cerrado
 ## 6. Estado del último QA
 
 **2026-06-17** — Build ✅ · Integración 17/17 ✅ · Smoke 7/7 ✅ · Rate-limit ✅ (QA-1 resuelto: 20×200 + 15×429) · Catálogo ⚠️ (QA-2, 2 cantos).
+
+**2026-06-19 (backend)** — Build ✅ · Integración 17/17 ✅ · Endpoints auth/admin sanos (admin-users→401, recover-password→404) · Tabla custom_parishes ✅ · Rate-limit distribuido ✅ (ráfaga 20×200+5×429; el test espaciado da 0×429 por ventana fija al correr seguido, no es fallo real) · Catálogo ⚠️ (QA-2, 2 cantos).
