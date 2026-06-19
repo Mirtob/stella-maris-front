@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { chileDioceses, Diocese, Parish, Chapel } from '../../data/chileDioceses';
 import { toast } from 'sonner';
 import { listActiveParishes, ParishActivity } from '../../services/parishStats';
-import { listChapels, addChapel, deleteChapel, Chapel as AdminChapel } from '../../services/chapels';
+import { listChapels, addChapel, updateChapel, deleteChapel, Chapel as AdminChapel } from '../../services/chapels';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 
 interface ExtendedParish extends Parish {
@@ -37,6 +37,26 @@ export function ParishManager() {
   const [adminChapels, setAdminChapels] = useState<AdminChapel[]>([]);
   const [savingChapel, setSavingChapel] = useState(false);
   const [pendingDeleteChapel, setPendingDeleteChapel] = useState<AdminChapel | null>(null);
+  const [editingChapel, setEditingChapel] = useState<AdminChapel | null>(null);
+  const [editChapelName, setEditChapelName] = useState('');
+  const [editChapelAddress, setEditChapelAddress] = useState('');
+
+  const openEditChapel = (chapel: AdminChapel) => {
+    setEditingChapel(chapel);
+    setEditChapelName(chapel.name);
+    setEditChapelAddress(chapel.address || '');
+  };
+  const handleUpdateChapel = async () => {
+    if (!editingChapel) return;
+    if (!editChapelName.trim()) { toast.error('El nombre es obligatorio'); return; }
+    setSavingChapel(true);
+    const r = await updateChapel(editingChapel.id, { name: editChapelName, address: editChapelAddress });
+    setSavingChapel(false);
+    if (!r.ok) { toast.error('No se pudo editar la capilla', { description: r.error }); return; }
+    setEditingChapel(null);
+    await loadChapels();
+    toast.success('Capilla actualizada');
+  };
 
   const loadChapels = useCallback(async () => {
     setAdminChapels(await listChapels());
@@ -338,13 +358,22 @@ export function ParishManager() {
                           <div className="font-semibold text-gray-900 dark:text-white truncate">{chapel.name}</div>
                           {chapel.address && <div className="text-sm text-gray-600 dark:text-gray-300 truncate">{chapel.address}</div>}
                         </div>
-                        <button
-                          onClick={() => setPendingDeleteChapel(chapel)}
-                          className="p-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex-shrink-0"
-                          aria-label="Eliminar capilla"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            onClick={() => openEditChapel(chapel)}
+                            className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                            aria-label="Editar capilla"
+                          >
+                            <Edit2 className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => setPendingDeleteChapel(chapel)}
+                            className="p-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            aria-label="Eliminar capilla"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -633,6 +662,31 @@ export function ParishManager() {
               >
                 Guardar Parroquia
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: editar capilla */}
+      {editingChapel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEditingChapel(null)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full border-4 border-blue-800" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-gradient-to-br from-blue-900 to-blue-950 text-white p-5 flex items-center gap-3 border-b-4 border-blue-800">
+              <Building2 className="w-6 h-6 flex-shrink-0" strokeWidth={2.5} />
+              <h2 className="text-xl font-bold min-w-0 truncate">Editar capilla</h2>
+            </div>
+            <div className="p-6">
+              <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Nombre</label>
+              <input value={editChapelName} onChange={(e) => setEditChapelName(e.target.value)} className="w-full px-4 py-3 mb-3 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium" />
+              <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Dirección (opcional)</label>
+              <input value={editChapelAddress} onChange={(e) => setEditChapelAddress(e.target.value)} className="w-full px-4 py-3 mb-4 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium" />
+              <div className="flex gap-2">
+                <button onClick={() => setEditingChapel(null)} className="flex-1 bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-white py-3 rounded-xl font-bold active:scale-95">Cancelar</button>
+                <button onClick={handleUpdateChapel} disabled={savingChapel} className="flex-1 bg-gradient-to-br from-blue-700 to-blue-900 text-white py-3 rounded-xl font-bold active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
+                  {savingChapel ? <Loader className="w-5 h-5 animate-spin" /> : 'Guardar'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -60,6 +60,26 @@ export async function addChapel(input: NewChapel): Promise<{ ok: boolean; error?
   }
 }
 
+/** Edita una capilla (nombre/dirección/diócesis) — solo admin por RLS. */
+export async function updateChapel(
+  id: string,
+  fields: { name?: string; address?: string; diocese?: string }
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const sb = getSupabaseClient();
+    const row: Record<string, unknown> = {};
+    if (fields.name !== undefined) row.name = fields.name.trim();
+    if (fields.address !== undefined) row.address = fields.address.trim() || null;
+    if (fields.diocese !== undefined) row.diocese = fields.diocese.trim() || null;
+    if (Object.keys(row).length === 0) return { ok: true };
+    const { error } = await sb.from(TABLE).update(row).eq('id', id);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || 'Error editando capilla' };
+  }
+}
+
 /** Elimina una capilla por ID (solo admin por RLS). */
 export async function deleteChapel(id: string): Promise<{ ok: boolean; error?: string }> {
   try {
