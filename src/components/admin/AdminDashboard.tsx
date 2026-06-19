@@ -1,19 +1,24 @@
 import { useState } from 'react';
-import { Users, Church, Music, ShieldCheck, Lock, AlertTriangle, Database, Youtube, LifeBuoy } from 'lucide-react';
+import { Users, Church, Music, ShieldCheck, Lock, AlertTriangle, Database, Youtube, LifeBuoy, KeyRound } from 'lucide-react';
 import { ProfileManager } from '../profile/ProfileManager';
 import { ParishManager } from '../profile/ParishManager';
 import { SongManager } from '../songs/SongManager';
 import { CatalogMigration } from './CatalogMigration';
 import { YouTubeSyncDialog } from './YouTubeSyncDialog';
 import { RecoveryManager } from '../profile/RecoveryManager';
+import { AdminUserAccounts } from './AdminUserAccounts';
 
-type AdminView = 'menu' | 'users' | 'parishes' | 'songs' | 'migration' | 'youtube-sync' | 'recovery';
+type AdminView = 'menu' | 'users' | 'accounts' | 'parishes' | 'songs' | 'migration' | 'youtube-sync' | 'recovery';
 
 export function AdminDashboard() {
   const [currentView, setCurrentView] = useState<AdminView>('menu');
 
   if (currentView === 'users') {
     return <ProfileManager />;
+  }
+
+  if (currentView === 'accounts') {
+    return <AdminUserAccounts onBack={() => setCurrentView('menu')} />;
   }
 
   if (currentView === 'parishes') {
@@ -144,6 +149,25 @@ export function AdminDashboard() {
                 </p>
               </div>
               <div className="text-3xl">🛟</div>
+            </div>
+          </button>
+
+          {/* Cuentas usuario/clave */}
+          <button
+            onClick={() => setCurrentView('accounts')}
+            className="w-full bg-gradient-to-br from-blue-700 to-indigo-900 rounded-2xl shadow-xl p-6 border-2 border-blue-600 hover:border-blue-400 active:scale-98 transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
+                <KeyRound className="w-9 h-9 text-white" strokeWidth={2.5} />
+              </div>
+              <div className="text-left flex-1">
+                <h2 className="text-2xl font-bold text-white mb-1">Cuentas usuario/clave</h2>
+                <p className="text-base text-blue-100">
+                  Crear cuentas sin correo y restablecer claves
+                </p>
+              </div>
+              <div className="text-3xl">🔑</div>
             </div>
           </button>
 
