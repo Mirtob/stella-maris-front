@@ -31,6 +31,35 @@ export async function signInWithGoogle() {
   });
 }
 
+// ── Cuentas de usuario + clave (alternativa a Google) ──────────────────────
+// El usuario solo escribe un nombre de usuario; por debajo se mapea a un email
+// SINTÉTICO interno (no se envía ningún correo). El correo real es opcional y se
+// usa solo para recuperación de clave (recovery_email, asistida por admin).
+export const USERNAME_EMAIL_DOMAIN = 'usuario.stellamaris.app';
+
+/** Normaliza un nombre de usuario a su email sintético interno. */
+export function usernameToEmail(username: string): string {
+  return `${username.trim().toLowerCase()}@${USERNAME_EMAIL_DOMAIN}`;
+}
+
+/** ¿El email corresponde a una cuenta de usuario/clave (no Google)? */
+export function isUsernameAccount(email?: string | null): boolean {
+  return !!email && email.toLowerCase().endsWith(`@${USERNAME_EMAIL_DOMAIN}`);
+}
+
+/** Login con usuario + clave (mapeado al email sintético). */
+export async function signInWithUsernamePassword(username: string, password: string) {
+  return supabaseClient.auth.signInWithPassword({
+    email: usernameToEmail(username),
+    password,
+  });
+}
+
+/** Cambia la contraseña del usuario actual. Requiere sesión activa. */
+export async function changePassword(newPassword: string) {
+  return supabaseClient.auth.updateUser({ password: newPassword });
+}
+
 export async function getSession() {
   return supabaseClient.auth.getSession();
 }

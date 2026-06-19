@@ -1,8 +1,9 @@
-import { User, Church, Music, Save, ArrowLeft, ShieldCheck, Loader, Trash2, Plus } from 'lucide-react';
+import { User, Church, Music, Save, ArrowLeft, ShieldCheck, Loader, Trash2, Plus, Lock } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { UserProfile, InstrumentType, UserRole } from '../../types';
 import { updateRecoveryEmail } from '../../services/userProfiles';
+import { changePassword, isUsernameAccount } from '../../services/supabaseClient';
 import { ParishPicker } from './ParishPicker';
 
 interface ProfileSettingsProps {
@@ -28,6 +29,33 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
   const [recoveryEmail, setRecoveryEmail] = useState(userProfile.recoveryEmail ?? '');
   const [recoverySaving, setRecoverySaving] = useState(false);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
+
+  // Cuenta de usuario/clave (no Google): permite cambiar la propia contraseña.
+  const isPasswordAccount = isUsernameAccount(userProfile.email);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) {
+      toast.error('La clave debe tener al menos 6 caracteres');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error('Las claves no coinciden');
+      return;
+    }
+    setChangingPassword(true);
+    const { error } = await changePassword(newPassword);
+    setChangingPassword(false);
+    if (error) {
+      toast.error('No se pudo cambiar la clave', { description: error.message });
+      return;
+    }
+    setNewPassword('');
+    setConfirmPassword('');
+    toast.success('Clave actualizada');
+  };
 
   // Se perfila por el rol EFECTIVO de la sesión, no el permanente (igual que el menú).
   const canChangeInstrument = effectiveRole === 'Coro';
@@ -344,6 +372,49 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
             </div>
           </div>
         </div>
+        )}
+
+        {/* Cambiar clave — solo cuentas de usuario/clave (no Google) */}
+        {isPasswordAccount && (
+          <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-blue-200 mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-700 to-blue-900 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Lock className="w-7 h-7 text-white" strokeWidth={2.5} />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800">Cambiar clave</h2>
+            </div>
+
+            <p className="text-base text-gray-700 mb-4">
+              Cambia tu contraseña cuando quieras. Debe tener al menos 6 caracteres.
+            </p>
+
+            <label className="text-base text-gray-600 mb-2 block" htmlFor="new-password">Nueva clave</label>
+            <input
+              id="new-password"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Nueva clave"
+              className="w-full px-4 py-3 mb-3 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium"
+            />
+            <label className="text-base text-gray-600 mb-2 block" htmlFor="confirm-password">Repetir clave</label>
+            <input
+              id="confirm-password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Repetir clave"
+              className="w-full px-4 py-3 mb-4 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium"
+            />
+            <button
+              onClick={handleChangePassword}
+              disabled={changingPassword || !newPassword || !confirmPassword}
+              className="w-full bg-gradient-to-br from-blue-700 to-blue-900 text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {changingPassword ? <Loader className="w-5 h-5 animate-spin" /> : <Lock className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />}
+              {changingPassword ? 'Guardando...' : 'Cambiar clave'}
+            </button>
+          </div>
         )}
 
         {/* T13 — Recovery Email (no aplica para admin) */}

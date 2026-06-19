@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { LogIn, User, Lock, Church, Loader } from 'lucide-react';
 import { toast } from 'sonner';
 import { loginWithGoogle } from '../../services/googleAuth';
+import { signInWithUsernamePassword } from '../../services/supabaseClient';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
 
 interface LoginProps {
@@ -10,6 +11,10 @@ interface LoginProps {
 
 export function Login({ onGoogleLogin }: LoginProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [showUserForm, setShowUserForm] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const handleGoogleLogin = async () => {
     try {
@@ -22,6 +27,30 @@ export function Login({ onGoogleLogin }: LoginProps) {
       console.error('Error en login:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleUserLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const u = username.trim();
+    if (!u || !password) {
+      toast.error('Escribe tu usuario y tu clave');
+      return;
+    }
+    try {
+      setSubmitting(true);
+      const { error } = await signInWithUsernamePassword(u, password);
+      if (error) {
+        toast.error('Usuario o clave incorrectos');
+        return;
+      }
+      // Recargar: la app re-inicia, toma la sesión recién creada y sigue el
+      // flujo normal (recuperar perfil / completar perfil).
+      window.location.reload();
+    } catch (err: any) {
+      toast.error(err?.message || 'No se pudo iniciar sesión');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -105,6 +134,65 @@ export function Login({ onGoogleLogin }: LoginProps) {
             <p className="text-xs text-white/90">
               Accede a cantorales, cantos y partituras de tu parroquia.
             </p>
+          </div>
+
+          {/* Login alternativo: usuario + clave (para quienes no quieren usar correo).
+              Las cuentas las entrega la parroquia/administrador. */}
+          <div className="mt-4 pt-3 border-t border-white/15">
+            {!showUserForm ? (
+              <button
+                type="button"
+                onClick={() => setShowUserForm(true)}
+                className="w-full flex items-center justify-center gap-2 text-sm font-bold text-blue-100 hover:text-white py-2 transition-colors"
+              >
+                <User className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
+                Entrar con usuario y clave
+              </button>
+            ) : (
+              <form onSubmit={handleUserLogin} className="space-y-3">
+                <div>
+                  <label htmlFor="login-user" className="sr-only">Usuario</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-900/60 pointer-events-none" />
+                    <input
+                      id="login-user"
+                      type="text"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="Usuario"
+                      className="w-full pl-10 pr-3 py-3 rounded-xl text-base text-blue-950 bg-white border-2 border-blue-200 focus:outline-none focus:border-blue-500 font-medium"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="login-pass" className="sr-only">Clave</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-900/60 pointer-events-none" />
+                    <input
+                      id="login-pass"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Clave"
+                      className="w-full pl-10 pr-3 py-3 rounded-xl text-base text-blue-950 bg-white border-2 border-blue-200 focus:outline-none focus:border-blue-500 font-medium"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-blue-950 py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? <Loader className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />}
+                  {submitting ? 'Entrando...' : 'Entrar'}
+                </button>
+                <p className="text-xs text-white/70 text-center">
+                  ¿Olvidaste tu clave? Pídele al encargado de tu parroquia que te la restablezca.
+                </p>
+              </form>
+            )}
           </div>
         </section>
 
