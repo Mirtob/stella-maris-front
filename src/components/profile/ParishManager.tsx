@@ -4,6 +4,7 @@ import { chileDioceses, Diocese, Parish, Chapel } from '../../data/chileDioceses
 import { toast } from 'sonner';
 import { listActiveParishes, ParishActivity } from '../../services/parishStats';
 import { listChapels, addChapel, updateChapel, deleteChapel, Chapel as AdminChapel } from '../../services/chapels';
+import { listCustomParishes, addCustomParish, updateCustomParish, deleteCustomParish, CustomParish } from '../../services/customParishes';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 
 interface ExtendedParish extends Parish {
@@ -62,6 +63,37 @@ export function ParishManager() {
     setAdminChapels(await listChapels());
   }, []);
   useEffect(() => { loadChapels(); }, [loadChapels]);
+
+  // Parroquias administradas (Supabase) — además del catálogo estático.
+  const [customParishes, setCustomParishes] = useState<CustomParish[]>([]);
+  const loadCustomParishes = useCallback(async () => {
+    setCustomParishes(await listCustomParishes());
+  }, []);
+  useEffect(() => { loadCustomParishes(); }, [loadCustomParishes]);
+  const [editingCustom, setEditingCustom] = useState<CustomParish | null>(null);
+  const [ecName, setEcName] = useState('');
+  const [ecCity, setEcCity] = useState('');
+  const [ecAddress, setEcAddress] = useState('');
+  const [pendingDeleteCustom, setPendingDeleteCustom] = useState<CustomParish | null>(null);
+
+  const openEditCustom = (p: CustomParish) => {
+    setEditingCustom(p); setEcName(p.name); setEcCity(p.city || ''); setEcAddress(p.address || '');
+  };
+  const handleUpdateCustom = async () => {
+    if (!editingCustom) return;
+    if (!ecName.trim()) { toast.error('El nombre es obligatorio'); return; }
+    const r = await updateCustomParish(editingCustom.id, { name: ecName, city: ecCity, address: ecAddress });
+    if (!r.ok) { toast.error('No se pudo editar', { description: r.error }); return; }
+    setEditingCustom(null);
+    await loadCustomParishes();
+    toast.success('Parroquia actualizada');
+  };
+  const handleDeleteCustom = async (p: CustomParish) => {
+    const r = await deleteCustomParish(p.id);
+    if (!r.ok) { toast.error('No se pudo eliminar', { description: r.error }); return; }
+    await loadCustomParishes();
+    toast.success('Parroquia eliminada');
+  };
 
   const chapelsForParish = (parishFull: string) =>
     adminChapels.filter((c) => c.parishFull === parishFull);
@@ -155,15 +187,22 @@ export function ParishManager() {
     setShowAddParishDialog(true);
   };
 
-  const handleSaveParish = () => {
-    // TODO: persistir en backend cuando exista endpoint /api/parishes
+  const handleSaveParish = async () => {
     const dioceseName = chileDioceses.find(d => d.id === newParishDiocese)?.name || '';
+    if (!newParishName.trim()) { toast.error('Escribe el nombre de la parroquia'); return; }
+    if (!newParishDiocese) { toast.error('Elige una diócesis'); return; }
 
-    toast.success('¡Parroquia agregada exitosamente!', {
-      description: `${newParishName} ha sido agregada a ${dioceseName}`,
-      duration: 4000,
+    const r = await addCustomParish({
+      name: newParishName,
+      dioceseId: newParishDiocese,
+      dioceseName,
+      city: newParishCity,
+      address: newParishAddress,
     });
-    
+    if (!r.ok) { toast.error('No se pudo agregar la parroquia', { description: r.error }); return; }
+
+    toast.success('¡Parroquia agregada!', { description: `${newParishName} — ${dioceseName}` });
+    await loadCustomParishes();
     setShowAddParishDialog(false);
     setNewParishName('');
     setNewParishAddress('');
@@ -292,8 +331,31 @@ export function ParishManager() {
         </div>
 
         <p className="text-center text-gray-600 dark:text-gray-400 mb-4">
-          Mostrando {filteredParishes.length} parroquias
+          Mostrando {filteredParishes.length} parroquias del catálogo
         </p>
+
+        {/* Parroquias agregadas (administradas en Supabase) */}
+        {customParishes.length > 0 && (
+          <div className="mb-6 bg-green-50 dark:bg-slate-800 rounded-2xl border-2 border-green-200 dark:border-green-700 p-4">
+            <h3 className="font-bold text-green-900 dark:text-green-200 mb-3 flex items-center gap-2">
+              <Building2 className="w-5 h-5 flex-shrink-0" /> Parroquias agregadas ({customParishes.length})
+            </h3>
+            <div className="space-y-2">
+              {customParishes.map((p) => (
+                <div key={p.id} className="bg-white dark:bg-slate-700 rounded-xl p-3 border border-green-200 dark:border-slate-500 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-gray-900 dark:text-white truncate">{p.name}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-300 truncate">{p.dioceseName}{p.city ? ` · ${p.city}` : ''}</div>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button onClick={() => openEditCustom(p)} className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20" aria-label="Editar parroquia"><Edit2 className="w-5 h-5" /></button>
+                    <button onClick={() => setPendingDeleteCustom(p)} className="p-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" aria-label="Eliminar parroquia"><Trash2 className="w-5 h-5" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Parishes List */}
         <div className="space-y-4">
@@ -666,6 +728,44 @@ export function ParishManager() {
           </div>
         </div>
       )}
+
+      {/* Modal: editar parroquia agregada */}
+      {editingCustom && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEditingCustom(null)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full border-4 border-blue-800" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-gradient-to-br from-blue-900 to-blue-950 text-white p-5 flex items-center gap-3 border-b-4 border-blue-800">
+              <Church className="w-6 h-6 flex-shrink-0" strokeWidth={2.5} />
+              <h2 className="text-xl font-bold min-w-0 truncate">Editar parroquia</h2>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{editingCustom.dioceseName}</p>
+              <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Nombre</label>
+              <input value={ecName} onChange={(e) => setEcName(e.target.value)} className="w-full px-4 py-3 mb-3 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium" />
+              <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Ciudad (opcional)</label>
+              <input value={ecCity} onChange={(e) => setEcCity(e.target.value)} className="w-full px-4 py-3 mb-3 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium" />
+              <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Dirección (opcional)</label>
+              <input value={ecAddress} onChange={(e) => setEcAddress(e.target.value)} className="w-full px-4 py-3 mb-4 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium" />
+              <div className="flex gap-2">
+                <button onClick={() => setEditingCustom(null)} className="flex-1 bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-white py-3 rounded-xl font-bold active:scale-95">Cancelar</button>
+                <button onClick={handleUpdateCustom} className="flex-1 bg-gradient-to-br from-blue-700 to-blue-900 text-white py-3 rounded-xl font-bold active:scale-95">Guardar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={!!pendingDeleteCustom}
+        title="Eliminar parroquia"
+        message="¿Eliminar esta parroquia agregada? Los usuarios dejarán de poder seleccionarla."
+        details={pendingDeleteCustom ? `${pendingDeleteCustom.name} · ${pendingDeleteCustom.dioceseName}` : undefined}
+        confirmLabel="Sí, eliminar"
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={() => { if (pendingDeleteCustom) handleDeleteCustom(pendingDeleteCustom); setPendingDeleteCustom(null); }}
+        onCancel={() => setPendingDeleteCustom(null)}
+      />
 
       {/* Modal: editar capilla */}
       {editingChapel && (

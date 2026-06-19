@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { chileDioceses, getParishesByDiocese } from '../../data/chileDioceses';
+import { listCustomParishes, CustomParish } from '../../services/customParishes';
 
 interface ParishPickerProps {
   /** Parroquias seleccionadas, en formato canónico "<Nombre> - <Diócesis>". */
@@ -23,8 +24,23 @@ interface ParishPickerProps {
  */
 export function ParishPicker({ selected, onChange, alreadyAdded = [] }: ParishPickerProps) {
   const [selectedDiocese, setSelectedDiocese] = useState('');
+  const [customParishes, setCustomParishes] = useState<CustomParish[]>([]);
 
-  const availableParishes = selectedDiocese ? getParishesByDiocese(selectedDiocese) : [];
+  useEffect(() => {
+    let cancelled = false;
+    listCustomParishes().then((list) => { if (!cancelled) setCustomParishes(list); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const staticParishes = selectedDiocese ? getParishesByDiocese(selectedDiocese) : [];
+  // Parroquias administradas de esta diócesis (no duplicar nombres del catálogo).
+  const customForDiocese = customParishes.filter(c => c.dioceseId === selectedDiocese);
+  const availableParishes = [
+    ...staticParishes.map(p => ({ id: p.id, name: p.name })),
+    ...customForDiocese
+      .filter(c => !staticParishes.some(p => p.name === c.name))
+      .map(c => ({ id: c.id, name: c.name })),
+  ];
   const dioceseName = chileDioceses.find(d => d.id === selectedDiocese)?.name ?? '';
 
   const fullName = (parishName: string) => `${parishName} - ${dioceseName}`;
