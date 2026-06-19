@@ -53,8 +53,8 @@ function clientIp(req: VercelRequest): string {
 // ausente devuelve null y el llamador cae al limiter en memoria por instancia.
 // No agrega dependencias (fetch directo a PostgREST con la anon key).
 async function distributedCheck(key: string, limit: number, windowSeconds: number): Promise<{ allowed: boolean; remaining: number } | null> {
-  const url = process.env.VITE_SUPABASE_URL;
-  const anon = process.env.VITE_SUPABASE_ANON_KEY;
+  const url = (process.env.VITE_SUPABASE_URL || '').trim();
+  const anon = (process.env.VITE_SUPABASE_ANON_KEY || '').trim();
   if (!url || !anon) return null;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 800);

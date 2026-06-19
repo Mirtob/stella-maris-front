@@ -44,9 +44,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Método no permitido' });
   }
 
-  const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
-  const ANON = process.env.VITE_SUPABASE_ANON_KEY;
-  const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // trim(): defensivo ante variables de entorno con espacios/saltos de línea.
+  const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || '').trim();
+  const ANON = (process.env.VITE_SUPABASE_ANON_KEY || '').trim();
+  const SERVICE = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
   if (!SUPABASE_URL || !ANON || !SERVICE) {
     return res.status(500).json({ error: 'Configuración del servidor incompleta' });
   }
