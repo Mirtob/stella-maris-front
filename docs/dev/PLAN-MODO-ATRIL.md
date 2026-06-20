@@ -1,5 +1,9 @@
 # Plan de implementación — Modo Atril
 
+> **Estado (2026-06-20):** Fases **A y B implementadas** (commit f73daac) en
+> `src/components/atril/AtrilMode.tsx`, con entrada desde ChoirView y
+> CantoralWithOrdinary. Fases **C (metrónomo) y D (afinador) → versiones futuras**.
+
 > Atril digital para músicos del coro: repertorio del domingo en orden litúrgico,
 > lectura a pantalla completa, autoscroll, zoom, transpositor, metrónomo y afinador.
 > Se implementa por **fases** (A→D), con build + commit + deploy por fase.
