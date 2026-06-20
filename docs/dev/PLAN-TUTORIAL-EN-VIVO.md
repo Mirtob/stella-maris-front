@@ -1,8 +1,9 @@
 # Plan — Tutorial en vivo (tour guiado por perfil)
 
-> **Estado (2026-06-20):** **F1 implementada** (commit ee77a24) — motor `src/components/tour/`
-> (`Tour.tsx` + `tours.ts`) + tour de **Pueblo fiel** + auto-disparo por rol. **F2 (Coro), F3
-> (Admin + botón "Ver tutorial"), F4 (tips contextuales)** pendientes. Decisiones 1–4 confirmadas.
+> **Estado (2026-06-20):** **F1, F2 y F3 implementadas** — motor `src/components/tour/`
+> (`Tour.tsx` + `tours.ts`) + tours de **Pueblo fiel**, **Coro** y **Admin/Canal** + auto-disparo
+> por rol + botón **"Ver tutorial"** en el Sidebar (reinicia el tour del rol activo). Solo queda
+> **F4 (tips contextuales en constructor/Atril + reinicio en ajustes)**. Decisiones 1–4 confirmadas.
 
 > Tour interactivo dentro de la app para **usuarios primerizos**: resalta los
 > elementos reales de la interfaz y enseña el **flujo natural de cada perfil**
@@ -74,11 +75,11 @@
 - **Reinicio:** opción "Ver tutorial de nuevo" (menú/ajustes) que limpia `tour_seen_<rol>`.
 
 ## Fases
-- **F1 (~1.5–2 d):** motor del tour (overlay spotlight + modelo de pasos + `data-tour` base) + **tour Pueblo fiel**.
-- **F2 (~0.5–1 d):** **tour Coro**.
-- **F3 (~0.5 d):** **tour Admin/Canal** + botón "Ver tutorial" para repetir.
+- ✅ **F1:** motor del tour (overlay spotlight + modelo de pasos + `data-tour` base) + **tour Pueblo fiel**.
+- ✅ **F2:** **tour Coro** (`data-tour` en ChoirView: celebración, categorías, sugerencias, publicar, Modo Atril + menú).
+- ✅ **F3:** **tour Admin/Canal** (`data-tour` en AdminDashboard: sync, songs, accounts) + botón **"Ver tutorial"**
+  en el Sidebar (`onReplayTour` → `resetTour(rol)` + `navigate('main')` + re-disparo).
 - **F4 (~0.5–1 d):** tips contextuales (constructor, Modo Atril) + reinicio en ajustes; métricas opcionales.
-- **Total ~3–4 días.**
 
 ## Decisiones a confirmar
 1. **Motor propio** (sin dependencia) vs. librería (driver.js). *Recom.: propio.*

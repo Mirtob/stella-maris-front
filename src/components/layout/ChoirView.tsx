@@ -167,6 +167,7 @@ export function ChoirView({
         {cantoral.length > 0 && (
           <button
             onClick={() => setShowAtril(true)}
+            data-tour="coro-atril"
             className="w-full mt-4 bg-gradient-to-br from-slate-800 to-slate-950 text-white py-3 px-4 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg border-2 border-slate-700 font-bold"
           >
             🎼 <span>Modo Atril</span>
@@ -176,7 +177,7 @@ export function ChoirView({
         {/* Selector de celebración — el constructor se adapta a la liturgia elegida.
             En Cuaresma/Semana Santa aparecen los oficios del Triduo para prepararlos. */}
         {celebrations.length > 1 && (
-          <div className="mt-4 bg-white/40 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-4 border-2 border-purple-300/60 dark:border-purple-700/60 transition-colors">
+          <div data-tour="coro-celebracion" className="mt-4 bg-white/40 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-4 border-2 border-purple-300/60 dark:border-purple-700/60 transition-colors">
             <h3 className="text-base font-bold text-purple-950 dark:text-purple-100 mb-1 flex items-center gap-2">
               <span className="text-xl flex-shrink-0">📅</span>
               <span className="min-w-0">¿Para qué celebración armas el cantoral?</span>
@@ -217,7 +218,7 @@ export function ChoirView({
         />
 
         {/* Liturgical Suggestions */}
-        <div className="mt-2">
+        <div className="mt-2" data-tour="coro-sugerencias">
           <LiturgicalSuggestions
             onAddToCantoral={onAddToCantoral}
             onPlaySong={onPlaySong}
@@ -281,7 +282,7 @@ export function ChoirView({
         )}
 
         {/* Category Searches - DINÁMICAS según el día litúrgico */}
-        <div className="mt-8 space-y-6">
+        <div className="mt-8 space-y-6" data-tour="coro-categorias">
           {categoryConfig.categories.map((rawCategory) => {
             // En Pascua, el Kyrie puede convertirse en el Rito de Aspersión según
             // lo que elija el coro (se le pregunta al tocar el Kyrie).
@@ -361,6 +362,7 @@ export function ChoirView({
           <div className="max-w-md md:max-w-2xl mx-auto">
             <button
               onClick={() => setShowPublishModal(true)}
+              data-tour="coro-publicar"
               className="w-full bg-gradient-to-br from-blue-900 to-blue-950 text-white py-4 px-3 sm:px-4 rounded-2xl shadow-2xl active:scale-98 transition-all flex items-center justify-center gap-3 border-2 border-blue-800"
             >
               <Send className="w-6 h-6 flex-shrink-0" />

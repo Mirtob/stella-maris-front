@@ -65,7 +65,99 @@ export const puebloFielTour: TourStep[] = [
   },
 ];
 
-/** Tours disponibles por rol. Coro y Admin llegan en las fases F2/F3. */
+// ── Guion: Coro (F2) ─────────────────────────────────────────────────────────
+export const coroTour: TourStep[] = [
+  {
+    id: 'intro',
+    title: '¡Hola, coro! 🎵',
+    body: 'Te muestro cómo armar el cantoral del domingo y publicarlo para tu parroquia.',
+  },
+  {
+    id: 'celebracion',
+    target: 'coro-celebracion',
+    skipIfMissing: true,
+    title: '¿Para qué celebración?',
+    body: 'En Cuaresma y Semana Santa puedes elegir el oficio (Jueves Santo, Vigilia, etc.). El constructor se adapta con el orden y los cantos que correspondan.',
+  },
+  {
+    id: 'categorias',
+    target: 'coro-categorias',
+    skipIfMissing: true,
+    title: 'Arma la Misa por momentos',
+    body: 'Toca cada categoría (Entrada, Salmo, Ofertorio, Comunión…) y agrega un canto a cada momento de la Misa.',
+  },
+  {
+    id: 'sugerencias',
+    target: 'coro-sugerencias',
+    skipIfMissing: true,
+    title: 'Sugerencias litúrgicas',
+    body: 'Te proponemos cantos según el tiempo litúrgico actual, para ayudarte a elegir.',
+  },
+  {
+    id: 'publicar',
+    target: 'coro-publicar',
+    skipIfMissing: true,
+    title: 'Publica el cantoral',
+    body: 'Cuando termines, publícalo para tu parroquia. El Pueblo fiel lo verá y podrá escuchar los cantos.',
+  },
+  {
+    id: 'atril',
+    target: 'coro-atril',
+    skipIfMissing: true,
+    title: 'Modo Atril 🎼',
+    body: 'Durante la Misa, abre el Modo Atril para leer el repertorio con letra, acordes, transpositor, zoom y desplazamiento automático.',
+  },
+  {
+    id: 'menu',
+    target: 'app-menu',
+    title: 'Tu menú',
+    body: 'En el menú tienes Mis Cantorales, Banco de Partituras, Calendario Litúrgico y los Cursos.',
+  },
+  {
+    id: 'fin',
+    title: '¡A cantar! ✝️',
+    body: 'Eso es lo esencial. Puedes volver a ver este tutorial desde el menú.',
+  },
+];
+
+// ── Guion: Admin / Canal (F3) ────────────────────────────────────────────────
+export const adminTour: TourStep[] = [
+  {
+    id: 'intro',
+    title: 'Panel de administración 🛡️',
+    body: 'Desde aquí gestionas el contenido, los usuarios y las parroquias.',
+  },
+  {
+    id: 'sync',
+    target: 'admin-sync',
+    skipIfMissing: true,
+    title: 'Sincronizar YouTube',
+    body: 'Importa los cantos del canal (los videos con su metadata). Es lo que llena el catálogo que ve el coro.',
+  },
+  {
+    id: 'songs',
+    target: 'admin-songs',
+    skipIfMissing: true,
+    title: 'Gestión de Cantos',
+    body: 'Revisa, edita, aprueba/rechaza o elimina cantos del catálogo.',
+  },
+  {
+    id: 'accounts',
+    target: 'admin-accounts',
+    skipIfMissing: true,
+    title: 'Cuentas usuario/clave',
+    body: 'Crea cuentas con usuario y clave para quienes no quieren usar correo, y restablece claves.',
+  },
+  {
+    id: 'fin',
+    title: 'Recuerda 📋',
+    body: 'Para que aparezcan cantos, sube los videos con su bloque de metadata y sincroniza (ver el Manual del Canal).',
+  },
+];
+
+/** Tours disponibles por rol. */
 export const toursByRole: Record<string, TourStep[]> = {
   'Pueblo fiel': puebloFielTour,
+  'Coro': coroTour,
+  'Admin': adminTour,
 };

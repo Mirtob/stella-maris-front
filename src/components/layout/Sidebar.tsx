@@ -17,9 +17,11 @@ interface SidebarProps {
   effectiveRoleOverride?: UserRole;
   /** Cambio rápido de parroquia activa (Coro / Pueblo fiel con varias parroquias). */
   onSwitchParish?: (parish: string) => void;
+  /** Reinicia y vuelve a mostrar el tutorial del rol actual. */
+  onReplayTour?: () => void;
 }
 
-export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate, onLogout, onOpenSettings, effectiveRoleOverride, onSwitchParish }: SidebarProps) {
+export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate, onLogout, onOpenSettings, effectiveRoleOverride, onSwitchParish, onReplayTour }: SidebarProps) {
   const [parishMenuOpen, setParishMenuOpen] = useState(false);
   // Use the session-level role (activeRole) so the menu reflects what the user
   // chose today, not their permanent registration role. App can override this
@@ -246,6 +248,23 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
           <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-transparent via-amber-100/50 to-amber-100 pointer-events-none -translate-y-full"></div>
           
           <div className="p-4 border-t-2 border-blue-900/20 bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center gap-4 shadow-2xl">
+            {/* Botón Ver tutorial */}
+            {onReplayTour && (
+              <div className="relative group">
+                <button
+                  onClick={() => { onReplayTour(); onClose(); }}
+                  className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-900 to-blue-950 text-white rounded-xl flex items-center justify-center hover:from-blue-800 hover:to-blue-900 active:scale-95 transition-all border-2 border-blue-800 shadow-lg hover:shadow-xl"
+                  aria-label="Ver tutorial"
+                >
+                  <GraduationCap className="w-6 h-6" strokeWidth={2.5} />
+                </button>
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-blue-950 text-white text-sm font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-xl">
+                  Ver tutorial
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-blue-950"></div>
+                </div>
+              </div>
+            )}
+
             {/* Botón Configuración - Solo icono con tooltip */}
             <div className="relative group">
               <button

@@ -8,7 +8,7 @@ import { PublishedCantorals } from './components/cantoral/PublishedCantorals';
 import { Sidebar } from './components/layout/Sidebar';
 import { MenuButton } from './components/layout/MenuButton';
 import { Tour } from './components/tour/Tour';
-import { toursByRole, hasSeenTour, markTourSeen } from './components/tour/tours';
+import { toursByRole, hasSeenTour, markTourSeen, resetTour } from './components/tour/tours';
 import { NotificationBell } from './components/layout/NotificationBell';
 import { SolemnityAlerts } from './components/liturgy/SolemnityAlerts';
 
@@ -962,6 +962,11 @@ function AppContent() {
         onOpenSettings={handleOpenSettings}
         effectiveRoleOverride={effectiveRole}
         onSwitchParish={handleSwitchActiveParish}
+        onReplayTour={() => {
+          resetTour(effectiveRole);
+          navigate('main');
+          setTourTick(t => t + 1);
+        }}
       />
 
       <ConfirmDialog

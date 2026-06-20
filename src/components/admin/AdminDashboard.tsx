@@ -97,6 +97,7 @@ export function AdminDashboard() {
 
           {/* Songs Management */}
           <button
+            data-tour="admin-songs"
             onClick={() => setCurrentView('songs')}
             className="w-full bg-gradient-to-br from-blue-900 to-blue-950 rounded-2xl shadow-xl p-6 border-2 border-blue-800 hover:border-blue-600 active:scale-98 transition-all"
           >
@@ -116,6 +117,7 @@ export function AdminDashboard() {
 
           {/* YouTube Sync */}
           <button
+            data-tour="admin-sync"
             onClick={() => setCurrentView('youtube-sync')}
             className="w-full bg-gradient-to-br from-red-600 to-red-700 rounded-2xl shadow-xl p-6 border-2 border-red-500 hover:border-red-300 active:scale-98 transition-all"
           >
@@ -154,6 +156,7 @@ export function AdminDashboard() {
 
           {/* Cuentas usuario/clave */}
           <button
+            data-tour="admin-accounts"
             onClick={() => setCurrentView('accounts')}
             className="w-full bg-gradient-to-br from-blue-700 to-indigo-900 rounded-2xl shadow-xl p-6 border-2 border-blue-600 hover:border-blue-400 active:scale-98 transition-all"
           >
