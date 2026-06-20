@@ -75,12 +75,48 @@ etiquetas: Popular, Comunidad
 > **Sobre el Aleluya en Cuaresma:** usa siempre `categoria: Aleluya`. La app, durante la Cuaresma, lo
 > muestra automáticamente como "Aclamación al Evangelio". No necesitas una categoría aparte.
 
-### La letra (`--- LETRA ---`)
+### La letra y los acordes (`--- LETRA ---`)
 
 - Todo lo que escribas **después** de la línea `--- LETRA ---` se toma como la letra.
-- Acordes **entre corchetes y en línea**, justo antes de la sílaba: `[Am]Santa Ma[G]ría`.
-  - El Pueblo fiel ve solo la letra; el Coro con guitarra ve la letra **con acordes**.
-- Puedes marcar secciones con etiquetas como `[Coro]`, `[Estrofa]`, `[Puente]`.
+- Los acordes van **entre corchetes y EN LÍNEA, pegados a la sílaba** donde cambia el acorde:
+  `[Am]Santa Ma[G]ría`.
+- **Por qué este formato (importante):** cada acorde queda **anclado a su sílaba**, no a espacios ni
+  columnas. La app lo dibuja **justo encima** de esa sílaba, así que **nunca se descuadra** aunque el
+  músico haga zoom, cambie el tamaño de pantalla o **transponga** el tono.
+  - ❌ **No** uses acordes en una línea aparte alineados con espacios (eso sí se descuadra).
+- El **Pueblo fiel ve solo la letra**; el **Coro con guitarra ve la letra con acordes** y puede
+  transponer. Por eso, los videos con acordes conviene marcarlos `version: Guitarra`.
+- Puedes marcar secciones con etiquetas en su propia línea: `[Coro]`, `[Estrofa]`, `[Puente]`.
+- Notación de acordes: latina o americana, con sostenidos/bemoles y modificadores —
+  `[Do]`, `[Sol7]`, `[Lam]`, `[Sib]`/`[A#]`, `[Dosus4]`, `[Re/Fa#]`.
+
+### 📋 Plantilla lista para copiar (canto)
+
+> Copia esto en la descripción del video, reemplaza los datos y la letra. Borra los campos que no uses
+> (excepto `categoria`, que es obligatorio).
+
+```
+STELLA_MARIS_META
+categoria: Entrada
+autor: Nombre del autor
+version: Guitarra
+temporada: Adviento
+tonalidad: Sol
+misa:
+partitura:
+liturgico: si
+etiquetas:
+
+--- LETRA ---
+[Estrofa]
+[Sol]Vienen con ale[Re]gría, Se[Mim]ñor,
+cantando vienen con ale[Do]gría, Se[Sol]ñor,
+los que ca[Re]minan por la [Sol]vida.
+
+[Coro]
+[Do]Vienen can[Re]tando la ale[Sol]gría
+[Do]de saberse ca[Re]minando ha[Sol]cia Ti.
+```
 
 ---
 
@@ -171,3 +207,68 @@ El canal es el activo más valioso. Recomendaciones:
 - [ ] Letra después de `--- LETRA ---` (con acordes `[Am]` si aplica).
 - [ ] Partitura subida a Drive, compartida "con el enlace", e ID puesto en `partitura:`.
 - [ ] **Sincronizar YouTube** en la app y verificar que aparece en **Gestión de Cantos**.
+
+---
+
+## 9. Videos de los Cursos (capacitación) 🎓
+
+La sección **Cursos** de la app (Teoría musical, Instrumentos, Liturgia) usa videos del mismo canal.
+Para mantenerlos ordenados y poder **vincularlos a cada lección**, etiqueta los videos de curso con su
+propio bloque de metadatos: **`STELLA_MARIS_CURSO`** (es **distinto** del de los cantos).
+
+> **Cómo funciona hoy vs. a futuro (honesto):** hoy la app abre el **canal oficial** o el video que se
+> haya enlazado a cada lección. Esta metadata **estandariza** los videos de curso y deja todo listo
+> para la **importación automática de cursos** (desarrollo futuro). Mientras tanto, cuando subas los
+> videos con este bloque, el equipo de desarrollo enlaza cada lección a su video.
+
+### Metadatos del video de curso
+
+```
+STELLA_MARIS_CURSO
+area: Instrumentos
+modulo: Guitarra
+leccion: 1
+titulo: Acordes básicos (Do, Re, Mi, Sol, La)
+duracion: 25 min
+nivel: Principiante
+```
+
+### Referencia de campos
+
+| Campo | Obligatorio | Valores válidos / ejemplo |
+|---|---|---|
+| `area` | **Sí** | **Teoría**, **Instrumentos** o **Liturgia**. |
+| `modulo` | Sí (en *Instrumentos*) | Para *Instrumentos*: **Guitarra**, **Órgano**, **Dirección** o **Voz**. Para *Teoría*/*Liturgia* puedes omitirlo o poner el tema. |
+| `leccion` | **Sí** | Número de orden dentro del módulo (1, 2, 3…). Define en qué orden aparecen. |
+| `titulo` | **Sí** | Título de la lección (lo que se muestra en la app). |
+| `duracion` | No | Ej. `25 min`. |
+| `nivel` | No | **Principiante**, **Intermedio** o **Avanzado**. |
+
+> No lleva `--- LETRA ---` (los cursos no tienen letra). El **título del video** puede ser libre; lo que
+> manda para la app es el campo `titulo:`.
+
+### Ejemplos por área
+
+```
+STELLA_MARIS_CURSO
+area: Teoría
+modulo: Lectura musical
+leccion: 1
+titulo: Las notas y el pentagrama
+duracion: 18 min
+nivel: Principiante
+```
+
+```
+STELLA_MARIS_CURSO
+area: Liturgia
+leccion: 2
+titulo: Las partes de la Misa y sus cantos
+duracion: 22 min
+nivel: Principiante
+```
+
+### Lista de verificación para cada video de curso ✅
+- [ ] Video subido al canal, visibilidad Público/No listado.
+- [ ] Bloque `STELLA_MARIS_CURSO` con `area`, `leccion` y `titulo` (y `modulo` si es Instrumentos).
+- [ ] Avisar al equipo para vincular la lección (hasta que exista la importación automática).
