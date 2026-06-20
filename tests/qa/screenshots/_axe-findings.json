@@ -6,7 +6,7 @@
   },
   "deeplink-valid": {
     "violations": [],
-    "passes": 28,
+    "passes": 23,
     "incomplete": 1
   },
   "deeplink-bad": {
