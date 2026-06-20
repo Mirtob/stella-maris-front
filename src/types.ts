@@ -117,9 +117,15 @@ export interface PublishedCantoral {
   choirId: string;
   choirName: string;
   parishName: string;
-  date: string; // Fecha calendario
+  date: string; // Fecha calendario (para una Misa vespertina, la víspera por la tarde)
   liturgicalDate: string; // Calendario litúrgico (ej: "1er Domingo de Adviento")
   massTime: string; // Horario de la Misa (ej: "10:00 AM")
+  /**
+   * Misa vespertina / de primeras vísperas: la víspera por la tarde que vale como
+   * Misa del día siguiente (ej. el sábado en la tarde cuenta como Misa del domingo).
+   * `date` ya apunta a la víspera; `liturgicalDate` mantiene la celebración del día.
+   */
+  vigil?: boolean;
   songs: Song[];
   createdAt: string;
   publishedBy?: string;

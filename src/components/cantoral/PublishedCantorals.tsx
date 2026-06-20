@@ -165,7 +165,14 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                     {formatDateShort(cantoral.date)} · {cantoral.liturgicalDate}
                   </div>
                 )}
-                <div className="text-lg sm:text-2xl font-bold mb-1">{cantoral.massTime}</div>
+                <div className="text-lg sm:text-2xl font-bold mb-1 flex items-center gap-2 flex-wrap">
+                  <span>{cantoral.massTime}</span>
+                  {cantoral.vigil && (
+                    <span className="text-[11px] font-bold bg-white/25 border border-white/40 rounded-full px-2 py-0.5 normal-case">
+                      🕯️ Misa vespertina
+                    </span>
+                  )}
+                </div>
                 <div className="text-sm opacity-90">{cantoral.parishName}</div>
               </div>
             </div>

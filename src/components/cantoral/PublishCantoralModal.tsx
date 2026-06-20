@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Send, Calendar, Church, Clock, Plus } from 'lucide-react';
 import { Song, InstrumentType } from '../../types';
-import { getTodayLocal, formatYmdForDisplay } from '../../utils/dateLocal';
+import { getTodayLocal, formatYmdForDisplay, addDaysLocal } from '../../utils/dateLocal';
 import { getLiturgicalDateForDate, getDateForLiturgicalName, isSunday, getLiturgicalDateNames } from '../../utils/liturgicalCalendar';
 import { LiturgicalColorBadge } from '../liturgy/LiturgicalColorBadge';
 import { validateCantoral, LiturgicalWarning } from '../../utils/liturgicalValidation';
@@ -13,9 +13,12 @@ import { toast } from 'sonner';
 /** Destino de publicación: una parroquia con su propia fecha/celebración/horario. */
 export interface PublishTarget {
   parishName: string;
+  /** Fecha real en que se canta. Para una vespertina, ya es la víspera. */
   date: string;
   liturgicalDate: string;
   massTime: string;
+  /** Misa vespertina/de primeras vísperas (la víspera por la tarde). */
+  vigil: boolean;
 }
 
 interface PublishCantoralModalProps {
@@ -39,6 +42,7 @@ interface ParishSchedule {
   date: string;
   liturgicalDate: string;
   massTime: string;
+  vigil: boolean;
 }
 
 /** Q38 — Normaliza horarios variados al formato 'HH:MM AM/PM' canónico. */
@@ -79,6 +83,10 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
   const [selectedDate, setSelectedDate] = useState(getTodayLocal());
   const [liturgicalDate, setLiturgicalDate] = useState('');
   const [massTime, setMassTime] = useState('');
+  // Misa vespertina: la celebración es la del día (el domingo), pero se canta la
+  // víspera por la tarde (el sábado). El usuario sigue eligiendo el día; al publicar
+  // anticipamos la fecha al día anterior.
+  const [vigil, setVigil] = useState(false);
   const [dateChangeSource, setDateChangeSource] = useState<'calendar' | 'liturgical' | null>(null);
 
   // ── Estado modo multi-parroquia ───────────────────────────────────────────
@@ -93,7 +101,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
     // para no obligar a re-elegir la fecha cuando ya es la correcta.
     const todayLiturgical = getLiturgicalDateForDate(today) || '';
     const init: Record<string, ParishSchedule> = {};
-    allParishes.forEach(p => { init[p] = { date: today, liturgicalDate: todayLiturgical, massTime: '' }; });
+    allParishes.forEach(p => { init[p] = { date: today, liturgicalDate: todayLiturgical, massTime: '', vigil: false }; });
     return init;
   });
 
@@ -173,23 +181,29 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
   };
 
   // ── Publicar ──────────────────────────────────────────────────────────────
+  // Para una vespertina la celebración es la del día elegido, pero se canta la
+  // víspera por la tarde → la fecha real es el día anterior.
+  const effectiveDate = (date: string, isVigil: boolean) => (isVigil ? addDaysLocal(date, -1) : date);
+
   const buildTargets = (): PublishTarget[] => {
     if (isMulti) {
       return Array.from(selectedParishes).map(parish => {
         const s = schedules[parish];
         return {
           parishName: parish,
-          date: s.date,
+          date: effectiveDate(s.date, s.vigil),
           liturgicalDate: s.liturgicalDate.trim(),
           massTime: normalizeMassTime(s.massTime),
+          vigil: s.vigil,
         };
       });
     }
     return [{
       parishName: allParishes[0] || parishName,
-      date: selectedDate,
+      date: effectiveDate(selectedDate, vigil),
       liturgicalDate: liturgicalDate.trim(),
       massTime: normalizeMassTime(massTime),
+      vigil,
     }];
   };
 
@@ -352,6 +366,41 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                                   ))}
                                 </select>
                               </div>
+                              {/* Tipo de Misa: del día vs vespertina */}
+                              <div>
+                                <label className="flex items-center gap-2 mb-1 text-sm font-bold text-blue-950 dark:text-white">
+                                  🕯️ Tipo de Misa
+                                </label>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => updateSchedule(parish, { vigil: false })}
+                                    className={`px-2 py-2 rounded-lg text-sm font-bold border-2 transition-all active:scale-95 ${
+                                      !s.vigil
+                                        ? 'bg-gradient-to-br from-blue-700 to-blue-900 text-white border-blue-800'
+                                        : 'bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white border-blue-200 dark:border-white/20'
+                                    }`}
+                                  >
+                                    Del día
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateSchedule(parish, { vigil: true })}
+                                    className={`px-2 py-2 rounded-lg text-sm font-bold border-2 transition-all active:scale-95 ${
+                                      s.vigil
+                                        ? 'bg-gradient-to-br from-purple-600 to-purple-800 text-white border-purple-800'
+                                        : 'bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white border-purple-200 dark:border-white/20'
+                                    }`}
+                                  >
+                                    Vespertina
+                                  </button>
+                                </div>
+                                {s.vigil && s.date && (
+                                  <p className="mt-1.5 text-xs text-purple-800 dark:text-purple-300">
+                                    Se publicará el <strong>{formatYmdForDisplay(addDaysLocal(s.date, -1), { weekday: 'long', day: 'numeric', month: 'long' })}</strong> por la tarde.
+                                  </p>
+                                )}
+                              </div>
                               {/* Horario */}
                               <div>
                                 <label className="flex items-center gap-2 mb-1 text-sm font-bold text-blue-950 dark:text-white">
@@ -446,6 +495,55 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                       <Plus className="w-4 h-4" />
                       Agregar solemnidad
                     </button>
+                  </div>
+
+                  {/* Tipo de Misa: del día vs vespertina (primeras vísperas) */}
+                  <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
+                    <label className="flex items-center gap-3 mb-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800">
+                        <span className="text-xl">🕯️</span>
+                      </div>
+                      <span className="text-xl font-bold text-blue-950 dark:text-white">Tipo de Misa</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setVigil(false)}
+                        className={`p-4 rounded-xl border-2 text-left transition-all active:scale-95 ${
+                          !vigil
+                            ? 'bg-gradient-to-br from-blue-700 to-blue-900 text-white border-blue-800 shadow-lg'
+                            : 'bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white border-blue-200 dark:border-white/20'
+                        }`}
+                      >
+                        <span className="block font-bold">Misa del día</span>
+                        <span className={`block text-xs mt-0.5 ${!vigil ? 'text-blue-100' : 'text-blue-700 dark:text-blue-300'}`}>
+                          Se canta el mismo día
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVigil(true)}
+                        className={`p-4 rounded-xl border-2 text-left transition-all active:scale-95 ${
+                          vigil
+                            ? 'bg-gradient-to-br from-purple-600 to-purple-800 text-white border-purple-800 shadow-lg'
+                            : 'bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white border-purple-200 dark:border-white/20'
+                        }`}
+                      >
+                        <span className="block font-bold">Misa vespertina</span>
+                        <span className={`block text-xs mt-0.5 ${vigil ? 'text-purple-100' : 'text-purple-700 dark:text-purple-300'}`}>
+                          Primeras vísperas (la víspera por la tarde)
+                        </span>
+                      </button>
+                    </div>
+                    {vigil && selectedDate && (
+                      <div className="mt-3 bg-purple-50 dark:bg-purple-950/40 border-2 border-purple-200 dark:border-purple-700 rounded-xl p-3 flex gap-2">
+                        <span className="text-lg">🕯️</span>
+                        <p className="text-sm text-purple-900 dark:text-purple-200">
+                          Se publicará para el <strong>{formatYmdForDisplay(addDaysLocal(selectedDate, -1), { weekday: 'long', day: 'numeric', month: 'long' })}</strong> por la tarde,
+                          como Misa anticipada de <strong>{liturgicalDate || 'la celebración elegida'}</strong>.
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Mass Time Selection */}

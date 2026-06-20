@@ -672,7 +672,7 @@ function AppContent() {
           newCantoral.songs,
           newCantoral.parishName,
           newCantoral.date,
-          newCantoral.liturgicalDate,
+          newCantoral.vigil ? `${newCantoral.liturgicalDate} (Misa vespertina)` : newCantoral.liturgicalDate,
           newCantoral.massTime,
           userProfile?.instruments ?? [],
           'Full Score',
@@ -929,7 +929,7 @@ function AppContent() {
       <CantoralQRDialog
         open={!!qrCantoral}
         cantoralId={qrCantoral?.id ?? ''}
-        cantoralLabel={qrCantoral ? `${qrCantoral.liturgicalDate} · ${qrCantoral.massTime}` : undefined}
+        cantoralLabel={qrCantoral ? `${qrCantoral.liturgicalDate}${qrCantoral.vigil ? ' (Misa vespertina)' : ''} · ${qrCantoral.massTime}` : undefined}
         parishName={qrCantoral?.parishName}
         pdfUrl={qrCantoral?.pdfUrl}
         onClose={() => setQrCantoral(null)}
