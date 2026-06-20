@@ -7,6 +7,7 @@ import { CantoralPreview } from '../cantoral/CantoralPreview';
 import { PublishCantoralModal, PublishTarget } from '../cantoral/PublishCantoralModal';
 import { LiturgicalSuggestions } from '../liturgy/LiturgicalSuggestions';
 import { SelectInstrumentModal } from '../cantoral/SelectInstrumentModal';
+import { AtrilMode } from '../atril/AtrilMode';
 import { Song, InstrumentType, PublishedCantoral } from '../../types';
 import { getGospelAcclamationName, getGospelAcclamationIcon, getCurrentLiturgicalSeason } from '../../utils/liturgicalSeason';
 import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji, getBuildableCelebrations, SpecialLiturgicalDay } from '../../utils/specialLiturgicalDays';
@@ -44,6 +45,7 @@ export function ChoirView({
   // 'null' = aún no se preguntó; al tocar el Kyrie en Pascua preguntamos.
   const [penitentialChoice, setPenitentialChoice] = useState<'kyrie' | 'aspersion' | null>(null);
   const [showAspersionDialog, setShowAspersionDialog] = useState(false);
+  const [showAtril, setShowAtril] = useState(false);
   const { songs: allSongs } = useSongs();
   const currentSeason = getCurrentLiturgicalSeason();
 
@@ -160,6 +162,16 @@ export function ChoirView({
     <>
       <div className="w-full max-w-md md:max-w-2xl mx-auto min-h-screen p-3 sm:p-4 md:p-6 pb-24 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
         <Home />
+
+        {/* Modo Atril — leer el repertorio durante la Misa */}
+        {cantoral.length > 0 && (
+          <button
+            onClick={() => setShowAtril(true)}
+            className="w-full mt-4 bg-gradient-to-br from-slate-800 to-slate-950 text-white py-3 px-4 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg border-2 border-slate-700 font-bold"
+          >
+            🎼 <span>Modo Atril</span>
+          </button>
+        )}
 
         {/* Selector de celebración — el constructor se adapta a la liturgia elegida.
             En Cuaresma/Semana Santa aparecen los oficios del Triduo para prepararlos. */}
@@ -369,6 +381,16 @@ export function ChoirView({
           onClose={() => setShowPublishModal(false)}
           onPublish={handlePublish}
           userInstruments={userInstruments}
+        />
+      )}
+
+      {/* Modo Atril */}
+      {showAtril && (
+        <AtrilMode
+          songs={cantoral}
+          userRole="Coro"
+          userInstrument={selectedInstrumentForMass}
+          onClose={() => setShowAtril(false)}
         />
       )}
 

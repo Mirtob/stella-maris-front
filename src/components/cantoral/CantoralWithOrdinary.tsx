@@ -7,6 +7,7 @@ import { getOrdinaryForCantoral } from '../../data/massOrdinaryVariants';
 import { PDFViewer } from '../common/PDFViewer';
 import { LyricsOnly } from '../songs/LyricsOnly';
 import { LyricsWithChords } from '../songs/LyricsWithChords';
+import { AtrilMode } from '../atril/AtrilMode';
 
 // Extrae el Drive file ID de una URL de Drive y arma la URL del proxy (PDF embebido).
 function getDriveProxyUrl(sheetMusicUrl?: string): { proxyUrl: string; driveViewUrl: string } | null {
@@ -31,6 +32,7 @@ interface CantoralWithOrdinaryProps {
 export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, userInstrument }: CantoralWithOrdinaryProps) {
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
+  const [showAtril, setShowAtril] = useState(false);
 
   // Pueblo fiel: SOLO la letra (sin partitura). Coro/Admin: letra (con acordes si
   // toca guitarra) + partitura.
@@ -185,14 +187,24 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
   return (
     <div className="w-full min-h-screen p-4 sm:p-6 md:p-8 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
       <div className="max-w-5xl mx-auto pt-8 pb-24">
-        {/* Back Button */}
-        <button
-          onClick={onBack}
-          className="mb-8 flex items-center gap-3 bg-gradient-to-br from-blue-900 to-blue-950 text-white px-3 sm:px-4 py-4 rounded-2xl border-2 border-blue-800 hover:border-blue-600 transition-all shadow-lg text-xl font-bold"
-        >
-          <ArrowLeft className="w-7 h-7" strokeWidth={2.5} />
-          Volver
-        </button>
+        {/* Back + Modo Atril */}
+        <div className="mb-8 flex items-center gap-3 flex-wrap">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-3 bg-gradient-to-br from-blue-900 to-blue-950 text-white px-3 sm:px-4 py-4 rounded-2xl border-2 border-blue-800 hover:border-blue-600 transition-all shadow-lg text-xl font-bold"
+          >
+            <ArrowLeft className="w-7 h-7" strokeWidth={2.5} />
+            Volver
+          </button>
+          {cantoral.songs.length > 0 && (
+            <button
+              onClick={() => setShowAtril(true)}
+              className="flex items-center gap-2 bg-gradient-to-br from-slate-800 to-slate-950 text-white px-4 py-4 rounded-2xl border-2 border-slate-700 transition-all shadow-lg text-xl font-bold active:scale-95"
+            >
+              🎼 <span>Modo Atril</span>
+            </button>
+          )}
+        </div>
 
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-900 to-blue-950 text-white rounded-3xl p-8 shadow-2xl mb-4 sm:mb-6 border-4 border-blue-800">
@@ -272,6 +284,16 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
           </p>
         </div>
       </div>
+
+      {/* Modo Atril */}
+      {showAtril && (
+        <AtrilMode
+          songs={cantoral.songs}
+          userRole={userRole}
+          userInstrument={userInstrument}
+          onClose={() => setShowAtril(false)}
+        />
+      )}
 
       {/* Modal de Canto Seleccionado */}
       {selectedSong && (
