@@ -1,0 +1,71 @@
+import { TourStep } from './Tour';
+
+// ── Persistencia (por rol, en localStorage) ──────────────────────────────────
+const SEEN_PREFIX = 'stella_maris_tour_seen_';
+
+/** ¿El usuario ya vio el tour de este rol? (true ante error → no molestar en bucle) */
+export function hasSeenTour(role: string): boolean {
+  try { return localStorage.getItem(SEEN_PREFIX + role) === '1'; } catch { return true; }
+}
+export function markTourSeen(role: string): void {
+  try { localStorage.setItem(SEEN_PREFIX + role, '1'); } catch { /* modo privado */ }
+}
+/** Para el botón "Ver tutorial de nuevo" (fases siguientes). */
+export function resetTour(role: string): void {
+  try { localStorage.removeItem(SEEN_PREFIX + role); } catch { /* noop */ }
+}
+
+// ── Guion: Pueblo fiel (F1) ──────────────────────────────────────────────────
+// Los pasos con `target` se saltan solos si el elemento no está (skipIfMissing),
+// p. ej. cuando la parroquia aún no tiene cantorales publicados.
+export const puebloFielTour: TourStep[] = [
+  {
+    id: 'intro',
+    title: '¡Bienvenido a Stella Maris! 🙏',
+    body: 'En 30 segundos te muestro cómo seguir la Misa con los cantos de tu parroquia.',
+  },
+  {
+    id: 'misas',
+    target: 'pf-misas',
+    skipIfMissing: true,
+    title: 'Las Misas de tu parroquia',
+    body: 'Aquí aparecen los cantorales que prepara el coro para las próximas semanas. Toca una Misa para abrirla.',
+  },
+  {
+    id: 'escuchar',
+    target: 'pf-escuchar',
+    skipIfMissing: true,
+    title: 'Escuchar los cantos 🎧',
+    body: '"Escuchar cantos" reproduce todos los cantos de la Misa, uno tras otro, como una radio. Sirve para practicar o rezar en casa.',
+  },
+  {
+    id: 'ver-cantos',
+    target: 'pf-ver-cantos',
+    skipIfMissing: true,
+    title: 'Ver la letra',
+    body: 'Con "Ver Cantos" y "Ver Ordinario" sigues la letra de cada canto y el orden de la Misa.',
+  },
+  {
+    id: 'notificaciones',
+    target: 'pf-notifications',
+    skipIfMissing: true,
+    title: 'Avisos de cantorales nuevos 🔔',
+    body: 'La campana te avisa cuando el coro publica un cantoral nuevo de tu parroquia.',
+  },
+  {
+    id: 'menu',
+    target: 'app-menu',
+    title: 'Tu menú',
+    body: 'Desde aquí cambias de parroquia o capilla, ves el calendario litúrgico y activas el modo oscuro.',
+  },
+  {
+    id: 'fin',
+    title: '¡Listo! ✝️',
+    body: 'Eso es todo. Puedes volver a ver este tutorial desde el menú. ¡Buena celebración!',
+  },
+];
+
+/** Tours disponibles por rol. Coro y Admin llegan en las fases F2/F3. */
+export const toursByRole: Record<string, TourStep[]> = {
+  'Pueblo fiel': puebloFielTour,
+};

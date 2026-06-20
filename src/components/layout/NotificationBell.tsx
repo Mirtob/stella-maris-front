@@ -59,6 +59,7 @@ export function NotificationBell({ cantorals, onListen }: NotificationBellProps)
     <>
       <button
         onClick={toggle}
+        data-tour="pf-notifications"
         aria-label={`Notificaciones${unread > 0 ? ` (${unread} sin leer)` : ''}`}
         className="fixed top-3 right-16 sm:top-4 sm:right-20 z-50 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-600 shadow-lg flex items-center justify-center text-blue-950 dark:text-white active:scale-95 hover:scale-110 transition-all"
       >

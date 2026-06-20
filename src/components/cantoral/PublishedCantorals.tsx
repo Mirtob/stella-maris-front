@@ -149,6 +149,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
     return (
       <div
         key={cantoral.id}
+        data-tour="pf-misas"
         className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl shadow-xl border-2 border-white/40 dark:border-white/20 overflow-hidden transition-colors"
       >
         {/* Cantoral Header */}
@@ -190,6 +191,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
             {onListen && (
               <button
                 onClick={() => onListen(cantoral)}
+                data-tour="pf-escuchar"
                 className="bg-gradient-to-br from-rose-600 to-red-700 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-rose-800 col-span-2"
               >
                 <Headphones className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
@@ -205,6 +207,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
             </button>
             <button
               onClick={() => setExpandedId(isExpandedCantoral ? null : cantoral.id)}
+              data-tour="pf-ver-cantos"
               className="bg-gradient-to-br from-green-600 to-green-700 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-sm sm:text-base font-bold shadow-lg border-2 border-green-800 leading-tight text-center"
             >
               <BookOpen className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />

@@ -7,6 +7,8 @@ import { ChoirView } from './components/layout/ChoirView';
 import { PublishedCantorals } from './components/cantoral/PublishedCantorals';
 import { Sidebar } from './components/layout/Sidebar';
 import { MenuButton } from './components/layout/MenuButton';
+import { Tour } from './components/tour/Tour';
+import { toursByRole, hasSeenTour, markTourSeen } from './components/tour/tours';
 import { NotificationBell } from './components/layout/NotificationBell';
 import { SolemnityAlerts } from './components/liturgy/SolemnityAlerts';
 
@@ -220,6 +222,8 @@ function AppContent() {
   const [chapelsByParish, setChapelsByParish] = useState<Record<string, { id: string; name: string }[]>>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showParishSelector, setShowParishSelector] = useState(false);
+  // Fuerza re-render al cerrar el tour (para que hasSeenTour() se reevalúe).
+  const [, setTourTick] = useState(0);
   const [qrCantoral, setQrCantoral] = useState<PublishedCantoral | null>(null);
   // Resumen tras publicar el mismo cantoral en varias parroquias (QR por parroquia).
   const [publishedBatch, setPublishedBatch] = useState<PublishedCantoral[] | null>(null);
@@ -996,6 +1000,14 @@ function AppContent() {
       </Suspense>
 
       <SolemnityAlerts />
+
+      {/* Tutorial en vivo (F1): auto la primera vez por rol, en la vista principal. */}
+      {view === 'main' && !showParishSelector && toursByRole[effectiveRole] && !hasSeenTour(effectiveRole) && (
+        <Tour
+          steps={toursByRole[effectiveRole]}
+          onClose={() => { markTourSeen(effectiveRole); setTourTick(t => t + 1); }}
+        />
+      )}
     </div>
   );
 }
