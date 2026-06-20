@@ -1,9 +1,10 @@
-import { User, Church, Music, Save, ArrowLeft, ShieldCheck, Loader, Trash2, Plus, Lock } from 'lucide-react';
+import { User, Church, Music, Save, ArrowLeft, ShieldCheck, Loader, Trash2, Plus, Lock, GraduationCap } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { UserProfile, InstrumentType, UserRole } from '../../types';
 import { updateRecoveryEmail } from '../../services/userProfiles';
 import { changePassword, isUsernameAccount } from '../../services/supabaseClient';
+import { resetAllTutorials } from '../tour/tours';
 import { ParishPicker } from './ParishPicker';
 
 interface ProfileSettingsProps {
@@ -543,6 +544,34 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
             </div>
           </div>
         )}
+
+        {/* Tutoriales — volver a verlos (F4) */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-indigo-200 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-blue-800 rounded-xl flex items-center justify-center flex-shrink-0">
+              <GraduationCap className="w-7 h-7 text-white" strokeWidth={2.5} />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800">Tutoriales</h2>
+          </div>
+
+          <p className="text-base text-gray-700 mb-4">
+            Vuelve a ver el recorrido guiado de tu perfil y los consejos del constructor y del Modo Atril,
+            como la primera vez.
+          </p>
+
+          <button
+            onClick={() => {
+              resetAllTutorials();
+              toast.success('Tutoriales reiniciados', {
+                description: 'Volverán a aparecer al usar cada pantalla.',
+              });
+            }}
+            className="w-full bg-gradient-to-br from-indigo-600 to-blue-800 text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow font-bold"
+          >
+            <GraduationCap className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
+            Volver a ver los tutoriales
+          </button>
+        </div>
 
         {/* Save Button */}
         <button

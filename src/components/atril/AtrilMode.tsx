@@ -5,6 +5,8 @@ import { transposeContent, getTransposedKey, formatTransposition } from '../../u
 import { LyricsWithChords } from '../songs/LyricsWithChords';
 import { LyricsOnly } from '../songs/LyricsOnly';
 import { useWakeLock } from '../../hooks/useWakeLock';
+import { Tour } from '../tour/Tour';
+import { atrilTips, hasSeenTip, markTipSeen } from '../tour/tours';
 
 interface AtrilModeProps {
   songs: Song[];
@@ -27,6 +29,8 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
   const [focus, setFocus] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(3); // 1..10
+  // Tip contextual la 1ª vez que se abre el atril (F4).
+  const [showTip, setShowTip] = useState(() => !hasSeenTip('atril'));
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | undefined>(undefined);
@@ -55,11 +59,13 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
   // ESC: salir del modo concentración o cerrar el atril.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Mientras el tip está abierto, ESC lo gestiona el propio Tour (no salir del atril).
+      if (showTip) return;
       if (e.key === 'Escape') { if (focus) setFocus(false); else onClose(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [focus, onClose]);
+  }, [focus, onClose, showTip]);
 
   // Motor de autoscroll (Fase B).
   useEffect(() => {
@@ -113,13 +119,13 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
 
         {/* Zoom */}
         <button onClick={() => setFontScale(s => Math.max(0.8, +(s - 0.15).toFixed(2)))} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label="Reducir letra"><ZoomOut className="w-6 h-6" strokeWidth={2.5} /></button>
-        <button onClick={() => setFontScale(s => Math.min(3, +(s + 0.15).toFixed(2)))} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label="Agrandar letra"><ZoomIn className="w-6 h-6" strokeWidth={2.5} /></button>
+        <button data-tour="atril-zoom" onClick={() => setFontScale(s => Math.min(3, +(s + 0.15).toFixed(2)))} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label="Agrandar letra"><ZoomIn className="w-6 h-6" strokeWidth={2.5} /></button>
 
         {/* Transpositor (solo con acordes) */}
         {canTranspose && (
           <>
             <button onClick={() => setTransposition(t => (t - 1 + 12) % 12)} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label="Bajar medio tono"><ChevronDown className="w-6 h-6" strokeWidth={2.5} /></button>
-            <span className="text-sm font-bold w-12 text-center text-amber-300 flex-shrink-0">{formatTransposition(transposition)}</span>
+            <span data-tour="atril-transpositor" className="text-sm font-bold w-12 text-center text-amber-300 flex-shrink-0">{formatTransposition(transposition)}</span>
             <button onClick={() => setTransposition(t => (t + 1) % 12)} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label="Subir medio tono"><ChevronUp className="w-6 h-6" strokeWidth={2.5} /></button>
             {transposition !== 0 && (
               <button onClick={() => setTransposition(0)} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label="Tono original"><RotateCcw className="w-5 h-5" strokeWidth={2.5} /></button>
@@ -128,7 +134,7 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
         )}
 
         {/* Modo concentración */}
-        <button onClick={toggleFocus} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label={focus ? 'Salir de pantalla completa' : 'Pantalla completa'}>
+        <button data-tour="atril-concentracion" onClick={toggleFocus} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label={focus ? 'Salir de pantalla completa' : 'Pantalla completa'}>
           {focus ? <Minimize2 className="w-6 h-6" strokeWidth={2.5} /> : <Maximize2 className="w-6 h-6" strokeWidth={2.5} />}
         </button>
       </div>
@@ -136,7 +142,7 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
       <div className="flex flex-1 min-h-0">
         {/* Sidebar de repertorio (oculta en modo concentración) */}
         {!focus && (
-          <aside className="w-44 sm:w-56 flex-shrink-0 bg-slate-950/60 border-r border-white/10 overflow-y-auto">
+          <aside data-tour="atril-repertorio" className="w-44 sm:w-56 flex-shrink-0 bg-slate-950/60 border-r border-white/10 overflow-y-auto">
             <div className="px-3 py-2 text-xs font-bold text-white/50 flex items-center gap-1.5"><List className="w-4 h-4" /> Repertorio</div>
             {songs.map((s, i) => (
               <button
@@ -174,7 +180,7 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
       </div>
 
       {/* Barra de autoscroll (Fase B) */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-slate-950 border-t border-white/10 flex-shrink-0" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
+      <div data-tour="atril-autoscroll" className="flex items-center gap-3 px-4 py-3 bg-slate-950 border-t border-white/10 flex-shrink-0" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
         <button onClick={() => setPlaying(p => !p)} className={`${btn} w-12 h-12 flex-shrink-0`} aria-label={playing ? 'Pausar desplazamiento' : 'Iniciar desplazamiento'}>
           {playing ? <Pause className="w-6 h-6" fill="currentColor" /> : <Play className="w-6 h-6" fill="currentColor" />}
         </button>
@@ -187,6 +193,14 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
         />
         <span className="text-sm font-bold w-6 text-center text-amber-300 flex-shrink-0">{speed}</span>
       </div>
+
+      {/* Tip contextual (F4): se muestra la 1ª vez que se abre el atril */}
+      {showTip && (
+        <Tour
+          steps={atrilTips}
+          onClose={() => { markTipSeen('atril'); setShowTip(false); }}
+        />
+      )}
     </div>
   );
 }

@@ -426,7 +426,7 @@ export function CategorySearch({
           )}
 
           {/* Search Bar */}
-          <div className="relative mb-4">
+          <div className="relative mb-4" data-tour="constructor-buscar">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-blue-900 dark:text-blue-300 pointer-events-none" />
             <input
               type="text"

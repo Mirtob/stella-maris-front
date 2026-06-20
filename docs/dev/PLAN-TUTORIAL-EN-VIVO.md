@@ -1,9 +1,10 @@
 # Plan — Tutorial en vivo (tour guiado por perfil)
 
-> **Estado (2026-06-20):** **F1, F2 y F3 implementadas** — motor `src/components/tour/`
-> (`Tour.tsx` + `tours.ts`) + tours de **Pueblo fiel**, **Coro** y **Admin/Canal** + auto-disparo
-> por rol + botón **"Ver tutorial"** en el Sidebar (reinicia el tour del rol activo). Solo queda
-> **F4 (tips contextuales en constructor/Atril + reinicio en ajustes)**. Decisiones 1–4 confirmadas.
+> **Estado (2026-06-20):** **COMPLETO (F1–F4).** Motor `src/components/tour/` (`Tour.tsx` +
+> `tours.ts`) + tours de **Pueblo fiel**, **Coro** y **Admin/Canal** con auto-disparo por rol +
+> botón **"Ver tutorial"** en el Sidebar + **tips contextuales** (constructor y Modo Atril) +
+> **"Volver a ver los tutoriales"** en Ajustes (`resetAllTutorials`). Decisiones 1–4 confirmadas.
+> No requiere migraciones SQL (persistencia 100% en `localStorage`).
 
 > Tour interactivo dentro de la app para **usuarios primerizos**: resalta los
 > elementos reales de la interfaz y enseña el **flujo natural de cada perfil**
@@ -79,7 +80,10 @@
 - ✅ **F2:** **tour Coro** (`data-tour` en ChoirView: celebración, categorías, sugerencias, publicar, Modo Atril + menú).
 - ✅ **F3:** **tour Admin/Canal** (`data-tour` en AdminDashboard: sync, songs, accounts) + botón **"Ver tutorial"**
   en el Sidebar (`onReplayTour` → `resetTour(rol)` + `navigate('main')` + re-disparo).
-- **F4 (~0.5–1 d):** tips contextuales (constructor, Modo Atril) + reinicio en ajustes; métricas opcionales.
+- ✅ **F4:** tips contextuales — `constructorTips` (1ª vez que se abre una categoría, target `constructor-buscar`)
+  y `atrilTips` (1ª vez que se abre el Modo Atril; targets `atril-repertorio/zoom/transpositor/concentracion/autoscroll`)
+  + tarjeta **"Volver a ver los tutoriales"** en ProfileSettings (`resetAllTutorials` limpia tours + tips).
+  Persistencia de tips con prefijo `stella_maris_tip_seen_`. Métricas: opcionales a futuro.
 
 ## Decisiones a confirmar
 1. **Motor propio** (sin dependencia) vs. librería (driver.js). *Recom.: propio.*

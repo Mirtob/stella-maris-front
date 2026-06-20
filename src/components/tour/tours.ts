@@ -10,9 +10,33 @@ export function hasSeenTour(role: string): boolean {
 export function markTourSeen(role: string): void {
   try { localStorage.setItem(SEEN_PREFIX + role, '1'); } catch { /* modo privado */ }
 }
-/** Para el botón "Ver tutorial de nuevo" (fases siguientes). */
+/** Para el botón "Ver tutorial de nuevo". */
 export function resetTour(role: string): void {
   try { localStorage.removeItem(SEEN_PREFIX + role); } catch { /* noop */ }
+}
+
+// ── Tips contextuales (F4) ────────────────────────────────────────────────────
+// Pequeños coachmarks que se disparan la 1ª vez que entras a una pantalla profunda
+// (constructor de categorías, Modo Atril). Persistencia propia por id de tip.
+const TIP_PREFIX = 'stella_maris_tip_seen_';
+
+export function hasSeenTip(id: string): boolean {
+  try { return localStorage.getItem(TIP_PREFIX + id) === '1'; } catch { return true; }
+}
+export function markTipSeen(id: string): void {
+  try { localStorage.setItem(TIP_PREFIX + id, '1'); } catch { /* modo privado */ }
+}
+
+// Registros para poder reiniciar TODO desde Ajustes.
+const ALL_ROLES = ['Pueblo fiel', 'Coro', 'Admin'];
+const ALL_TIP_IDS = ['constructor', 'atril'];
+
+/** Reinicia todos los tutoriales: tours por rol + tips contextuales. */
+export function resetAllTutorials(): void {
+  try {
+    ALL_ROLES.forEach((r) => localStorage.removeItem(SEEN_PREFIX + r));
+    ALL_TIP_IDS.forEach((t) => localStorage.removeItem(TIP_PREFIX + t));
+  } catch { /* noop */ }
 }
 
 // ── Guion: Pueblo fiel (F1) ──────────────────────────────────────────────────
@@ -161,3 +185,60 @@ export const toursByRole: Record<string, TourStep[]> = {
   'Coro': coroTour,
   'Admin': adminTour,
 };
+
+// ── Tip contextual: constructor de cantorales (F4) ────────────────────────────
+// Se dispara la 1ª vez que el coro abre una categoría para agregar cantos.
+export const constructorTips: TourStep[] = [
+  {
+    id: 'buscar',
+    target: 'constructor-buscar',
+    skipIfMissing: true,
+    title: 'Agrega un canto a este momento',
+    body: 'Busca por título, autor o misa, o usa las sugerencias de arriba. Toca "Agregar" y el canto queda en el cantoral; la categoría se cierra sola.',
+  },
+];
+
+// ── Tip contextual: Modo Atril (F4) ───────────────────────────────────────────
+// Se dispara la 1ª vez que se abre el Modo Atril.
+export const atrilTips: TourStep[] = [
+  {
+    id: 'intro',
+    title: 'Modo Atril 🎼',
+    body: 'Pensado para leer el repertorio durante la Misa, con la pantalla siempre encendida.',
+  },
+  {
+    id: 'repertorio',
+    target: 'atril-repertorio',
+    skipIfMissing: true,
+    title: 'Tu repertorio',
+    body: 'Toca cualquier canto de la lista para saltar a él. El canto activo queda resaltado.',
+  },
+  {
+    id: 'zoom',
+    target: 'atril-zoom',
+    skipIfMissing: true,
+    title: 'Tamaño de letra',
+    body: 'Agranda o reduce la letra para leerla cómoda desde tu posición.',
+  },
+  {
+    id: 'transpositor',
+    target: 'atril-transpositor',
+    skipIfMissing: true,
+    title: 'Transpositor 🎸',
+    body: 'Sube o baja el tono medio tono a la vez (solo con acordes). El tono mostrado se actualiza al instante.',
+  },
+  {
+    id: 'concentracion',
+    target: 'atril-concentracion',
+    skipIfMissing: true,
+    title: 'Pantalla completa',
+    body: 'Oculta la barra lateral y entra en modo concentración. ESC vuelve atrás.',
+  },
+  {
+    id: 'autoscroll',
+    target: 'atril-autoscroll',
+    skipIfMissing: true,
+    title: 'Desplazamiento automático',
+    body: 'Play hace avanzar la letra solo; ajusta la velocidad con la barra. Tocar la pantalla lo pausa.',
+  },
+];

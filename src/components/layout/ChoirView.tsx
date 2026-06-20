@@ -8,6 +8,8 @@ import { PublishCantoralModal, PublishTarget } from '../cantoral/PublishCantoral
 import { LiturgicalSuggestions } from '../liturgy/LiturgicalSuggestions';
 import { SelectInstrumentModal } from '../cantoral/SelectInstrumentModal';
 import { AtrilMode } from '../atril/AtrilMode';
+import { Tour } from '../tour/Tour';
+import { constructorTips, hasSeenTip, markTipSeen } from '../tour/tours';
 import { Song, InstrumentType, PublishedCantoral } from '../../types';
 import { getGospelAcclamationName, getGospelAcclamationIcon, getCurrentLiturgicalSeason } from '../../utils/liturgicalSeason';
 import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji, getBuildableCelebrations, SpecialLiturgicalDay } from '../../utils/specialLiturgicalDays';
@@ -46,6 +48,8 @@ export function ChoirView({
   const [penitentialChoice, setPenitentialChoice] = useState<'kyrie' | 'aspersion' | null>(null);
   const [showAspersionDialog, setShowAspersionDialog] = useState(false);
   const [showAtril, setShowAtril] = useState(false);
+  // Tip contextual del constructor (F4): 1ª vez que se abre una categoría.
+  const [showConstructorTip, setShowConstructorTip] = useState(false);
   const { songs: allSongs } = useSongs();
   const currentSeason = getCurrentLiturgicalSeason();
 
@@ -82,6 +86,14 @@ export function ChoirView({
       setShowInstrumentModal(true);
     }
   }, [userInstruments]);
+
+  // Tip del constructor: la 1ª vez que el coro abre una categoría para agregar cantos.
+  const anyCategoryExpanded = Object.values(expandedCategories).some(Boolean);
+  useEffect(() => {
+    if (anyCategoryExpanded && !hasSeenTip('constructor')) {
+      setShowConstructorTip(true);
+    }
+  }, [anyCategoryExpanded]);
 
   // Actualizar instrumento cuando se selecciona
   const handleSelectInstrument = (instrument: InstrumentType) => {
@@ -393,6 +405,14 @@ export function ChoirView({
           userRole="Coro"
           userInstrument={selectedInstrumentForMass}
           onClose={() => setShowAtril(false)}
+        />
+      )}
+
+      {/* Tip contextual del constructor (F4) */}
+      {showConstructorTip && !showAtril && (
+        <Tour
+          steps={constructorTips}
+          onClose={() => { markTipSeen('constructor'); setShowConstructorTip(false); }}
         />
       )}
 
