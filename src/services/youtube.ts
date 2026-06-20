@@ -243,69 +243,64 @@ export async function getVideoMetadata(videoId: string): Promise<YouTubeVideoMet
     return cached;
   }
 
-  const useRealApi = hasRealYouTubeApiKey();
-  if (!useRealApi) {
-    const mockMetadata: YouTubeVideoMetadata = {
-      id: videoId,
-      title: 'Canto Litúrgico',
-      description: 'Canto para la Santa Misa',
-      thumbnails: {
-        default: getThumbnailUrl(videoId, 'default'),
-        medium: getThumbnailUrl(videoId, 'medium'),
-        high: getThumbnailUrl(videoId, 'high'),
-        standard: getThumbnailUrl(videoId, 'standard'),
-        maxres: getThumbnailUrl(videoId, 'maxres'),
-      },
-      duration: 'PT3M45S',
-      durationFormatted: '3:45',
-      publishedAt: new Date().toISOString(),
-      channelTitle: 'Cantorales Católicos',
-      tags: ['canto católico', 'música litúrgica'],
-      viewCount: 1000,
-      likeCount: 50,
-    };
-
-    videoCache.set(videoId, mockMetadata);
-    return mockMetadata;
-  }
-
+  // La metadata se obtiene vía el proxy serverless /api/youtube (la API key vive
+  // solo en el servidor). Si el proxy no devuelve datos, se usa un mock para que
+  // el reproductor no quede en blanco.
   try {
-    const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&id=${encodeURIComponent(videoId)}&key=${encodeURIComponent(YOUTUBE_CONFIG.apiKey)}`;
+    const url = `/api/youtube?endpoint=videos&part=snippet,contentDetails,statistics&id=${encodeURIComponent(videoId)}`;
     const response = await fetch(url);
     const data = await response.json();
 
-    if (!response.ok || !data.items || data.items.length === 0) {
-      console.error('❌ Video no encontrado:', videoId, data);
-      return null;
+    if (response.ok && data.items && data.items.length > 0) {
+      const video = data.items[0];
+      const metadata: YouTubeVideoMetadata = {
+        id: video.id,
+        title: video.snippet.title,
+        description: video.snippet.description,
+        thumbnails: {
+          default: video.snippet.thumbnails.default?.url,
+          medium: video.snippet.thumbnails.medium?.url,
+          high: video.snippet.thumbnails.high?.url,
+          standard: video.snippet.thumbnails.standard?.url,
+          maxres: video.snippet.thumbnails.maxres?.url,
+        },
+        duration: video.contentDetails.duration,
+        durationFormatted: formatDuration(video.contentDetails.duration),
+        publishedAt: video.snippet.publishedAt,
+        channelTitle: video.snippet.channelTitle,
+        tags: video.snippet.tags,
+        viewCount: Number(video.statistics?.viewCount || 0),
+        likeCount: Number(video.statistics?.likeCount || 0),
+      };
+      videoCache.set(videoId, metadata);
+      return metadata;
     }
-
-    const video = data.items[0];
-    const metadata: YouTubeVideoMetadata = {
-      id: video.id,
-      title: video.snippet.title,
-      description: video.snippet.description,
-      thumbnails: {
-        default: video.snippet.thumbnails.default?.url,
-        medium: video.snippet.thumbnails.medium?.url,
-        high: video.snippet.thumbnails.high?.url,
-        standard: video.snippet.thumbnails.standard?.url,
-        maxres: video.snippet.thumbnails.maxres?.url,
-      },
-      duration: video.contentDetails.duration,
-      durationFormatted: formatDuration(video.contentDetails.duration),
-      publishedAt: video.snippet.publishedAt,
-      channelTitle: video.snippet.channelTitle,
-      tags: video.snippet.tags,
-      viewCount: Number(video.statistics?.viewCount || 0),
-      likeCount: Number(video.statistics?.likeCount || 0),
-    };
-
-    videoCache.set(videoId, metadata);
-    return metadata;
   } catch (error) {
-    console.error('❌ Error obteniendo metadata:', error);
-    return null;
+    console.error('❌ Error obteniendo metadata (proxy):', error);
   }
+
+  // Fallback (sin servidor/catálogo): datos mínimos para no romper la UI.
+  const mockMetadata: YouTubeVideoMetadata = {
+    id: videoId,
+    title: 'Canto Litúrgico',
+    description: 'Canto para la Santa Misa',
+    thumbnails: {
+      default: getThumbnailUrl(videoId, 'default'),
+      medium: getThumbnailUrl(videoId, 'medium'),
+      high: getThumbnailUrl(videoId, 'high'),
+      standard: getThumbnailUrl(videoId, 'standard'),
+      maxres: getThumbnailUrl(videoId, 'maxres'),
+    },
+    duration: 'PT3M45S',
+    durationFormatted: '3:45',
+    publishedAt: new Date().toISOString(),
+    channelTitle: 'Cantorales Católicos',
+    tags: ['canto católico', 'música litúrgica'],
+    viewCount: 0,
+    likeCount: 0,
+  };
+  videoCache.set(videoId, mockMetadata);
+  return mockMetadata;
 }
 
 /**
@@ -314,11 +309,9 @@ export async function getVideoMetadata(videoId: string): Promise<YouTubeVideoMet
  * NOTA: Requiere YouTube Data API key y Channel ID
  */
 export async function searchVideos(query: string, maxResults: number = 20): Promise<YouTubeSearchResult[]> {
-  const useRealApi = hasRealYouTubeApiKey() && hasValidYouTubeChannelId();
-  if (!useRealApi) return [];
-
   try {
-    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${encodeURIComponent(YOUTUBE_CONFIG.channelId)}&q=${encodeURIComponent(query)}&type=video&maxResults=${maxResults}&order=date&key=${encodeURIComponent(YOUTUBE_CONFIG.apiKey)}`;
+    // channelId lo fuerza el proxy desde el servidor (canal oficial).
+    const url = `/api/youtube?endpoint=search&part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=${maxResults}&order=date`;
     const response = await fetch(url);
     const data = await response.json();
 

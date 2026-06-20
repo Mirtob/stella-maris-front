@@ -273,21 +273,22 @@ function formatDuration(iso: string): string {
 // Llamadas a la API de YouTube
 // ──────────────────────────────────────────────
 
-const YT_API = 'https://www.googleapis.com/youtube/v3';
+// Lectura vía el proxy serverless /api/youtube (la API key vive solo en el servidor).
+const YT_PROXY = '/api/youtube';
 
-async function getUploadsPlaylistId(channelId: string, apiKey: string): Promise<string | null> {
-  const url = `${YT_API}/channels?part=contentDetails&id=${channelId}&key=${apiKey}`;
+async function getUploadsPlaylistId(channelId: string): Promise<string | null> {
+  const url = `${YT_PROXY}?endpoint=channels&part=contentDetails&id=${encodeURIComponent(channelId)}`;
   const res = await fetch(url);
   const data = await res.json();
   return data.items?.[0]?.contentDetails?.relatedPlaylists?.uploads ?? null;
 }
 
-async function getPlaylistVideoIds(playlistId: string, apiKey: string): Promise<string[]> {
+async function getPlaylistVideoIds(playlistId: string): Promise<string[]> {
   const ids: string[] = [];
   let pageToken = '';
 
   do {
-    const url = `${YT_API}/playlistItems?part=contentDetails&playlistId=${playlistId}&maxResults=50&key=${apiKey}${pageToken ? `&pageToken=${pageToken}` : ''}`;
+    const url = `${YT_PROXY}?endpoint=playlistItems&part=contentDetails&playlistId=${encodeURIComponent(playlistId)}&maxResults=50${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`;
     const res = await fetch(url);
     const data = await res.json();
     if (data.error) break;
@@ -302,13 +303,13 @@ async function getPlaylistVideoIds(playlistId: string, apiKey: string): Promise<
   return ids;
 }
 
-async function getVideoDetails(videoIds: string[], apiKey: string): Promise<any[]> {
+async function getVideoDetails(videoIds: string[]): Promise<any[]> {
   const results: any[] = [];
 
   // YouTube permite máximo 50 IDs por request
   for (let i = 0; i < videoIds.length; i += 50) {
     const batch = videoIds.slice(i, i + 50).join(',');
-    const url = `${YT_API}/videos?part=snippet,contentDetails,statistics&id=${batch}&key=${apiKey}`;
+    const url = `${YT_PROXY}?endpoint=videos&part=snippet,contentDetails,statistics&id=${encodeURIComponent(batch)}`;
     const res = await fetch(url);
     const data = await res.json();
     if (!data.error) results.push(...(data.items ?? []));
@@ -322,23 +323,20 @@ async function getVideoDetails(videoIds: string[], apiKey: string): Promise<any[
 // ──────────────────────────────────────────────
 
 export async function loadSongsFromYouTube(): Promise<Song[]> {
-  const apiKey = YOUTUBE_CONFIG.apiKey;
   const channelId = YOUTUBE_CONFIG.channelId;
-
-  const hasKey = apiKey && !apiKey.includes('XXXXXXXX') && !apiKey.includes('xxxxx');
   const hasChannel = channelId && !channelId.includes('UCxxxxxxxx');
+  if (!hasChannel) return [];
 
-  if (!hasKey || !hasChannel) return [];
-
-  const uploadsId = await getUploadsPlaylistId(channelId, apiKey);
+  // La API key vive en el servidor; el proxy responde vacío si no está configurada.
+  const uploadsId = await getUploadsPlaylistId(channelId);
   if (!uploadsId) return [];
 
-  const videoIds = await getPlaylistVideoIds(uploadsId, apiKey);
+  const videoIds = await getPlaylistVideoIds(uploadsId);
   if (videoIds.length === 0) return [];
 
   // Cargar videos y partituras en paralelo
   const [videos, sheets] = await Promise.all([
-    getVideoDetails(videoIds, apiKey),
+    getVideoDetails(videoIds),
     loadSheets(),
   ]);
 

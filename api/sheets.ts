@@ -114,7 +114,9 @@ async function rateLimit(req: VercelRequest, res: VercelResponse, endpoint: stri
 }
 
 const FOLDER_ID = process.env.VITE_GOOGLE_DRIVE_SHEET_MUSIC_FOLDER || '1AIUOrDiruV6_H8kPnBUEMONSdS91Ubhv';
-const API_KEY = process.env.VITE_GOOGLE_DRIVE_API_KEY || process.env.VITE_YOUTUBE_API_KEY || '';
+// Preferir GOOGLE_API_KEY (server-only, sin VITE_ → no entra al bundle).
+// Fallback a las VITE_ por compatibilidad mientras se migra la env var.
+const API_KEY = (process.env.GOOGLE_API_KEY || process.env.VITE_GOOGLE_DRIVE_API_KEY || process.env.VITE_YOUTUBE_API_KEY || '').trim();
 
 const FOLDER_MIME = 'application/vnd.google-apps.folder';
 // Cotas de seguridad para que un Drive enorme (o un ciclo de atajos) no

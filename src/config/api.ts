@@ -77,11 +77,11 @@ export const SUPABASE_CONFIG = {
 // ==========================================
 
 export const YOUTUBE_CONFIG = {
-  // API Key para requests públicas (leer videos)
-  apiKey: typeof import.meta !== 'undefined' && import.meta.env?.VITE_YOUTUBE_API_KEY 
-    ? import.meta.env.VITE_YOUTUBE_API_KEY 
-    : 'AIzaSyXXXXXXXXXXXXXXXX',
-  
+  // La API key NO vive en el cliente: las lecturas pasan por el proxy serverless
+  // /api/youtube (la clave está solo en el servidor). Se deja vacío a propósito
+  // para que no se inyecte ninguna clave en el bundle.
+  apiKey: '',
+
   // Channel ID del canal oficial de cantos
   channelId: typeof import.meta !== 'undefined' && import.meta.env?.VITE_YOUTUBE_CHANNEL_ID 
     ? import.meta.env.VITE_YOUTUBE_CHANNEL_ID 
@@ -138,12 +138,11 @@ export const YOUTUBE_CONFIG = {
 // ==========================================
 
 export const GOOGLE_DRIVE_CONFIG = {
-  // API Key para requests públicas
-  apiKey: typeof import.meta !== 'undefined'
-    ? import.meta.env?.VITE_GOOGLE_DRIVE_API_KEY || import.meta.env?.NEXT_PUBLIC_GOOGLE_DRIVE_API_KEY
-    : 'AIzaSyXXXXXXXXXXXXXXXX',
-  
-  // Client ID para OAuth
+  // La API key de Drive vive SOLO en el servidor (/api/sheets, /api/pdf).
+  // No se inyecta al bundle. Las lecturas del cliente pasan por esos endpoints.
+  apiKey: '',
+
+  // Client ID para OAuth (público por diseño)
   clientId: typeof import.meta !== 'undefined'
     ? import.meta.env?.VITE_GOOGLE_CLIENT_ID || import.meta.env?.NEXT_PUBLIC_GOOGLE_CLIENT_ID
     : 'xxxxx.apps.googleusercontent.com',
@@ -330,11 +329,9 @@ export function validateApiConfig(): { valid: boolean; errors: string[] } {
     errors.push('❌ VITE_SUPABASE_ANON_KEY no configurada');
   }
   
-  // Validar YouTube
-  if (!YOUTUBE_CONFIG.apiKey || YOUTUBE_CONFIG.apiKey.includes('XXXXX')) {
-    errors.push('⚠️ VITE_YOUTUBE_API_KEY no configurada (opcional)');
-  }
-  
+  // La API key de YouTube/Drive vive en el servidor (proxy /api/youtube y
+  // /api/sheets). No se valida en el cliente porque ya no se expone aquí.
+
   if (!YOUTUBE_CONFIG.channelId || YOUTUBE_CONFIG.channelId.includes('xxxxx')) {
     errors.push('⚠️ VITE_YOUTUBE_CHANNEL_ID no configurada (opcional)');
   }
