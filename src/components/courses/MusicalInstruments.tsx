@@ -74,8 +74,17 @@ export function MusicalInstruments({ onBack }: MusicalInstrumentsProps) {
   ];
 
   const handleLessonClick = (videoUrl: string) => {
-    // Si la lección aún no tiene video propio, abrir el canal oficial como respaldo
-    window.open(videoUrl || getChannelUrl(), '_blank');
+    // Si la lección aún no tiene video propio, abrir el canal oficial como respaldo.
+    // Usamos un <a> sintético en vez de window.open: en una PWA instalada/móvil
+    // window.open suele ser bloqueado y "no abre nada".
+    const url = videoUrl || getChannelUrl();
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   };
 
   return (

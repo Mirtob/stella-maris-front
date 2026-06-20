@@ -58,8 +58,16 @@ export function MusicalTheory({ onBack }: MusicalTheoryProps) {
   ];
 
   const handleLessonClick = (videoUrl: string) => {
-    // Si la lección aún no tiene video propio, abrir el canal oficial como respaldo
-    window.open(videoUrl || getChannelUrl(), '_blank');
+    // <a> sintético en vez de window.open (más fiable en PWA/móvil, donde
+    // window.open suele ser bloqueado).
+    const url = videoUrl || getChannelUrl();
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   };
 
   return (
