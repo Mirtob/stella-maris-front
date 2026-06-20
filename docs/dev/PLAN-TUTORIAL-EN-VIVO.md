@@ -1,5 +1,9 @@
 # Plan — Tutorial en vivo (tour guiado por perfil)
 
+> **Estado (2026-06-20):** **F1 implementada** (commit ee77a24) — motor `src/components/tour/`
+> (`Tour.tsx` + `tours.ts`) + tour de **Pueblo fiel** + auto-disparo por rol. **F2 (Coro), F3
+> (Admin + botón "Ver tutorial"), F4 (tips contextuales)** pendientes. Decisiones 1–4 confirmadas.
+
 > Tour interactivo dentro de la app para **usuarios primerizos**: resalta los
 > elementos reales de la interfaz y enseña el **flujo natural de cada perfil**
 > (Pueblo fiel, Coro, Admin/Canal).
