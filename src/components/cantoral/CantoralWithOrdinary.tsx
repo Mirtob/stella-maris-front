@@ -33,6 +33,14 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [showAtril, setShowAtril] = useState(false);
+  // Idioma del ordinario y las respuestas: español o latín (para todos los perfiles).
+  const [lang, setLang] = useState<'es' | 'la'>(() => {
+    try { return (localStorage.getItem('stella_maris_ordinario_lang') as 'es' | 'la') || 'es'; } catch { return 'es'; }
+  });
+  const changeLang = (l: 'es' | 'la') => {
+    setLang(l);
+    try { localStorage.setItem('stella_maris_ordinario_lang', l); } catch { /* modo privado */ }
+  };
 
   // Pueblo fiel: SOLO la letra (sin partitura). Coro/Admin: letra (con acordes si
   // toca guitarra) + partitura.
@@ -115,6 +123,18 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
               </div>
             </div>
           </div>
+
+          {/* Texto del ordinario en latín (para seguir/cantar la parte fija) */}
+          {lang === 'la' && section.latin && (
+            <div className="mt-3 bg-white/70 dark:bg-black/20 rounded-xl p-3 sm:p-4 border-2 border-purple-200 dark:border-purple-700">
+              <p className="text-xs font-bold uppercase tracking-wide text-purple-700 dark:text-purple-300 mb-1">
+                Texto en latín
+              </p>
+              <p className="text-base sm:text-lg leading-relaxed whitespace-pre-line font-medium text-gray-800 dark:text-gray-100">
+                {section.latin}
+              </p>
+            </div>
+          )}
         </div>
       );
     }
@@ -168,11 +188,16 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
             </div>
           </button>
 
-          {isExpanded && section.text && (
+          {isExpanded && (lang === 'la' ? (section.latin ?? section.text) : section.text) && (
             <div className="px-3 sm:px-4 pb-6">
               <div className="bg-white/50 dark:bg-black/20 rounded-2xl p-3 sm:p-4 border-3 border-black/10 dark:border-white/10">
+                {lang === 'la' && !section.latin && (
+                  <p className="text-xs italic text-gray-500 dark:text-gray-400 mb-2">
+                    Sin texto fijo en latín; se muestra en español.
+                  </p>
+                )}
                 <p className="text-lg sm:text-xl leading-relaxed whitespace-pre-line font-medium">
-                  {section.text}
+                  {lang === 'la' ? (section.latin ?? section.text) : section.text}
                 </p>
               </div>
             </div>
@@ -205,6 +230,28 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
               🎼 <span>Modo Atril</span>
             </button>
           )}
+
+          {/* Idioma del ordinario: Español / Latín (todos los perfiles) */}
+          <div
+            className="ml-auto inline-flex rounded-2xl border-2 border-blue-800 overflow-hidden shadow-lg"
+            role="group"
+            aria-label="Idioma del ordinario"
+          >
+            <button
+              onClick={() => changeLang('es')}
+              aria-pressed={lang === 'es'}
+              className={`px-3 sm:px-4 py-4 font-bold text-base sm:text-lg active:scale-95 transition-all ${lang === 'es' ? 'bg-blue-900 text-white' : 'bg-white/70 dark:bg-slate-800 text-blue-900 dark:text-blue-200'}`}
+            >
+              Español
+            </button>
+            <button
+              onClick={() => changeLang('la')}
+              aria-pressed={lang === 'la'}
+              className={`px-3 sm:px-4 py-4 font-bold text-base sm:text-lg active:scale-95 transition-all ${lang === 'la' ? 'bg-blue-900 text-white' : 'bg-white/70 dark:bg-slate-800 text-blue-900 dark:text-blue-200'}`}
+            >
+              Latín
+            </button>
+          </div>
         </div>
 
         {/* Header */}
