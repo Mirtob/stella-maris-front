@@ -24,6 +24,7 @@ export function CantoralPDFPreview({
   onClose
 }: CantoralPDFPreviewProps) {
   const [downloading, setDownloading] = useState(false);
+  const [downloadingScores, setDownloadingScores] = useState(false);
 
   // Agrupar cantos por categoría
   const categoryOrder = [
@@ -75,12 +76,14 @@ export function CantoralPDFPreview({
     'Salida': '⛪',
   };
 
-  const handleDownloadPDF = async () => {
-    if (downloading) return;
-    setDownloading(true);
+  // El folleto del Coro es, por defecto, letra con acordes (las partituras se
+  // consultan en el Modo Atril). `withScores` genera la variante opcional que
+  // además embebe todas las partituras (más pesada y tarda unos segundos).
+  const runDownload = async (withScores: boolean) => {
+    if (downloading || downloadingScores) return;
+    const setBusy = withScores ? setDownloadingScores : setDownloading;
+    setBusy(true);
     try {
-      // El folleto del Coro es la letra con acordes (en orden de la Misa). Las
-      // partituras del coro se consultan en el Modo Atril, no en este folleto.
       await generateChoirCantoralPDF(
         cantoral,
         parishName,
@@ -89,10 +92,12 @@ export function CantoralPDFPreview({
         massTime,
         userInstruments,
         'Full Score',
-        { download: true }
+        withScores ? { download: true, embedScores: true } : { download: true }
       );
       toast.success('PDF Generado', {
-        description: 'El folleto con letras y acordes se ha descargado'
+        description: withScores
+          ? 'El folleto con letras, acordes y partituras se ha descargado'
+          : 'El folleto con letras y acordes se ha descargado'
       });
     } catch (error) {
       console.error('Error al generar PDF:', error);
@@ -100,9 +105,12 @@ export function CantoralPDFPreview({
         description: 'Por favor intenta nuevamente'
       });
     } finally {
-      setDownloading(false);
+      setBusy(false);
     }
   };
+
+  const handleDownloadPDF = () => runDownload(false);
+  const handleDownloadWithScores = () => runDownload(true);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
@@ -255,7 +263,7 @@ export function CantoralPDFPreview({
             </button>
             <button
               onClick={handleDownloadPDF}
-              disabled={downloading}
+              disabled={downloading || downloadingScores}
               className="flex-1 bg-gradient-to-r from-green-700 to-green-800 text-white py-4 px-4 rounded-xl font-bold text-lg hover:shadow-lg active:scale-95 transition-all border-2 border-green-900 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               <div className="flex items-center justify-center gap-2">
@@ -276,6 +284,31 @@ export function CantoralPDFPreview({
               </div>
             </button>
           </div>
+
+          {/* Variante opcional: folleto del coro CON las partituras embebidas.
+              Más pesado y tarda unos segundos (renderiza cada partitura). */}
+          <button
+            onClick={handleDownloadWithScores}
+            disabled={downloading || downloadingScores}
+            className="w-full bg-white dark:bg-gray-800 text-green-800 dark:text-green-300 py-3 px-4 rounded-xl font-bold hover:bg-green-50 dark:hover:bg-gray-700 active:scale-95 transition-all border-2 border-green-700 disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            <div className="flex items-center justify-center gap-2">
+              {downloadingScores ? (
+                <>
+                  <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                  </svg>
+                  Generando con partituras…
+                </>
+              ) : (
+                <>
+                  <Download className="w-5 h-5" />
+                  Descargar con partituras
+                </>
+              )}
+            </div>
+          </button>
         </div>
       </div>
     </div>
