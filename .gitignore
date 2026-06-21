@@ -11,6 +11,11 @@ dist/
 .env.*.local
 .env.production
 
+# Credenciales reales del manual de entrega — NUNCA subir (solo la PLANTILLA se versiona)
+docs/entrega/CREDENCIALES.local.md
+**/CREDENCIALES.local.md
+BACKUP-MANIFEST.txt
+
 # Logs
 *.log
 dev-server.log
