@@ -196,7 +196,8 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
             <ArrowLeft className="w-7 h-7" strokeWidth={2.5} />
             Volver
           </button>
-          {cantoral.songs.length > 0 && (
+          {/* Modo Atril: solo para el perfil Coro */}
+          {userRole === 'Coro' && cantoral.songs.length > 0 && (
             <button
               onClick={() => setShowAtril(true)}
               className="flex items-center gap-2 bg-gradient-to-br from-slate-800 to-slate-950 text-white px-4 py-4 rounded-2xl border-2 border-slate-700 transition-all shadow-lg text-xl font-bold active:scale-95"
