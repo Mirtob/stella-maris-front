@@ -8,6 +8,9 @@ Carpeta con los documentos de cierre y traspaso. Orden sugerido de lectura:
    (backend + frontend) para validar antes del cierre.
 3. **[BACKUP-Y-RESTAURACION.md](BACKUP-Y-RESTAURACION.md)** — respaldo local (este PC) y
    cómo levantar la app desde otro computador. Script: `scripts/backup-local.ps1`.
+3b. **[LEVANTAR-LA-APP-PASO-A-PASO.md](LEVANTAR-LA-APP-PASO-A-PASO.md)** — runbook
+   detallado para poner la app a funcionar en un computador nuevo (desarrollo local y
+   producción desde cero), con solución de problemas.
 4. **[MANUAL-ADMINISTRADOR-CRITICO.md](MANUAL-ADMINISTRADOR-CRITICO.md)** — info crítica
    para futuros administradores: servicios, credenciales (inventario) y operación.
 5. **[CREDENCIALES.PLANTILLA.md](CREDENCIALES.PLANTILLA.md)** — plantilla de credenciales.
