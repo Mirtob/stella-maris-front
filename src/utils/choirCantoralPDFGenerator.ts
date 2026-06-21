@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import { Song, InstrumentType } from '../types';
 import { getDrivePdfProxyUrl } from './driveProxy';
+import { isOrdinary } from './ordinary';
 
 type VoiceSelection = 'Soprano' | 'Contralto' | 'Tenor' | 'Bajo' | 'Full Score';
 
@@ -8,11 +9,12 @@ interface GenerateOptions {
   /** Si true, dispara la descarga local del PDF. Default: true (compatibilidad). */
   download?: boolean;
   /**
-   * Si true, además de la letra con acordes, embebe las páginas de la partitura
-   * (PDF de Drive) de cada canto, intercaladas en orden. Para instrumentistas (Coro).
+   * Embebe las páginas de la partitura (PDF de Drive) en una sección al final.
    * Requiere red (descarga cada partitura vía el proxy). Default: false.
+   *   - `true`       → todas las partituras (folleto Full Score del Coro).
+   *   - `'ordinary'` → solo el ordinario + Padre Nuestro (PDF publicado/QR, más liviano).
    */
-  embedScores?: boolean;
+  embedScores?: boolean | 'ordinary';
 }
 
 /**
@@ -479,25 +481,34 @@ export const generateChoirCantoralPDF = async (
   // Solo en el folleto del Coro (embedScores). Va DESPUÉS de todas las letras con
   // acordes, en una sección aparte (mismo orden por categoría que la Sección 1).
   if (options.embedScores) {
-    pdf.addPage();
-    yPosition = margin;
-    addLogo(8);
-    pdf.setFontSize(22);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(30, 58, 138); // blue-900
-    const secTitle = 'Partituras';
-    pdf.text(secTitle, (pageWidth - pdf.getTextWidth(secTitle)) / 2, yPosition);
-    yPosition += 9;
-    pdf.setFontSize(11);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(107, 114, 128); // gray-500
-    const secSub = 'Ordenadas por parte de la Misa';
-    pdf.text(secSub, (pageWidth - pdf.getTextWidth(secSub)) / 2, yPosition);
+    const onlyOrdinary = options.embedScores === 'ordinary';
+    const include = (song: Song) => !!song.sheetMusicUrl && (!onlyOrdinary || isOrdinary(song));
+    // ¿Hay alguna partitura que embeber? Si no, no agregamos la sección vacía.
+    const hasAny = sortedCategories.some(cat => groupedSongs[cat].some(include));
 
-    for (const category of sortedCategories) {
-      for (const song of groupedSongs[category]) {
-        if (song.sheetMusicUrl) {
-          await embedPartituraPages(pdf, song, { pageWidth, pageHeight, margin });
+    if (hasAny) {
+      pdf.addPage();
+      yPosition = margin;
+      addLogo(8);
+      pdf.setFontSize(22);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(30, 58, 138); // blue-900
+      const secTitle = onlyOrdinary ? 'Partituras del ordinario' : 'Partituras';
+      pdf.text(secTitle, (pageWidth - pdf.getTextWidth(secTitle)) / 2, yPosition);
+      yPosition += 9;
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(107, 114, 128); // gray-500
+      const secSub = onlyOrdinary
+        ? 'Kyrie, Gloria, Santo, Cordero de Dios y Padre Nuestro'
+        : 'Ordenadas por parte de la Misa';
+      pdf.text(secSub, (pageWidth - pdf.getTextWidth(secSub)) / 2, yPosition);
+
+      for (const category of sortedCategories) {
+        for (const song of groupedSongs[category]) {
+          if (include(song)) {
+            await embedPartituraPages(pdf, song, { pageWidth, pageHeight, margin });
+          }
         }
       }
     }

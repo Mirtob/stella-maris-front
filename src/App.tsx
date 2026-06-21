@@ -676,7 +676,9 @@ function AppContent() {
           newCantoral.massTime,
           userProfile?.instruments ?? [],
           'Full Score',
-          { download: false }
+          // El PDF publicado (QR) embebe solo las partituras del ordinario + Padre
+          // Nuestro: útil para el coro sin engordar demasiado el folleto compartido.
+          { download: false, embedScores: 'ordinary' }
         );
         const uploadResult = await uploadCantoralPDF(newCantoral.id, blob);
         if (uploadResult.ok && uploadResult.publicUrl) {

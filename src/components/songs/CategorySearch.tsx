@@ -10,6 +10,8 @@ import { AddGloriaDialog } from '../cantoral/AddGloriaDialog';
 import { AddPadreNuestroDialog } from '../cantoral/AddPadreNuestroDialog';
 import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji } from '../../utils/specialLiturgicalDays';
 import { getCurrentLiturgicalSeason } from '../../utils/liturgicalSeason';
+import { isOrdinary } from '../../utils/ordinary';
+import { resolveOrdinarySheetMusic } from '../../utils/ordinarySheetMusic';
 
 interface CategorySearchProps {
   category: string;
@@ -122,6 +124,18 @@ export function CategorySearch({
     matchesSearch(song.massName, searchTerm)
   );
 
+  // Agrega un canto al cantoral; si es parte del ordinario sin partitura vinculada,
+  // intenta resolverla en Drive antes de agregarlo (best-effort, no bloquea la UI).
+  const addSongEnriched = (song: Song) => {
+    if (isOrdinary(song) && !song.sheetMusicUrl) {
+      resolveOrdinarySheetMusic(song)
+        .then(onAddToCantoral)
+        .catch(() => onAddToCantoral(song));
+    } else {
+      onAddToCantoral(song);
+    }
+  };
+
   const handleAddSong = (song: Song) => {
     // Solo Comunión permite múltiples cantos
     if (category !== 'Comunión') {
@@ -162,8 +176,8 @@ export function CategorySearch({
       // Primera pregunta: ¿Agregar Santo y Cordero de la misma misa?
       setShowSantoCordeloDialog(true);
     } else {
-      // Para otros cantos, simplemente agregar
-      onAddToCantoral(song);
+      // Para otros cantos, simplemente agregar (enriqueciendo si es ordinario)
+      addSongEnriched(song);
 
       // Si es Ofertorio y aún no hay Padre Nuestro en el cantoral, preguntar
       if (song.category === 'Ofertorio' && !cantoral.some(s => s.category === 'Padre Nuestro')) {
@@ -184,7 +198,7 @@ export function CategorySearch({
     );
 
     if (existing) {
-      onAddToCantoral({ ...existing, category: 'Padre Nuestro' });
+      addSongEnriched({ ...existing, category: 'Padre Nuestro' });
     } else {
       // Crear canto sintético — buscar partitura en Drive por nombre
       let sheetMusicUrl: string | undefined;
@@ -235,9 +249,9 @@ export function CategorySearch({
     const corderoToAdd = pendingCordero;
     const gloriaToAdd = pendingGloria;
 
-    if (kyrieToAdd) onAddToCantoral(kyrieToAdd);
-    if (santoToAdd) onAddToCantoral(santoToAdd);
-    if (corderoToAdd) onAddToCantoral(corderoToAdd);
+    if (kyrieToAdd) addSongEnriched(kyrieToAdd);
+    if (santoToAdd) addSongEnriched(santoToAdd);
+    if (corderoToAdd) addSongEnriched(corderoToAdd);
 
     setShowSantoCordeloDialog(false);
     
@@ -255,7 +269,7 @@ export function CategorySearch({
     // El usuario NO quiere el Santo y Cordero automático
     // Solo agregar el Kyrie
     if (pendingKyrie) {
-      onAddToCantoral(pendingKyrie);
+      addSongEnriched(pendingKyrie);
     }
     
     setShowSantoCordeloDialog(false);
@@ -276,8 +290,8 @@ export function CategorySearch({
       // Remover Gloria existente si lo hay
       const existingGloria = cantoral.filter(s => s.category === 'Gloria');
       existingGloria.forEach(s => onRemoveFromCantoral(s.id));
-      
-      onAddToCantoral(pendingGloria);
+
+      addSongEnriched(pendingGloria);
     }
     
     setShowGloriaDialog(false);
