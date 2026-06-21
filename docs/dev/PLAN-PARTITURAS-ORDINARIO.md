@@ -1,5 +1,14 @@
 # Plan — Partituras del ordinario en PDF y Modo Atril
 
+> **Actualización (2026-06-20): cantorales/PDF separados por perfil.**
+> - **Pueblo fiel** (`generateCantoralPDF`): letra SIN acordes + partituras del ordinario embebidas.
+> - **Coro** (`generateChoirCantoralPDF`): letra de todos los cantos CON acordes, en orden de la Misa,
+>   **sin** partituras embebidas (los callers ya no pasan `embedScores`).
+> - **Modo Atril**: Coro = partitura de TODOS los cantos con `sheetMusicUrl` (fallback letra+acordes);
+>   Pueblo fiel = partitura solo del ordinario. Repertorio ordenado por la Misa (`sortByMassOrder`).
+> - Embebido de partituras compartido en `utils/embedPartitura.ts`. Efecto secundario: publicar
+>   vuelve a ser rápido (ya no se renderizan PDFs al publicar).
+
 > **Estado (2026-06-20): IMPLEMENTADO (F1–F4).**
 > - **F1** `utils/ordinary.ts` (`ORDINARY_CATEGORIES` + `isOrdinary`) y `utils/ordinarySheetMusic.ts`
 >   (`resolveOrdinarySheetMusic` con caché de `/api/sheets`, match por Misa+parte). Enganchado en

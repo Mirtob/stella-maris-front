@@ -79,9 +79,8 @@ export function CantoralPDFPreview({
     if (downloading) return;
     setDownloading(true);
     try {
-      // embedScores: el folleto del Coro incluye, por canto, la letra con acordes y
-      // a continuación las páginas de su partitura (para instrumentistas). Descarga
-      // cada partitura vía el proxy, por eso puede tardar unos segundos.
+      // El folleto del Coro es la letra con acordes (en orden de la Misa). Las
+      // partituras del coro se consultan en el Modo Atril, no en este folleto.
       await generateChoirCantoralPDF(
         cantoral,
         parishName,
@@ -90,10 +89,10 @@ export function CantoralPDFPreview({
         massTime,
         userInstruments,
         'Full Score',
-        { embedScores: true }
+        { download: true }
       );
       toast.success('PDF Generado', {
-        description: 'El folleto con letras, acordes y partituras se ha descargado'
+        description: 'El folleto con letras y acordes se ha descargado'
       });
     } catch (error) {
       console.error('Error al generar PDF:', error);
@@ -210,7 +209,7 @@ export function CantoralPDFPreview({
                       )}
                       {song.sheetMusicUrl && (
                         <span className="flex items-center gap-1">
-                          📄 Partitura disponible
+                          📄 Partitura en Modo Atril
                         </span>
                       )}
                     </div>
@@ -266,7 +265,7 @@ export function CantoralPDFPreview({
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                     </svg>
-                    Generando con partituras…
+                    Generando folleto…
                   </>
                 ) : (
                   <>

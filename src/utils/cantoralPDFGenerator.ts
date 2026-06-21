@@ -1,6 +1,8 @@
 import { jsPDF } from 'jspdf';
 import { PublishedCantoral, Song } from '../types';
 import { getCurrentLiturgicalSeason } from './liturgicalSeason';
+import { isOrdinary, sortByMassOrder } from './ordinary';
+import { embedPartituraPages } from './embedPartitura';
 
 interface PDFGeneratorOptions {
   cantoral: PublishedCantoral;
@@ -346,6 +348,35 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   });
 
   addPageFooter();
+
+  // ─── PARTITURAS DEL ORDINARIO ───
+  // El folleto del Pueblo fiel incluye, al final, las partituras de las partes
+  // fijas de la Misa (Kyrie, Gloria, Santo, Cordero de Dios) y del Padre Nuestro
+  // si se canta. Se renderizan con PDF.js desde Drive (vía el proxy interno).
+  const ordinaryWithScore = sortByMassOrder(
+    cantoral.songs.filter(s => isOrdinary(s) && !!s.sheetMusicUrl)
+  );
+  if (ordinaryWithScore.length > 0) {
+    pdf.addPage();
+    pageNum++;
+    addPageHeader();
+    y = 30;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(18);
+    pdf.setTextColor(...colors.primary);
+    pdf.text('Partituras del ordinario', pageW / 2, y, { align: 'center' });
+    y += 8;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.setTextColor(110, 110, 110);
+    pdf.text('Kyrie, Gloria, Santo, Cordero de Dios y Padre Nuestro', pageW / 2, y, { align: 'center' });
+    addPageFooter();
+
+    const layout = { pageWidth: pageW, pageHeight: pageH, margin };
+    for (const song of ordinaryWithScore) {
+      await embedPartituraPages(pdf, song, layout);
+    }
+  }
 
   // Descargar
   const safeFileName = cleanText(cantoral.liturgicalDate).replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');

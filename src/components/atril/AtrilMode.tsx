@@ -7,7 +7,7 @@ import { LyricsOnly } from '../songs/LyricsOnly';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { Tour } from '../tour/Tour';
 import { atrilTips, hasSeenTip, markTipSeen } from '../tour/tours';
-import { isOrdinary } from '../../utils/ordinary';
+import { isOrdinary, sortByMassOrder } from '../../utils/ordinary';
 import { getDrivePdfProxyUrl } from '../../utils/driveProxy';
 import { PDFViewer } from '../common/PDFViewer';
 
@@ -51,10 +51,16 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
   const isPuebloFiel = userRole === 'Pueblo fiel';
   const showChords = !isPuebloFiel && userInstrument === 'Guitarra';
 
-  const song: Song | undefined = songs[index];
-  // Partes del ordinario (Kyrie/Gloria/Santo/Cordero/Padre Nuestro) se leen desde
-  // la partitura. Si la tienen vinculada, mostramos el visor de PDF en vez de la letra.
-  const scoreProxy = isOrdinary(song) ? getDrivePdfProxyUrl(song?.sheetMusicUrl) : null;
+  // Repertorio en orden de la Misa (Entrada → Kyrie → … → Salida).
+  const orderedSongs = sortByMassOrder(songs);
+  const song: Song | undefined = orderedSongs[index];
+
+  // Cuándo mostrar la partitura en vez de la letra:
+  //  - Coro: TODOS los cantos que tengan partitura (la letra con acordes queda de
+  //    respaldo para los que no la tienen).
+  //  - Pueblo fiel: solo las partes fijas del ordinario.
+  const scoreEligible = !isPuebloFiel || isOrdinary(song);
+  const scoreProxy = scoreEligible ? getDrivePdfProxyUrl(song?.sheetMusicUrl) : null;
   const showScore = !!scoreProxy;
   const canTranspose = !showScore && showChords && !!song?.lyrics;
   const displayedLyrics = song?.lyrics && canTranspose
@@ -164,7 +170,7 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
         {!focus && (
           <aside data-tour="atril-repertorio" className="w-44 sm:w-56 flex-shrink-0 bg-slate-950/60 border-r border-white/10 overflow-y-auto">
             <div className="px-3 py-2 text-xs font-bold text-white/50 flex items-center gap-1.5"><List className="w-4 h-4" /> Repertorio</div>
-            {songs.map((s, i) => (
+            {orderedSongs.map((s, i) => (
               <button
                 key={s.id || i}
                 onClick={() => setIndex(i)}

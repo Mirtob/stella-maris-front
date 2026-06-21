@@ -676,9 +676,11 @@ function AppContent() {
           newCantoral.massTime,
           userProfile?.instruments ?? [],
           'Full Score',
-          // El PDF publicado (QR) embebe solo las partituras del ordinario + Padre
-          // Nuestro: útil para el coro sin engordar demasiado el folleto compartido.
-          { download: false, embedScores: 'ordinary' }
+          // PDF del coro = letra con acordes (en orden de la Misa). Las partituras
+          // del coro se ven en el Modo Atril, no en este folleto. El folleto del
+          // Pueblo fiel (letra sin acordes + partituras del ordinario) se genera
+          // aparte con generateCantoralPDF.
+          { download: false }
         );
         const uploadResult = await uploadCantoralPDF(newCantoral.id, blob);
         if (uploadResult.ok && uploadResult.publicUrl) {
