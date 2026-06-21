@@ -15,6 +15,9 @@ Carpeta con los documentos de cierre y traspaso. Orden sugerido de lectura:
    para futuros administradores: servicios, credenciales (inventario) y operación.
 5. **[CREDENCIALES.PLANTILLA.md](CREDENCIALES.PLANTILLA.md)** — plantilla de credenciales.
    Copiar a `CREDENCIALES.local.md` (gitignored) o a un gestor de contraseñas; **no** versionar valores reales.
+6. **[MIGRACION-A-CUENTA-OFICIAL.md](MIGRACION-A-CUENTA-OFICIAL.md)** — paso a paso para
+   dejar todos los servicios vinculados a **stellamarismusicacatolica@gmail.com** en lugar
+   de la cuenta personal (transferencias de propiedad por servicio + verificación).
 
 Documentos relacionados existentes:
 - `docs/BACKUP-SETUP.md` — backup de Supabase (Pro/PITR o script).
