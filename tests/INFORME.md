@@ -11,6 +11,35 @@
 
 ---
 
+## Corrida 2026-06-20 — Smoke headless contra producción (feature: Misa vespertina)
+
+| Campo | Valor |
+|---|---|
+| **Commit** | `10a86a0` (feat: Misa vespertina / primeras vísperas al publicar) |
+| **Entorno** | Producción — `https://stella-maris-front.vercel.app/` + Supabase `szoaiiipglebpewwzfgh` |
+| **Ejecutado por** | Claude Code (automatizado, anon key) |
+| **Hora** | 2026-06-20 21:10 UTC |
+| **Resultado** | ✅ **APROBADO** — 17/17 suite integrada + verificación de feature OK |
+
+### Suite integrada (`node tests/integration/run-all.mjs`) — 17/17 ✅
+
+- **Supabase básicos (5/5):** SELECT solo `published`; `search_songs` accesible; `is_admin()` = FALSE para anon; INSERT sin auth bloqueado por RLS; DELETE songs sin admin bloqueado.
+- **Storage (3/3):** LIST anon no enumera; UPLOAD anon rechazado; path traversal `../etc/passwd` rechazado (Bucket not found).
+- **Endpoints Vercel (3/3):** `/api/sheets` 200 con CORS + RateLimit; CORS niega `evil.example.com`; `/api/pdf?id=hack` → 400.
+- **RPC search_songs (6/6):** las 6 combinaciones de filtros respondieron sin error.
+
+### Verificación puntual — Misa vespertina (migración `20260620_cantoral_vigil`)
+
+| Check | Esperado | Observado | Estado |
+|---|---|---|---|
+| Columna `vigil` legible vía anon (`SELECT id,status,vigil`) | Sin error de columna | 5 filas, `vigil` presente | ✅ Pass |
+| Filtro `.eq('vigil', true)` (tipo boolean) | Sin error | OK — 0 cantorales vespertinos hoy | ✅ Pass |
+| Bundle desplegado contiene `"Misa vespertina"` | Presente (deploy activo) | Encontrado en `index-BnPMGvGG.js` | ✅ Pass |
+
+**Conclusión:** Deploy del commit `10a86a0` activo en prod, columna `vigil` aplicada en `published_cantorals`, backend sano. **No automatizable:** el insert autenticado (publicar una vespertina como coro) requiere sesión — pendiente de validación manual end-to-end desde cuenta de coro (marcar "vespertina" → cae bajo la víspera con badge 🕯️).
+
+---
+
 ## 1. Resumen ejecutivo
 
 Stella Maris fue sometida a un protocolo de pruebas de tres etapas: **integrales** (lógica de
