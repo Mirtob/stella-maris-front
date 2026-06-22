@@ -41,6 +41,23 @@ export function SongManager() {
   const [editSong, setEditSong] = useState<Song | null>(null);
   const [savingSong, setSavingSong] = useState(false);
   const [f, setF] = useState({ title: '', author: '', artist: '', massMoment: 'entrada' as MassMoment, youtubeId: '', driveFileId: '', duration: '', originalKey: '', massName: '', lyrics: '' });
+  // Partituras disponibles en la carpeta de Drive (para elegir sin buscar el ID a mano).
+  const [sheets, setSheets] = useState<{ id: string; name: string }[]>([]);
+  const [loadingSheets, setLoadingSheets] = useState(false);
+
+  // Cargar la lista de partituras de Drive al abrir el editor (una vez).
+  useEffect(() => {
+    if (!editSong || sheets.length > 0 || loadingSheets) return;
+    setLoadingSheets(true);
+    fetch('/api/sheets')
+      .then(r => (r.ok ? r.json() : { files: [] }))
+      .then(d => setSheets((d.files || [])
+        .filter((x: any) => (x.mimeType || '').includes('pdf'))
+        .map((x: any) => ({ id: x.id, name: x.name }))
+        .sort((a: any, b: any) => a.name.localeCompare(b.name))))
+      .catch(() => { /* sin red: queda el campo manual */ })
+      .finally(() => setLoadingSheets(false));
+  }, [editSong, sheets.length, loadingSheets]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -384,7 +401,6 @@ export function SongManager() {
                 ['Autor', 'author'],
                 ['Artista / Intérprete', 'artist'],
                 ['ID de YouTube', 'youtubeId'],
-                ['ID de archivo en Drive (partitura)', 'driveFileId'],
                 ['Duración (ej. 3:45)', 'duration'],
                 ['Tonalidad (ej. Sol, Re m)', 'originalKey'],
                 ['Nombre de la Misa (agrupa Kyrie/Gloria/Santo/Cordero)', 'massName'],
@@ -398,6 +414,34 @@ export function SongManager() {
                   />
                 </div>
               ))}
+              {/* Partitura: elegir el archivo de la carpeta de Drive (sin buscar el ID a mano) */}
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">
+                  Partitura (Google Drive)
+                </label>
+                <select
+                  value={f.driveFileId}
+                  onChange={(e) => setF(prev => ({ ...prev, driveFileId: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium"
+                >
+                  <option value="">{loadingSheets ? 'Cargando partituras…' : '— Sin partitura —'}</option>
+                  {/* Si el canto ya tiene un ID que no está en la lista, mostrarlo igual. */}
+                  {f.driveFileId && !sheets.some(s => s.id === f.driveFileId) && (
+                    <option value={f.driveFileId}>Partitura actual ({f.driveFileId.slice(0, 8)}…)</option>
+                  )}
+                  {sheets.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Elige el archivo de la carpeta de partituras. Si no aparece, súbelo a Drive y vuelve a abrir este editor.
+                </p>
+                <input
+                  value={f.driveFileId}
+                  onChange={(e) => setF(prev => ({ ...prev, driveFileId: e.target.value }))}
+                  placeholder="…o pega el ID del archivo de Drive manualmente"
+                  className="w-full mt-2 px-4 py-2 rounded-xl text-sm text-gray-700 bg-gray-50 border-2 border-gray-200 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
               <div>
                 <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Momento de la Misa</label>
                 <select
