@@ -150,6 +150,7 @@ export function ChoirView({
       date: t.date,
       liturgicalDate: t.liturgicalDate,
       massTime: t.massTime,
+      massType: t.massType,
       vigil: t.vigil,
       createdAt: now,
       publishedBy: 'Mi Coro',

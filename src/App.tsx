@@ -62,6 +62,7 @@ import { uploadCantoralPDF } from './services/cantoralPDF';
 import { cacheCantoralsForOffline, getOfflineCantorals } from './services/offlineCache';
 import { listChapels } from './services/chapels';
 import { getTodayLocal, addDaysLocal, isWithinInclusive } from './utils/dateLocal';
+import { massTypeBadge } from './utils/massType';
 import { generateChoirCantoralPDF } from './utils/choirCantoralPDFGenerator';
 import { isCurrentUserAdmin } from './services/admin';
 import { upsertCurrentUserProfile, getCurrentUserProfile } from './services/userProfiles';
@@ -672,7 +673,7 @@ function AppContent() {
           newCantoral.songs,
           newCantoral.parishName,
           newCantoral.date,
-          newCantoral.vigil ? `${newCantoral.liturgicalDate} (Misa vespertina)` : newCantoral.liturgicalDate,
+          massTypeBadge(newCantoral) ? `${newCantoral.liturgicalDate} (${massTypeBadge(newCantoral)})` : newCantoral.liturgicalDate,
           newCantoral.massTime,
           userProfile?.instruments ?? [],
           'Full Score',
@@ -933,7 +934,7 @@ function AppContent() {
       <CantoralQRDialog
         open={!!qrCantoral}
         cantoralId={qrCantoral?.id ?? ''}
-        cantoralLabel={qrCantoral ? `${qrCantoral.liturgicalDate}${qrCantoral.vigil ? ' (Misa vespertina)' : ''} · ${qrCantoral.massTime}` : undefined}
+        cantoralLabel={qrCantoral ? `${qrCantoral.liturgicalDate}${massTypeBadge(qrCantoral) ? ` (${massTypeBadge(qrCantoral)})` : ''} · ${qrCantoral.massTime}` : undefined}
         parishName={qrCantoral?.parishName}
         pdfUrl={qrCantoral?.pdfUrl}
         onClose={() => setQrCantoral(null)}

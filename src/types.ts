@@ -112,6 +112,9 @@ export interface UserProfile {
   recoveryEmail?: string;      // T13 — Email alternativo para recuperación de cuenta. Solo lo usa el admin en flujos de recovery.
 }
 
+/** Tipo de horario litúrgico de una Misa de domingo/solemnidad de precepto. */
+export type MassType = 'visperas_i' | 'dia' | 'visperas_ii';
+
 export interface PublishedCantoral {
   id: string;
   choirId: string;
@@ -121,10 +124,14 @@ export interface PublishedCantoral {
   liturgicalDate: string; // Calendario litúrgico (ej: "1er Domingo de Adviento")
   massTime: string; // Horario de la Misa (ej: "10:00 AM")
   /**
-   * Misa vespertina / de primeras vísperas: la víspera por la tarde que vale como
-   * Misa del día siguiente (ej. el sábado en la tarde cuenta como Misa del domingo).
-   * `date` ya apunta a la víspera; `liturgicalDate` mantiene la celebración del día.
+   * Tipo de horario litúrgico (domingos y solemnidades de precepto):
+   *  - 'visperas_i'  → I Vísperas: tarde del día ANTERIOR (15:00–23:59). `date` = día anterior.
+   *  - 'dia'         → Misa del día: mismo día, 00:00–15:00.
+   *  - 'visperas_ii' → II Vísperas: mismo día, 15:01–23:59.
+   * `liturgicalDate` siempre mantiene la celebración del día.
    */
+  massType?: MassType;
+  /** DEPRECATED: equivale a massType === 'visperas_i'. Se mantiene por compatibilidad. */
   vigil?: boolean;
   songs: Song[];
   createdAt: string;

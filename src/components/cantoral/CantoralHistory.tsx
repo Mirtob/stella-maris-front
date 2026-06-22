@@ -4,6 +4,7 @@ import { PublishedCantoral, Song } from '../../types';
 import { generateChoirCantoralPDF } from '../../utils/choirCantoralPDFGenerator';
 import { parseParishChapel, splitActiveParish } from '../../utils/parish';
 import { parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
+import { massTypeBadge } from '../../utils/massType';
 import { LiturgicalColorBadge } from '../liturgy/LiturgicalColorBadge';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -287,10 +288,15 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
                               <LiturgicalColorBadge date={cantoral.date} />
                             </div>
 
-                            {/* Horario */}
-                            <div className="flex items-center gap-2 text-lg text-blue-700 dark:text-blue-300">
+                            {/* Horario + tipo litúrgico */}
+                            <div className="flex items-center gap-2 text-lg text-blue-700 dark:text-blue-300 flex-wrap">
                               <Clock className="w-6 h-6" strokeWidth={2.5} />
                               <span className="font-bold">{cantoral.massTime}</span>
+                              {massTypeBadge(cantoral) && (
+                                <span className="text-xs font-bold bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200 border border-purple-300 dark:border-purple-700 rounded-full px-2 py-0.5">
+                                  🕯️ {massTypeBadge(cantoral)}
+                                </span>
+                              )}
                             </div>
                           </div>
 

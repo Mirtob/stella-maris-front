@@ -5,6 +5,7 @@ import { getCategoryColors } from '../../utils/colors';
 import { CantoralWithOrdinary } from './CantoralWithOrdinary';
 import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
 import { getTodayLocal, addDaysLocal, getWeekRangeLocal, isWithinInclusive, parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
+import { massTypeBadge } from '../../utils/massType';
 import { parseParishChapel, splitActiveParish } from '../../utils/parish';
 import { LiturgicalColorBadge } from '../liturgy/LiturgicalColorBadge';
 import { toast } from 'sonner';
@@ -167,9 +168,9 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                 )}
                 <div className="text-lg sm:text-2xl font-bold mb-1 flex items-center gap-2 flex-wrap">
                   <span>{cantoral.massTime}</span>
-                  {cantoral.vigil && (
+                  {massTypeBadge(cantoral) && (
                     <span className="text-[11px] font-bold bg-white/25 border border-white/40 rounded-full px-2 py-0.5 normal-case">
-                      🕯️ Misa vespertina
+                      🕯️ {massTypeBadge(cantoral)}
                     </span>
                   )}
                 </div>
