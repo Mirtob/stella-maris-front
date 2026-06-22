@@ -36,8 +36,8 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
         cantoral.massTime,
         [],
         'Full Score',
-        // PDF del coro = letra con acordes; las partituras van en el Modo Atril.
-        { download: true }
+        // PDF del coro = letra con acordes + partituras de todos los cantos.
+        { download: true, embedScores: true }
       );
       toast.success('PDF Descargado', {
         description: 'El cantoral con letras, acordes y partituras se ha descargado'

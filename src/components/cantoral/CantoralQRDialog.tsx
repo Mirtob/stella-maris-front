@@ -200,7 +200,7 @@ export function CantoralQRDialog({
             className="w-full mb-3 py-3 px-4 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-700 text-white font-bold flex items-center justify-center gap-2 active:scale-95 hover:opacity-95 transition-all border-2 border-emerald-700 shadow-lg"
           >
             <FileDown className="w-5 h-5" />
-            Descargar PDF del coro (con acordes)
+            Descargar PDF del coro (acordes + partituras)
           </button>
         )}
 

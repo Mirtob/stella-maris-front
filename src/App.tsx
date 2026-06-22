@@ -665,7 +665,7 @@ function AppContent() {
         const { blob } = await generateChoirCantoralPDF(
           updated.songs, updated.parishName, updated.date,
           massTypeBadge(updated) ? `${updated.liturgicalDate} (${massTypeBadge(updated)})` : updated.liturgicalDate,
-          updated.massTime, userProfile?.instruments ?? [], 'Full Score', { download: false }
+          updated.massTime, userProfile?.instruments ?? [], 'Full Score', { download: false, embedScores: true }
         );
         const up = await uploadCantoralPDF(updated.id, blob);
         if (up.ok && up.publicUrl) await updateCantoralPdfUrl(updated.id, up.publicUrl);
@@ -716,11 +716,10 @@ function AppContent() {
           newCantoral.massTime,
           userProfile?.instruments ?? [],
           'Full Score',
-          // PDF del coro = letra con acordes (en orden de la Misa). Las partituras
-          // del coro se ven en el Modo Atril, no en este folleto. El folleto del
-          // Pueblo fiel (letra sin acordes + partituras del ordinario) se genera
-          // aparte con generateCantoralPDF.
-          { download: false }
+          // PDF del coro = letra con acordes + las partituras de todos los cantos
+          // (en orden de la Misa), en el mismo archivo. El folleto del Pueblo fiel
+          // (solo letra) se genera aparte con generateCantoralPDF.
+          { download: false, embedScores: true }
         );
         const uploadResult = await uploadCantoralPDF(newCantoral.id, blob);
         if (uploadResult.ok && uploadResult.publicUrl) {
