@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Send, Calendar, Church, Clock, Plus } from 'lucide-react';
 import { Song, InstrumentType } from '../../types';
-import { getTodayLocal, formatYmdForDisplay, addDaysLocal } from '../../utils/dateLocal';
+import { getTodayLocal, formatYmdForDisplay } from '../../utils/dateLocal';
 import { getLiturgicalDateForDate, getDateForLiturgicalName, isSunday, getLiturgicalDateNames } from '../../utils/liturgicalCalendar';
 import { LiturgicalColorBadge } from '../liturgy/LiturgicalColorBadge';
 import { validateCantoral, LiturgicalWarning } from '../../utils/liturgicalValidation';
@@ -181,17 +181,15 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
   };
 
   // ── Publicar ──────────────────────────────────────────────────────────────
-  // Para una vespertina la celebración es la del día elegido, pero se canta la
-  // víspera por la tarde → la fecha real es el día anterior.
-  const effectiveDate = (date: string, isVigil: boolean) => (isVigil ? addDaysLocal(date, -1) : date);
-
+  // El cantoral se publica en la fecha y hora EXACTAS que se ingresan (no se mueve
+  // al día anterior). La marca de vespertina es solo una etiqueta de la celebración.
   const buildTargets = (): PublishTarget[] => {
     if (isMulti) {
       return Array.from(selectedParishes).map(parish => {
         const s = schedules[parish];
         return {
           parishName: parish,
-          date: effectiveDate(s.date, s.vigil),
+          date: s.date,
           liturgicalDate: s.liturgicalDate.trim(),
           massTime: normalizeMassTime(s.massTime),
           vigil: s.vigil,
@@ -200,7 +198,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
     }
     return [{
       parishName: allParishes[0] || parishName,
-      date: effectiveDate(selectedDate, vigil),
+      date: selectedDate,
       liturgicalDate: liturgicalDate.trim(),
       massTime: normalizeMassTime(massTime),
       vigil,
@@ -395,9 +393,9 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                                     Vespertina
                                   </button>
                                 </div>
-                                {s.vigil && s.date && (
+                                {s.vigil && (
                                   <p className="mt-1.5 text-xs text-purple-800 dark:text-purple-300">
-                                    Se publicará el <strong>{formatYmdForDisplay(addDaysLocal(s.date, -1), { weekday: 'long', day: 'numeric', month: 'long' })}</strong> por la tarde.
+                                    Pon la fecha y hora reales de la Misa vespertina (p. ej. el sábado por la tarde).
                                   </p>
                                 )}
                               </div>
@@ -535,11 +533,12 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                         </span>
                       </button>
                     </div>
-                    {vigil && selectedDate && (
+                    {vigil && (
                       <div className="mt-3 bg-purple-50 dark:bg-purple-950/40 border-2 border-purple-200 dark:border-purple-700 rounded-xl p-3 flex gap-2">
                         <span className="text-lg">🕯️</span>
                         <p className="text-sm text-purple-900 dark:text-purple-200">
-                          Se publicará para el <strong>{formatYmdForDisplay(addDaysLocal(selectedDate, -1), { weekday: 'long', day: 'numeric', month: 'long' })}</strong> por la tarde,
+                          Se publicará con la <strong>fecha y hora que ingreses arriba</strong>. Para la Misa
+                          vespertina, pon la fecha y hora reales en que se canta (p. ej. el sábado por la tarde),
                           como Misa anticipada de <strong>{liturgicalDate || 'la celebración elegida'}</strong>.
                         </p>
                       </div>
