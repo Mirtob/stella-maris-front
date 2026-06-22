@@ -3,7 +3,6 @@ import { Send, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Home } from './Home';
 import { CategorySearch } from '../songs/CategorySearch';
-import { CantoralPreview } from '../cantoral/CantoralPreview';
 import { PublishCantoralModal, PublishTarget } from '../cantoral/PublishCantoralModal';
 import { LiturgicalSuggestions } from '../liturgy/LiturgicalSuggestions';
 import { SelectInstrumentModal } from '../cantoral/SelectInstrumentModal';
@@ -223,13 +222,6 @@ export function ChoirView({
             </div>
           </div>
         )}
-
-        {/* Cantoral Preview */}
-        <CantoralPreview
-          cantoral={cantoral}
-          onRemove={onRemoveFromCantoral}
-          onPlaySong={onPlaySong}
-        />
 
         {/* Liturgical Suggestions */}
         <div className="mt-2" data-tour="coro-sugerencias">

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, ChevronDown, ChevronUp, Music, Cross, CheckCircle, Play, AlertCircle, Sparkles } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, Music, Cross, CheckCircle, Play, AlertCircle, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Song, InstrumentType } from '../../types';
 import { useSongs } from '../../hooks/useSongs';
@@ -371,6 +371,32 @@ export function CategorySearch({
           )}
         </div>
       </button>
+
+      {/* Cantos ya agregados a este momento (siempre visibles, reemplaza a "Mi Cantoral") */}
+      {cantoral.filter(s => s.category === category).length > 0 && (
+        <div className="px-3 sm:px-4 py-3 bg-green-50/80 dark:bg-green-900/20 border-t-2 border-green-200 dark:border-green-800 space-y-2">
+          {cantoral.filter(s => s.category === category).map((s) => (
+            <div key={s.id} className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-xl p-2.5 border border-green-200 dark:border-green-700">
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" strokeWidth={2.5} />
+              <span className="flex-1 min-w-0 text-sm sm:text-base font-bold text-blue-950 dark:text-white truncate">{s.title}</span>
+              <button
+                onClick={() => onPlaySong(s)}
+                aria-label={`Ver ${s.title}`}
+                className="w-9 h-9 flex-shrink-0 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-lg flex items-center justify-center active:scale-95 transition-all"
+              >
+                <Play className="w-4 h-4" fill="currentColor" />
+              </button>
+              <button
+                onClick={() => onRemoveFromCantoral(s.id)}
+                aria-label={`Quitar ${s.title}`}
+                className="w-9 h-9 flex-shrink-0 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg flex items-center justify-center active:scale-95 transition-all"
+              >
+                <X className="w-4 h-4" strokeWidth={3} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Expanded Content */}
       {isExpanded && (
