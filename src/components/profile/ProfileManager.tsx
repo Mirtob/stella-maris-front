@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { UserRole, UserProfile, InstrumentType } from '../../types';
 import { listUserProfiles, updateUserRole, deleteUserProfile, adminUpdateUserProfile } from '../../services/userProfiles';
 import { createUserAccount } from '../../services/adminUsers';
+import { isUsernameAccount } from '../../services/supabaseClient';
 import { matchesSearch } from '../../utils/textSearch';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { ParishPicker } from './ParishPicker';
@@ -167,7 +168,13 @@ export function ProfileManager() {
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-purple-900 dark:text-white mb-1">Gestión de Usuarios</h1>
           <p className="text-base sm:text-lg text-purple-700 dark:text-purple-200">
-            {loading ? 'Cargando…' : `${users.length} usuarios registrados`}
+            {loading
+              ? 'Cargando…'
+              : (() => {
+                  const up = users.filter(u => isUsernameAccount(u.email)).length;
+                  const google = users.length - up;
+                  return `${users.length} usuarios · 📧 ${google} Google · 👤 ${up} usuario/clave`;
+                })()}
           </p>
         </div>
 
@@ -247,7 +254,23 @@ export function ProfileManager() {
                 <div className="flex items-start justify-between mb-3 gap-2">
                   <div className="flex-1 min-w-0">
                     <h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-white truncate">{user.name}</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 truncate">{user.email}</p>
+                    {(() => {
+                      const isUP = isUsernameAccount(user.email);
+                      return (
+                        <>
+                          <p className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                            {isUP ? `Usuario: ${user.email.split('@')[0]}` : user.email}
+                          </p>
+                          <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[11px] font-bold border ${
+                            isUP
+                              ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700'
+                              : 'bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-700'
+                          }`}>
+                            {isUP ? '👤 Usuario/clave' : '📧 Google'}
+                          </span>
+                        </>
+                      );
+                    })()}
                   </div>
                   <div className={`flex items-center gap-1 px-2 py-1 rounded-lg border-2 flex-shrink-0 ${getRoleBadgeColor(user.role)}`}>
                     {getRoleIcon(user.role)}
