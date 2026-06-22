@@ -3,6 +3,9 @@
 Este manual es para quien **alimenta el catálogo de cantos**: sube los videos al canal de YouTube,
 los etiqueta y los sincroniza con la app.
 
+> 🟢 **¿Primera vez subiendo un canto?** Sigue el paso a paso simple:
+> **[TUTORIAL-SUBIR-CONTENIDO.md](TUTORIAL-SUBIR-CONTENIDO.md)** (video + partitura + cómo sacar el ID de Drive).
+
 ---
 
 ## 0. Lo más importante de entender
