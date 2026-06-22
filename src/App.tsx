@@ -1229,6 +1229,9 @@ function renderView(p: ViewProps): JSX.Element | null {
     case 'liturgical-calendar':
       return (
         <LiturgicalCalendar
+          userRole={p.effectiveRole}
+          publishedCantorals={p.publishedCantorals}
+          onViewCantoral={() => p.navigate('cantorals')}
           onCreateCantoral={(liturgicalDate, date) => {
             if (p.effectiveRole === 'Coro') {
               p.navigate('main');

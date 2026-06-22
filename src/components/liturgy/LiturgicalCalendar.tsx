@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Calendar, Church, ChevronDown, ChevronUp, Bell, Plus, BookOpen, X } from 'lucide-react';
 import { liturgicalCalendar2026, LiturgicalEvent } from '../../data/liturgicalCalendar';
 import { getLiturgicalCardClasses, getLiturgicalSolidColor } from '../../utils/liturgicalColors';
-import { parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
+import { parseYmdLocal, formatYmdForDisplay, addDaysLocal } from '../../utils/dateLocal';
 
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -11,9 +11,15 @@ const MONTHS = [
 
 interface LiturgicalCalendarProps {
   onCreateCantoral?: (liturgicalDate: string, date: string) => void;
+  /** Rol efectivo: el Pueblo fiel ve "Ver cantoral" en vez de "Agregar Cantoral". */
+  userRole?: 'Coro' | 'Pueblo fiel' | 'Admin';
+  /** Cantorales publicados (para saber si hay uno en esa fecha/celebración). */
+  publishedCantorals?: { date: string; liturgicalDate: string }[];
+  /** Ir a ver el/los cantoral(es) publicados (Pueblo fiel). */
+  onViewCantoral?: (liturgicalDate: string, date: string) => void;
 }
 
-export function LiturgicalCalendar({ onCreateCantoral }: LiturgicalCalendarProps = {}) {
+export function LiturgicalCalendar({ onCreateCantoral, userRole, publishedCantorals = [], onViewCantoral }: LiturgicalCalendarProps = {}) {
   const [expandedMonth, setExpandedMonth] = useState<number | null>(null);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [showAlertDialog, setShowAlertDialog] = useState(false);
@@ -109,6 +115,17 @@ export function LiturgicalCalendar({ onCreateCantoral }: LiturgicalCalendarProps
     
     alert(alertMessage);
   };
+
+  const isPuebloFiel = userRole === 'Pueblo fiel';
+
+  // ¿Hay un cantoral publicado para esta celebración? Coincide por nombre litúrgico
+  // o por fecha (incluida la víspera, que se guarda el día anterior en I Vísperas).
+  const hasPublishedFor = (event: LiturgicalEvent) =>
+    publishedCantorals.some(c =>
+      c.liturgicalDate === event.name ||
+      c.date === event.date ||
+      c.date === addDaysLocal(event.date, -1)
+    );
 
   const handleAddCantoral = (event: LiturgicalEvent) => {
     if (onCreateCantoral) {
@@ -516,13 +533,29 @@ export function LiturgicalCalendar({ onCreateCantoral }: LiturgicalCalendarProps
                             Color: {event.color}
                           </span>
                         </div>
-                        <button
-                          onClick={() => handleAddCantoral(event)}
-                          className="w-full p-3 bg-gradient-to-br from-blue-900 to-blue-950 hover:from-blue-800 hover:to-blue-900 text-white rounded-xl flex items-center justify-center gap-2 font-bold text-lg transition-all active:scale-98 shadow-lg border-2 border-blue-800"
-                        >
-                          <BookOpen className="w-6 h-6" strokeWidth={2.5} />
-                          Agregar Cantoral
-                        </button>
+                        {isPuebloFiel ? (
+                          hasPublishedFor(event) ? (
+                            <button
+                              onClick={() => onViewCantoral?.(event.name, event.date)}
+                              className="w-full p-3 bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-xl flex items-center justify-center gap-2 font-bold text-lg transition-all active:scale-98 shadow-lg border-2 border-green-800"
+                            >
+                              <BookOpen className="w-6 h-6" strokeWidth={2.5} />
+                              Ver cantoral
+                            </button>
+                          ) : (
+                            <div className="w-full p-3 bg-white/40 dark:bg-black/20 rounded-xl text-center text-sm font-semibold text-gray-600 dark:text-gray-300 border border-white/40 dark:border-white/10">
+                              Aún no hay cantoral publicado para esta fecha.
+                            </div>
+                          )
+                        ) : (
+                          <button
+                            onClick={() => handleAddCantoral(event)}
+                            className="w-full p-3 bg-gradient-to-br from-blue-900 to-blue-950 hover:from-blue-800 hover:to-blue-900 text-white rounded-xl flex items-center justify-center gap-2 font-bold text-lg transition-all active:scale-98 shadow-lg border-2 border-blue-800"
+                          >
+                            <BookOpen className="w-6 h-6" strokeWidth={2.5} />
+                            Agregar Cantoral
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>

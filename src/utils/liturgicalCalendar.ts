@@ -28,8 +28,43 @@ export interface LiturgicalInfo {
   cycle: string | null; // 'A' | 'B' | 'C'
 }
 
+// ── Traducción de nombres que romcal deja en inglés ────────────────────────
+// Cuando la localización `es` de romcal no tiene la entrada, cae al inglés. Aquí
+// los pasamos a español para que toda la copy (constructor, calendario) esté en
+// español. "Corpus Christi" se deja igual (uso común en español).
+const ES_NAMES: Record<string, string> = {
+  'Birth of the Blessed Virgin Mary': 'Natividad de la Santísima Virgen María',
+  'Chair of Saint Peter, Apostle': 'Cátedra de San Pedro, Apóstol',
+  'Conversion of Saint Paul, Apostle': 'Conversión de San Pablo, Apóstol',
+  'Dedication of the Lateran Basilica': 'Dedicación de la Basílica de Letrán',
+  'Holy Innocents, Martyrs': 'Santos Inocentes, Mártires',
+  'Immaculate Heart of Mary': 'Inmaculado Corazón de María',
+  'Saint Andrew the Apostle': 'San Andrés, Apóstol',
+  'Saint Bartholomew the Apostle': 'San Bartolomé, Apóstol',
+  'Saint Bridget of Sweden, Religious, Patron of Europe': 'Santa Brígida de Suecia, Religiosa, Patrona de Europa',
+  'Saint James, Apostle': 'Santiago, Apóstol',
+  'Saint John the Apostle and Evangelist': 'San Juan, Apóstol y Evangelista',
+  'Saint Lawrence of Rome, Deacon and Martyr': 'San Lorenzo, Diácono y Mártir',
+  'Saint Luke the Evangelist': 'San Lucas, Evangelista',
+  'Saint Mark the Evangelist': 'San Marcos, Evangelista',
+  'Saint Mary Magdalene': 'Santa María Magdalena',
+  'Saint Matthew, Apostle and Evangelist': 'San Mateo, Apóstol y Evangelista',
+  'Saint Matthias the Apostle': 'San Matías, Apóstol',
+  'Saint Stephen, The First Martyr': 'San Esteban, Protomártir',
+  'Saint Thomas the Apostle': 'Santo Tomás, Apóstol',
+  'Saints Michael, Gabriel and Raphael, Archangels': 'Santos Arcángeles Miguel, Gabriel y Rafael',
+  'Saints Philip and James, Apostles': 'Santos Felipe y Santiago, Apóstoles',
+  'Saints Simon and Jude, Apostles': 'Santos Simón y Judas, Apóstoles',
+  'The Exaltation of the Holy Cross': 'La Exaltación de la Santa Cruz',
+  'Visitation of the Blessed Virgin Mary': 'La Visitación de la Santísima Virgen María',
+};
+
+function toEs(name: string): string {
+  return ES_NAMES[name] ?? name;
+}
+
 // ── Índice de los datos generados ──────────────────────────────────────────
-const GEN = generated as LiturgicalInfo[];
+const GEN = (generated as LiturgicalInfo[]).map((e) => ({ ...e, name: toEs(e.name) }));
 const byDate = new Map<string, LiturgicalInfo>(GEN.map((e) => [e.date, e]));
 const GEN_YEARS = GEN.map((e) => parseInt(e.date.slice(0, 4), 10));
 const GEN_MIN_YEAR = Math.min(...GEN_YEARS);
