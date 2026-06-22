@@ -1,5 +1,6 @@
 import { Song, MassMoment, LiturgicalSeason, InstrumentType } from '../types';
 import { getSupabaseClient } from './supabaseClient';
+import { normalizeCategory } from '../utils/category';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,7 +40,7 @@ function rowToSong(row: Record<string, unknown>): Song {
   return {
     id:                    row.id as string,
     title:                 row.title as string,
-    category:              row.mass_moment as string,       // backwards compat
+    category:              normalizeCategory(row.mass_moment as string), // nombre de categoría que usa la app
     massMoment:            row.mass_moment as MassMoment,
     youtubeId:             (row.youtube_id as string) ?? '',
     videoUrl:              row.youtube_id ? `https://www.youtube.com/watch?v=${row.youtube_id}` : undefined,

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { ArrowLeft, Play, Pause, SkipBack, SkipForward, Repeat, Music as MusicIcon, Radio } from 'lucide-react';
 import { PublishedCantoral, Song } from '../../types';
 import { getCategoryColors } from '../../utils/colors';
+import { normalizeCategory } from '../../utils/category';
 
 const CATEGORY_ORDER = [
   'Entrada', 'Kyrie', 'Gloria', 'Salmo', 'Aleluya', 'Post Evangelio',
@@ -36,9 +37,13 @@ const isValidVideoId = (id?: string) => !!id && /^[a-zA-Z0-9_-]{11}$/.test(id);
 
 export function PlaylistPlayer({ cantoral, onBack }: PlaylistPlayerProps) {
   // Pistas con video válido, en orden litúrgico.
+  const rank = (c: string) => {
+    const i = CATEGORY_ORDER.indexOf(normalizeCategory(c));
+    return i === -1 ? 999 : i;
+  };
   const tracks: Song[] = [...cantoral.songs]
     .filter((s) => isValidVideoId(s.youtubeId))
-    .sort((a, b) => CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category));
+    .sort((a, b) => rank(a.category) - rank(b.category));
 
   const playerRef = useRef<any>(null);
   const mountRef = useRef<HTMLDivElement>(null);
@@ -85,6 +90,14 @@ export function PlaylistPlayer({ cantoral, onBack }: PlaylistPlayerProps) {
               else if (repeatRef.current) playIndex(0);
               else setIsPlaying(false);
             }
+          },
+          // Video no embebible / restringido / borrado → saltar al siguiente en vez
+          // de quedar trabado mostrando el error de YouTube.
+          onError: () => {
+            const next = idxRef.current + 1;
+            if (next < tracksRef.current.length) playIndex(next);
+            else if (repeatRef.current && tracksRef.current.length > 1) playIndex(0);
+            else setIsPlaying(false);
           },
         },
       });
@@ -153,7 +166,7 @@ export function PlaylistPlayer({ cantoral, onBack }: PlaylistPlayerProps) {
               {/* Now playing + controles */}
               <div className="p-4 bg-white/40 dark:bg-white/10 backdrop-blur-sm">
                 <div className="mb-3">
-                  <div className="text-xs text-blue-700 dark:text-blue-300">{current?.category}</div>
+                  <div className="text-xs text-blue-700 dark:text-blue-300">{normalizeCategory(current?.category)}</div>
                   <div className="text-base font-bold text-blue-950 dark:text-white truncate">{current?.title}</div>
                 </div>
                 <div className="flex items-center justify-center gap-3">
@@ -204,7 +217,7 @@ export function PlaylistPlayer({ cantoral, onBack }: PlaylistPlayerProps) {
                       {active && isPlaying ? <Pause className="w-5 h-5 text-white" /> : <Play className="w-5 h-5 text-white ml-0.5" />}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs opacity-80">{song.category}</div>
+                      <div className="text-xs opacity-80">{normalizeCategory(song.category)}</div>
                       <div className="font-bold truncate">{song.title}</div>
                     </div>
                   </button>
