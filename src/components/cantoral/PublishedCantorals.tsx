@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { BookOpen, Calendar, Church, Play, Music as MusicIcon, Clock, BookText, ChevronDown, ChevronUp, Download, Filter, Search, Headphones } from 'lucide-react';
+import { BookOpen, Calendar, Church, Play, Music as MusicIcon, Clock, BookText, ChevronDown, ChevronUp, Download, Filter, Search, Headphones, Edit2, Trash2 } from 'lucide-react';
 import { PublishedCantoral, Song } from '../../types';
 import { getCategoryColors } from '../../utils/colors';
 import { CantoralWithOrdinary } from './CantoralWithOrdinary';
 import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import { getTodayLocal, addDaysLocal, getWeekRangeLocal, isWithinInclusive, parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
 import { massTypeBadge } from '../../utils/massType';
 import { parseParishChapel, splitActiveParish } from '../../utils/parish';
@@ -18,15 +19,23 @@ interface PublishedCantoralsProps {
   userRole?: 'Coro' | 'Pueblo fiel' | 'Admin';
   userInstrument?: 'Guitarra' | 'Órgano'; // Para mostrar acordes/partitura según corresponda
   userParishName?: string; // Parroquia del usuario para filtrar
+  /** Editar un cantoral publicado (solo Coro/Admin). */
+  onEdit?: (cantoralId: string) => void;
+  /** Eliminar un cantoral publicado (solo Coro/Admin). */
+  onDelete?: (cantoralId: string) => void;
 }
 
 // Pueblo fiel solo ve hasta 2 semanas adelante en el dashboard.
 const PUEBLO_FIEL_WINDOW_DAYS = 14;
 
-export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onListen, userRole, userInstrument, userParishName }: PublishedCantoralsProps) {
+export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onListen, userRole, userInstrument, userParishName, onEdit, onDelete }: PublishedCantoralsProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewingOrdinary, setViewingOrdinary] = useState<string | null>(null);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  // Coro y Admin pueden gestionar (editar/eliminar); el Pueblo fiel solo ve.
+  const canManage = userRole !== 'Pueblo fiel';
+  const pendingDeleteCantoral = pendingDeleteId ? cantorals.find(c => c.id === pendingDeleteId) : null;
   // Filtros del archivo (solo Coro)
   const [archiveParish, setArchiveParish] = useState<string>('all');
   const [archiveChapel, setArchiveChapel] = useState<string>('all');
@@ -49,20 +58,20 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
 
   // ── Ventanas temporales ────────────────────────────────────────────────────
   const today = getTodayLocal();
-  const { end: endOfWeek } = getWeekRangeLocal();
 
-  // Pueblo fiel: hoy → hoy+14 días (las pasadas desaparecen automáticamente)
-  const puebloWindow = roleList.filter(c =>
-    isWithinInclusive(c.date, today, addDaysLocal(today, PUEBLO_FIEL_WINDOW_DAYS))
-  );
+  // Un cantoral está VIGENTE desde que se publica hasta las 23:59 de la fecha de la
+  // Misa (c.date). Pasada esa fecha va al archivo. (Comparación de 'YYYY-MM-DD'.)
+  const esVigente = (c: PublishedCantoral) => c.date >= today;
 
-  // Coro: "Esta semana" = desde hoy hasta el domingo de esta semana.
-  //       "Archivo" = todo lo demás (misas pasadas o futuras más allá del domingo).
-  const estaSemana = roleList
-    .filter(c => isWithinInclusive(c.date, today, endOfWeek))
+  // Pueblo fiel y la lista principal del Coro: cantorales vigentes (hoy → fecha de la Misa).
+  const vigentes = roleList
+    .filter(esVigente)
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  const puebloWindow = vigentes;
+
+  // Coro: "Archivo" = misas ya pasadas (fecha < hoy).
   const archivo = roleList
-    .filter(c => !isWithinInclusive(c.date, today, endOfWeek))
+    .filter(c => !esVigente(c))
     .sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : 0)); // más reciente primero
 
   // ── Filtros del archivo (parroquia → capilla → búsqueda) ───────────────────
@@ -234,6 +243,30 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
               Descargar Cantoral PDF
             </button>
           </div>
+
+          {/* Gestión (CRUD) — solo Coro/Admin, sobre los cantorales de la parroquia activa */}
+          {canManage && (onEdit || onDelete) && (
+            <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-white/40 dark:border-white/20">
+              {onEdit && (
+                <button
+                  onClick={() => onEdit(cantoral.id)}
+                  className="bg-gradient-to-br from-blue-700 to-blue-900 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-blue-800"
+                >
+                  <Edit2 className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
+                  Editar
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  onClick={() => setPendingDeleteId(cantoral.id)}
+                  className="bg-gradient-to-br from-red-600 to-red-700 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-red-800"
+                >
+                  <Trash2 className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
+                  Eliminar
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Lista de cantos (expandible) */}
@@ -436,7 +469,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
           <p className="text-sm text-blue-900 dark:text-blue-100">
             {userRole === 'Pueblo fiel'
               ? 'Elige el horario de tu Misa'
-              : `${estaSemana.length} esta semana · ${archivo.length} en archivo`}
+              : `${vigentes.length} vigente${vigentes.length === 1 ? '' : 's'} · ${archivo.length} en archivo`}
           </p>
         </div>
 
@@ -448,7 +481,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
               <div>
                 <h3 className="text-sm font-bold text-blue-950 dark:text-blue-100 mb-1">Encuentra tu Misa</h3>
                 <p className="text-xs text-blue-900 dark:text-blue-200">
-                  Verás las misas de las próximas dos semanas. Consulta horarios y cantos de cada una.
+                  Verás las misas disponibles hasta el día de cada celebración. Consulta horarios y cantos de cada una.
                 </p>
               </div>
             </div>
@@ -463,13 +496,13 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
           <>
             <div className="flex items-center gap-2 mb-3 mt-1">
               <span className="text-xl">📅</span>
-              <h2 className="text-lg font-bold text-blue-950 dark:text-white">Esta semana</h2>
+              <h2 className="text-lg font-bold text-blue-950 dark:text-white">Vigentes</h2>
             </div>
-            {estaSemana.length > 0 ? (
-              renderDateGroups(estaSemana)
+            {vigentes.length > 0 ? (
+              renderDateGroups(vigentes)
             ) : (
               <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/40 dark:border-white/20 text-center text-sm text-blue-900 dark:text-blue-100 mb-2">
-                No hay cantorales para lo que resta de esta semana.
+                No hay cantorales vigentes. Publica uno desde el constructor.
               </div>
             )}
 
@@ -542,6 +575,21 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
           </>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!pendingDeleteCantoral}
+        title="Eliminar cantoral"
+        message="¿Eliminar este cantoral publicado? Esta acción no se puede deshacer."
+        details={pendingDeleteCantoral ? `${pendingDeleteCantoral.parishName} · ${pendingDeleteCantoral.liturgicalDate} · ${pendingDeleteCantoral.massTime}` : undefined}
+        confirmLabel="Sí, eliminar"
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={() => {
+          if (pendingDeleteId && onDelete) onDelete(pendingDeleteId);
+          setPendingDeleteId(null);
+        }}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   );
 }

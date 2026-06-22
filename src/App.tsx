@@ -53,6 +53,7 @@ import {
   listCantorals,
   publishCantoral as publishCantoralToDB,
   deleteCantoral as deleteCantoralFromDB,
+  updateCantoral as updateCantoralInDB,
   updateCantoralPdfUrl,
   rowToCantoral,
   findDuplicate,
@@ -219,6 +220,8 @@ function AppContent() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [cantoral, setCantoral] = useState<Song[]>([]);
   const [publishedCantorals, setPublishedCantorals] = useState<PublishedCantoral[]>([]);
+  // Si está editando un cantoral publicado, su id; al republicar se ACTUALIZA en vez de crear.
+  const [editingCantoralId, setEditingCantoralId] = useState<string | null>(null);
   // Catálogo global de capillas (parishFull → capillas) para el selector de sesión.
   const [chapelsByParish, setChapelsByParish] = useState<Record<string, { id: string; name: string }[]>>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -255,6 +258,9 @@ function AppContent() {
       setPendingNavigateView(view as ViewState);
       return;
     }
+    // Salir del constructor cancela cualquier edición en curso (evita actualizar
+    // por error un cantoral previo al publicar uno nuevo más tarde).
+    if (view !== 'main') setEditingCantoralId(null);
     setRoute({ screen: 'app', view: view as ViewState });
   }
 
@@ -638,6 +644,36 @@ function AppContent() {
       return;
     }
 
+    // ── Edición: si venimos de "Editar", ACTUALIZAMOS el cantoral existente (mismo id)
+    //    en vez de crear uno nuevo. La edición aplica a un solo cantoral.
+    if (editingCantoralId) {
+      const updated: PublishedCantoral = { ...newCantorals[0], id: editingCantoralId };
+      setEditingCantoralId(null);
+      setPublishedCantorals(prev => prev.map(c => (c.id === editingCantoralId ? updated : c)));
+      const r = await updateCantoralInDB(updated);
+      if (!r.ok) {
+        toast.error('No se pudo actualizar el cantoral', { description: r.error });
+        const activeParish = userProfile?.activeParishName || userProfile?.parishName;
+        setPublishedCantorals(await listCantorals(activeParish));
+        return;
+      }
+      // Regenerar el PDF del coro y refrescar.
+      try {
+        const { blob } = await generateChoirCantoralPDF(
+          updated.songs, updated.parishName, updated.date,
+          massTypeBadge(updated) ? `${updated.liturgicalDate} (${massTypeBadge(updated)})` : updated.liturgicalDate,
+          updated.massTime, userProfile?.instruments ?? [], 'Full Score', { download: false }
+        );
+        const up = await uploadCantoralPDF(updated.id, blob);
+        if (up.ok && up.publicUrl) await updateCantoralPdfUrl(updated.id, up.publicUrl);
+      } catch { /* best-effort */ }
+      setCantoral([]);
+      const activeParish = userProfile?.activeParishName || userProfile?.parishName;
+      setPublishedCantorals(await listCantorals(activeParish));
+      toast.success('Cantoral actualizado');
+      return;
+    }
+
     // Optimistic UI: mostrar todos de inmediato mientras corren los inserts.
     setPublishedCantorals(prev => [...newCantorals, ...prev]);
 
@@ -795,6 +831,19 @@ function AppContent() {
       const fresh = await listCantorals(activeParish);
       setPublishedCantorals(fresh);
     }
+  };
+
+  // Editar: carga los cantos al constructor y, al republicar, actualiza el mismo
+  // cantoral (no crea uno nuevo). El original se conserva hasta que se vuelva a publicar.
+  const handleEditCantoral = (id: string) => {
+    const c = publishedCantorals.find(x => x.id === id);
+    if (!c) return;
+    setCantoral(c.songs);
+    setEditingCantoralId(id);
+    navigate('main');
+    toast.info('Editando cantoral', {
+      description: 'Modifica los cantos y la fecha/hora, y vuelve a publicarlo.',
+    });
   };
 
   // ── Route rendering ───────────────────────────────────────────────────────
@@ -1005,6 +1054,7 @@ function AppContent() {
           onPublishCantoral: handlePublishCantoral,
           navigate,
           onDeleteCantoral: handleDeleteCantoral,
+          onEditCantoral: handleEditCantoral,
           onListen: handleListen,
         })}
       </Suspense>
@@ -1040,6 +1090,7 @@ interface ViewProps {
   onPublishCantoral: (cantorals: PublishedCantoral[]) => Promise<void>;
   navigate: (view: string) => void;
   onDeleteCantoral: (id: string) => Promise<void>;
+  onEditCantoral: (id: string) => void;
   onListen: (cantoral: PublishedCantoral) => void;
 }
 
@@ -1100,6 +1151,9 @@ function renderView(p: ViewProps): JSX.Element | null {
           userRole={p.effectiveRole}
           userInstrument={p.userProfile.instrument}
           userParishName={p.activeParishName}
+          // CRUD solo para Coro/Admin; el Pueblo fiel solo ve.
+          onEdit={p.effectiveRole !== 'Pueblo fiel' ? p.onEditCantoral : undefined}
+          onDelete={p.effectiveRole !== 'Pueblo fiel' ? p.onDeleteCantoral : undefined}
         />
       );
 
@@ -1137,6 +1191,8 @@ function renderView(p: ViewProps): JSX.Element | null {
         >
           <CantoralManager
             cantorals={p.publishedCantorals}
+            onEdit={p.onEditCantoral}
+            onDelete={p.onDeleteCantoral}
           />
         </RoleGuard>
       );
