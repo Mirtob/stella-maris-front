@@ -7,9 +7,11 @@ interface CantoralManagerProps {
   cantorals: PublishedCantoral[];
   onEdit?: (cantoralId: string) => void;
   onDelete?: (cantoralId: string) => void;
+  /** Mostrar el QR del cantoral para compartir/imprimir. */
+  onShare?: (cantoral: PublishedCantoral) => void;
 }
 
-export function CantoralManager({ cantorals, onEdit, onDelete }: CantoralManagerProps) {
+export function CantoralManager({ cantorals, onEdit, onDelete, onShare }: CantoralManagerProps) {
   const [filterStatus, setFilterStatus] = useState<'Todos' | 'Publicados' | 'Borradores'>('Todos');
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const pendingDeleteCantoral = pendingDeleteId
@@ -138,7 +140,10 @@ export function CantoralManager({ cantorals, onEdit, onDelete }: CantoralManager
                 </button>
                 
                 {cantoral.statusLabel === 'Publicados' && (
-                  <button className="flex-1 bg-gradient-to-br from-green-600 to-green-700 text-white py-3 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg border-2 border-green-800 hover:shadow-xl">
+                  <button
+                    onClick={() => onShare?.(cantoral)}
+                    className="flex-1 bg-gradient-to-br from-green-600 to-green-700 text-white py-3 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg border-2 border-green-800 hover:shadow-xl"
+                  >
                     <Share2 className="w-5 h-5" strokeWidth={2.5} />
                     <span className="text-base font-bold">Compartir</span>
                   </button>

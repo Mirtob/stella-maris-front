@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Download, Share2, Copy, Check, X, FileDown } from 'lucide-react';
+import { Download, Share2, Copy, Check, X, FileDown, Printer } from 'lucide-react';
 import QRCode from 'qrcode';
 import { toast } from 'sonner';
 import { safeWindowOpen } from '../../utils/safeUrl';
@@ -70,6 +70,36 @@ export function CantoralQRDialog({
     link.click();
     document.body.removeChild(link);
     toast.success('QR descargado');
+  };
+
+  const handlePrint = () => {
+    if (!qrDataUrl) return;
+    // Ventana de impresión con el QR + datos del cantoral. Si el navegador/PWA la
+    // bloquea, caemos a descargar el PNG (que el usuario puede imprimir).
+    const w = window.open('', '_blank', 'width=520,height=720');
+    if (!w) {
+      handleDownloadQR();
+      toast.info('Descargamos el QR para que lo imprimas', {
+        description: 'Tu navegador bloqueó la ventana de impresión.',
+      });
+      return;
+    }
+    const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+    w.document.write(
+      `<!doctype html><html><head><meta charset="utf-8"><title>QR del cantoral</title>` +
+      `<style>body{font-family:system-ui,Arial,sans-serif;text-align:center;padding:28px;color:#1e3a8a}` +
+      `h2{margin:0 0 4px}p{margin:4px 0;color:#475569}img{width:340px;height:340px;margin:16px auto}` +
+      `.link{font-size:11px;color:#64748b;word-break:break-all}</style></head><body>` +
+      `<h2>${esc(parishName ?? 'Cantoral')}</h2>` +
+      (cantoralLabel ? `<p>${esc(cantoralLabel)}</p>` : '') +
+      `<img src="${qrDataUrl}" alt="QR"/>` +
+      `<p class="link">${esc(deepLink)}</p>` +
+      `</body></html>`
+    );
+    w.document.close();
+    // Imprimir desde la app (evita <script> inline que la CSP bloquearía).
+    w.focus();
+    setTimeout(() => { try { w.print(); } catch { /* el usuario puede imprimir manual */ } }, 350);
   };
 
   const handleShare = async () => {
@@ -202,6 +232,16 @@ export function CantoralQRDialog({
             <span className="text-xs font-semibold">Compartir</span>
           </button>
         </div>
+
+        {/* Imprimir el QR (para dejarlo a la entrada de la parroquia, etc.) */}
+        <button
+          onClick={handlePrint}
+          disabled={!qrDataUrl}
+          className="w-full mt-3 py-3 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+        >
+          <Printer className="w-5 h-5" />
+          Imprimir QR
+        </button>
 
         <button
           onClick={onClose}

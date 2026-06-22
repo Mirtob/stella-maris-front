@@ -1055,6 +1055,7 @@ function AppContent() {
           navigate,
           onDeleteCantoral: handleDeleteCantoral,
           onEditCantoral: handleEditCantoral,
+          onShareCantoral: setQrCantoral,
           onListen: handleListen,
         })}
       </Suspense>
@@ -1091,6 +1092,7 @@ interface ViewProps {
   navigate: (view: string) => void;
   onDeleteCantoral: (id: string) => Promise<void>;
   onEditCantoral: (id: string) => void;
+  onShareCantoral: (cantoral: PublishedCantoral) => void;
   onListen: (cantoral: PublishedCantoral) => void;
 }
 
@@ -1154,6 +1156,7 @@ function renderView(p: ViewProps): JSX.Element | null {
           // CRUD solo para Coro/Admin; el Pueblo fiel solo ve.
           onEdit={p.effectiveRole !== 'Pueblo fiel' ? p.onEditCantoral : undefined}
           onDelete={p.effectiveRole !== 'Pueblo fiel' ? p.onDeleteCantoral : undefined}
+          onShare={p.effectiveRole !== 'Pueblo fiel' ? p.onShareCantoral : undefined}
         />
       );
 
@@ -1193,6 +1196,7 @@ function renderView(p: ViewProps): JSX.Element | null {
             cantorals={p.publishedCantorals}
             onEdit={p.onEditCantoral}
             onDelete={p.onDeleteCantoral}
+            onShare={p.onShareCantoral}
           />
         </RoleGuard>
       );

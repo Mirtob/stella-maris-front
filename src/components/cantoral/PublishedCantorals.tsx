@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, Calendar, Church, Play, Music as MusicIcon, Clock, BookText, ChevronDown, ChevronUp, Download, Filter, Search, Headphones, Edit2, Trash2 } from 'lucide-react';
+import { BookOpen, Calendar, Church, Play, Music as MusicIcon, Clock, BookText, ChevronDown, ChevronUp, Download, Filter, Search, Headphones, Edit2, Trash2, QrCode } from 'lucide-react';
 import { PublishedCantoral, Song } from '../../types';
 import { getCategoryColors } from '../../utils/colors';
 import { CantoralWithOrdinary } from './CantoralWithOrdinary';
@@ -23,12 +23,14 @@ interface PublishedCantoralsProps {
   onEdit?: (cantoralId: string) => void;
   /** Eliminar un cantoral publicado (solo Coro/Admin). */
   onDelete?: (cantoralId: string) => void;
+  /** Mostrar el QR del cantoral para compartir/imprimir (solo Coro/Admin). */
+  onShare?: (cantoral: PublishedCantoral) => void;
 }
 
 // Pueblo fiel solo ve hasta 2 semanas adelante en el dashboard.
 const PUEBLO_FIEL_WINDOW_DAYS = 14;
 
-export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onListen, userRole, userInstrument, userParishName, onEdit, onDelete }: PublishedCantoralsProps) {
+export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onListen, userRole, userInstrument, userParishName, onEdit, onDelete, onShare }: PublishedCantoralsProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewingOrdinary, setViewingOrdinary] = useState<string | null>(null);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
@@ -245,8 +247,17 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
           </div>
 
           {/* Gestión (CRUD) — solo Coro/Admin, sobre los cantorales de la parroquia activa */}
-          {canManage && (onEdit || onDelete) && (
+          {canManage && (onEdit || onDelete || onShare) && (
             <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-white/40 dark:border-white/20">
+              {onShare && (
+                <button
+                  onClick={() => onShare(cantoral)}
+                  className="col-span-2 bg-gradient-to-br from-green-600 to-green-700 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-green-800"
+                >
+                  <QrCode className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
+                  Compartir (QR)
+                </button>
+              )}
               {onEdit && (
                 <button
                   onClick={() => onEdit(cantoral.id)}
