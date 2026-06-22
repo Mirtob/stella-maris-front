@@ -229,6 +229,9 @@ function AppContent() {
   // Fuerza re-render al cerrar el tour (para que hasSeenTour() se reevalúe).
   const [, setTourTick] = useState(0);
   const [qrCantoral, setQrCantoral] = useState<PublishedCantoral | null>(null);
+  // true cuando el QR se abre desde "Compartir" (no recién publicado) → encabezado distinto.
+  const [qrShareMode, setQrShareMode] = useState(false);
+  const handleShareCantoral = (c: PublishedCantoral) => { setQrShareMode(true); setQrCantoral(c); };
   // Resumen tras publicar el mismo cantoral en varias parroquias (QR por parroquia).
   const [publishedBatch, setPublishedBatch] = useState<PublishedCantoral[] | null>(null);
   // Server-authoritative admin check (vs. trusting the role saved in localStorage)
@@ -763,6 +766,7 @@ function AppContent() {
 
     // QR: una sola → diálogo directo; varias → resumen con QR por parroquia.
     if (succeeded.length === 1) {
+      setQrShareMode(false);
       setQrCantoral(succeeded[0]);
     } else {
       setPublishedBatch(succeeded);
@@ -986,7 +990,8 @@ function AppContent() {
         cantoralLabel={qrCantoral ? `${qrCantoral.liturgicalDate}${massTypeBadge(qrCantoral) ? ` (${massTypeBadge(qrCantoral)})` : ''} · ${qrCantoral.massTime}` : undefined}
         parishName={qrCantoral?.parishName}
         pdfUrl={qrCantoral?.pdfUrl}
-        onClose={() => setQrCantoral(null)}
+        shareMode={qrShareMode}
+        onClose={() => { setQrCantoral(null); setQrShareMode(false); }}
       />
 
       {publishedBatch && (
@@ -1055,7 +1060,7 @@ function AppContent() {
           navigate,
           onDeleteCantoral: handleDeleteCantoral,
           onEditCantoral: handleEditCantoral,
-          onShareCantoral: setQrCantoral,
+          onShareCantoral: handleShareCantoral,
           onListen: handleListen,
         })}
       </Suspense>
@@ -1124,6 +1129,8 @@ function renderView(p: ViewProps): JSX.Element | null {
             userRole={p.effectiveRole}
             userInstrument={p.userProfile.instrument}
             userParishName={p.activeParishName}
+            // El Pueblo fiel puede compartir el QR (no editar/eliminar).
+            onShare={p.onShareCantoral}
           />
         );
       }
@@ -1153,10 +1160,10 @@ function renderView(p: ViewProps): JSX.Element | null {
           userRole={p.effectiveRole}
           userInstrument={p.userProfile.instrument}
           userParishName={p.activeParishName}
-          // CRUD solo para Coro/Admin; el Pueblo fiel solo ve.
+          // Editar/Eliminar solo Coro/Admin; Compartir (QR) lo puede usar también el Pueblo fiel.
           onEdit={p.effectiveRole !== 'Pueblo fiel' ? p.onEditCantoral : undefined}
           onDelete={p.effectiveRole !== 'Pueblo fiel' ? p.onDeleteCantoral : undefined}
-          onShare={p.effectiveRole !== 'Pueblo fiel' ? p.onShareCantoral : undefined}
+          onShare={p.onShareCantoral}
         />
       );
 

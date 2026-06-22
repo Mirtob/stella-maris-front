@@ -246,8 +246,9 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
             </button>
           </div>
 
-          {/* Gestión (CRUD) — solo Coro/Admin, sobre los cantorales de la parroquia activa */}
-          {canManage && (onEdit || onDelete || onShare) && (
+          {/* Compartir (QR) — disponible para todos los perfiles, incluido Pueblo fiel.
+              Editar/Eliminar — solo Coro/Admin, sobre los cantorales de la parroquia activa. */}
+          {(onShare || (canManage && (onEdit || onDelete))) && (
             <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-white/40 dark:border-white/20">
               {onShare && (
                 <button
@@ -258,7 +259,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                   Compartir (QR)
                 </button>
               )}
-              {onEdit && (
+              {canManage && onEdit && (
                 <button
                   onClick={() => onEdit(cantoral.id)}
                   className="bg-gradient-to-br from-blue-700 to-blue-900 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-blue-800"
@@ -267,7 +268,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                   Editar
                 </button>
               )}
-              {onDelete && (
+              {canManage && onDelete && (
                 <button
                   onClick={() => setPendingDeleteId(cantoral.id)}
                   className="bg-gradient-to-br from-red-600 to-red-700 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-red-800"

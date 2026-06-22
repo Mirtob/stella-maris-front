@@ -11,6 +11,8 @@ interface CantoralQRDialogProps {
   cantoralLabel?: string;  // e.g. "Domingo 5 de Pascua · 10:00 AM"
   parishName?: string;
   pdfUrl?: string;          // URL pública del PDF del cantoral (Supabase Storage)
+  /** true = abierto desde "Compartir" (no recién publicado): cambia el encabezado. */
+  shareMode?: boolean;
   onClose: () => void;
 }
 
@@ -25,6 +27,7 @@ export function CantoralQRDialog({
   cantoralLabel,
   parishName,
   pdfUrl,
+  shareMode = false,
   onClose,
 }: CantoralQRDialogProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -145,10 +148,12 @@ export function CantoralQRDialog({
         <div className="text-center mb-5">
           <div className="text-4xl mb-2">📲</div>
           <h2 className="text-xl sm:text-2xl font-bold text-blue-950 dark:text-white">
-            ¡Cantoral publicado!
+            {shareMode ? 'Compartir cantoral' : '¡Cantoral publicado!'}
           </h2>
           <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-            Comparte este QR con tu comunidad
+            {shareMode
+              ? 'Comparte este QR con quien quiera seguir la Misa'
+              : 'Comparte este QR con tu comunidad'}
           </p>
           {cantoralLabel && (
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 italic">
