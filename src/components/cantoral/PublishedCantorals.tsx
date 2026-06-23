@@ -53,9 +53,13 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
     roleList = roleList.filter(c => c.status === 'published');
   }
 
-  // Filtrar por parroquia activa del usuario
+  // Filtrar por parroquia activa del usuario (tolerante a espacios y mayúsculas,
+  // igual que listCantorals — evita que un cantoral "no aparezca" por diferencias
+  // de formato entre la parroquia guardada y la activa).
   if (userParishName) {
-    roleList = roleList.filter(c => c.parishName === userParishName);
+    const norm = (s?: string) => (s ?? '').trim().toLowerCase();
+    const target = norm(userParishName);
+    roleList = roleList.filter(c => norm(c.parishName) === target);
   }
 
   // ── Ventanas temporales ────────────────────────────────────────────────────

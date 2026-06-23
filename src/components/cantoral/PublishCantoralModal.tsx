@@ -232,6 +232,17 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
     ...customDates.map(cd => cd.name),
   ];
 
+  // Aviso: la fecha EFECTIVA en que se publica (ya con el ajuste de I Vísperas)
+  // quedó en el pasado → el Pueblo fiel no lo verá (solo muestra de hoy en adelante).
+  const pastPublishDates = (() => {
+    const today = getTodayLocal();
+    const eff = isMulti
+      ? Array.from(selectedParishes).map(p => publishDate(schedules[p]?.date || '', schedules[p]?.massType || 'dia'))
+      : [publishDate(selectedDate, massType)];
+    return eff.filter(d => d && d < today);
+  })();
+  const hasPastPublishDate = pastPublishDates.length > 0;
+
   // Revisión litúrgica (avisos no bloqueantes) para la(s) fecha(s) destino.
   const liturgicalWarnings: LiturgicalWarning[] = (() => {
     const dates = isMulti
@@ -548,6 +559,23 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                     </p>
                   </div>
                 </>
+              )}
+
+              {/* Aviso de fecha en el pasado — el Pueblo fiel no lo vería */}
+              {hasPastPublishDate && (
+                <div className="bg-red-50 dark:bg-red-950/40 rounded-2xl p-4 border-2 border-red-300 dark:border-red-700 transition-colors">
+                  <div className="flex gap-2">
+                    <span className="text-2xl">⚠️</span>
+                    <div>
+                      <h4 className="text-base font-bold text-red-900 dark:text-red-100 mb-1">La fecha de la Misa ya pasó</h4>
+                      <p className="text-sm text-red-900 dark:text-red-200">
+                        Se publicaría para el <strong>{formatYmdForDisplay(pastPublishDates[0], { weekday: 'long', day: 'numeric', month: 'long' })}</strong>,
+                        que es anterior a hoy. El Pueblo fiel solo ve cantorales de hoy en adelante, así que <strong>no aparecerá</strong> en su lista.
+                        {massType === 'visperas_i' && ' Revisa que la celebración y su fecha sean las correctas (I Vísperas publica el día anterior).'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* Revisión litúrgica — avisos no bloqueantes */}
