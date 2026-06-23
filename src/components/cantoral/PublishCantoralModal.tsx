@@ -175,9 +175,25 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
   };
 
   // ── Publicar ──────────────────────────────────────────────────────────────
-  // La celebración se elige por su día. I Vísperas se canta la tarde del día
-  // ANTERIOR → la fecha publicada es día−1; Misa del día y II Vísperas usan el mismo día.
-  const publishDate = (date: string, type: MassType) => (type === 'visperas_i' ? addDaysLocal(date, -1) : date);
+  // Fecha base = la fecha CANÓNICA de la celebración elegida (si se reconoce en el
+  // calendario o en las solemnidades agregadas), NO la que haya quedado en el campo.
+  // Así I Vísperas siempre cae el día correcto aunque el campo de fecha no se haya
+  // sincronizado. Si la celebración no se reconoce, usa la fecha del campo.
+  const canonicalBaseDate = (litName: string, fallbackDate: string): string => {
+    const name = (litName || '').trim();
+    if (!name) return fallbackDate;
+    const year = new Date(fallbackDate || getTodayLocal()).getFullYear();
+    const derived = getDateForLiturgicalName(name, year);
+    if (derived) return derived;
+    const custom = customDates.find(cd => cd.name === name);
+    return custom?.date || fallbackDate;
+  };
+
+  // I Vísperas → día anterior a la celebración; Misa del día y II Vísperas → el día.
+  const publishDate = (date: string, type: MassType, litName: string) => {
+    const base = canonicalBaseDate(litName, date);
+    return type === 'visperas_i' ? addDaysLocal(base, -1) : base;
+  };
 
   const buildTargets = (): PublishTarget[] => {
     if (isMulti) {
@@ -185,7 +201,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
         const s = schedules[parish];
         return {
           parishName: parish,
-          date: publishDate(s.date, s.massType),
+          date: publishDate(s.date, s.massType, s.liturgicalDate),
           liturgicalDate: s.liturgicalDate.trim(),
           massTime: normalizeMassTime(s.massTime),
           massType: s.massType,
@@ -195,7 +211,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
     }
     return [{
       parishName: allParishes[0] || parishName,
-      date: publishDate(selectedDate, massType),
+      date: publishDate(selectedDate, massType, liturgicalDate),
       liturgicalDate: liturgicalDate.trim(),
       massTime: normalizeMassTime(massTime),
       massType,
@@ -237,8 +253,8 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
   const pastPublishDates = (() => {
     const today = getTodayLocal();
     const eff = isMulti
-      ? Array.from(selectedParishes).map(p => publishDate(schedules[p]?.date || '', schedules[p]?.massType || 'dia'))
-      : [publishDate(selectedDate, massType)];
+      ? Array.from(selectedParishes).map(p => publishDate(schedules[p]?.date || '', schedules[p]?.massType || 'dia', schedules[p]?.liturgicalDate || ''))
+      : [publishDate(selectedDate, massType, liturgicalDate)];
     return eff.filter(d => d && d < today);
   })();
   const hasPastPublishDate = pastPublishDates.length > 0;
@@ -394,9 +410,10 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                                     </button>
                                   ))}
                                 </div>
-                                {s.massType === 'visperas_i' && s.date && (
+                                {(s.date || s.liturgicalDate) && (
                                   <p className="mt-1.5 text-xs text-purple-800 dark:text-purple-300">
-                                    Se publicará el <strong>{formatYmdForDisplay(addDaysLocal(s.date, -1), { weekday: 'long', day: 'numeric', month: 'long' })}</strong> por la tarde (I Vísperas).
+                                    Se publicará el <strong>{formatYmdForDisplay(publishDate(s.date, s.massType, s.liturgicalDate), { weekday: 'long', day: 'numeric', month: 'long' })}</strong>
+                                    {s.massType === 'visperas_i' ? ' por la tarde (I Vísperas)' : s.massType === 'visperas_ii' ? ' por la tarde (II Vísperas)' : ''}.
                                   </p>
                                 )}
                               </div>
@@ -523,12 +540,13 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                         </button>
                       ))}
                     </div>
-                    {massType === 'visperas_i' && selectedDate && (
+                    {(selectedDate || liturgicalDate) && (
                       <div className="mt-3 bg-purple-50 dark:bg-purple-950/40 border-2 border-purple-200 dark:border-purple-700 rounded-xl p-3 flex gap-2">
-                        <span className="text-lg">🕯️</span>
+                        <span className="text-lg">📅</span>
                         <p className="text-sm text-purple-900 dark:text-purple-200">
-                          Se publicará el <strong>{formatYmdForDisplay(addDaysLocal(selectedDate, -1), { weekday: 'long', day: 'numeric', month: 'long' })}</strong> por la tarde
-                          (I Vísperas de <strong>{liturgicalDate || 'la celebración elegida'}</strong>).
+                          Se publicará el <strong>{formatYmdForDisplay(publishDate(selectedDate, massType, liturgicalDate), { weekday: 'long', day: 'numeric', month: 'long' })}</strong>
+                          {massType === 'visperas_i' ? ' por la tarde (I Vísperas)' : massType === 'visperas_ii' ? ' por la tarde (II Vísperas)' : ''}
+                          {liturgicalDate ? <> · {liturgicalDate}</> : null}.
                         </p>
                       </div>
                     )}
