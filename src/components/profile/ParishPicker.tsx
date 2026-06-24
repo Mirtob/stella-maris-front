@@ -93,8 +93,15 @@ export function ParishPicker({ selected, onChange, alreadyAdded = [] }: ParishPi
               const isAdded = alreadyAdded.includes(full);
               const checked = isAdded || selected.includes(full);
               const parishChapels = chapelsFor(full);
+              const hasChapels = parishChapels.length > 0;
               return (
-                <div key={parish.id}>
+                <div key={parish.id} className={hasChapels ? 'rounded-lg bg-white/40 dark:bg-white/5 p-2' : ''}>
+                  {/* Nombre de la parroquia: cabecera del grupo cuando tiene capillas */}
+                  {hasChapels && (
+                    <div className="px-2 pt-1 pb-1 text-sm font-bold text-blue-950 dark:text-white">
+                      {parish.name}
+                    </div>
+                  )}
                   <label
                     className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
                       isAdded
@@ -110,7 +117,7 @@ export function ParishPicker({ selected, onChange, alreadyAdded = [] }: ParishPi
                       className="w-5 h-5 rounded border-2 border-blue-600 dark:border-blue-400 bg-white dark:bg-white/10 cursor-pointer accent-blue-600 disabled:cursor-not-allowed"
                     />
                     <span className="text-base sm:text-lg font-medium text-blue-900 dark:text-blue-100">
-                      {parish.name}
+                      {hasChapels ? 'Sede parroquial' : parish.name}
                       {isAdded && <span className="text-sm text-blue-700 dark:text-blue-300"> (ya agregada)</span>}
                     </span>
                   </label>
