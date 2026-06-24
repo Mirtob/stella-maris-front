@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { UserRole } from '../../types';
-import { buildChapelParish } from '../../utils/parish';
+import { buildChapelParish, formatActiveParishLabel } from '../../utils/parish';
 
 interface SelectActiveParishDialogProps {
   parishes: string[];
@@ -202,7 +202,7 @@ export function SelectActiveParishDialog({
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100 flex-1 min-w-0 break-words">{parish}</span>
+                        <span className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100 flex-1 min-w-0 break-words">{formatActiveParishLabel(parish)}</span>
                         {isLast && <LastUseBadge />}
                         <span className="text-blue-500 dark:text-blue-400 text-lg">→</span>
                       </div>

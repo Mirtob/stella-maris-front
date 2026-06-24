@@ -54,3 +54,14 @@ export function splitActiveParish(active?: string | null): { parishFull: string;
   const chapel = raw.slice(idx + CHAPEL_SEP.length).trim();
   return chapel ? { parishFull, chapel } : { parishFull };
 }
+
+/**
+ * Etiqueta legible de una unidad (parroquia o capilla). Para una capilla muestra
+ * SIEMPRE su parroquia madre, de modo que dos capillas con el mismo nombre (en
+ * parroquias distintas) se distingan: "Capilla San José · Parroquia X - Diócesis".
+ */
+export function formatActiveParishLabel(active?: string | null): string {
+  const { parishFull, chapel } = splitActiveParish(active);
+  if (!chapel) return parishFull;
+  return `Capilla ${chapel} · ${parishFull}`;
+}

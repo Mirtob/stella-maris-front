@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Send, Calendar, Church, Clock, Plus } from 'lucide-react';
 import { Song, InstrumentType } from '../../types';
 import { getTodayLocal, formatYmdForDisplay, addDaysLocal } from '../../utils/dateLocal';
+import { formatActiveParishLabel } from '../../utils/parish';
 import { MassType } from '../../types';
 import { MASS_TYPE_LABEL, MASS_TYPE_RANGE, MASS_TIME_BY_TYPE } from '../../utils/massType';
 import { getLiturgicalDateForDate, getDateForLiturgicalName, isSunday, getLiturgicalDateNames } from '../../utils/liturgicalCalendar';
@@ -356,7 +357,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                               onChange={() => toggleParish(parish)}
                               className="w-5 h-5 rounded border-2 border-blue-600 dark:border-blue-400 accent-blue-600 cursor-pointer flex-shrink-0"
                             />
-                            <span className="text-base font-bold text-blue-950 dark:text-white break-words">{parish}</span>
+                            <span className="text-base font-bold text-blue-950 dark:text-white break-words">{formatActiveParishLabel(parish)}</span>
                           </label>
 
                           {checked && (
@@ -451,7 +452,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                       </div>
                       <div>
                         <div className="text-sm text-blue-900 dark:text-blue-200">Parroquia</div>
-                        <div className="text-xl font-bold text-blue-950 dark:text-white">{parishName}</div>
+                        <div className="text-xl font-bold text-blue-950 dark:text-white">{formatActiveParishLabel(parishName)}</div>
                       </div>
                     </div>
                   </div>
