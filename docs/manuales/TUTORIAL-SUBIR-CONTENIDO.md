@@ -108,7 +108,7 @@ liturgico: si
 
 --- LETRA ---
 [Coro]
-[G]Vienen con ale[C]gría, Se[D]ñor...
+[Sol]Vienen con ale[Do]gría, Se[Re]ñor...
 [Estrofa 1]
 ...
 ```
@@ -128,8 +128,9 @@ liturgico: si
 | `liturgico` | No | `si` (default) o `no` |
 | `categoria_no_liturgica` | No | Solo si `liturgico: no` — Adoración, Procesión, Mariano, Reflexión, Evangelización, Otro |
 
-> **Acordes en la letra:** se escriben entre corchetes pegados a la sílaba, ej.
-> `[G]Vienen con ale[C]gría`. Así el transpositor del Modo Atril no descuadra los acordes.
+> **Acordes en la letra:** se escriben en **cifrado latino** (Do, Re, Mi, Fa, Sol, La, Si)
+> entre corchetes pegados a la sílaba, ej. `[Sol]Vienen con ale[Do]gría`. En la app, el
+> usuario puede ver los acordes en latino o americano (C, D, E…) y transponerlos.
 
 ---
 

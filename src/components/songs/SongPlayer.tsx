@@ -16,7 +16,7 @@ function getDriveProxyUrl(sheetMusicUrl: string): { proxyUrl: string; driveViewU
   };
 }
 import { getCategoryColors, getCategoryHeaderGradient } from '../../utils/colors';
-import { transposeContent, getTransposedKey, formatTransposition } from '../../utils/chordTranspose';
+import { transposeContent, getTransposedKey, formatTransposition, getChordNotation, setChordNotation, type ChordNotation } from '../../utils/chordTranspose';
 import { LyricsWithChords } from './LyricsWithChords';
 import { LyricsOnly } from './LyricsOnly';
 
@@ -31,6 +31,8 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
   const [showSheetMusic, setShowSheetMusic] = useState(false);
   const [sheetMusicScale, setSheetMusicScale] = useState(1);
   const [transposition, setTransposition] = useState(0); // Semitonos de transposición
+  const [notation, setNotation] = useState<ChordNotation>(() => getChordNotation());
+  const changeNotation = (n: ChordNotation) => { setNotation(n); setChordNotation(n); };
   const [showLyrics, setShowLyrics] = useState(true); // Mostrar letras por defecto
   
   const colors = getCategoryColors(song.category);
@@ -48,13 +50,13 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
                        song.lyrics;
 
   // Transponer la letra si hay transposición activa
-  const displayedLyrics = song.lyrics && canTranspose 
-    ? transposeContent(song.lyrics, transposition)
+  const displayedLyrics = song.lyrics
+    ? transposeContent(song.lyrics, canTranspose ? transposition : 0, notation)
     : song.lyrics;
 
   // Calcular tonalidad transpuesta
-  const displayedKey = song.originalKey && canTranspose
-    ? getTransposedKey(song.originalKey, transposition)
+  const displayedKey = song.originalKey
+    ? getTransposedKey(song.originalKey, canTranspose ? transposition : 0, notation)
     : song.originalKey;
 
   const handleZoomIn = () => {
@@ -254,7 +256,23 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
                       </button>
                     </div>
                   </div>
-                  <p className="text-sm opacity-90">
+                  {/* Cifrado: latino (Do, Re…) ↔ americano (C, D…) */}
+                  <div className="flex items-center gap-2 mt-3">
+                    <span className="text-sm opacity-90">Cifrado:</span>
+                    <button
+                      onClick={() => changeNotation('latin')}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-bold border ${notation === 'latin' ? 'bg-white text-green-800 border-white' : 'bg-white/10 text-white border-white/30'}`}
+                    >
+                      Do Re Mi
+                    </button>
+                    <button
+                      onClick={() => changeNotation('american')}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-bold border ${notation === 'american' ? 'bg-white text-green-800 border-white' : 'bg-white/10 text-white border-white/30'}`}
+                    >
+                      C D E
+                    </button>
+                  </div>
+                  <p className="text-sm opacity-90 mt-3">
                     💡 <strong>Tip:</strong> Usa los botones ↑↓ para encontrar la tonalidad más cómoda para tu voz
                   </p>
                 </div>

@@ -1,101 +1,97 @@
 /**
- * Utilidad para transponer acordes musicales
- * Usado para que los guitarristas puedan cambiar la tonalidad
+ * Transposición y notación de acordes.
+ *
+ * Los acordes se escriben en la letra entre corchetes: [Sol], [Lam], [Do#7], [Re/Fa#].
+ * Por convención los escribimos en **cifrado latino** (Do, Re, Mi, Fa, Sol, La, Si),
+ * pero el usuario puede VER los acordes en latino o en **cifrado americano** (C, D, E…),
+ * y transponer con las flechas. La transformación ocurre SOLO dentro de los corchetes,
+ * nunca sobre la letra.
  */
 
-// Notas en orden cromático (escala de 12 semitonos)
-const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+export type ChordNotation = 'latin' | 'american';
 
-// Mapeo de notación alternativa (bemoles a sostenidos)
-const NOTE_MAPPING: Record<string, string> = {
-  'Db': 'C#',
-  'Eb': 'D#',
-  'Gb': 'F#',
-  'Ab': 'G#',
-  'Bb': 'A#',
+// Escala cromática (12 semitonos) en ambas notaciones, usando sostenidos.
+const AMERICAN = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const LATIN = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'];
+
+// Nombre de nota base → índice cromático (sin alteración).
+const BASE_INDEX: Record<string, number> = {
+  C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11,
+  DO: 0, RE: 2, MI: 4, FA: 5, SOL: 7, LA: 9, SI: 11,
 };
+// Prefijos latinos a probar (Sol antes que los de 2 letras).
+const LATIN_PREFIXES = ['Sol', 'Do', 'Re', 'Mi', 'Fa', 'La', 'Si'];
 
-/**
- * Transpone una nota individual
- * @param note - Nota a transponer (ej: "C", "Am", "G7")
- * @param semitones - Número de semitonos a subir (+) o bajar (-)
- */
-function transposeNote(note: string, semitones: number): string {
-  // Separar la nota base del modificador (m, 7, sus4, etc.)
-  const noteMatch = note.match(/^([A-G][#b]?)(.*)/);
-  
-  if (!noteMatch) return note; // Si no es una nota válida, devolver sin cambios
-  
-  let baseNote = noteMatch[1];
-  const modifier = noteMatch[2];
-  
-  // Convertir bemoles a sostenidos
-  if (baseNote in NOTE_MAPPING) {
-    baseNote = NOTE_MAPPING[baseNote];
+interface ParsedBase { index: number; rest: string; }
+
+/** Lee la nota base (latina o americana) + alteración al inicio del token. */
+function parseBase(token: string): ParsedBase | null {
+  const lower = token.toLowerCase();
+  for (const p of LATIN_PREFIXES) {
+    if (lower.startsWith(p.toLowerCase())) {
+      let index = BASE_INDEX[p.toUpperCase()];
+      let rest = token.slice(p.length);
+      if (rest[0] === '#') { index = (index + 1) % 12; rest = rest.slice(1); }
+      else if (rest[0] === 'b') { index = (index + 11) % 12; rest = rest.slice(1); }
+      return { index, rest };
+    }
   }
-  
-  // Buscar el índice de la nota en la escala
-  const currentIndex = NOTES.indexOf(baseNote);
-  
-  if (currentIndex === -1) return note; // Nota no válida
-  
-  // Calcular el nuevo índice
-  let newIndex = (currentIndex + semitones) % 12;
-  
-  // Manejar índices negativos
-  if (newIndex < 0) {
-    newIndex = 12 + newIndex;
+  const m = token.match(/^([A-Ga-g])([#b]?)/);
+  if (m) {
+    let index = BASE_INDEX[m[1].toUpperCase()];
+    if (m[2] === '#') index = (index + 1) % 12;
+    else if (m[2] === 'b') index = (index + 11) % 12;
+    return { index, rest: token.slice(m[0].length) };
   }
-  
-  // Devolver la nueva nota con su modificador
-  return NOTES[newIndex] + modifier;
+  return null;
+}
+
+function formatNote(index: number, notation: ChordNotation): string {
+  const i = ((index % 12) + 12) % 12;
+  return notation === 'american' ? AMERICAN[i] : LATIN[i];
+}
+
+/** Transforma un token de acorde (incluye bajo "/X"): transpone y cambia de notación. */
+function transformChord(token: string, semitones: number, notation: ChordNotation): string {
+  return token
+    .split('/')
+    .map((part) => {
+      const trimmed = part.trim();
+      const parsed = parseBase(trimmed);
+      if (!parsed) return part; // no es un acorde reconocible → dejar igual
+      const newIndex = parsed.index + semitones;
+      return formatNote(newIndex, notation) + parsed.rest;
+    })
+    .join('/');
 }
 
 /**
- * Transpone todos los acordes en una línea de texto
- * @param line - Línea de texto con acordes
- * @param semitones - Número de semitonos a transponer
+ * Transpone y/o reescribe en la notación elegida TODOS los acordes [..] del contenido.
+ * No toca la letra (solo lo que está entre corchetes).
  */
-export function transposeLine(line: string, semitones: number): string {
-  // Patrón para encontrar acordes (letras mayúsculas seguidas opcionalmente de #, b, m, 7, etc.)
-  const chordPattern = /\b([A-G][#b]?(?:m|maj|min|dim|aug|sus|add|[0-9])*)\b/g;
-  
-  return line.replace(chordPattern, (match) => {
-    return transposeNote(match, semitones);
-  });
+export function transposeContent(content: string, semitones: number, notation: ChordNotation = 'latin'): string {
+  return content.replace(/\[([^\]]+)\]/g, (_m, chord) => `[${transformChord(chord, semitones, notation)}]`);
 }
 
-/**
- * Transpone todo el contenido (letra con acordes)
- * @param content - Texto completo con letras y acordes
- * @param semitones - Número de semitonos a transponer
- */
-export function transposeContent(content: string, semitones: number): string {
-  // Si no hay transposición, devolver el contenido original
-  if (semitones === 0) return content;
-  
-  // Dividir en líneas y transponer cada una
-  const lines = content.split('\n');
-  const transposedLines = lines.map(line => transposeLine(line, semitones));
-  
-  return transposedLines.join('\n');
+/** Tonalidad transpuesta (la clave NO va entre corchetes). */
+export function getTransposedKey(originalKey: string, semitones: number, notation: ChordNotation = 'latin'): string {
+  if (!originalKey) return originalKey;
+  return transformChord(originalKey, semitones, notation);
 }
 
-/**
- * Obtiene el nombre de la tonalidad transpuesta
- * @param originalKey - Tonalidad original (ej: "G")
- * @param semitones - Número de semitonos transpuestos
- */
-export function getTransposedKey(originalKey: string, semitones: number): string {
-  return transposeNote(originalKey, semitones);
-}
-
-/**
- * Formatea el número de semitonos como texto descriptivo
- * @param semitones - Número de semitonos
- */
+/** Texto descriptivo de la transposición. */
 export function formatTransposition(semitones: number): string {
   if (semitones === 0) return 'Tono original';
-  if (semitones > 0) return `+${semitones} ${Math.abs(semitones) === 1 ? 'semitono' : 'semitonos'}`;
+  if (semitones > 0) return `+${semitones} ${semitones === 1 ? 'semitono' : 'semitonos'}`;
   return `${semitones} ${Math.abs(semitones) === 1 ? 'semitono' : 'semitonos'}`;
+}
+
+// ── Preferencia de notación (compartida, persistida) ─────────────────────────
+const NOTATION_KEY = 'stella_maris_chord_notation';
+
+export function getChordNotation(): ChordNotation {
+  try { return localStorage.getItem(NOTATION_KEY) === 'american' ? 'american' : 'latin'; } catch { return 'latin'; }
+}
+export function setChordNotation(n: ChordNotation): void {
+  try { localStorage.setItem(NOTATION_KEY, n); } catch { /* modo privado */ }
 }

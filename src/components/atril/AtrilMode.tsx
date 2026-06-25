@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, ZoomIn, ZoomOut, ChevronUp, ChevronDown, RotateCcw, Play, Pause, Maximize2, Minimize2, Music, List } from 'lucide-react';
 import { Song, UserRole, InstrumentType } from '../../types';
-import { transposeContent, getTransposedKey, formatTransposition } from '../../utils/chordTranspose';
+import { transposeContent, getTransposedKey, formatTransposition, getChordNotation, setChordNotation, type ChordNotation } from '../../utils/chordTranspose';
 import { LyricsWithChords } from '../songs/LyricsWithChords';
 import { LyricsOnly } from '../songs/LyricsOnly';
 import { useWakeLock } from '../../hooks/useWakeLock';
@@ -41,6 +41,9 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
   const [focus, setFocus] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(3); // 1..10
+  // Notación de los acordes: latino (Do, Re…) o americano (C, D…). Elección del usuario.
+  const [notation, setNotation] = useState<ChordNotation>(() => getChordNotation());
+  const changeNotation = (n: ChordNotation) => { setNotation(n); setChordNotation(n); };
   // Tip contextual la 1ª vez que se abre el atril (F4).
   const [showTip, setShowTip] = useState(() => !hasSeenTip('atril'));
 
@@ -64,12 +67,14 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
   const scoreProxy = scoreEligible ? getDrivePdfProxyUrl(song?.sheetMusicUrl) : null;
   const showScore = !!scoreProxy;
   const canTranspose = !showScore && showChords && !!song?.lyrics;
-  const displayedLyrics = song?.lyrics && canTranspose
-    ? transposeContent(song.lyrics, transposition)
-    : (song?.lyrics ?? '');
-  const displayedKey = song?.originalKey && canTranspose
-    ? getTransposedKey(song.originalKey, transposition)
-    : song?.originalKey;
+  // Convierte la notación (latino/americano) y aplica la transposición SOLO a los
+  // acordes entre corchetes. La letra queda intacta.
+  const displayedLyrics = song?.lyrics
+    ? transposeContent(song.lyrics, transposition, notation)
+    : '';
+  const displayedKey = song?.originalKey
+    ? getTransposedKey(song.originalKey, transposition, notation)
+    : undefined;
 
   // Al cambiar de canto: resetear scroll, transposición y autoscroll.
   useEffect(() => {
@@ -146,6 +151,18 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
             <button onClick={() => setFontScale(s => Math.max(0.8, +(s - 0.15).toFixed(2)))} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label="Reducir letra"><ZoomOut className="w-6 h-6" strokeWidth={2.5} /></button>
             <button data-tour="atril-zoom" onClick={() => setFontScale(s => Math.min(3, +(s + 0.15).toFixed(2)))} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label="Agrandar letra"><ZoomIn className="w-6 h-6" strokeWidth={2.5} /></button>
           </>
+        )}
+
+        {/* Cifrado de acordes: latino (Do, Re…) ↔ americano (C, D…) */}
+        {canTranspose && (
+          <button
+            onClick={() => changeNotation(notation === 'latin' ? 'american' : 'latin')}
+            className={`${btn} px-2 h-11 flex-shrink-0 text-xs font-bold`}
+            aria-label="Cambiar cifrado de acordes (latino/americano)"
+            title="Cifrado latino / americano"
+          >
+            {notation === 'latin' ? 'Do·Re' : 'C·D'}
+          </button>
         )}
 
         {/* Transpositor (solo con acordes) */}

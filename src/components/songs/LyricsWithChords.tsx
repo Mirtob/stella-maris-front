@@ -87,27 +87,37 @@ function LyricsWithChordsImpl({ lyrics }: LyricsWithChordsProps) {
       );
     }
 
-    // Renderizar acordes encima del texto. El acorde va en un ancla de ANCHO 0
-    // (absolute encima), así NO separa la palabra cuando está en medio de ella
-    // (ej. "ale[C]gría" se ve junto). El texto fluye normal y envuelve por espacios.
+    // Agrupar en "columnas": cada columna = acorde (arriba) + el texto que le sigue
+    // (abajo). Así el acorde queda ENCIMA de la sílaba, sin superponerse a la letra
+    // y sin separar la palabra (las columnas se pegan: "ale"+"gría" = "alegría").
+    type Chunk = { chord: string; text: string };
+    const chunks: Chunk[] = [];
+    let cur: Chunk = { chord: '', text: '' };
+    let started = false;
+    for (const part of parts) {
+      if (part.type === 'chord') {
+        if (started) chunks.push(cur);
+        cur = { chord: part.content, text: '' };
+        started = true;
+      } else {
+        cur.text += part.content;
+        started = true;
+      }
+    }
+    chunks.push(cur);
+
     return (
-      <div key={lineIndex} className="relative pt-6 pb-1 leading-relaxed whitespace-pre-wrap break-words">
-        {parts.map((part, partIndex) => {
-          if (part.type === 'chord') {
-            return (
-              <span key={partIndex} className="relative inline-block align-baseline" style={{ width: 0 }}>
-                <span className="absolute bottom-full left-0 mb-0.5 text-blue-700 dark:text-blue-300 font-bold text-sm whitespace-nowrap">
-                  {part.content}
-                </span>
-              </span>
-            );
-          }
-          return (
-            <span key={partIndex} className="text-gray-900 dark:text-gray-100 text-base">
-              {part.content}
+      <div key={lineIndex} className="leading-relaxed py-1">
+        {chunks.map((c, i) => (
+          <span key={i} className="inline-flex flex-col align-bottom">
+            <span className="h-5 leading-none text-blue-700 dark:text-blue-300 font-bold text-sm whitespace-pre">
+              {c.chord || ' '}
             </span>
-          );
-        })}
+            <span className="text-gray-900 dark:text-gray-100 text-base whitespace-pre-wrap">
+              {c.text || ' '}
+            </span>
+          </span>
+        ))}
       </div>
     );
   };
