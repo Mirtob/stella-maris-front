@@ -1,7 +1,7 @@
 import { Music, Search, Trash2, FileText, Youtube, Loader, RefreshCw, Pencil, X, Check, Ban, Plus } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Song, MassMoment } from '../../types';
+import { Song, MassMoment, LiturgicalSeason, LITURGICAL_SEASON_LABELS } from '../../types';
 import { listSongs, deleteSong, updateSong, approveSong, rejectSong, addSong } from '../../services/songs';
 import { getSupabaseClient } from '../../services/supabaseClient';
 import { extractVideoId, formatDuration } from '../../services/youtube';
@@ -44,8 +44,20 @@ export function SongManager() {
   const emptyForm = { title: '', author: '', artist: '', massMoment: 'entrada' as MassMoment, youtubeId: '', driveFileId: '', duration: '', originalKey: '', massName: '', lyrics: '' };
   const [f, setF] = useState(emptyForm);
   // Alta manual de un canto (p. ej. de un canal ajeno: pones tú la metadata).
+  const NON_LIT_OPTIONS = ['Adoración', 'Procesión', 'Mariano', 'Reflexión', 'Evangelización', 'Otro'] as const;
+  const emptyAddForm = {
+    ...emptyForm,
+    seasons: [] as LiturgicalSeason[],
+    isLiturgical: true,
+    nonLiturgicalCategory: '' as string,
+  };
   const [showAdd, setShowAdd] = useState(false);
-  const [na, setNa] = useState(emptyForm);
+  const [na, setNa] = useState(emptyAddForm);
+  const toggleSeason = (s: LiturgicalSeason) =>
+    setNa(prev => ({
+      ...prev,
+      seasons: prev.seasons.includes(s) ? prev.seasons.filter(x => x !== s) : [...prev.seasons, s],
+    }));
   const [addingSong, setAddingSong] = useState(false);
   const [ytUrl, setYtUrl] = useState('');
   const [fetchingYt, setFetchingYt] = useState(false);
@@ -162,7 +174,7 @@ export function SongManager() {
 
   // Abrir el alta manual (formulario en blanco).
   const openAddSong = () => {
-    setNa(emptyForm);
+    setNa(emptyAddForm);
     setYtUrl('');
     setShowAdd(true);
   };
@@ -211,6 +223,9 @@ export function SongManager() {
       duration: na.duration.trim() || undefined,
       massName: na.massName.trim() || undefined,
       lyrics: na.lyrics || undefined,
+      liturgicalSeasons: na.seasons,
+      isLiturgical: na.isLiturgical,
+      nonLiturgicalCategory: na.isLiturgical ? undefined : (na.nonLiturgicalCategory as Song['nonLiturgicalCategory']) || undefined,
     });
     setAddingSong(false);
     if (!r.ok) { toast.error('No se pudo agregar el canto', { description: r.error }); return; }
@@ -628,6 +643,72 @@ export function SongManager() {
                   {MOMENT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
+
+              {/* Temporada litúrgica (varias permitidas; sin marcar = sirve para todas) */}
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">
+                  Temporada litúrgica <span className="text-gray-400">(opcional; sin marcar = todas)</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {(Object.keys(LITURGICAL_SEASON_LABELS) as LiturgicalSeason[]).map((s) => {
+                    const on = na.seasons.includes(s);
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => toggleSeason(s)}
+                        className={`px-3 py-1.5 rounded-full text-sm font-bold border-2 active:scale-95 transition-all ${
+                          on
+                            ? 'bg-blue-700 text-white border-blue-800'
+                            : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
+                        }`}
+                      >
+                        {LITURGICAL_SEASON_LABELS[s]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Litúrgico / No litúrgico */}
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Tipo de canto</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNa(prev => ({ ...prev, isLiturgical: true }))}
+                    className={`px-3 py-2.5 rounded-xl text-sm font-bold border-2 active:scale-95 transition-all ${
+                      na.isLiturgical
+                        ? 'bg-blue-700 text-white border-blue-800'
+                        : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
+                    }`}
+                  >
+                    Litúrgico (para la Misa)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNa(prev => ({ ...prev, isLiturgical: false }))}
+                    className={`px-3 py-2.5 rounded-xl text-sm font-bold border-2 active:scale-95 transition-all ${
+                      !na.isLiturgical
+                        ? 'bg-amber-600 text-white border-amber-700'
+                        : 'bg-white dark:bg-slate-700 text-amber-900 dark:text-amber-200 border-amber-200 dark:border-slate-600'
+                    }`}
+                  >
+                    No litúrgico
+                  </button>
+                </div>
+                {!na.isLiturgical && (
+                  <select
+                    value={na.nonLiturgicalCategory}
+                    onChange={(e) => setNa(prev => ({ ...prev, nonLiturgicalCategory: e.target.value }))}
+                    className="w-full mt-2 px-4 py-2.5 rounded-xl text-base text-gray-900 bg-white border-2 border-amber-300 focus:outline-none focus:border-amber-500 font-medium"
+                  >
+                    <option value="">Categoría no litúrgica…</option>
+                    {NON_LIT_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                )}
+              </div>
+
               <div>
                 <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Letra (con acordes [G] si aplica)</label>
                 <textarea
