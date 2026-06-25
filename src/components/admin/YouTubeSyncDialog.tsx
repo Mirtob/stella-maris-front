@@ -59,11 +59,11 @@ export function YouTubeSyncDialog({ onBack }: YouTubeSyncDialogProps) {
             </li>
             <li className="flex gap-2">
               <span className="font-bold">2.</span>
-              <span>Toca <strong>"Sincronizar ahora"</strong> — el app lee el canal y agrega solo los videos nuevos al catálogo.</span>
+              <span>Toca <strong>"Sincronizar ahora"</strong> — el app lee el canal, agrega los videos nuevos y <strong>actualiza</strong> los existentes con la metadata actual.</span>
             </li>
             <li className="flex gap-2">
               <span className="font-bold">3.</span>
-              <span>Las canciones ya existentes <strong>no se modifican</strong>. Seguro de repetir.</span>
+              <span>Refresca partes, temporadas, letra, etc. desde el canal. <strong>Ojo:</strong> sobrescribe esos campos si los editaste a mano en la app (no toca la partitura ni la letra si la metadata no las trae).</span>
             </li>
           </ul>
 
@@ -115,7 +115,7 @@ Letra del canto...`}</pre>
         {(status === 'done' || status === 'error') && result && (
           <div className="space-y-4">
             <div className={`rounded-2xl border-2 p-5 ${
-              result.inserted > 0
+              result.inserted > 0 || result.updated > 0
                 ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-400 dark:border-emerald-700'
                 : status === 'error'
                 ? 'bg-red-50 dark:bg-red-950/30 border-red-400 dark:border-red-700'
@@ -127,8 +127,11 @@ Letra del canto...`}</pre>
                   : <CheckCircle className="w-7 h-7 text-emerald-600 flex-shrink-0" />
                 }
                 <span className="text-lg font-bold text-blue-950 dark:text-white">
-                  {result.inserted > 0
-                    ? `${result.inserted} canción${result.inserted > 1 ? 'es' : ''} nueva${result.inserted > 1 ? 's' : ''} agregada${result.inserted > 1 ? 's' : ''}`
+                  {result.inserted > 0 || result.updated > 0
+                    ? [
+                        result.inserted > 0 ? `${result.inserted} nueva${result.inserted > 1 ? 's' : ''}` : null,
+                        result.updated > 0 ? `${result.updated} actualizada${result.updated > 1 ? 's' : ''}` : null,
+                      ].filter(Boolean).join(' · ')
                     : result.errors > 0
                     ? 'Sincronización con errores'
                     : 'Canal ya estaba al día'}
@@ -145,8 +148,8 @@ Letra del canto...`}</pre>
                   <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">Nuevas</p>
                 </div>
                 <div className="bg-white/60 dark:bg-white/10 rounded-xl p-3">
-                  <p className="text-2xl font-bold text-amber-600">{result.skipped}</p>
-                  <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">Ya existían</p>
+                  <p className="text-2xl font-bold text-amber-600">{result.updated}</p>
+                  <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">Actualizadas</p>
                 </div>
               </div>
             </div>

@@ -102,9 +102,24 @@ function songToRow(song: Song): Record<string, unknown> {
 export interface MigrationResult {
   total:    number;
   inserted: number;
-  skipped:  number;   // already existed (duplicate youtube_id)
+  updated:  number;   // already existed and were refreshed from YouTube
+  skipped:  number;   // already existed (duplicate youtube_id) — solo en la migración de mocks
   errors:   number;
   details:  string[];
+}
+
+/**
+ * Fila para RE-SINCRONIZAR: la metadata del canal manda, pero sin pisar lo que no
+ * corresponde. No incluye approval_status (preserva el flujo de aprobación) y omite
+ * drive_file_id / lyrics cuando la metadata no los trae (no borra una partitura/letra
+ * ya cargada). El resto de campos (partes, temporadas, etc.) sí se refresca.
+ */
+function songToSyncRow(song: Song): Record<string, unknown> {
+  const row = songToRow(song);
+  delete row.approval_status;
+  if (row.drive_file_id == null) delete row.drive_file_id;
+  if (row.lyrics == null)        delete row.lyrics;
+  return row;
 }
 
 /**
@@ -115,6 +130,7 @@ export async function migrateMockSongsToSupabase(): Promise<MigrationResult> {
   const result: MigrationResult = {
     total:    mockSongs.length,
     inserted: 0,
+    updated:  0,
     skipped:  0,
     errors:   0,
     details:  [],
@@ -156,12 +172,13 @@ export async function migrateMockSongsToSupabase(): Promise<MigrationResult> {
 // ---------------------------------------------------------------------------
 
 /**
- * Reads all videos with STELLA_MARIS_META from the YouTube channel and
- * inserts any that don't yet exist in Supabase (identified by youtube_id).
- * Existing songs are left untouched — run this after each channel upload.
+ * Reads all videos with STELLA_MARIS_META from the YouTube channel and los
+ * sincroniza con Supabase (identificados por youtube_id): inserta los nuevos y
+ * ACTUALIZA los existentes con la metadata actual del canal. Ejecutar después de
+ * cada subida o edición de metadata en el canal.
  */
 export async function syncYouTubeToSupabase(): Promise<MigrationResult> {
-  const result: MigrationResult = { total: 0, inserted: 0, skipped: 0, errors: 0, details: [] };
+  const result: MigrationResult = { total: 0, inserted: 0, updated: 0, skipped: 0, errors: 0, details: [] };
 
   // 1. Pull videos from YouTube (only those with STELLA_MARIS_META metadata)
   let ytSongs: Song[];
@@ -183,28 +200,46 @@ export async function syncYouTubeToSupabase(): Promise<MigrationResult> {
     return result;
   }
 
-  // 2. Upsert into Supabase — skip songs already in the catalog
   const sb = getSupabaseClient();
+
+  // 2. ¿Cuáles ya existían? (para contar nuevas vs. actualizadas)
+  const existing = new Set<string>();
+  try {
+    const ids = ytSongs.map(s => s.youtubeId).filter(Boolean) as string[];
+    const CHUNK = 200;
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const { data } = await sb
+        .from('songs')
+        .select('youtube_id')
+        .in('youtube_id', ids.slice(i, i + CHUNK));
+      for (const row of data ?? []) {
+        if (row.youtube_id) existing.add(row.youtube_id as string);
+      }
+    }
+  } catch {
+    // si falla el conteo previo, seguimos: el upsert igual funciona (contadores aproximados)
+  }
+
+  // 3. Upsert (insertar nuevos + actualizar existentes desde la metadata del canal)
   const BATCH = 50;
-
   for (let i = 0; i < ytSongs.length; i += BATCH) {
-    const batch = ytSongs.slice(i, i + BATCH).map(songToRow);
+    const slice = ytSongs.slice(i, i + BATCH);
+    const batch = slice.map(songToSyncRow);
 
-    const { data, error } = await sb
+    const { error } = await sb
       .from('songs')
-      .upsert(batch, { onConflict: 'youtube_id', ignoreDuplicates: true })
-      .select('id');
+      .upsert(batch, { onConflict: 'youtube_id' });
 
     if (error) {
       result.errors += batch.length;
       result.details.push(`Batch ${Math.floor(i / BATCH) + 1} error: ${error.message}`);
     } else {
-      const inserted = (data ?? []).length;
-      const skipped  = batch.length - inserted;
+      const updated  = slice.filter(s => s.youtubeId && existing.has(s.youtubeId)).length;
+      const inserted = slice.length - updated;
       result.inserted += inserted;
-      result.skipped  += skipped;
+      result.updated  += updated;
       result.details.push(
-        `Batch ${Math.floor(i / BATCH) + 1}: ${inserted} nuevas, ${skipped} ya existían`
+        `Batch ${Math.floor(i / BATCH) + 1}: ${inserted} nuevas, ${updated} actualizadas`
       );
     }
   }

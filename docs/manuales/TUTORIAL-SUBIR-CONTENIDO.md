@@ -138,12 +138,16 @@ liturgico: si
 > entre corchetes pegados a la sílaba, ej. `[Sol]Vienen con ale[Do]gría`. En la app, el
 > usuario puede ver los acordes en latino o americano (C, D, E…) y transponerlos.
 
-> **Editar después en la app:** también puedes ajustar partes y temporadas sin tocar la
-> metadata, en **Gestión de Cantos → Editar** (chips "Parte(s) de la Misa" y "Temporada
-> litúrgica"; la 1ª parte marcada es la principal). Útil sobre todo para cantos **ya
-> sincronizados**: al volver a sincronizar, los cantos existentes se **omiten** (no se
-> re-actualizan desde YouTube), así que los cambios de metadata posteriores se aplican
-> editando el canto en la app (o borrándolo y volviéndolo a sincronizar).
+> **Re-sincronizar actualiza:** al volver a sincronizar, los cantos **existentes se
+> actualizan** con la metadata actual del canal (partes, temporadas, autor, tonalidad,
+> Misa, etc.). Si editas la metadata de un video y sincronizas, los cambios se aplican.
+> **Ojo:** eso **sobrescribe** esos campos si los habías editado a mano en la app. No
+> borra la partitura ni la letra cuando la metadata no las trae, y no cambia el estado de
+> aprobación del canto.
+>
+> **Editar en la app:** también puedes ajustar partes y temporadas sin tocar la metadata,
+> en **Gestión de Cantos → Editar** (chips "Parte(s) de la Misa" y "Temporada litúrgica";
+> la 1ª parte marcada es la principal).
 
 ---
 
