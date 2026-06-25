@@ -36,6 +36,8 @@
 import { Song } from '../types';
 import { mockSongs } from '../data/mockSongs';
 import { YOUTUBE_CONFIG } from '../config/api';
+import { isOrdinary } from '../utils/ordinary';
+import { pickOrdinarySheet } from '../utils/ordinarySheetMusic';
 
 const CACHE_KEY = 'stella_maris_songs_cache';
 const CACHE_TTL = 60 * 60 * 1000; // 1 hora
@@ -143,7 +145,7 @@ function parseDescription(description: string): ParsedMeta | null {
 // Matching de partituras por nombre
 // ──────────────────────────────────────────────
 
-interface DriveFile { id: string; name: string; mimeType: string; }
+interface DriveFile { id: string; name: string; mimeType: string; path?: string }
 
 /** Normaliza un texto para comparación: minúsculas, sin acentos, sin caracteres especiales. */
 function normalize(s: string): string {
@@ -223,8 +225,14 @@ function videoToSong(video: any, sheets: DriveFile[] = []): Song | null {
     thumbnails.default?.url ?? '';
 
   // 1. Si la descripción tiene "partitura: ID", usar ese ID directamente
-  // 2. Si no, buscar automáticamente en Drive por título similar
+  // 2. Si es una parte del ordinario con `misa:`, resolver por CARPETA de la Misa
+  //    (una carpeta por Misa con un PDF por parte) — evita tomar el Kyrie de otra Misa
+  // 3. Si no, buscar automáticamente en Drive por título similar
   let sheetFileId = meta.partitura;
+  if (!sheetFileId && meta.categoria && meta.misa && isOrdinary({ category: meta.categoria })) {
+    const match = pickOrdinarySheet(meta.categoria, meta.misa, sheets);
+    if (match) sheetFileId = match.id;
+  }
   if (!sheetFileId) {
     const match = findBestSheetMatch(snippet.title ?? '', sheets);
     if (match) sheetFileId = match.id;

@@ -144,6 +144,51 @@ liturgico: si
 
 ---
 
+## 7-bis. Partes fijas de la Misa (Ordinario): **una carpeta por Misa**
+
+Las partes fijas (Kyrie, Gloria, Santo, Cordero de Dios) van **una a una**: un video
+por parte y un PDF por parte. Para que la app pueda "ir a buscar el resto de las partes
+a la misma carpeta", organízalas así:
+
+**En Drive — una carpeta por cada Misa, dentro de la carpeta de partituras:**
+
+```
+Partituras/
+└── Misa de los Ángeles/        ← la carpeta se llama IGUAL que la Misa
+    ├── Kyrie.pdf
+    ├── Gloria.pdf
+    ├── Santo.pdf
+    └── Cordero.pdf
+```
+
+> El **nombre de la carpeta = el nombre de la Misa**. Dentro, nombra cada PDF por su
+> parte (Kyrie, Gloria, Santo, Cordero). **No necesitas el ID de cada PDF**: la app lo
+> resuelve por la carpeta.
+
+**En YouTube — un video por parte**, todos con el **mismo** campo `misa:` (idéntico al
+nombre de la carpeta) y su `categoria:` correspondiente:
+
+```
+STELLA_MARIS_META
+categoria: Kyrie
+misa: Misa de los Ángeles      ← debe ser EXACTAMENTE el nombre de la carpeta
+version: Coro
+```
+
+Repite para `categoria: Gloria`, `Santo` y `Cordero de Dios`, siempre con el mismo
+`misa:`. (Si prefieres, puedes igual poner `partitura: <ID>`; tiene prioridad sobre la
+carpeta.)
+
+**Resultado en la app:** al armar el cantoral y agregar **una** parte (p. ej. el Kyrie),
+la app ofrece agregar automáticamente las demás partes de **esa misma Misa** y vincula
+la partitura de cada una desde **su carpeta** — sin mezclar el Santo de otra Misa.
+
+> Clave única de enlace: el texto de `misa:` en cada video **debe coincidir** con el
+> nombre de la carpeta en Drive. Si no coinciden, la app cae al match por nombre de
+> archivo (menos preciso).
+
+---
+
 ## 8. Errores comunes
 
 | Síntoma | Causa | Solución |
