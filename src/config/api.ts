@@ -76,17 +76,32 @@ export const SUPABASE_CONFIG = {
 // 🎬 YOUTUBE API CONFIGURATION
 // ==========================================
 
+// Lista de canales de cantos a sincronizar. Acepta varios IDs:
+//  - una lista separada por comas en VITE_YOUTUBE_CHANNEL_ID, y/o
+//  - un segundo canal en VITE_YOUTUBE_CHANNEL_ID_2.
+// La app lee/sincroniza TODOS los canales de la lista.
+const YT_CHANNEL_IDS: string[] = (() => {
+  const env = typeof import.meta !== 'undefined' ? (import.meta.env ?? {}) : ({} as Record<string, string>);
+  const raw = [env.VITE_YOUTUBE_CHANNEL_ID, env.VITE_YOUTUBE_CHANNEL_ID_2]
+    .filter(Boolean)
+    .join(',');
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s && !s.includes('xxxxx'));
+})();
+
 export const YOUTUBE_CONFIG = {
   // La API key NO vive en el cliente: las lecturas pasan por el proxy serverless
   // /api/youtube (la clave está solo en el servidor). Se deja vacío a propósito
   // para que no se inyecte ninguna clave en el bundle.
   apiKey: '',
 
-  // Channel ID del canal oficial de cantos
-  channelId: typeof import.meta !== 'undefined' && import.meta.env?.VITE_YOUTUBE_CHANNEL_ID 
-    ? import.meta.env.VITE_YOUTUBE_CHANNEL_ID 
-    : 'UCxxxxxxxxxxxxx',
-  
+  // Todos los canales a sincronizar.
+  channelIds: YT_CHANNEL_IDS,
+  // Canal principal (compat: link público y búsqueda forzada server-side).
+  channelId: YT_CHANNEL_IDS[0] ?? 'UCxxxxxxxxxxxxx',
+
   // YouTube se accede con API key de la cuenta de la app, no con OAuth del usuario
   scopes: [],
   

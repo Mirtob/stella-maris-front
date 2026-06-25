@@ -323,18 +323,25 @@ async function getVideoDetails(videoIds: string[]): Promise<any[]> {
 // ──────────────────────────────────────────────
 
 export async function loadSongsFromYouTube(): Promise<Song[]> {
-  const channelId = YOUTUBE_CONFIG.channelId;
-  const hasChannel = channelId && !channelId.includes('UCxxxxxxxx');
-  if (!hasChannel) return [];
+  // Soporta uno o varios canales (YOUTUBE_CONFIG.channelIds).
+  const channelIds = (YOUTUBE_CONFIG.channelIds ?? []).filter((c) => c && !c.includes('xxxxx'));
+  if (channelIds.length === 0) return [];
 
-  // La API key vive en el servidor; el proxy responde vacío si no está configurada.
-  const uploadsId = await getUploadsPlaylistId(channelId);
-  if (!uploadsId) return [];
+  // Para cada canal: uploads playlist → IDs de video. Se acumulan todos los IDs.
+  const allVideoIds: string[] = [];
+  for (const channelId of channelIds) {
+    // La API key vive en el servidor; el proxy responde vacío si no está configurada.
+    const uploadsId = await getUploadsPlaylistId(channelId);
+    if (!uploadsId) continue;
+    const ids = await getPlaylistVideoIds(uploadsId);
+    allVideoIds.push(...ids);
+  }
 
-  const videoIds = await getPlaylistVideoIds(uploadsId);
+  // Dedupe (por si un video apareciera en más de un canal/lista).
+  const videoIds = Array.from(new Set(allVideoIds));
   if (videoIds.length === 0) return [];
 
-  // Cargar videos y partituras en paralelo
+  // Cargar detalles de videos y partituras en paralelo.
   const [videos, sheets] = await Promise.all([
     getVideoDetails(videoIds),
     loadSheets(),
