@@ -42,18 +42,25 @@ export function SongManager() {
   const [editSong, setEditSong] = useState<Song | null>(null);
   const [savingSong, setSavingSong] = useState(false);
   const NON_LIT_OPTIONS = ['Adoración', 'Procesión', 'Mariano', 'Reflexión', 'Evangelización', 'Otro'] as const;
+  // Etiquetas para clasificar el canto: tiempos litúrgicos + temáticas. Se guardan
+  // como rótulos en `liturgical_seasons` (text[]), igual que los cantos sincronizados.
+  // Se pueden marcar varias por canto.
+  const SEASON_TAGS: string[] = [
+    ...Object.values(LITURGICAL_SEASON_LABELS),
+    'Sagrado Corazón', 'Virgen María', 'Santos', 'Gregoriano',
+  ];
   const emptyForm = {
     title: '', author: '', artist: '', massMoment: 'entrada' as MassMoment, youtubeId: '',
     driveFileId: '', duration: '', originalKey: '', massName: '', lyrics: '',
-    seasons: [] as LiturgicalSeason[], isLiturgical: true, nonLiturgicalCategory: '' as string,
+    seasons: [] as string[], isLiturgical: true, nonLiturgicalCategory: '' as string,
   };
   type SongForm = typeof emptyForm;
   const [f, setF] = useState<SongForm>(emptyForm);
   // Alta manual de un canto (p. ej. de un canal ajeno: pones tú la metadata).
   const [showAdd, setShowAdd] = useState(false);
   const [na, setNa] = useState<SongForm>(emptyForm);
-  // Toggler de temporada genérico para cualquiera de los dos formularios (edición/alta).
-  const toggleSeasonIn = (setForm: Dispatch<SetStateAction<SongForm>>, s: LiturgicalSeason) =>
+  // Toggler de etiqueta genérico para cualquiera de los dos formularios (edición/alta).
+  const toggleSeasonIn = (setForm: Dispatch<SetStateAction<SongForm>>, s: string) =>
     setForm(prev => ({
       ...prev,
       seasons: prev.seasons.includes(s) ? prev.seasons.filter(x => x !== s) : [...prev.seasons, s],
@@ -146,7 +153,7 @@ export function SongManager() {
       originalKey: song.originalKey || '',
       massName: song.massName || '',
       lyrics: song.lyrics || '',
-      seasons: (song.liturgicalSeasons as LiturgicalSeason[]) || [],
+      seasons: (song.liturgicalSeasons as unknown as string[]) || [],
       isLiturgical: song.isLiturgical ?? true,
       nonLiturgicalCategory: song.nonLiturgicalCategory || '',
     });
@@ -167,7 +174,7 @@ export function SongManager() {
       originalKey: f.originalKey.trim() || undefined,
       massName: f.massName.trim() || undefined,
       lyrics: f.lyrics || undefined,
-      liturgicalSeasons: f.seasons,
+      liturgicalSeasons: f.seasons as unknown as LiturgicalSeason[],
       isLiturgical: f.isLiturgical,
       nonLiturgicalCategory: f.isLiturgical ? undefined : (f.nonLiturgicalCategory as Song['nonLiturgicalCategory']) || undefined,
     });
@@ -229,7 +236,7 @@ export function SongManager() {
       duration: na.duration.trim() || undefined,
       massName: na.massName.trim() || undefined,
       lyrics: na.lyrics || undefined,
-      liturgicalSeasons: na.seasons,
+      liturgicalSeasons: na.seasons as unknown as LiturgicalSeason[],
       isLiturgical: na.isLiturgical,
       nonLiturgicalCategory: na.isLiturgical ? undefined : (na.nonLiturgicalCategory as Song['nonLiturgicalCategory']) || undefined,
     });
@@ -556,7 +563,7 @@ export function SongManager() {
                   Temporada litúrgica <span className="text-gray-400">(opcional; sin marcar = todas)</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {(Object.keys(LITURGICAL_SEASON_LABELS) as LiturgicalSeason[]).map((s) => {
+                  {SEASON_TAGS.map((s) => {
                     const on = f.seasons.includes(s);
                     return (
                       <button
@@ -569,7 +576,7 @@ export function SongManager() {
                             : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
                         }`}
                       >
-                        {LITURGICAL_SEASON_LABELS[s]}
+                        {s}
                       </button>
                     );
                   })}
@@ -722,7 +729,7 @@ export function SongManager() {
                   Temporada litúrgica <span className="text-gray-400">(opcional; sin marcar = todas)</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {(Object.keys(LITURGICAL_SEASON_LABELS) as LiturgicalSeason[]).map((s) => {
+                  {SEASON_TAGS.map((s) => {
                     const on = na.seasons.includes(s);
                     return (
                       <button
@@ -735,7 +742,7 @@ export function SongManager() {
                             : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
                         }`}
                       >
-                        {LITURGICAL_SEASON_LABELS[s]}
+                        {s}
                       </button>
                     );
                   })}

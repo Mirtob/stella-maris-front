@@ -67,12 +67,16 @@ export function CategorySearch({
     
     // Filtrar por tiempo litúrgico
     const suggestedSongs = categorySongs.filter(song => {
-      // Si el canto no tiene liturgicalSeason definido, considerarlo para todas las temporadas
-      if (!song.liturgicalSeason) return true;
-      
-      // Si tiene liturgicalSeason, verificar si incluye la temporada actual
-      const seasons = song.liturgicalSeason.split(',').map(s => s.trim());
-      
+      // Considerar TODAS las etiquetas del canto (no solo la primera), porque un
+      // canto puede tener varias (p. ej. "Tiempo Ordinario" + "Virgen María").
+      const seasons = (song.liturgicalSeasons && song.liturgicalSeasons.length > 0
+        ? (song.liturgicalSeasons as string[])
+        : (song.liturgicalSeason ? song.liturgicalSeason.split(',') : [])
+      ).map(s => s.trim()).filter(Boolean);
+
+      // Sin etiquetas → sirve para todas las temporadas.
+      if (seasons.length === 0) return true;
+
       // Mapear nombres de temporadas
       const seasonMapping: Record<string, string[]> = {
         'Adviento': ['Adviento'],
