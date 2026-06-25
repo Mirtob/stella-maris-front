@@ -52,6 +52,12 @@ export function SelectActiveParishDialog({
   const chapelsOf = (parishFull: string) => chapelsByParish[parishFull] ?? [];
 
   const handleRoleSelect = (role: UserRole) => {
+    // El Administrador tiene acceso global (CRUD), no opera desde una parroquia:
+    // entra directo sin preguntar parroquia ni capilla.
+    if (role === 'Admin') {
+      onSelect('', 'Admin');
+      return;
+    }
     if (multiParish) {
       setChosenRole(role);
       return;
