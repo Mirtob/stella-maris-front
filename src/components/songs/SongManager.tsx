@@ -1,5 +1,5 @@
 import { Music, Search, Trash2, FileText, Youtube, Loader, RefreshCw, Pencil, X, Check, Ban, Plus } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type Dispatch, type SetStateAction } from 'react';
 import { toast } from 'sonner';
 import { Song, MassMoment, LiturgicalSeason, LITURGICAL_SEASON_LABELS } from '../../types';
 import { listSongs, deleteSong, updateSong, approveSong, rejectSong, addSong } from '../../services/songs';
@@ -41,20 +41,20 @@ export function SongManager() {
   // Editar canto
   const [editSong, setEditSong] = useState<Song | null>(null);
   const [savingSong, setSavingSong] = useState(false);
-  const emptyForm = { title: '', author: '', artist: '', massMoment: 'entrada' as MassMoment, youtubeId: '', driveFileId: '', duration: '', originalKey: '', massName: '', lyrics: '' };
-  const [f, setF] = useState(emptyForm);
-  // Alta manual de un canto (p. ej. de un canal ajeno: pones tú la metadata).
   const NON_LIT_OPTIONS = ['Adoración', 'Procesión', 'Mariano', 'Reflexión', 'Evangelización', 'Otro'] as const;
-  const emptyAddForm = {
-    ...emptyForm,
-    seasons: [] as LiturgicalSeason[],
-    isLiturgical: true,
-    nonLiturgicalCategory: '' as string,
+  const emptyForm = {
+    title: '', author: '', artist: '', massMoment: 'entrada' as MassMoment, youtubeId: '',
+    driveFileId: '', duration: '', originalKey: '', massName: '', lyrics: '',
+    seasons: [] as LiturgicalSeason[], isLiturgical: true, nonLiturgicalCategory: '' as string,
   };
+  type SongForm = typeof emptyForm;
+  const [f, setF] = useState<SongForm>(emptyForm);
+  // Alta manual de un canto (p. ej. de un canal ajeno: pones tú la metadata).
   const [showAdd, setShowAdd] = useState(false);
-  const [na, setNa] = useState(emptyAddForm);
-  const toggleSeason = (s: LiturgicalSeason) =>
-    setNa(prev => ({
+  const [na, setNa] = useState<SongForm>(emptyForm);
+  // Toggler de temporada genérico para cualquiera de los dos formularios (edición/alta).
+  const toggleSeasonIn = (setForm: Dispatch<SetStateAction<SongForm>>, s: LiturgicalSeason) =>
+    setForm(prev => ({
       ...prev,
       seasons: prev.seasons.includes(s) ? prev.seasons.filter(x => x !== s) : [...prev.seasons, s],
     }));
@@ -146,6 +146,9 @@ export function SongManager() {
       originalKey: song.originalKey || '',
       massName: song.massName || '',
       lyrics: song.lyrics || '',
+      seasons: (song.liturgicalSeasons as LiturgicalSeason[]) || [],
+      isLiturgical: song.isLiturgical ?? true,
+      nonLiturgicalCategory: song.nonLiturgicalCategory || '',
     });
   };
 
@@ -164,6 +167,9 @@ export function SongManager() {
       originalKey: f.originalKey.trim() || undefined,
       massName: f.massName.trim() || undefined,
       lyrics: f.lyrics || undefined,
+      liturgicalSeasons: f.seasons,
+      isLiturgical: f.isLiturgical,
+      nonLiturgicalCategory: f.isLiturgical ? undefined : (f.nonLiturgicalCategory as Song['nonLiturgicalCategory']) || undefined,
     });
     setSavingSong(false);
     if (!r.ok) { toast.error('No se pudo guardar', { description: r.error }); return; }
@@ -174,7 +180,7 @@ export function SongManager() {
 
   // Abrir el alta manual (formulario en blanco).
   const openAddSong = () => {
-    setNa(emptyAddForm);
+    setNa(emptyForm);
     setYtUrl('');
     setShowAdd(true);
   };
@@ -543,6 +549,72 @@ export function SongManager() {
                   {MOMENT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
+
+              {/* Temporada litúrgica (varias permitidas; sin marcar = todas) */}
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">
+                  Temporada litúrgica <span className="text-gray-400">(opcional; sin marcar = todas)</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {(Object.keys(LITURGICAL_SEASON_LABELS) as LiturgicalSeason[]).map((s) => {
+                    const on = f.seasons.includes(s);
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => toggleSeasonIn(setF, s)}
+                        className={`px-3 py-1.5 rounded-full text-sm font-bold border-2 active:scale-95 transition-all ${
+                          on
+                            ? 'bg-blue-700 text-white border-blue-800'
+                            : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
+                        }`}
+                      >
+                        {LITURGICAL_SEASON_LABELS[s]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Litúrgico / No litúrgico */}
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Tipo de canto</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setF(prev => ({ ...prev, isLiturgical: true }))}
+                    className={`px-3 py-2.5 rounded-xl text-sm font-bold border-2 active:scale-95 transition-all ${
+                      f.isLiturgical
+                        ? 'bg-blue-700 text-white border-blue-800'
+                        : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
+                    }`}
+                  >
+                    Litúrgico (para la Misa)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setF(prev => ({ ...prev, isLiturgical: false }))}
+                    className={`px-3 py-2.5 rounded-xl text-sm font-bold border-2 active:scale-95 transition-all ${
+                      !f.isLiturgical
+                        ? 'bg-amber-600 text-white border-amber-700'
+                        : 'bg-white dark:bg-slate-700 text-amber-900 dark:text-amber-200 border-amber-200 dark:border-slate-600'
+                    }`}
+                  >
+                    No litúrgico
+                  </button>
+                </div>
+                {!f.isLiturgical && (
+                  <select
+                    value={f.nonLiturgicalCategory}
+                    onChange={(e) => setF(prev => ({ ...prev, nonLiturgicalCategory: e.target.value }))}
+                    className="w-full mt-2 px-4 py-2.5 rounded-xl text-base text-gray-900 bg-white border-2 border-amber-300 focus:outline-none focus:border-amber-500 font-medium"
+                  >
+                    <option value="">Categoría no litúrgica…</option>
+                    {NON_LIT_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                )}
+              </div>
+
               <div>
                 <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Letra</label>
                 <textarea
@@ -656,7 +728,7 @@ export function SongManager() {
                       <button
                         key={s}
                         type="button"
-                        onClick={() => toggleSeason(s)}
+                        onClick={() => toggleSeasonIn(setNa, s)}
                         className={`px-3 py-1.5 rounded-full text-sm font-bold border-2 active:scale-95 transition-all ${
                           on
                             ? 'bg-blue-700 text-white border-blue-800'
