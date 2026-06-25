@@ -50,11 +50,22 @@ export function SongManager() {
     'Sagrado Corazón', 'Virgen María', 'Santos', 'Gregoriano',
   ];
   const emptyForm = {
-    title: '', author: '', artist: '', massMoment: 'entrada' as MassMoment, youtubeId: '',
+    title: '', author: '', artist: '', moments: ['entrada'] as MassMoment[], youtubeId: '',
     driveFileId: '', duration: '', originalKey: '', massName: '', lyrics: '',
     seasons: [] as string[], isLiturgical: true, nonLiturgicalCategory: '' as string,
   };
   type SongForm = typeof emptyForm;
+  // Alterna una parte de la Misa. La primera elegida es la PRINCIPAL (orden del
+  // cantoral/PDF); el resto son partes adicionales donde el canto también sirve.
+  // Nunca se queda sin al menos una parte.
+  const toggleMomentIn = (setForm: Dispatch<SetStateAction<SongForm>>, m: MassMoment) =>
+    setForm(prev => {
+      if (prev.moments.includes(m)) {
+        if (prev.moments.length === 1) return prev; // siempre al menos una
+        return { ...prev, moments: prev.moments.filter(x => x !== m) };
+      }
+      return { ...prev, moments: [...prev.moments, m] };
+    });
   const [f, setF] = useState<SongForm>(emptyForm);
   // Alta manual de un canto (p. ej. de un canal ajeno: pones tú la metadata).
   const [showAdd, setShowAdd] = useState(false);
@@ -146,7 +157,10 @@ export function SongManager() {
       title: song.title || '',
       author: song.author || '',
       artist: song.artist || '',
-      massMoment: (song.massMoment as MassMoment) || 'entrada',
+      moments: [
+        (song.massMoment as MassMoment) || 'entrada',
+        ...((song.extraMoments ?? []) as MassMoment[]),
+      ].filter((m, i, arr) => arr.indexOf(m) === i),
       youtubeId: song.youtubeId || '',
       driveFileId: song.driveFileId || '',
       duration: song.duration || '',
@@ -167,7 +181,8 @@ export function SongManager() {
       title: f.title.trim(),
       author: f.author.trim() || undefined,
       artist: f.artist.trim() || undefined,
-      massMoment: f.massMoment,
+      massMoment: f.moments[0],
+      extraMoments: f.moments.slice(1),
       youtubeId: f.youtubeId.trim() || undefined,
       driveFileId: f.driveFileId.trim() || undefined,
       duration: f.duration.trim() || undefined,
@@ -227,7 +242,8 @@ export function SongManager() {
     setAddingSong(true);
     const r = await addSong({
       title: na.title.trim(),
-      massMoment: na.massMoment,
+      massMoment: na.moments[0],
+      extraMoments: na.moments.slice(1),
       youtubeId: na.youtubeId.trim() || undefined,
       driveFileId: na.driveFileId.trim() || undefined,
       author: na.author.trim() || undefined,
@@ -547,14 +563,30 @@ export function SongManager() {
               </div>
 
               <div>
-                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Momento de la Misa</label>
-                <select
-                  value={f.massMoment}
-                  onChange={(e) => setF(prev => ({ ...prev, massMoment: e.target.value as MassMoment }))}
-                  className="w-full px-4 py-2.5 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium"
-                >
-                  {MOMENT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
+                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">
+                  Parte(s) de la Misa <span className="text-gray-400">(elige una o varias; la 1ª es la principal)</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {MOMENT_OPTIONS.map((o) => {
+                    const idx = f.moments.indexOf(o.value);
+                    const on = idx !== -1;
+                    return (
+                      <button
+                        key={o.value}
+                        type="button"
+                        onClick={() => toggleMomentIn(setF, o.value)}
+                        className={`px-3 py-1.5 rounded-full text-sm font-bold border-2 active:scale-95 transition-all ${
+                          on
+                            ? 'bg-blue-700 text-white border-blue-800'
+                            : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
+                        }`}
+                      >
+                        {o.label}{idx === 0 ? ' ★' : ''}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">★ principal. Un canto puede servir para varias partes (p. ej. Ofertorio y Comunión).</p>
               </div>
 
               {/* Temporada litúrgica (varias permitidas; sin marcar = todas) */}
@@ -713,14 +745,30 @@ export function SongManager() {
               </div>
 
               <div>
-                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Momento de la Misa</label>
-                <select
-                  value={na.massMoment}
-                  onChange={(e) => setNa(prev => ({ ...prev, massMoment: e.target.value as MassMoment }))}
-                  className="w-full px-4 py-2.5 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium"
-                >
-                  {MOMENT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
+                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">
+                  Parte(s) de la Misa <span className="text-gray-400">(elige una o varias; la 1ª es la principal)</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {MOMENT_OPTIONS.map((o) => {
+                    const idx = na.moments.indexOf(o.value);
+                    const on = idx !== -1;
+                    return (
+                      <button
+                        key={o.value}
+                        type="button"
+                        onClick={() => toggleMomentIn(setNa, o.value)}
+                        className={`px-3 py-1.5 rounded-full text-sm font-bold border-2 active:scale-95 transition-all ${
+                          on
+                            ? 'bg-blue-700 text-white border-blue-800'
+                            : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
+                        }`}
+                      >
+                        {o.label}{idx === 0 ? ' ★' : ''}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">★ principal. Un canto puede servir para varias partes (p. ej. Ofertorio y Comunión).</p>
               </div>
 
               {/* Temporada litúrgica (varias permitidas; sin marcar = sirve para todas) */}

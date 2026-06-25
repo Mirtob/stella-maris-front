@@ -60,11 +60,16 @@ export function CategorySearch({
     return ['Kyrie', 'Gloria', 'Santo', 'Cordero de Dios'].includes(category);
   };
 
+  // Un canto pertenece a una categoría si es su parte principal O una de las
+  // partes adicionales donde también sirve (recommendedCategories).
+  const songInCategory = (song: Song, cat: string) =>
+    song.category === cat || (song.recommendedCategories?.includes(cat) ?? false);
+
   // **SUGERENCIAS LITÚRGICAS**: Filtrar cantos por categoría Y tiempo litúrgico
   const getSuggestedSongs = (): Song[] => {
     // Obtener todos los cantos de esta categoría
-    const categorySongs = songs.filter(song => song.category === category);
-    
+    const categorySongs = songs.filter(song => songInCategory(song, category));
+
     // Filtrar por tiempo litúrgico
     const suggestedSongs = categorySongs.filter(song => {
       // Considerar TODAS las etiquetas del canto (no solo la primera), porque un
@@ -108,8 +113,8 @@ export function CategorySearch({
 
   const suggestedSongs = getSuggestedSongs();
 
-  let categorySongs = songs.filter(song => song.category === category);
-  
+  let categorySongs = songs.filter(song => songInCategory(song, category));
+
   // Sort by preferred instrument if available
   if (preferredInstrument) {
     categorySongs = categorySongs.sort((a, b) => {
@@ -140,7 +145,12 @@ export function CategorySearch({
     }
   };
 
-  const handleAddSong = (song: Song) => {
+  const handleAddSong = (rawSong: Song) => {
+    // Si el canto se agrega desde una parte distinta a su principal (porque sirve
+    // para varias), fijar la categoría a la de esta tarjeta para que caiga en el
+    // lugar correcto del cantoral.
+    const song = rawSong.category === category ? rawSong : { ...rawSong, category };
+
     // Solo Comunión permite múltiples cantos
     if (category !== 'Comunión') {
       // Remover cualquier canto existente de esta categoría

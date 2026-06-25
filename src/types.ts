@@ -76,7 +76,8 @@ export interface Song {
   thumbnailUrl?: string; // URL del thumbnail del video de YouTube
   uploadedAt?: string; // Fecha de subida
   views?: number; // Visualizaciones (opcional)
-  recommendedCategories?: string[]; // Partes de la Misa donde se recomienda usar este canto
+  recommendedCategories?: string[]; // Partes de la Misa (nombres) donde TAMBIÉN sirve este canto (derivado de extraMoments)
+  extraMoments?: MassMoment[];       // Momentos ADICIONALES de la Misa (códigos) donde sirve, además del principal
   liturgicalSeason?: string; // Tiempo litúrgico recomendado
   lyrics?: string; // Letra del canto con acordes (para guitarristas) o sin acordes
   originalKey?: string; // Tonalidad original del canto (ej: "G", "Am")

@@ -132,6 +132,12 @@ liturgico: si
 > entre corchetes pegados a la sílaba, ej. `[Sol]Vienen con ale[Do]gría`. En la app, el
 > usuario puede ver los acordes en latino o americano (C, D, E…) y transponerlos.
 
+> **Un canto en varias partes:** la metadata del video usa **una** `categoria`. Si un
+> canto sirve para más de una parte (p. ej. Ofertorio y Comunión), agrégalo igual y luego,
+> en la app, **Gestión de Cantos → Editar → Parte(s) de la Misa**, marca todas las partes
+> que correspondan (la 1ª marcada es la principal). Aparecerá en cada una de esas tarjetas
+> al armar el cantoral.
+
 ---
 
 ## 7. Sin el ID: dos atajos
@@ -150,20 +156,30 @@ Las partes fijas (Kyrie, Gloria, Santo, Cordero de Dios) van **una a una**: un v
 por parte y un PDF por parte. Para que la app pueda "ir a buscar el resto de las partes
 a la misma carpeta", organízalas así:
 
-**En Drive — una carpeta por cada Misa, dentro de la carpeta de partituras:**
+**En Drive — organiza el Ordinario por familia, y una carpeta por cada Misa:**
 
 ```
 Partituras/
-└── Misa de los Ángeles/        ← la carpeta se llama IGUAL que la Misa
-    ├── Kyrie.pdf
-    ├── Gloria.pdf
-    ├── Santo.pdf
-    └── Cordero.pdf
+└── Ordinario/
+    ├── Misas en español/
+    │   └── Misa de los Ángeles/     ← la carpeta se llama IGUAL que la Misa
+    │       ├── Kyrie.pdf
+    │       ├── Gloria.pdf
+    │       ├── Santo.pdf
+    │       └── Cordero.pdf
+    └── Misas Gregorianas/
+        └── Misa de Angelis/         ← (o el nombre/autor de la Misa)
+            ├── Kyrie.pdf
+            ├── Gloria.pdf
+            ├── Santo.pdf
+            └── Cordero.pdf
 ```
 
-> El **nombre de la carpeta = el nombre de la Misa**. Dentro, nombra cada PDF por su
-> parte (Kyrie, Gloria, Santo, Cordero). **No necesitas el ID de cada PDF**: la app lo
-> resuelve por la carpeta.
+> Lo que importa para la app es el **nombre de la carpeta de la Misa** (el último nivel):
+> debe ser **igual al nombre de la Misa** (o del autor). Las carpetas intermedias
+> (`Ordinario`, `Misas en español`, `Misas Gregorianas`) son solo para tu orden — la app
+> busca la Misa a cualquier profundidad. Dentro, nombra cada PDF por su parte (Kyrie,
+> Gloria, Santo, Cordero). **No necesitas el ID de cada PDF**: la app lo resuelve por la carpeta.
 
 **En YouTube — un video por parte**, todos con el **mismo** campo `misa:` (idéntico al
 nombre de la carpeta) y su `categoria:` correspondiente:

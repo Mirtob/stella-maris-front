@@ -19,6 +19,7 @@ export interface SongInput {
   title: string;
   youtubeId?: string;
   massMoment: MassMoment;
+  extraMoments?: MassMoment[];
   liturgicalSeasons?: LiturgicalSeason[];
   instruments?: InstrumentType[];
   driveFileId?: string;
@@ -42,6 +43,8 @@ function rowToSong(row: Record<string, unknown>): Song {
     title:                 row.title as string,
     category:              normalizeCategory(row.mass_moment as string), // nombre de categoría que usa la app
     massMoment:            row.mass_moment as MassMoment,
+    extraMoments:          (row.extra_moments as MassMoment[]) ?? [],
+    recommendedCategories: ((row.extra_moments as string[]) ?? []).map(m => normalizeCategory(m)),
     youtubeId:             (row.youtube_id as string) ?? '',
     videoUrl:              row.youtube_id ? `https://www.youtube.com/watch?v=${row.youtube_id}` : undefined,
     liturgicalSeasons:     (row.liturgical_seasons as LiturgicalSeason[]) ?? [],
@@ -73,6 +76,7 @@ function songInputToRow(input: SongInput): Record<string, unknown> {
     title:                 input.title,
     youtube_id:            input.youtubeId ?? null,
     mass_moment:           input.massMoment,
+    extra_moments:         input.extraMoments ?? [],
     liturgical_seasons:    input.liturgicalSeasons ?? [],
     instruments:           input.instruments?.map(i => i.toLowerCase()) ?? ['coro', 'guitarra', 'organo'],
     drive_file_id:         input.driveFileId ?? null,
@@ -173,6 +177,7 @@ export async function updateSong(
     if (input.title !== undefined)            row.title                  = input.title;
     if (input.youtubeId !== undefined)        row.youtube_id             = input.youtubeId;
     if (input.massMoment !== undefined)       row.mass_moment            = input.massMoment;
+    if (input.extraMoments !== undefined)     row.extra_moments          = input.extraMoments;
     if (input.liturgicalSeasons !== undefined)row.liturgical_seasons     = input.liturgicalSeasons;
     if (input.instruments !== undefined)      row.instruments            = input.instruments.map(i => i.toLowerCase());
     if (input.driveFileId !== undefined)      row.drive_file_id          = input.driveFileId;
