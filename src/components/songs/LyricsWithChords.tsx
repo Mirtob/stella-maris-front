@@ -87,29 +87,27 @@ function LyricsWithChordsImpl({ lyrics }: LyricsWithChordsProps) {
       );
     }
 
-    // Renderizar acordes encima del texto
+    // Renderizar acordes encima del texto. El acorde va en un ancla de ANCHO 0
+    // (absolute encima), así NO separa la palabra cuando está en medio de ella
+    // (ej. "ale[C]gría" se ve junto). El texto fluye normal y envuelve por espacios.
     return (
-      <div key={lineIndex} className="relative py-1 my-1">
-        <div className="flex flex-wrap items-start min-h-[3rem]">
-          {parts.map((part, partIndex) => {
-            if (part.type === 'chord') {
-              return (
-                <span key={partIndex} className="relative inline-block">
-                  <span className="absolute -top-6 left-0 text-blue-700 dark:text-blue-300 font-bold text-sm whitespace-nowrap">
-                    {part.content}
-                  </span>
-                  <span className="invisible">.</span> {/* Espaciador invisible */}
-                </span>
-              );
-            } else {
-              return (
-                <span key={partIndex} className="text-gray-900 dark:text-gray-100 text-base">
+      <div key={lineIndex} className="relative pt-6 pb-1 leading-relaxed whitespace-pre-wrap break-words">
+        {parts.map((part, partIndex) => {
+          if (part.type === 'chord') {
+            return (
+              <span key={partIndex} className="relative inline-block align-baseline" style={{ width: 0 }}>
+                <span className="absolute bottom-full left-0 mb-0.5 text-blue-700 dark:text-blue-300 font-bold text-sm whitespace-nowrap">
                   {part.content}
                 </span>
-              );
-            }
-          })}
-        </div>
+              </span>
+            );
+          }
+          return (
+            <span key={partIndex} className="text-gray-900 dark:text-gray-100 text-base">
+              {part.content}
+            </span>
+          );
+        })}
       </div>
     );
   };

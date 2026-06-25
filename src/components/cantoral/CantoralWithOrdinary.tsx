@@ -45,7 +45,8 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
   // Pueblo fiel: SOLO la letra (sin partitura). Coro/Admin: letra (con acordes si
   // toca guitarra) + partitura.
   const isPuebloFiel = userRole === 'Pueblo fiel';
-  const showChords = !isPuebloFiel && userInstrument === 'Guitarra';
+  // El coro ve los acordes con cualquier instrumento (Guitarra u Órgano).
+  const showChords = !isPuebloFiel;
 
   // Ordinario según la celebración: Triduo (por fecha), Exequias/Ordenación
   // (por el texto) o la Misa normal.

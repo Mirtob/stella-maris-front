@@ -49,7 +49,8 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
   const accRef = useRef(0);
 
   const isPuebloFiel = userRole === 'Pueblo fiel';
-  const showChords = !isPuebloFiel && userInstrument === 'Guitarra';
+  // El coro ve los acordes encima de la letra con cualquier instrumento (Guitarra u Órgano).
+  const showChords = !isPuebloFiel;
 
   // Repertorio en orden de la Misa (Entrada → Kyrie → … → Salida).
   const orderedSongs = sortByMassOrder(songs);
