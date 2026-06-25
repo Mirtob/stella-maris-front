@@ -1,9 +1,10 @@
-import { Music, Search, Trash2, FileText, Youtube, Loader, RefreshCw, Pencil, X, Check, Ban } from 'lucide-react';
+import { Music, Search, Trash2, FileText, Youtube, Loader, RefreshCw, Pencil, X, Check, Ban, Plus } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Song, MassMoment } from '../../types';
-import { listSongs, deleteSong, updateSong, approveSong, rejectSong } from '../../services/songs';
+import { listSongs, deleteSong, updateSong, approveSong, rejectSong, addSong } from '../../services/songs';
 import { getSupabaseClient } from '../../services/supabaseClient';
+import { extractVideoId, formatDuration } from '../../services/youtube';
 import { matchesSearch } from '../../utils/textSearch';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 
@@ -40,14 +41,21 @@ export function SongManager() {
   // Editar canto
   const [editSong, setEditSong] = useState<Song | null>(null);
   const [savingSong, setSavingSong] = useState(false);
-  const [f, setF] = useState({ title: '', author: '', artist: '', massMoment: 'entrada' as MassMoment, youtubeId: '', driveFileId: '', duration: '', originalKey: '', massName: '', lyrics: '' });
+  const emptyForm = { title: '', author: '', artist: '', massMoment: 'entrada' as MassMoment, youtubeId: '', driveFileId: '', duration: '', originalKey: '', massName: '', lyrics: '' };
+  const [f, setF] = useState(emptyForm);
+  // Alta manual de un canto (p. ej. de un canal ajeno: pones tú la metadata).
+  const [showAdd, setShowAdd] = useState(false);
+  const [na, setNa] = useState(emptyForm);
+  const [addingSong, setAddingSong] = useState(false);
+  const [ytUrl, setYtUrl] = useState('');
+  const [fetchingYt, setFetchingYt] = useState(false);
   // Partituras disponibles en la carpeta de Drive (para elegir sin buscar el ID a mano).
   const [sheets, setSheets] = useState<{ id: string; name: string }[]>([]);
   const [loadingSheets, setLoadingSheets] = useState(false);
 
-  // Cargar la lista de partituras de Drive al abrir el editor (una vez).
+  // Cargar la lista de partituras de Drive al abrir el editor o el alta (una vez).
   useEffect(() => {
-    if (!editSong || sheets.length > 0 || loadingSheets) return;
+    if ((!editSong && !showAdd) || sheets.length > 0 || loadingSheets) return;
     setLoadingSheets(true);
     fetch('/api/sheets')
       .then(r => (r.ok ? r.json() : { files: [] }))
@@ -57,7 +65,7 @@ export function SongManager() {
         .sort((a: any, b: any) => a.name.localeCompare(b.name))))
       .catch(() => { /* sin red: queda el campo manual */ })
       .finally(() => setLoadingSheets(false));
-  }, [editSong, sheets.length, loadingSheets]);
+  }, [editSong, showAdd, sheets.length, loadingSheets]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -152,6 +160,65 @@ export function SongManager() {
     load();
   };
 
+  // Abrir el alta manual (formulario en blanco).
+  const openAddSong = () => {
+    setNa(emptyForm);
+    setYtUrl('');
+    setShowAdd(true);
+  };
+
+  // Trae título/duración del video desde YouTube (sirve para cualquier canal público).
+  const handleFetchYt = async () => {
+    const id = extractVideoId(ytUrl.trim()) || ytUrl.trim();
+    if (!/^[a-zA-Z0-9_-]{11}$/.test(id)) {
+      toast.error('Pega una URL o ID de YouTube válido');
+      return;
+    }
+    setFetchingYt(true);
+    try {
+      const r = await fetch(`/api/youtube?endpoint=videos&part=snippet,contentDetails&id=${encodeURIComponent(id)}`);
+      const data = await r.json();
+      const v = data.items?.[0];
+      if (!v) { toast.error('No se encontró el video (¿es público?)'); return; }
+      setNa(prev => ({
+        ...prev,
+        youtubeId: id,
+        title: prev.title || (v.snippet?.title ?? ''),
+        duration: formatDuration(v.contentDetails?.duration ?? '') || prev.duration,
+      }));
+      toast.success('Datos del video cargados', { description: 'Completa la metadata abajo.' });
+    } catch {
+      toast.error('No se pudo consultar YouTube');
+    } finally {
+      setFetchingYt(false);
+    }
+  };
+
+  const handleAddSong = async () => {
+    if (!na.title.trim()) { toast.error('El título es obligatorio'); return; }
+    if (na.youtubeId && !/^[a-zA-Z0-9_-]{11}$/.test(na.youtubeId.trim())) {
+      toast.error('El ID de YouTube no es válido'); return;
+    }
+    setAddingSong(true);
+    const r = await addSong({
+      title: na.title.trim(),
+      massMoment: na.massMoment,
+      youtubeId: na.youtubeId.trim() || undefined,
+      driveFileId: na.driveFileId.trim() || undefined,
+      author: na.author.trim() || undefined,
+      artist: na.artist.trim() || undefined,
+      originalKey: na.originalKey.trim() || undefined,
+      duration: na.duration.trim() || undefined,
+      massName: na.massName.trim() || undefined,
+      lyrics: na.lyrics || undefined,
+    });
+    setAddingSong(false);
+    if (!r.ok) { toast.error('No se pudo agregar el canto', { description: r.error }); return; }
+    setShowAdd(false);
+    toast.success('Canto agregado al catálogo');
+    load();
+  };
+
   const handleApprove = async (song: Song) => {
     const { data } = await getSupabaseClient().auth.getSession();
     const who = data.session?.user?.email || 'admin';
@@ -200,6 +267,15 @@ export function SongManager() {
             {loading ? 'Cargando…' : `${songs.length} cantos en el catálogo`}
           </p>
         </div>
+
+        {/* Agregar canto manualmente (p. ej. de un canal ajeno: la metadata la pones tú) */}
+        <button
+          onClick={openAddSong}
+          className="w-full mb-3 py-3 bg-gradient-to-br from-blue-700 to-blue-900 text-white border-2 border-blue-800 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95"
+        >
+          <Plus className="w-5 h-5" strokeWidth={3} />
+          Agregar canto manualmente
+        </button>
 
         {/* Refresh */}
         <button
@@ -464,6 +540,106 @@ export function SongManager() {
               <button onClick={handleSaveSong} disabled={savingSong} className="w-full bg-gradient-to-br from-blue-700 to-blue-900 text-white py-3 rounded-xl flex items-center justify-center gap-2 font-bold active:scale-95 disabled:opacity-50">
                 {savingSong ? <Loader className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />}
                 {savingSong ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: alta manual de un canto */}
+      {showAdd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowAdd(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-lg w-full border-4 border-blue-800 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-gradient-to-br from-blue-900 to-blue-950 text-white p-5 flex items-center justify-between border-b-4 border-blue-800 z-10">
+              <div className="flex items-center gap-3 min-w-0"><Plus className="w-6 h-6 flex-shrink-0" strokeWidth={2.5} /><h2 className="text-xl font-bold min-w-0 truncate">Agregar canto</h2></div>
+              <button onClick={() => setShowAdd(false)} className="p-2 hover:bg-white/20 rounded-xl flex-shrink-0"><X className="w-6 h-6" strokeWidth={2.5} /></button>
+            </div>
+            <div className="p-6 space-y-3">
+              {/* Traer datos desde una URL/ID de YouTube (cualquier canal público) */}
+              <div className="bg-blue-50 dark:bg-blue-950/40 rounded-xl p-3 border-2 border-blue-200 dark:border-blue-800">
+                <label className="text-sm font-bold text-blue-900 dark:text-blue-200 mb-1 block">Video de YouTube (URL o ID)</label>
+                <div className="flex gap-2">
+                  <input
+                    value={ytUrl}
+                    onChange={(e) => setYtUrl(e.target.value)}
+                    placeholder="https://youtube.com/watch?v=…"
+                    className="flex-1 px-4 py-2.5 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium"
+                  />
+                  <button
+                    onClick={handleFetchYt}
+                    disabled={fetchingYt || !ytUrl.trim()}
+                    className="px-4 py-2.5 rounded-xl bg-blue-700 text-white font-bold flex items-center gap-2 active:scale-95 disabled:opacity-50"
+                  >
+                    {fetchingYt ? <Loader className="w-5 h-5 animate-spin" /> : <Youtube className="w-5 h-5" />}
+                    Traer
+                  </button>
+                </div>
+                <p className="text-xs text-blue-800 dark:text-blue-300 mt-1">
+                  Trae el título y la duración. Tú completas la metadata abajo (categoría, partitura, etc.).
+                </p>
+              </div>
+
+              {([
+                ['Título', 'title'],
+                ['Autor', 'author'],
+                ['Artista / Intérprete', 'artist'],
+                ['ID de YouTube', 'youtubeId'],
+                ['Duración (ej. 3:45)', 'duration'],
+                ['Tonalidad (ej. Sol, Re m)', 'originalKey'],
+                ['Nombre de la Misa (agrupa Kyrie/Gloria/Santo/Cordero)', 'massName'],
+              ] as [string, keyof typeof na][]).map(([label, key]) => (
+                <div key={key}>
+                  <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">{label}</label>
+                  <input
+                    value={na[key] as string}
+                    onChange={(e) => setNa(prev => ({ ...prev, [key]: e.target.value }))}
+                    className="w-full px-4 py-2.5 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium"
+                  />
+                </div>
+              ))}
+
+              {/* Partitura (Google Drive) */}
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Partitura (Google Drive)</label>
+                <select
+                  value={na.driveFileId}
+                  onChange={(e) => setNa(prev => ({ ...prev, driveFileId: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium"
+                >
+                  <option value="">{loadingSheets ? 'Cargando partituras…' : '— Sin partitura —'}</option>
+                  {sheets.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                <input
+                  value={na.driveFileId}
+                  onChange={(e) => setNa(prev => ({ ...prev, driveFileId: e.target.value }))}
+                  placeholder="…o pega el ID del archivo de Drive manualmente"
+                  className="w-full mt-2 px-4 py-2 rounded-xl text-sm text-gray-700 bg-gray-50 border-2 border-gray-200 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Momento de la Misa</label>
+                <select
+                  value={na.massMoment}
+                  onChange={(e) => setNa(prev => ({ ...prev, massMoment: e.target.value as MassMoment }))}
+                  className="w-full px-4 py-2.5 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium"
+                >
+                  {MOMENT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Letra (con acordes [G] si aplica)</label>
+                <textarea
+                  value={na.lyrics}
+                  onChange={(e) => setNa(prev => ({ ...prev, lyrics: e.target.value }))}
+                  rows={5}
+                  className="w-full px-4 py-2.5 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium"
+                />
+              </div>
+              <button onClick={handleAddSong} disabled={addingSong} className="w-full bg-gradient-to-br from-green-700 to-green-800 text-white py-3 rounded-xl flex items-center justify-center gap-2 font-bold active:scale-95 disabled:opacity-50">
+                {addingSong ? <Loader className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />}
+                {addingSong ? 'Agregando...' : 'Agregar al catálogo'}
               </button>
             </div>
           </div>
