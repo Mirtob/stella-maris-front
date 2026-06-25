@@ -97,10 +97,10 @@
 
 ```
 STELLA_MARIS_META
-categoria: Entrada
+categoria: Ofertorio, Comunión
 autor: Alejandro Mejía
 version: Guitarra
-temporada: Adviento
+temporada: Adviento, Navidad
 tonalidad: G
 misa: Misa de los Ángeles
 partitura: 1AbCdEf123XyZ456GhI789
@@ -113,14 +113,20 @@ liturgico: si
 ...
 ```
 
+> **Varias partes / varias temporadas desde la metadata:** tanto `categoria` como
+> `temporada` admiten **varios valores separados por coma**. En `categoria`, la **primera
+> es la principal** (define el orden en el cantoral/PDF) y las demás son partes adicionales
+> donde el canto también aparece. En el ejemplo, el canto sirve para **Ofertorio y Comunión**,
+> y se sugiere en **Adviento y Navidad**.
+
 ### Campos
 
 | Campo | Obligatorio | Valores / ejemplo |
 |---|---|---|
-| `categoria` | **Sí** | Entrada, Kyrie, Gloria, Salmo, Aleluya, Aclamación al Evangelio, Post Evangelio, Ofertorio, Santo, Padre Nuestro, Cordero de Dios, Comunión, Salida, Rito de Aspersión, Credo |
+| `categoria` | **Sí** | Una o **varias separadas por coma** (la 1ª = principal): Entrada, Kyrie, Gloria, Salmo, Aleluya, Aclamación al Evangelio, Post Evangelio, Ofertorio, Santo, Padre Nuestro, Cordero de Dios, Comunión, Salida, Rito de Aspersión, Credo |
 | `autor` | No | Nombre del autor/compositor |
 | `version` | No | `Coro`, `Guitarra` u `Órgano` (default: Coro) |
-| `temporada` | No | Adviento, Navidad, Cuaresma, Pascua, Tiempo Ordinario… (separa con coma si son varias) |
+| `temporada` | No | Una o **varias separadas por coma**: Adviento, Navidad, Cuaresma, Pascua, Tiempo Ordinario… (sin poner = sirve para todas) |
 | `tonalidad` | No | Tono original (ej. `G`, `Re m`) |
 | `misa` | No | Nombre de la Misa (agrupa Kyrie/Gloria/Santo/Cordero de la misma misa) |
 | `partitura` | No | **ID del archivo PDF** en Drive (Paso 3) |
@@ -132,11 +138,12 @@ liturgico: si
 > entre corchetes pegados a la sílaba, ej. `[Sol]Vienen con ale[Do]gría`. En la app, el
 > usuario puede ver los acordes en latino o americano (C, D, E…) y transponerlos.
 
-> **Un canto en varias partes:** la metadata del video usa **una** `categoria`. Si un
-> canto sirve para más de una parte (p. ej. Ofertorio y Comunión), agrégalo igual y luego,
-> en la app, **Gestión de Cantos → Editar → Parte(s) de la Misa**, marca todas las partes
-> que correspondan (la 1ª marcada es la principal). Aparecerá en cada una de esas tarjetas
-> al armar el cantoral.
+> **Editar después en la app:** también puedes ajustar partes y temporadas sin tocar la
+> metadata, en **Gestión de Cantos → Editar** (chips "Parte(s) de la Misa" y "Temporada
+> litúrgica"; la 1ª parte marcada es la principal). Útil sobre todo para cantos **ya
+> sincronizados**: al volver a sincronizar, los cantos existentes se **omiten** (no se
+> re-actualizan desde YouTube), así que los cambios de metadata posteriores se aplican
+> editando el canto en la app (o borrándolo y volviéndolo a sincronizar).
 
 ---
 

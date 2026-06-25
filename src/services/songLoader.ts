@@ -33,11 +33,12 @@
  * URL de preview: https://drive.google.com/file/d/[FILE_ID]/preview
  */
 
-import { Song } from '../types';
+import { Song, LiturgicalSeason } from '../types';
 import { mockSongs } from '../data/mockSongs';
 import { YOUTUBE_CONFIG } from '../config/api';
 import { isOrdinary } from '../utils/ordinary';
 import { pickOrdinarySheet } from '../utils/ordinarySheetMusic';
+import { categoryToMoment, seasonToCanonical } from '../utils/category';
 
 const CACHE_KEY = 'stella_maris_songs_cache';
 const CACHE_TTL = 60 * 60 * 1000; // 1 hora
@@ -84,10 +85,12 @@ export function clearSongsCache(): void {
 // ──────────────────────────────────────────────
 
 interface ParsedMeta {
-  categoria?: string;
+  categoria?: string;     // parte PRINCIPAL (primera de la lista)
+  categorias?: string[];  // todas las partes (categoria separada por coma)
   autor?: string;
   version?: string;
-  temporada?: string;
+  temporada?: string;     // primera temporada (compat)
+  temporadas?: string[];  // todas las temporadas (temporada separada por coma)
   tonalidad?: string;
   etiquetas?: string[];
   misa?: string;
@@ -95,6 +98,15 @@ interface ParsedMeta {
   liturgico?: boolean;
   categoriaNOLiturgica?: string;
   letra?: string;
+}
+
+/** Divide un valor separado por comas en una lista limpia (sin vacíos ni duplicados). */
+function splitCsv(value: string): string[] {
+  const out: string[] = [];
+  for (const part of value.split(',').map(t => t.trim()).filter(Boolean)) {
+    if (!out.includes(part)) out.push(part);
+  }
+  return out;
 }
 
 function parseDescription(description: string): ParsedMeta | null {
@@ -117,10 +129,10 @@ function parseDescription(description: string): ParsedMeta | null {
     const value = line.slice(colonIdx + 1).trim();
 
     switch (key) {
-      case 'categoria':          meta.categoria = value; break;
+      case 'categoria':          meta.categorias = splitCsv(value); meta.categoria = meta.categorias[0]; break;
       case 'autor':              meta.autor = value; break;
       case 'version':            meta.version = value; break;
-      case 'temporada':          meta.temporada = value; break;
+      case 'temporada':          meta.temporadas = splitCsv(value); meta.temporada = meta.temporadas[0]; break;
       case 'tonalidad':          meta.tonalidad = value; break;
       case 'etiquetas':          meta.etiquetas = value.split(',').map(t => t.trim()); break;
       case 'misa':               meta.misa = value; break;
@@ -242,10 +254,19 @@ function videoToSong(video: any, sheets: DriveFile[] = []): Song | null {
     ? `https://drive.google.com/file/d/${sheetFileId}/preview`
     : undefined;
 
+  // Partes adicionales (categoria con varias separadas por coma; la 1ª es la principal).
+  const extraLabels = (meta.categorias ?? []).slice(1);
+  // Temporadas litúrgicas (temporada separada por coma) → códigos canónicos.
+  const seasons = (meta.temporadas ?? (meta.temporada ? [meta.temporada] : []))
+    .map(seasonToCanonical)
+    .filter((s): s is LiturgicalSeason => s !== null);
+
   return {
     id: videoId,
     title: snippet.title ?? 'Sin título',
     category: meta.categoria!,
+    recommendedCategories: extraLabels.length ? extraLabels : undefined,
+    extraMoments: extraLabels.map(categoryToMoment),
     youtubeId: videoId,
     duration: formatDuration(details.duration ?? ''),
     artist: 'Stella Maris',
@@ -258,6 +279,7 @@ function videoToSong(video: any, sheets: DriveFile[] = []): Song | null {
     uploadedAt: snippet.publishedAt,
     views: Number(stats.viewCount ?? 0),
     liturgicalSeason: meta.temporada,
+    liturgicalSeasons: seasons,
     lyrics: meta.letra,
     originalKey: meta.tonalidad,
     isLiturgical: meta.liturgico !== false,

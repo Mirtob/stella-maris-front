@@ -9,73 +9,26 @@ import { Song, MassMoment, LiturgicalSeason } from '../types';
 import { getSupabaseClient } from '../services/supabaseClient';
 import { mockSongs } from '../data/mockSongs';
 import { loadSongsFromYouTube } from '../services/songLoader';
-
-// ---------------------------------------------------------------------------
-// Mapping tables  (old string values → canonical keys)
-// ---------------------------------------------------------------------------
-
-const CATEGORY_TO_MOMENT: Record<string, MassMoment> = {
-  'Entrada':                  'entrada',
-  'Kyrie':                    'kyrie',
-  'Gloria':                   'gloria',
-  'Salmo':                    'salmo',
-  'Salmo AT 1-7':             'salmo',
-  'Salmo Epistolar':          'salmo',
-  'Aleluya':                  'aleluya',
-  'Aleluya Triple':           'aleluya',
-  'Post Evangelio':           'aleluya',
-  'Aclamación al Evangelio':  'aleluya',
-  'Secuencia de Pascua':      'aleluya',
-  'Secuencia de Pentecostés': 'aleluya',
-  'Secuencia de Corpus':      'aleluya',
-  'Ofertorio':                'ofertorio',
-  'Santo':                    'santo',
-  'Cordero de Dios':          'cordero',
-  'Comunión':                 'comunion',
-  'Salida':                   'final',
-  'Kalenda Navideña':         'entrada',
-  'Pregón Pascual':           'entrada',
-  'Exposición y Procesión':   'exposicion',
-  'Adoración':                'no-liturgico',
-  'Procesión':                'no-liturgico',
-  'Mariano':                  'no-liturgico',
-  'Reflexión':                'no-liturgico',
-  'Evangelización':           'no-liturgico',
-  'Otro':                     'no-liturgico',
-};
-
-const SEASON_TO_CANONICAL: Record<string, LiturgicalSeason> = {
-  'Adviento':          'adviento',
-  'Navidad':           'navidad',
-  'Ordinario':         'tiempo-ordinario',
-  'Tiempo Ordinario':  'tiempo-ordinario',
-  'Cuaresma':          'cuaresma',
-  'Semana Santa':      'semana-santa',
-  'Pascua':            'pascua',
-  'Pentecostés':       'pentecostes',
-  'Corpus Christi':    'corpus-christi',
-};
+import { categoryToMoment, seasonToCanonical } from '../utils/category';
 
 // ---------------------------------------------------------------------------
 // Mappers
 // ---------------------------------------------------------------------------
 
 function mapMoment(category: string): MassMoment {
-  return CATEGORY_TO_MOMENT[category] ?? 'no-liturgico';
+  return categoryToMoment(category);
 }
 
 function mapSeasons(song: Song): LiturgicalSeason[] {
   const seasons: LiturgicalSeason[] = [];
 
   // Primary season from liturgicalSeason field
-  if (song.liturgicalSeason) {
-    const canonical = SEASON_TO_CANONICAL[song.liturgicalSeason];
-    if (canonical) seasons.push(canonical);
-  }
+  const primary = seasonToCanonical(song.liturgicalSeason);
+  if (primary) seasons.push(primary);
 
   // Supplement with tags (e.g. "Adviento", "Cuaresma" as YouTube tags)
   for (const tag of song.tags ?? []) {
-    const canonical = SEASON_TO_CANONICAL[tag];
+    const canonical = seasonToCanonical(tag);
     if (canonical && !seasons.includes(canonical)) {
       seasons.push(canonical);
     }
@@ -83,6 +36,16 @@ function mapSeasons(song: Song): LiturgicalSeason[] {
 
   // Empty array = valid for all seasons (no restriction)
   return seasons;
+}
+
+/** Momentos adicionales: usa los explícitos del canto o los deriva de recommendedCategories. */
+function mapExtraMoments(song: Song): MassMoment[] {
+  const primary = mapMoment(song.category);
+  const codes = (song.extraMoments && song.extraMoments.length)
+    ? song.extraMoments
+    : (song.recommendedCategories ?? []).map(categoryToMoment);
+  // Sin duplicados y sin repetir el principal.
+  return Array.from(new Set(codes)).filter(m => m !== primary);
 }
 
 function mapInstruments(song: Song): string[] {
@@ -114,7 +77,10 @@ function songToRow(song: Song): Record<string, unknown> {
     title:                   song.title,
     youtube_id:              song.youtubeId || null,
     mass_moment:             mapMoment(song.category),
-    liturgical_seasons:      mapSeasons(song),
+    extra_moments:           mapExtraMoments(song),
+    liturgical_seasons:      (song.liturgicalSeasons && song.liturgicalSeasons.length)
+                               ? song.liturgicalSeasons
+                               : mapSeasons(song),
     instruments:             mapInstruments(song),
     drive_file_id:           extractDriveFileId(song.sheetMusicUrl),
     artist:                  song.artist   ?? null,
