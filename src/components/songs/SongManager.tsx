@@ -1,7 +1,7 @@
 import { Music, Search, Trash2, FileText, Youtube, Loader, RefreshCw, Pencil, X, Check, Ban, Plus } from 'lucide-react';
 import { useState, useEffect, useCallback, type Dispatch, type SetStateAction } from 'react';
 import { toast } from 'sonner';
-import { Song, MassMoment, LiturgicalSeason, LITURGICAL_SEASON_LABELS } from '../../types';
+import { Song, MassMoment, LiturgicalSeason, InstrumentType, LITURGICAL_SEASON_LABELS } from '../../types';
 import { listSongs, deleteSong, updateSong, approveSong, rejectSong, addSong } from '../../services/songs';
 import { getSupabaseClient } from '../../services/supabaseClient';
 import { extractVideoId, formatDuration } from '../../services/youtube';
@@ -49,12 +49,33 @@ export function SongManager() {
     ...Object.values(LITURGICAL_SEASON_LABELS),
     'Sagrado Corazón', 'Virgen María', 'Santos', 'Gregoriano',
   ];
+  // Versión / instrumento del canto. Vacío = sirve para todas las versiones
+  // (en BD se guarda como {coro,guitarra,organo}); marcar una = es esa versión.
+  const INSTRUMENT_OPTIONS: InstrumentType[] = ['Guitarra', 'Órgano'];
   const emptyForm = {
     title: '', author: '', artist: '', moments: ['entrada'] as MassMoment[], youtubeId: '',
     driveFileId: '', duration: '', originalKey: '', massName: '', lyrics: '',
-    seasons: [] as string[], isLiturgical: true, nonLiturgicalCategory: '' as string,
+    seasons: [] as string[], instruments: [] as InstrumentType[],
+    isLiturgical: true, nonLiturgicalCategory: '' as string,
   };
   type SongForm = typeof emptyForm;
+  // Deriva los chips de versión desde lo guardado en BD (minúsculas/sin acento).
+  // Si incluye 'coro' o está vacío lo tratamos como genérico → ningún chip.
+  const songVersionChips = (instruments?: string[]): InstrumentType[] => {
+    const inst = (instruments ?? []).map(i => i.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''));
+    if (inst.length === 0 || inst.includes('coro')) return [];
+    const chips: InstrumentType[] = [];
+    if (inst.includes('guitarra')) chips.push('Guitarra');
+    if (inst.includes('organo')) chips.push('Órgano');
+    return chips;
+  };
+  const toggleInstrumentIn = (setForm: Dispatch<SetStateAction<SongForm>>, i: InstrumentType) =>
+    setForm(prev => ({
+      ...prev,
+      instruments: prev.instruments.includes(i)
+        ? prev.instruments.filter(x => x !== i)
+        : [...prev.instruments, i],
+    }));
   // Alterna una parte de la Misa. La primera elegida es la PRINCIPAL (orden del
   // cantoral/PDF); el resto son partes adicionales donde el canto también sirve.
   // Nunca se queda sin al menos una parte.
@@ -168,6 +189,7 @@ export function SongManager() {
       massName: song.massName || '',
       lyrics: song.lyrics || '',
       seasons: (song.liturgicalSeasons as unknown as string[]) || [],
+      instruments: songVersionChips(song.instruments),
       isLiturgical: song.isLiturgical ?? true,
       nonLiturgicalCategory: song.nonLiturgicalCategory || '',
     });
@@ -183,6 +205,8 @@ export function SongManager() {
       artist: f.artist.trim() || undefined,
       massMoment: f.moments[0],
       extraMoments: f.moments.slice(1),
+      // Vacío = no tocar la versión guardada; con chips = fijar esa versión.
+      instruments: f.instruments.length ? f.instruments : undefined,
       youtubeId: f.youtubeId.trim() || undefined,
       driveFileId: f.driveFileId.trim() || undefined,
       duration: f.duration.trim() || undefined,
@@ -244,6 +268,8 @@ export function SongManager() {
       title: na.title.trim(),
       massMoment: na.moments[0],
       extraMoments: na.moments.slice(1),
+      // Vacío = sirve para todas las versiones (default {coro,guitarra,organo}).
+      instruments: na.instruments.length ? na.instruments : undefined,
       youtubeId: na.youtubeId.trim() || undefined,
       driveFileId: na.driveFileId.trim() || undefined,
       author: na.author.trim() || undefined,
@@ -589,6 +615,33 @@ export function SongManager() {
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">★ principal. Un canto puede servir para varias partes (p. ej. Ofertorio y Comunión).</p>
               </div>
 
+              {/* Versión / instrumento (sin marcar = todas las versiones) */}
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">
+                  Versión <span className="text-gray-400">(opcional; sin marcar = todas)</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {INSTRUMENT_OPTIONS.map((i) => {
+                    const on = f.instruments.includes(i);
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => toggleInstrumentIn(setF, i)}
+                        className={`px-3 py-1.5 rounded-full text-sm font-bold border-2 active:scale-95 transition-all ${
+                          on
+                            ? 'bg-blue-700 text-white border-blue-800'
+                            : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
+                        }`}
+                      >
+                        {i === 'Guitarra' ? '🎶' : '🎹'} {i}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Guitarra = con acordes · Órgano = con partitura. Sin marcar sirve para cualquier instrumento.</p>
+              </div>
+
               {/* Temporada litúrgica (varias permitidas; sin marcar = todas) */}
               <div>
                 <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">
@@ -769,6 +822,33 @@ export function SongManager() {
                   })}
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">★ principal. Un canto puede servir para varias partes (p. ej. Ofertorio y Comunión).</p>
+              </div>
+
+              {/* Versión / instrumento (sin marcar = todas las versiones) */}
+              <div>
+                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">
+                  Versión <span className="text-gray-400">(opcional; sin marcar = todas)</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {INSTRUMENT_OPTIONS.map((i) => {
+                    const on = na.instruments.includes(i);
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => toggleInstrumentIn(setNa, i)}
+                        className={`px-3 py-1.5 rounded-full text-sm font-bold border-2 active:scale-95 transition-all ${
+                          on
+                            ? 'bg-blue-700 text-white border-blue-800'
+                            : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
+                        }`}
+                      >
+                        {i === 'Guitarra' ? '🎶' : '🎹'} {i}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Guitarra = con acordes · Órgano = con partitura. Sin marcar sirve para cualquier instrumento.</p>
               </div>
 
               {/* Temporada litúrgica (varias permitidas; sin marcar = sirve para todas) */}

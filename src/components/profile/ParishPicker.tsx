@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { Search } from 'lucide-react';
 import { chileDioceses, getParishesByDiocese } from '../../data/chileDioceses';
 import { listCustomParishes, CustomParish } from '../../services/customParishes';
 import { listChapels, Chapel } from '../../services/chapels';
+import { matchesSearch } from '../../utils/textSearch';
 
 interface ParishPickerProps {
   /** Parroquias seleccionadas, en formato canónico "<Nombre> - <Diócesis>". */
@@ -25,6 +27,7 @@ interface ParishPickerProps {
  */
 export function ParishPicker({ selected, onChange, alreadyAdded = [] }: ParishPickerProps) {
   const [selectedDiocese, setSelectedDiocese] = useState('');
+  const [query, setQuery] = useState('');
   const [customParishes, setCustomParishes] = useState<CustomParish[]>([]);
   const [chapels, setChapels] = useState<Chapel[]>([]);
 
@@ -65,11 +68,21 @@ export function ParishPicker({ selected, onChange, alreadyAdded = [] }: ParishPi
   const chapelsFor = (parishFull: string) =>
     chapels.filter(ch => norm(ch.parishFull) === norm(parishFull));
 
+  // Filtro por texto (insensible a acentos): coincide por nombre de parroquia o
+  // por el de alguna de sus capillas. La lista puede ser muy larga por diócesis.
+  const q = query.trim();
+  const visibleParishes = !q
+    ? availableParishes
+    : availableParishes.filter(p =>
+        matchesSearch(p.name, q) ||
+        chapelsFor(fullName(p.name)).some(ch => matchesSearch(ch.name, q))
+      );
+
   return (
     <div>
       <select
         value={selectedDiocese}
-        onChange={(e) => setSelectedDiocese(e.target.value)}
+        onChange={(e) => { setSelectedDiocese(e.target.value); setQuery(''); }}
         className="w-full px-3 py-3 sm:px-4 sm:py-4 text-sm sm:text-base rounded-xl border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/70 dark:bg-white/10 text-blue-950 dark:text-white font-bold shadow-lg transition-colors"
       >
         <option value="" className="bg-white dark:bg-slate-800 text-blue-950 dark:text-white">
@@ -87,8 +100,27 @@ export function ParishPicker({ selected, onChange, alreadyAdded = [] }: ParishPi
           <p className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100">
             Parroquias disponibles:
           </p>
+
+          {/* Buscador: la lista de una diócesis puede ser muy larga. */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-400 dark:text-blue-300" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar parroquia o capilla…"
+              aria-label="Buscar parroquia o capilla"
+              className="w-full pl-10 pr-3 py-2.5 text-sm sm:text-base rounded-xl border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/70 dark:bg-white/10 text-blue-950 dark:text-white font-medium"
+            />
+          </div>
+
           <div className="space-y-2 max-h-64 overflow-y-auto bg-white/50 dark:bg-white/5 rounded-xl p-4">
-            {availableParishes.map((parish) => {
+            {visibleParishes.length === 0 && (
+              <p className="text-sm text-blue-800/70 dark:text-blue-200/70 text-center py-4">
+                No se encontraron parroquias ni capillas para “{q}”.
+              </p>
+            )}
+            {visibleParishes.map((parish) => {
               const full = fullName(parish.name);
               const isAdded = alreadyAdded.includes(full);
               const checked = isAdded || selected.includes(full);

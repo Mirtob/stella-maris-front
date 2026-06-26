@@ -37,6 +37,14 @@ export interface SongInput {
 // DB row ↔ Song mapper
 // ---------------------------------------------------------------------------
 
+/**
+ * Normaliza un instrumento al valor canónico que guarda la BD: minúsculas y sin
+ * acentos ('Órgano' → 'organo'). Imprescindible para que coincida con el default
+ * '{coro,guitarra,organo}' y con el filtro p_instrument del RPC search_songs.
+ */
+const normalizeInstrument = (i: string): string =>
+  i.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
 function rowToSong(row: Record<string, unknown>): Song {
   return {
     id:                    row.id as string,
@@ -78,7 +86,7 @@ function songInputToRow(input: SongInput): Record<string, unknown> {
     mass_moment:           input.massMoment,
     extra_moments:         input.extraMoments ?? [],
     liturgical_seasons:    input.liturgicalSeasons ?? [],
-    instruments:           input.instruments?.map(i => i.toLowerCase()) ?? ['coro', 'guitarra', 'organo'],
+    instruments:           input.instruments?.map(normalizeInstrument) ?? ['coro', 'guitarra', 'organo'],
     drive_file_id:         input.driveFileId ?? null,
     artist:                input.artist ?? null,
     author:                input.author ?? null,
@@ -108,7 +116,7 @@ export async function listSongs(filters: SongFilters = {}): Promise<Song[]> {
     const { data, error } = await sb.rpc('search_songs', {
       p_moment:     filters.massMoment      ?? null,
       p_season:     filters.liturgicalSeason ?? null,
-      p_instrument: filters.instrument?.toLowerCase() ?? null,
+      p_instrument: filters.instrument ? normalizeInstrument(filters.instrument) : null,
       p_query:      filters.search          ?? null,
       p_limit:      filters.limit           ?? 200,
       p_offset:     filters.offset          ?? 0,
@@ -179,7 +187,7 @@ export async function updateSong(
     if (input.massMoment !== undefined)       row.mass_moment            = input.massMoment;
     if (input.extraMoments !== undefined)     row.extra_moments          = input.extraMoments;
     if (input.liturgicalSeasons !== undefined)row.liturgical_seasons     = input.liturgicalSeasons;
-    if (input.instruments !== undefined)      row.instruments            = input.instruments.map(i => i.toLowerCase());
+    if (input.instruments !== undefined)      row.instruments            = input.instruments.map(normalizeInstrument);
     if (input.driveFileId !== undefined)      row.drive_file_id          = input.driveFileId;
     if (input.artist !== undefined)           row.artist                 = input.artist;
     if (input.author !== undefined)           row.author                 = input.author;
