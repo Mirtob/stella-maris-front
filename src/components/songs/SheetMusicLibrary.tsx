@@ -80,26 +80,47 @@ export function SheetMusicLibrary({ onPlaySong }: SheetMusicLibraryProps) {
     return grouped;
   };
 
-  // Agrupar cantos de una parte por tiempo litúrgico
+  // Mapea una temporada almacenada a su bucket del banco. Acepta los dos formatos
+  // que conviven en BD: códigos canónicos del sync (ej. 'tiempo-ordinario') y
+  // etiquetas del alta manual (ej. 'Tiempo Ordinario'). Comparación insensible a
+  // acentos/mayúsculas, por inclusión. Devuelve null si no es un bucket específico.
+  const seasonToBucket = (raw: string): string | null => {
+    const n = raw.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    if (n.includes('advien')) return 'Adviento';
+    if (n.includes('navidad')) return 'Navidad';
+    if (n.includes('cuaresma')) return 'Cuaresma';
+    if (n.includes('pascua')) return 'Pascua';
+    if (n.includes('ordinario')) return 'Ordinario';
+    return null;
+  };
+
+  // Agrupar cantos de una parte por tiempo litúrgico. Cada canto cae en al menos
+  // un bucket: los que no matchean ninguna temporada específica (vacíos, Semana
+  // Santa, Pentecostés, tags especiales, etc.) van a "Todas las temporadas" para
+  // que nunca se pierdan en la lista.
   const groupByLiturgicalSeason = (songs: Song[]): Record<string, Song[]> => {
     const grouped: Record<string, Song[]> = {};
-    
+
     LITURGICAL_SEASONS.forEach(season => {
       grouped[season.id] = [];
     });
 
     songs.forEach(song => {
-      // Si el canto tiene liturgicalSeason definido
-      if (song.liturgicalSeason) {
-        const seasons = song.liturgicalSeason.split(',').map(s => s.trim());
-        seasons.forEach(season => {
-          if (grouped[season]) {
-            grouped[season].push(song);
-          }
-        });
-      } else {
-        // Si no tiene, ponerlo en "Todas las temporadas"
+      // Preferir el array completo; usar el singular como fallback de compatibilidad.
+      const raws = (song.liturgicalSeasons && song.liturgicalSeasons.length)
+        ? (song.liturgicalSeasons as unknown as string[])
+        : (song.liturgicalSeason ? song.liturgicalSeason.split(',').map(s => s.trim()) : []);
+
+      const buckets = new Set<string>();
+      raws.forEach(r => {
+        const b = seasonToBucket(r);
+        if (b) buckets.add(b);
+      });
+
+      if (buckets.size === 0) {
         grouped['Todas las temporadas'].push(song);
+      } else {
+        buckets.forEach(b => grouped[b].push(song));
       }
     });
 
