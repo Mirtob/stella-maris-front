@@ -432,6 +432,15 @@ function AppContent() {
               setRoute({ screen: 'cantoral-link', cantoralId: pendingId });
               return;
             }
+            // Perfil pre-armado por el admin (cuenta usuario/clave) que aún no
+            // completó su setup: sin parroquia y no-Admin → pedir rol + parroquia
+            // en vez del selector de sesión vacío. handleProfileSetup sobrescribe
+            // su perfil con lo que elija.
+            const hasParishData = (remoteProfile.parishes?.length ?? 0) > 0 || !!remoteProfile.parishName;
+            if (remoteProfile.role !== 'Admin' && !hasParishData) {
+              setRoute({ screen: 'profile-setup' });
+              return;
+            }
             // Admin entra directo; el resto elige rol + parroquia de la sesión.
             if (remoteProfile.role !== 'Admin') setShowParishSelector(true);
             setRoute({ screen: 'app', view: 'main' });

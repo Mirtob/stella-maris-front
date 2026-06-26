@@ -4,8 +4,9 @@ import { toast } from 'sonner';
 import { UserRole, UserProfile, InstrumentType } from '../../types';
 import { listUserProfiles, updateUserRole, deleteUserProfile, adminUpdateUserProfile } from '../../services/userProfiles';
 import { createUserAccount } from '../../services/adminUsers';
-import { isUsernameAccount } from '../../services/supabaseClient';
+import { getSupabaseClient, isUsernameAccount } from '../../services/supabaseClient';
 import { matchesSearch } from '../../utils/textSearch';
+import { isPrincipalAdminEmail } from '../../config/admin';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { ParishPicker } from './ParishPicker';
 
@@ -31,6 +32,10 @@ function generatePassword(): string {
 export function ProfileManager() {
   const [users, setUsers] = useState<ProfileRow[]>([]);
   const [loading, setLoading] = useState(true);
+  // Solo el administrador principal puede cambiar roles. Detectamos su email
+  // desde la sesión actual; el resto de los Admin ven el rol en modo lectura.
+  const [currentEmail, setCurrentEmail] = useState<string | null>(null);
+  const isPrincipal = isPrincipalAdminEmail(currentEmail);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<UserRole | 'Todos'>('Todos');
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -64,6 +69,12 @@ export function ProfileManager() {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    getSupabaseClient().auth.getSession().then(({ data }) => {
+      setCurrentEmail(data.session?.user?.email ?? null);
+    }).catch(() => setCurrentEmail(null));
+  }, []);
+
   const filteredUsers = users.filter(user => {
     const matchesText =
       matchesSearch(user.name, searchTerm) ||
@@ -89,6 +100,7 @@ export function ProfileManager() {
   };
 
   const handleRoleChange = async (user: ProfileRow, newRole: UserRole) => {
+    if (!isPrincipal) { toast.error('Solo el administrador principal puede cambiar roles'); return; }
     if (user.role === newRole) return;
     // Optimistic
     setUsers(prev => prev.map(u => u.id === user.id ? { ...u, role: newRole } : u));
@@ -111,7 +123,13 @@ export function ProfileManager() {
     if (!r.ok) { toast.error('No se pudo crear', { description: r.error }); return; }
     setCreatedCreds({ username: u, password: cPass });
     setCUser(''); setCName(''); setCPass('');
-    toast.success('Cuenta creada');
+    if ((r as { warning?: string }).warning) {
+      toast.warning('Cuenta creada', { description: (r as { warning?: string }).warning });
+    } else {
+      toast.success('Cuenta creada');
+    }
+    // El perfil ya quedó pre-armado server-side → recargar para que aparezca en la lista.
+    load();
   };
 
   const openEdit = (user: ProfileRow) => {
@@ -299,19 +317,27 @@ export function ProfileManager() {
 
                 {/* Role selector + delete */}
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs font-bold text-gray-600 dark:text-gray-400 flex-shrink-0">Cambiar rol:</label>
-                    <select
-                      value={user.role}
-                      onChange={(e) => handleRoleChange(user, e.target.value as UserRole)}
-                      aria-label={`Cambiar rol de ${user.name}`}
-                      className="flex-1 px-3 py-2 text-sm border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-900 dark:text-white rounded-lg focus:outline-none focus:border-purple-400"
-                    >
-                      <option value="Pueblo fiel">Pueblo fiel</option>
-                      <option value="Coro">Coro</option>
-                      <option value="Admin">Admin</option>
-                    </select>
-                  </div>
+                  {isPrincipal ? (
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-bold text-gray-600 dark:text-gray-400 flex-shrink-0">Cambiar rol:</label>
+                      <select
+                        value={user.role}
+                        onChange={(e) => handleRoleChange(user, e.target.value as UserRole)}
+                        aria-label={`Cambiar rol de ${user.name}`}
+                        className="flex-1 px-3 py-2 text-sm border-2 border-gray-200 dark:border-slate-600 dark:bg-slate-900 dark:text-white rounded-lg focus:outline-none focus:border-purple-400"
+                      >
+                        <option value="Pueblo fiel">Pueblo fiel</option>
+                        <option value="Coro">Coro</option>
+                        <option value="Admin">Admin</option>
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                      <span className="font-bold flex-shrink-0">Rol:</span>
+                      <span className="px-2 py-1 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 font-bold">{user.role}</span>
+                      <span className="italic">· solo el administrador principal puede cambiarlo</span>
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <button
                       onClick={() => openEdit(user)}
@@ -359,7 +385,7 @@ export function ProfileManager() {
             </div>
             <div className="p-6">
               <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-                El usuario entra con estas credenciales y elige su rol (Coro o Pueblo fiel) en su primer ingreso. Aparecerá en la lista cuando inicie sesión.
+                El usuario entra con estas credenciales y elige su rol (Coro o Pueblo fiel) en su primer ingreso. Aparece en la lista apenas se crea; puedes cambiar su rol cuando quieras (por ejemplo a Admin, para que suba cantos).
               </p>
               <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Usuario</label>
               <input value={cUser} onChange={(e) => setCUser(e.target.value)} autoCapitalize="none" placeholder="ej: coro.sanjose" className="w-full px-4 py-3 mb-3 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium" />

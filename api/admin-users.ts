@@ -99,7 +99,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           : (data?.msg || data?.error_description || data?.error || 'No se pudo crear la cuenta');
         return res.status(400).json({ error: msg });
       }
-      return res.status(200).json({ ok: true, username, email });
+
+      // Pre-armar la fila en user_profiles para que la cuenta aparezca de inmediato
+      // en Gestión de Usuarios (sin esperar al primer login) y el admin pueda
+      // cambiarle el rol/perfil. Rol por defecto 'Pueblo fiel'; el usuario elige
+      // su rol y parroquia en su primer ingreso (perfil "incompleto" → setup).
+      let warning: string | undefined;
+      const newUserId = data?.id;
+      if (newUserId) {
+        const pr = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles`, {
+          method: 'POST',
+          headers: { ...svcHeaders, Prefer: 'return=minimal' },
+          body: JSON.stringify({ id: newUserId, email, name: name ?? null, role: 'Pueblo fiel' }),
+        });
+        if (!pr.ok) {
+          // No es fatal: la cuenta ya existe; su perfil se creará en el primer login.
+          const pblob = await pr.text().catch(() => '');
+          console.error('admin-users create: no se pudo prearmar user_profiles', pr.status, pblob);
+          warning = 'La cuenta se creó, pero su perfil aparecerá recién cuando inicie sesión.';
+        }
+      }
+      return res.status(200).json({ ok: true, username, email, ...(warning ? { warning } : {}) });
     }
 
     if (action === 'reset-password') {
