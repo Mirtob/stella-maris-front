@@ -169,9 +169,15 @@ export function CategorySearch({
       // solo como Guitarra), y antes eso dejaba sin agregar el Cordero / sin
       // preguntar por el Gloria. Tolera además partes que sirven en varias
       // categorías (songInCategory).
+      // Misma Misa con comparación tolerante (sin acentos/mayúsculas/espacios),
+      // por si el Cordero de la Misa quedó con una diferencia mínima en massName.
+      const normMisa = (x?: string) =>
+        (x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+      const sameMisa = (s: Song) => !!s.massName && normMisa(s.massName) === normMisa(song.massName);
+
       const findMassPart = (cat: string): Song | null =>
-        songs.find(s => s.massName === song.massName && songInCategory(s, cat) && s.version === song.version)
-        ?? songs.find(s => s.massName === song.massName && songInCategory(s, cat))
+        songs.find(s => sameMisa(s) && songInCategory(s, cat) && s.version === song.version)
+        ?? songs.find(s => sameMisa(s) && songInCategory(s, cat))
         ?? null;
 
       const santo = findMassPart('Santo');
@@ -255,6 +261,19 @@ export function CategorySearch({
     setTimeout(() => onClose(), 300);
   };
 
+  // Agrega un canto en una parte fija concreta. Si el canto es "prestado" de otra
+  // parte (multi-parte: su categoría principal no es `part`), le fija la categoría
+  // y un id único por parte; así el dedup por id de handleAddToCantoral no colapsa
+  // Santo y Cordero cuando provienen del mismo canto.
+  const addAsPart = (src: Song, part: string) => {
+    if (src.category === part) {
+      addSongEnriched(src);
+    } else {
+      const suffix = part.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '-');
+      addSongEnriched({ ...src, category: part, id: `${src.id}::${suffix}` });
+    }
+  };
+
   const handleConfirmSantoCordero = () => {
     // Remover Santo y Cordero existentes PRIMERO
     const existingSanto = cantoral.filter(s => s.category === 'Santo');
@@ -266,13 +285,10 @@ export function CategorySearch({
     const kyrieToAdd = pendingKyrie;
     const santoToAdd = pendingSanto;
     const corderoToAdd = pendingCordero;
-    const gloriaToAdd = pendingGloria;
-
-    void gloriaToAdd; // la sugerencia se pasa al diálogo vía pendingGloria
 
     if (kyrieToAdd) addSongEnriched(kyrieToAdd);
-    if (santoToAdd) addSongEnriched(santoToAdd);
-    if (corderoToAdd) addSongEnriched(corderoToAdd);
+    if (santoToAdd) addAsPart(santoToAdd, 'Santo');
+    if (corderoToAdd) addAsPart(corderoToAdd, 'Cordero de Dios');
 
     setShowSantoCordeloDialog(false);
 
@@ -300,7 +316,7 @@ export function CategorySearch({
     const existingGloria = cantoral.filter(s => s.category === 'Gloria');
     existingGloria.forEach(s => onRemoveFromCantoral(s.id));
 
-    addSongEnriched(gloria.category === 'Gloria' ? gloria : { ...gloria, category: 'Gloria' });
+    addAsPart(gloria, 'Gloria');
 
     setShowGloriaDialog(false);
     resetPendingState();
