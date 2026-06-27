@@ -41,9 +41,10 @@ export function massTypeBadge(c: { massType?: MassType; vigil?: boolean }): stri
 
 // ──────────────────────────────────────────────────────────────────────────
 // Ventana de vigencia (fecha + HORA local) según el tipo de Misa.
-//   · I Vísperas  → el día publicado (= víspera), 15:00 a 23:59.
-//   · Misa del día → mismo día, 00:00 a 15:00.
-//   · II Vísperas → mismo día, 15:01 a 23:59.
+// `date` es SIEMPRE la fecha propia de la celebración (la que elige el usuario).
+//   · I Vísperas  → el DÍA ANTERIOR a la celebración, 15:00 a 23:59.
+//   · Misa del día → la fecha de la celebración, 00:00 a 15:00.
+//   · II Vísperas → la fecha de la celebración, 15:01 a 23:59.
 // Aplica igual a domingos y a solemnidades agregadas manualmente.
 // ──────────────────────────────────────────────────────────────────────────
 
@@ -58,7 +59,8 @@ const ymd = (date: string): [number, number, number] => {
 export function cantoralWindowStart(c: CantoralLike): Date {
   const [y, m, d] = ymd(c.date);
   switch (resolveMassType(c)) {
-    case 'visperas_i':  return new Date(y, m - 1, d, 15, 0, 0, 0);
+    // I Vísperas se canta la tarde del día anterior a la celebración (d - 1).
+    case 'visperas_i':  return new Date(y, m - 1, d - 1, 15, 0, 0, 0);
     case 'visperas_ii': return new Date(y, m - 1, d, 15, 1, 0, 0);
     case 'dia':
     default:            return new Date(y, m - 1, d, 0, 0, 0, 0);
@@ -68,9 +70,14 @@ export function cantoralWindowStart(c: CantoralLike): Date {
 /** Fin de la ventana de vigencia (Date local). */
 export function cantoralWindowEnd(c: CantoralLike): Date {
   const [y, m, d] = ymd(c.date);
-  // Misa del día cierra a las 15:00 (cede a II Vísperas); las vísperas, a las 23:59.
-  if (resolveMassType(c) === 'dia') return new Date(y, m - 1, d, 15, 0, 59, 999);
-  return new Date(y, m - 1, d, 23, 59, 59, 999);
+  switch (resolveMassType(c)) {
+    // I Vísperas: hasta las 23:59 del día anterior a la celebración.
+    case 'visperas_i':  return new Date(y, m - 1, d - 1, 23, 59, 59, 999);
+    // Misa del día: cierra a las 15:00 (cede a II Vísperas).
+    case 'dia':         return new Date(y, m - 1, d, 15, 0, 59, 999);
+    case 'visperas_ii':
+    default:            return new Date(y, m - 1, d, 23, 59, 59, 999);
+  }
 }
 
 /** ¿La Misa ya pasó? (ahora superó el fin de su ventana). */

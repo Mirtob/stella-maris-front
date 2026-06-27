@@ -1,9 +1,55 @@
 import { jsPDF } from 'jspdf';
 import { PublishedCantoral, Song } from '../types';
 import { getCurrentLiturgicalSeason } from './liturgicalSeason';
+import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
 
 interface PDFGeneratorOptions {
   cantoral: PublishedCantoral;
+}
+
+/** Carga una imagen (el logo) como dataURL + dimensiones, para jsPDF.addImage. */
+async function loadImageData(src: string): Promise<{ dataUrl: string; width: number; height: number } | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || 1;
+        canvas.height = img.naturalHeight || 1;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(null);
+        ctx.drawImage(img, 0, 0);
+        resolve({ dataUrl: canvas.toDataURL('image/png'), width: canvas.width, height: canvas.height });
+      } catch { resolve(null); }
+    };
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+/**
+ * Dibuja un divisor ornamental tipo "enredadera": un tallo con hojitas alternadas,
+ * un motivo central y remates en las puntas. Se dibuja en el color litúrgico, pero
+ * su FORMA distingue las secciones aunque el folleto se imprima en blanco y negro.
+ */
+function drawVineDivider(pdf: jsPDF, cx: number, y: number, halfW: number, color: [number, number, number]) {
+  pdf.setDrawColor(...color);
+  pdf.setFillColor(...color);
+  pdf.setLineWidth(0.3);
+  pdf.line(cx - halfW, y, cx + halfW, y);
+  const leaves = 3;
+  for (let i = 1; i <= leaves; i++) {
+    const dx = (halfW / (leaves + 1)) * i;
+    const dy = i % 2 === 1 ? -1.1 : 1.1; // hojas alternadas arriba/abajo
+    pdf.ellipse(cx + dx, y + dy, 0.5, 1.1, 'F');
+    pdf.ellipse(cx - dx, y + dy, 0.5, 1.1, 'F');
+  }
+  // Motivo central (rombo) y remates redondos en las puntas.
+  pdf.triangle(cx - 1.4, y, cx, y - 1.9, cx + 1.4, y, 'F');
+  pdf.triangle(cx - 1.4, y, cx, y + 1.9, cx + 1.4, y, 'F');
+  pdf.circle(cx - halfW, y, 0.6, 'F');
+  pdf.circle(cx + halfW, y, 0.6, 'F');
 }
 
 const CATEGORY_ORDER = [
@@ -133,12 +179,21 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   let y = margin;
   let pageNum = 1;
 
+  // Logo de la app para el encabezado (si falla la carga, se usa el texto).
+  const logo = await loadImageData(logoStellaMaris);
+
   // Header en cada página
   const addPageHeader = () => {
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(10);
-    pdf.setTextColor(60, 60, 60);
-    pdf.text('Stella Maris', margin, 10);
+    if (logo) {
+      const h = 7;
+      const w = (logo.width / logo.height) * h;
+      pdf.addImage(logo.dataUrl, 'PNG', margin, 3, w, h);
+    } else {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.setTextColor(60, 60, 60);
+      pdf.text('Stella Maris', margin, 10);
+    }
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(120, 120, 120);
     pdf.text(cleanText(cantoral.liturgicalDate), pageW - margin, 10, { align: 'right' });
@@ -224,10 +279,8 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   pdf.text(cleanText(cantoral.massTime), pageW / 2, y, { align: 'center' });
   y += 14;
 
-  // Línea decorativa
-  pdf.setDrawColor(...colors.primary);
-  pdf.setLineWidth(0.5);
-  pdf.line(pageW / 2 - 30, y, pageW / 2 + 30, y);
+  // Adorno decorativo (enredadera) en el color litúrgico
+  drawVineDivider(pdf, pageW / 2, y, 34, colors.primary);
   y += 12;
 
   // Parroquia
@@ -267,6 +320,9 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     pdf.setTextColor(...colors.textOnPrimary);
     pdf.text(cleanText(category).toUpperCase(), margin + 3, y);
     y += 10;
+    // Enredadera bajo la cabecera: distingue la sección aunque se imprima en B/N.
+    drawVineDivider(pdf, pageW / 2, y - 2, 26, colors.primary);
+    y += 4;
 
     byCategory[category].forEach((song, idx) => {
       needPage(20);
@@ -338,13 +394,11 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
         y += 6;
       }
 
-      // Separador entre cantos de la misma categoría
+      // Separador entre cantos de la misma categoría (enredadera tenue)
       if (idx < byCategory[category].length - 1) {
-        y += 4;
-        pdf.setDrawColor(230, 230, 230);
-        pdf.setLineWidth(0.2);
-        pdf.line(margin + 20, y, pageW - margin - 20, y);
-        y += 6;
+        y += 5;
+        drawVineDivider(pdf, pageW / 2, y, 20, colors.primary);
+        y += 7;
       }
     });
 

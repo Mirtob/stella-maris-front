@@ -695,7 +695,7 @@ function AppContent() {
     for (const newCantoral of newCantorals) {
       // Un cantoral por Misa: si ya hay uno para esa parroquia + fecha + horario,
       // no publicar otro. (El índice UNIQUE en la BD es la red de seguridad.)
-      const dup = await findDuplicate(newCantoral.parishName, newCantoral.date, newCantoral.massTime);
+      const dup = await findDuplicate(newCantoral.parishName, newCantoral.date, newCantoral.massTime, newCantoral.massType);
       if (dup) {
         setPublishedCantorals(prev => prev.filter(c => c.id !== newCantoral.id));
         // 'duplicate' → translatePublishError lo mapea al mensaje amigable de duplicado.
