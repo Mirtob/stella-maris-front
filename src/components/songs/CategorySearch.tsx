@@ -162,27 +162,22 @@ export function CategorySearch({
     if (song.category === 'Kyrie' && song.massName) {
       // Guardar Kyrie pendiente
       setPendingKyrie(song);
-      
-      // Buscar Santo y Cordero de la misma misa
-      const santo = songs.find(s => 
-        s.massName === song.massName && 
-        s.category === 'Santo' && 
-        s.version === song.version
-      );
-      
-      const cordero = songs.find(s => 
-        s.massName === song.massName && 
-        s.category === 'Cordero de Dios' && 
-        s.version === song.version
-      );
-      
-      // Buscar Gloria de la misma misa
-      const gloria = songs.find(s => 
-        s.massName === song.massName && 
-        s.category === 'Gloria' && 
-        s.version === song.version
-      );
-      
+
+      // Busca una parte fija de la MISMA Misa. Prefiere la misma versión del
+      // Kyrie, pero cae a cualquier versión si no hay coincidencia exacta: la
+      // version (= instruments[0]) puede diferir entre partes (p. ej. una marcada
+      // solo como Guitarra), y antes eso dejaba sin agregar el Cordero / sin
+      // preguntar por el Gloria. Tolera además partes que sirven en varias
+      // categorías (songInCategory).
+      const findMassPart = (cat: string): Song | null =>
+        songs.find(s => s.massName === song.massName && songInCategory(s, cat) && s.version === song.version)
+        ?? songs.find(s => s.massName === song.massName && songInCategory(s, cat))
+        ?? null;
+
+      const santo = findMassPart('Santo');
+      const cordero = findMassPart('Cordero de Dios');
+      const gloria = findMassPart('Gloria');
+
       setPendingSanto(santo || null);
       setPendingCordero(cordero || null);
       setPendingGloria(gloria || null);
