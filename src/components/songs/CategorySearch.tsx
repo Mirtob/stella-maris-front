@@ -268,20 +268,17 @@ export function CategorySearch({
     const corderoToAdd = pendingCordero;
     const gloriaToAdd = pendingGloria;
 
+    void gloriaToAdd; // la sugerencia se pasa al diálogo vía pendingGloria
+
     if (kyrieToAdd) addSongEnriched(kyrieToAdd);
     if (santoToAdd) addSongEnriched(santoToAdd);
     if (corderoToAdd) addSongEnriched(corderoToAdd);
 
     setShowSantoCordeloDialog(false);
-    
-    // Ahora preguntar por el Gloria
-    if (gloriaToAdd) {
-      setShowGloriaDialog(true);
-    } else {
-      // Si no hay Gloria, cerrar directamente
-      resetPendingState();
-      setTimeout(() => onClose(), 300);
-    }
+
+    // Siempre preguntar por el Gloria (aunque no haya un canto sugerido de esta
+    // Misa): el usuario decide si lleva Gloria y lo elige con el buscador.
+    setShowGloriaDialog(true);
   };
 
   const handleCancelSantoCordero = () => {
@@ -290,36 +287,28 @@ export function CategorySearch({
     if (pendingKyrie) {
       addSongEnriched(pendingKyrie);
     }
-    
+
     setShowSantoCordeloDialog(false);
-    
-    // Preguntar por el Gloria
-    if (pendingGloria) {
-      setShowGloriaDialog(true);
-    } else {
-      // Si no hay Gloria, cerrar directamente
-      resetPendingState();
-      setTimeout(() => onClose(), 300);
-    }
+
+    // Igual preguntar por el Gloria.
+    setShowGloriaDialog(true);
   };
 
-  const handleConfirmGloria = () => {
-    // Agregar el Gloria sugerido
-    if (pendingGloria) {
-      // Remover Gloria existente si lo hay
-      const existingGloria = cantoral.filter(s => s.category === 'Gloria');
-      existingGloria.forEach(s => onRemoveFromCantoral(s.id));
+  // El usuario eligió un Gloria concreto (sugerido o desde el buscador).
+  const handleSelectGloria = (gloria: Song) => {
+    // Remover Gloria existente si lo hay
+    const existingGloria = cantoral.filter(s => s.category === 'Gloria');
+    existingGloria.forEach(s => onRemoveFromCantoral(s.id));
 
-      addSongEnriched(pendingGloria);
-    }
-    
+    addSongEnriched(gloria.category === 'Gloria' ? gloria : { ...gloria, category: 'Gloria' });
+
     setShowGloriaDialog(false);
     resetPendingState();
     setTimeout(() => onClose(), 300);
   };
 
-  const handleCancelGloria = () => {
-    // El usuario no quiere el Gloria sugerido
+  // El usuario decide que la Misa no lleva Gloria (o cierra el diálogo).
+  const handleSkipGloria = () => {
     setShowGloriaDialog(false);
     resetPendingState();
     setTimeout(() => onClose(), 300);
@@ -614,12 +603,14 @@ export function CategorySearch({
         </div>
       )}
       
-      {/* Add Gloria Dialog */}
-      {showGloriaDialog && pendingGloria && (
+      {/* Add Gloria Dialog — siempre pregunta; permite elegir con buscador */}
+      {showGloriaDialog && (
         <AddGloriaDialog
-          gloria={pendingGloria}
-          onConfirm={handleConfirmGloria}
-          onCancel={handleCancelGloria}
+          suggestion={pendingGloria}
+          gloriaSongs={songs.filter(s => songInCategory(s, 'Gloria'))}
+          massName={pendingKyrie?.massName}
+          onSelect={handleSelectGloria}
+          onSkip={handleSkipGloria}
         />
       )}
 
