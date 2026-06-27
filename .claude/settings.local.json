@@ -19,7 +19,10 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "PowerShell(npx vercel --version 2>&1 | Select-Object -Last 3; \"EXIT:$LASTEXITCODE\")",
+      "Read(//c/Users/gusta/Downloads/**)",
+      "PowerShell(git *)"
     ]
   }
 }
