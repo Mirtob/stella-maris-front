@@ -38,3 +38,48 @@ export function massTypeBadge(c: { massType?: MassType; vigil?: boolean }): stri
   const t = resolveMassType(c);
   return t === 'dia' ? null : MASS_TYPE_LABEL[t];
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// Ventana de vigencia (fecha + HORA local) según el tipo de Misa.
+//   · I Vísperas  → el día publicado (= víspera), 15:00 a 23:59.
+//   · Misa del día → mismo día, 00:00 a 15:00.
+//   · II Vísperas → mismo día, 15:01 a 23:59.
+// Aplica igual a domingos y a solemnidades agregadas manualmente.
+// ──────────────────────────────────────────────────────────────────────────
+
+type CantoralLike = { date: string; massType?: MassType; vigil?: boolean };
+
+const ymd = (date: string): [number, number, number] => {
+  const [y, m, d] = date.split('-').map(Number);
+  return [y, m, d];
+};
+
+/** Inicio de la ventana de vigencia (Date local). */
+export function cantoralWindowStart(c: CantoralLike): Date {
+  const [y, m, d] = ymd(c.date);
+  switch (resolveMassType(c)) {
+    case 'visperas_i':  return new Date(y, m - 1, d, 15, 0, 0, 0);
+    case 'visperas_ii': return new Date(y, m - 1, d, 15, 1, 0, 0);
+    case 'dia':
+    default:            return new Date(y, m - 1, d, 0, 0, 0, 0);
+  }
+}
+
+/** Fin de la ventana de vigencia (Date local). */
+export function cantoralWindowEnd(c: CantoralLike): Date {
+  const [y, m, d] = ymd(c.date);
+  // Misa del día cierra a las 15:00 (cede a II Vísperas); las vísperas, a las 23:59.
+  if (resolveMassType(c) === 'dia') return new Date(y, m - 1, d, 15, 0, 59, 999);
+  return new Date(y, m - 1, d, 23, 59, 59, 999);
+}
+
+/** ¿La Misa ya pasó? (ahora superó el fin de su ventana). */
+export function cantoralYaPaso(c: CantoralLike, now: Date = new Date()): boolean {
+  return now.getTime() > cantoralWindowEnd(c).getTime();
+}
+
+/** ¿Está activa AHORA mismo? (dentro de [inicio, fin]). */
+export function cantoralActivoAhora(c: CantoralLike, now: Date = new Date()): boolean {
+  const t = now.getTime();
+  return t >= cantoralWindowStart(c).getTime() && t <= cantoralWindowEnd(c).getTime();
+}

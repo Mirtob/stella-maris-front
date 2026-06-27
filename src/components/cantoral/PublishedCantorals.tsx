@@ -5,8 +5,8 @@ import { getCategoryColors } from '../../utils/colors';
 import { CantoralWithOrdinary } from './CantoralWithOrdinary';
 import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-import { getTodayLocal, addDaysLocal, getWeekRangeLocal, isWithinInclusive, parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
-import { massTypeBadge } from '../../utils/massType';
+import { addDaysLocal, getWeekRangeLocal, isWithinInclusive, parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
+import { massTypeBadge, cantoralYaPaso } from '../../utils/massType';
 import { parseParishChapel, splitActiveParish } from '../../utils/parish';
 import { LiturgicalColorBadge } from '../liturgy/LiturgicalColorBadge';
 import { toast } from 'sonner';
@@ -63,11 +63,13 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
   }
 
   // ── Ventanas temporales ────────────────────────────────────────────────────
-  const today = getTodayLocal();
-
-  // Un cantoral está VIGENTE desde que se publica hasta las 23:59 de la fecha de la
-  // Misa (c.date). Pasada esa fecha va al archivo. (Comparación de 'YYYY-MM-DD'.)
-  const esVigente = (c: PublishedCantoral) => c.date >= today;
+  // Un cantoral está VIGENTE hasta el FIN de su ventana horaria según el tipo de
+  // Misa: I Vísperas hasta 23:59 de la víspera; Misa del día hasta las 15:00;
+  // II Vísperas hasta 23:59. Pasado ese momento va al archivo. Así, una tarde de
+  // domingo la "Misa del día" cede su lugar a las II Vísperas. (Aplica igual a
+  // domingos y a solemnidades agregadas manualmente.)
+  const now = new Date();
+  const esVigente = (c: PublishedCantoral) => !cantoralYaPaso(c, now);
 
   // Pueblo fiel y la lista principal del Coro: cantorales vigentes (hoy → fecha de la Misa).
   const vigentes = roleList
