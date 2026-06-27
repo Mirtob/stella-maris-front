@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
-import { chileDioceses, getParishesByDiocese } from '../../data/chileDioceses';
+import { americanCountries, getDiocesesByCountry } from '../../data/countries';
 import { listCustomParishes, CustomParish } from '../../services/customParishes';
 import { listChapels, Chapel } from '../../services/chapels';
 import { matchesSearch } from '../../utils/textSearch';
@@ -26,6 +26,8 @@ interface ParishPickerProps {
  * que un coro pertenezca a parroquias de distintas diócesis.
  */
 export function ParishPicker({ selected, onChange, alreadyAdded = [] }: ParishPickerProps) {
+  // País por defecto: Chile (el único con datos hoy). Acota la lista de diócesis.
+  const [selectedCountry, setSelectedCountry] = useState('CL');
   const [selectedDiocese, setSelectedDiocese] = useState('');
   const [query, setQuery] = useState('');
   const [customParishes, setCustomParishes] = useState<CustomParish[]>([]);
@@ -40,7 +42,16 @@ export function ParishPicker({ selected, onChange, alreadyAdded = [] }: ParishPi
 
   const norm = (s: string) => s.trim().toLowerCase();
 
-  const staticParishes = selectedDiocese ? getParishesByDiocese(selectedDiocese) : [];
+  const dioceses = getDiocesesByCountry(selectedCountry);
+  // Diócesis agrupadas por región/provincia eclesiástica para el <optgroup>.
+  const diocesesByRegion = dioceses.reduce<Record<string, typeof dioceses>>((acc, d) => {
+    (acc[d.region] ??= []).push(d);
+    return acc;
+  }, {});
+
+  const staticParishes = selectedDiocese
+    ? (dioceses.find(d => d.id === selectedDiocese)?.parishes ?? [])
+    : [];
   // Parroquias administradas de esta diócesis (no duplicar nombres del catálogo).
   const customForDiocese = customParishes.filter(c => c.dioceseId === selectedDiocese);
   const availableParishes = [
@@ -49,7 +60,7 @@ export function ParishPicker({ selected, onChange, alreadyAdded = [] }: ParishPi
       .filter(c => !staticParishes.some(p => p.name === c.name))
       .map(c => ({ id: c.id, name: c.name })),
   ];
-  const dioceseName = chileDioceses.find(d => d.id === selectedDiocese)?.name ?? '';
+  const dioceseName = dioceses.find(d => d.id === selectedDiocese)?.name ?? '';
 
   const fullName = (parishName: string) => `${parishName} - ${dioceseName}`;
 
@@ -78,22 +89,51 @@ export function ParishPicker({ selected, onChange, alreadyAdded = [] }: ParishPi
         chapelsFor(fullName(p.name)).some(ch => matchesSearch(ch.name, q))
       );
 
+  const selectClass = 'w-full px-3 py-3 sm:px-4 sm:py-4 text-sm sm:text-base rounded-xl border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/70 dark:bg-white/10 text-blue-950 dark:text-white font-bold shadow-lg transition-colors';
+  const optionClass = 'bg-white dark:bg-slate-800 text-blue-950 dark:text-white';
+
   return (
-    <div>
+    <div className="space-y-4">
+      {/* Selector de país (por ahora, países de América). */}
       <select
-        value={selectedDiocese}
-        onChange={(e) => { setSelectedDiocese(e.target.value); setQuery(''); }}
-        className="w-full px-3 py-3 sm:px-4 sm:py-4 text-sm sm:text-base rounded-xl border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/70 dark:bg-white/10 text-blue-950 dark:text-white font-bold shadow-lg transition-colors"
+        value={selectedCountry}
+        onChange={(e) => { setSelectedCountry(e.target.value); setSelectedDiocese(''); setQuery(''); }}
+        aria-label="Elige un país"
+        className={selectClass}
       >
-        <option value="" className="bg-white dark:bg-slate-800 text-blue-950 dark:text-white">
-          Elige una diócesis...
-        </option>
-        {chileDioceses.map((diocese) => (
-          <option key={diocese.id} value={diocese.id} className="bg-white dark:bg-slate-800 text-blue-950 dark:text-white">
-            {diocese.name}
+        {americanCountries.map((c) => (
+          <option key={c.id} value={c.id} className={optionClass}>
+            {c.flag} {c.name}{c.dioceses.length === 0 ? ' (próximamente)' : ''}
           </option>
         ))}
       </select>
+
+      {/* Selector de diócesis del país elegido, agrupadas por región/provincia. */}
+      {dioceses.length > 0 ? (
+        <select
+          value={selectedDiocese}
+          onChange={(e) => { setSelectedDiocese(e.target.value); setQuery(''); }}
+          aria-label="Elige una diócesis"
+          className={selectClass}
+        >
+          <option value="" className={optionClass}>
+            Elige una diócesis...
+          </option>
+          {Object.entries(diocesesByRegion).map(([region, ds]) => (
+            <optgroup key={region} label={region}>
+              {ds.map((diocese) => (
+                <option key={diocese.id} value={diocese.id} className={optionClass}>
+                  {diocese.name}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      ) : (
+        <p className="text-sm sm:text-base text-blue-800/80 dark:text-blue-200/80 bg-white/40 dark:bg-white/5 rounded-xl p-4">
+          Aún no hay parroquias cargadas para este país. Próximamente.
+        </p>
+      )}
 
       {selectedDiocese && availableParishes.length > 0 && (
         <div className="mt-5 space-y-3">
