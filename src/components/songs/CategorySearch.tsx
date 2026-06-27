@@ -7,7 +7,7 @@ import { getCategoryColors } from '../../utils/colors';
 import { getCurrentLiturgicalColor, getLiturgicalCrossColor } from '../../utils/liturgicalColors';
 import { matchesSearch } from '../../utils/textSearch';
 import { AddGloriaDialog } from '../cantoral/AddGloriaDialog';
-import { AddPadreNuestroDialog } from '../cantoral/AddPadreNuestroDialog';
+import { AddPadreNuestroDialog, PadreNuestroLanguage } from '../cantoral/AddPadreNuestroDialog';
 import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji } from '../../utils/specialLiturgicalDays';
 import { getCurrentLiturgicalSeason } from '../../utils/liturgicalSeason';
 import { isOrdinary } from '../../utils/ordinary';
@@ -203,42 +203,52 @@ export function CategorySearch({
     }
   };
 
-  // Confirma agregar el Padre Nuestro cantado
-  const handleConfirmPadreNuestro = async () => {
-    // Buscar canto existente en YouTube con category 'Padre Nuestro' o título que coincida
-    const existing = songs.find(s =>
-      s.category === 'Padre Nuestro' ||
-      s.title.toLowerCase().includes('padre nuestro')
-    );
+  // Busca en Drive la partitura del Padre Nuestro según el idioma:
+  //  · 'es' → archivo «Padre nuestro»  · 'la' → archivo «Pater noster».
+  // Prefiere coincidencia exacta de nombre; cae a "contiene" si no la encuentra.
+  const fetchPadreNuestroSheet = async (language: PadreNuestroLanguage): Promise<string | undefined> => {
+    try {
+      const r = await fetch('/api/sheets');
+      if (!r.ok) return undefined;
+      const data = await r.json();
+      const files = (data.files || []) as Array<{ id: string; name: string }>;
+      const norm = (s: string) =>
+        s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[_\-.]+/g, ' ').replace(/\s+/g, ' ').trim();
+      const wanted = language === 'la' ? 'pater noster' : 'padre nuestro';
+      const baseName = (name: string) => norm(name.replace(/\.pdf$/i, ''));
+      const match =
+        files.find(f => baseName(f.name) === wanted) ||
+        files.find(f => norm(f.name).includes(wanted));
+      return match ? `https://drive.google.com/file/d/${match.id}/preview` : undefined;
+    } catch {
+      return undefined;
+    }
+  };
 
-    if (existing) {
-      addSongEnriched({ ...existing, category: 'Padre Nuestro' });
-    } else {
-      // Crear canto sintético — buscar partitura en Drive por nombre
-      let sheetMusicUrl: string | undefined;
-      try {
-        const r = await fetch('/api/sheets');
-        if (r.ok) {
-          const data = await r.json();
-          const match = (data.files || []).find((f: any) =>
-            /padre\s*nuestro/i.test(f.name.replace(/_/g, ' '))
-          );
-          if (match) sheetMusicUrl = `https://drive.google.com/file/d/${match.id}/preview`;
-        }
-      } catch { /* ignorar */ }
+  // Confirma agregar el Padre Nuestro cantado, en español o en gregoriano (latín).
+  // Siempre inserta la partitura nombrada correspondiente (no usa el resolver del
+  // ordinario, que no distingue idioma).
+  const handleConfirmPadreNuestro = async (language: PadreNuestroLanguage) => {
+    const isLatin = language === 'la';
+    const sheetMusicUrl = await fetchPadreNuestroSheet(language);
 
-      const padreNuestroSong: Song = {
-        id: `padre-nuestro-${Date.now()}`,
-        title: 'Padre Nuestro',
-        category: 'Padre Nuestro',
-        youtubeId: '',
-        duration: '0:00',
-        author: 'Misa',
-        version: 'Coro',
-        sheetMusicUrl,
-        isLiturgical: true,
-      };
-      onAddToCantoral(padreNuestroSong);
+    const padreNuestroSong: Song = {
+      id: `padre-nuestro-${language}-${Date.now()}`,
+      title: isLatin ? 'Padre Nuestro (Gregoriano)' : 'Padre Nuestro',
+      category: 'Padre Nuestro',
+      youtubeId: '',
+      duration: '0:00',
+      author: isLatin ? 'Pater noster (latín)' : 'Misa',
+      version: 'Coro',
+      sheetMusicUrl,
+      isLiturgical: true,
+    };
+    onAddToCantoral(padreNuestroSong);
+
+    if (!sheetMusicUrl) {
+      toast.warning('No encontré la partitura', {
+        description: `Agregué el Padre Nuestro, pero no hallé el PDF «${isLatin ? 'Pater noster' : 'Padre nuestro'}» en Drive.`,
+      });
     }
 
     setShowPadreNuestroDialog(false);

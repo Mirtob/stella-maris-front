@@ -75,23 +75,29 @@ function cleanText(text: string): string {
  * - Elimina secciones explícitas como (Repetir Coro), (Bis)
  * - Mantiene marcas tipo "Coro:", "Estrofa 1:" en su propia línea
  */
+// Token de acorde, en notación AMERICANA (A-G) o LATINA (Do, Re, Mi, Fa, Sol, La,
+// Si). Ej: Am, G/B, C#m7, Sol, Lam, Re7, Do/Mi. Sensible a mayúsculas a propósito:
+// los acordes van capitalizados, así no confundimos palabras como "si"/"la"/"mi"/"sol".
+const NOTE = '([A-G]|Do|Re|Mi|Fa|Sol|La|Si)';
+const CHORD_TOKEN = new RegExp(
+  `^${NOTE}[#b]?(maj|min|m|sus|dim|aug|add)?[0-9]?(\\/${NOTE}[#b]?)?$`
+);
+
 function cleanLyrics(lyrics: string): string {
   if (!lyrics) return '';
 
-  // Quitar acordes inline: [Am] [G/B] [C#m7]
-  let cleaned = lyrics.replace(/\[[A-G][#b]?[a-zA-Z0-9/]*\]/g, '');
+  // Quitar acordes inline entre corchetes (cualquier notación): [Sol] [La m] [C#m7] [Re/Fa#]
+  let cleaned = lyrics.replace(/\[[^\]]*\]/g, '');
 
   // Procesar línea por línea
   const lines = cleaned.split('\n').map(line => {
     const stripped = line.trim();
     if (!stripped) return '';
 
-    // Si la línea es solo acordes (letras de acordes separadas por espacios), eliminarla
-    // Patrón: "G   D   Em" → toda la línea son acordes
+    // Si la línea es solo acordes (sueltos, sin corchetes), eliminarla.
+    // Patrón: "Sol  Re  Lam  Do" → toda la línea son acordes
     const tokens = stripped.split(/\s+/);
-    const isChordLine = tokens.length > 0 && tokens.every(t =>
-      /^[A-G][#b]?(maj|min|m|sus|dim|aug|add)?[0-9]?(\/[A-G][#b]?)?$/.test(t)
-    );
+    const isChordLine = tokens.length > 0 && tokens.every(t => CHORD_TOKEN.test(t));
     if (isChordLine) return '';
 
     return line;

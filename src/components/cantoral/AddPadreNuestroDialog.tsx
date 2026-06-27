@@ -1,8 +1,11 @@
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
+/** Idioma/versión del Padre Nuestro: 'es' = español, 'la' = gregoriano (latín). */
+export type PadreNuestroLanguage = 'es' | 'la';
+
 interface AddPadreNuestroDialogProps {
-  onConfirm: () => void;
+  onConfirm: (language: PadreNuestroLanguage) => void;
   onCancel: () => void;
 }
 
@@ -40,12 +43,13 @@ export function AddPadreNuestroDialog({ onConfirm, onCancel }: AddPadreNuestroDi
         {/* Content */}
         <div className="mb-8">
           <p className="text-base sm:text-lg text-blue-900 dark:text-blue-100 mb-4">
-            ¿En esta Misa se cantará el <strong>Padre Nuestro</strong>?
+            ¿En esta Misa se cantará el <strong>Padre Nuestro</strong>? Elige la versión:
           </p>
 
           <div className="bg-blue-100 dark:bg-blue-900/30 rounded-2xl p-4 mb-4 border-2 border-blue-300 dark:border-blue-700">
             <p className="text-sm sm:text-base text-blue-800 dark:text-blue-200">
-              Si lo agregas, aparecerá como una tarjeta en el cantoral y se incluirá la partitura en el PDF.
+              Aparecerá como una tarjeta en el cantoral y se incluirá su partitura en el PDF:
+              <strong> Español</strong> usa la partitura «Padre nuestro»; <strong>Gregoriano</strong> usa «Pater noster» (latín).
             </p>
           </div>
 
@@ -55,18 +59,26 @@ export function AddPadreNuestroDialog({ onConfirm, onCancel }: AddPadreNuestroDi
         </div>
 
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => onConfirm('es')}
+              className="flex-1 bg-gradient-to-br from-blue-900 to-blue-950 text-white py-3 sm:py-4 px-3 sm:px-4 rounded-xl text-base sm:text-lg font-bold shadow-lg hover:shadow-2xl active:scale-95 transition-all border-2 border-blue-800"
+            >
+              Español 🙏
+            </button>
+            <button
+              onClick={() => onConfirm('la')}
+              className="flex-1 bg-gradient-to-br from-amber-700 to-amber-900 text-white py-3 sm:py-4 px-3 sm:px-4 rounded-xl text-base sm:text-lg font-bold shadow-lg hover:shadow-2xl active:scale-95 transition-all border-2 border-amber-800"
+            >
+              Gregoriano (latín) 🎼
+            </button>
+          </div>
           <button
             onClick={onCancel}
-            className="flex-1 bg-white/50 dark:bg-white/10 border-2 border-blue-300 dark:border-blue-700 text-blue-900 dark:text-blue-100 py-3 sm:py-4 px-3 sm:px-4 rounded-xl text-base sm:text-lg font-bold hover:bg-white/70 dark:hover:bg-white/20 active:scale-95 transition-all"
+            className="w-full bg-white/50 dark:bg-white/10 border-2 border-blue-300 dark:border-blue-700 text-blue-900 dark:text-blue-100 py-3 px-3 sm:px-4 rounded-xl text-base font-bold hover:bg-white/70 dark:hover:bg-white/20 active:scale-95 transition-all"
           >
             No, gracias
-          </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 bg-gradient-to-br from-blue-900 to-blue-950 text-white py-3 sm:py-4 px-3 sm:px-4 rounded-xl text-base sm:text-lg font-bold shadow-lg hover:shadow-2xl active:scale-95 transition-all border-2 border-blue-800"
-          >
-            Sí, agregar 🙏
           </button>
         </div>
       </div>
