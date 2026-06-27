@@ -1,6 +1,7 @@
 import { Church, Search, Edit2, Trash2, MapPin, Users, Plus, Building2, ArrowLeft, Activity, RefreshCw, Loader } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
-import { chileDioceses, Diocese, Parish, Chapel } from '../../data/chileDioceses';
+import { Diocese, Parish, Chapel } from '../../data/chileDioceses';
+import { americanCountries, getCountry, getDiocesesByCountry } from '../../data/countries';
 import { toast } from 'sonner';
 import { listActiveParishes, ParishActivity } from '../../services/parishStats';
 import { listChapels, addChapel, updateChapel, deleteChapel, Chapel as AdminChapel } from '../../services/chapels';
@@ -14,7 +15,15 @@ interface ExtendedParish extends Parish {
   dioceseId?: string;
 }
 
+// Agrupa diócesis por región / provincia eclesiástica (para los <optgroup>).
+const groupByRegion = (ds: Diocese[]) =>
+  ds.reduce<Record<string, Diocese[]>>((acc, d) => {
+    (acc[d.region] ??= []).push(d);
+    return acc;
+  }, {});
+
 export function ParishManager() {
+  const [selectedCountry, setSelectedCountry] = useState('CL');
   const [selectedDiocese, setSelectedDiocese] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   // Parroquias con actividad real (consulta Supabase: user_profiles + published_cantorals).
@@ -110,22 +119,28 @@ export function ParishManager() {
   const [newParishName, setNewParishName] = useState('');
   const [newParishAddress, setNewParishAddress] = useState('');
   const [newParishCity, setNewParishCity] = useState('');
+  const [newParishCountry, setNewParishCountry] = useState('CL');
   const [newParishDiocese, setNewParishDiocese] = useState('');
   
   // Estado local de parroquias (simulando backend)
   const [localParishes, setLocalParishes] = useState<Map<string, Parish[]>>(new Map());
   const [localChapels, setLocalChapels] = useState<Map<string, Chapel[]>>(new Map());
 
+  // Diócesis del país elegido (filtro de la UI; no cambia el string canónico).
+  const country = getCountry(selectedCountry);
+  const dioceses = getDiocesesByCountry(selectedCountry);
+  const diocesesByRegion = groupByRegion(dioceses);
+
   // Obtener todas las parroquias con información adicional
-  const allParishesWithDiocese: ExtendedParish[] = selectedDiocese 
-    ? (chileDioceses.find(d => d.id === selectedDiocese)?.parishes || []).map(p => ({
+  const allParishesWithDiocese: ExtendedParish[] = selectedDiocese
+    ? (dioceses.find(d => d.id === selectedDiocese)?.parishes || []).map(p => ({
         ...p,
         choirCount: 0,
         memberCount: 0,
-        dioceseName: chileDioceses.find(d => d.id === selectedDiocese)?.name,
+        dioceseName: dioceses.find(d => d.id === selectedDiocese)?.name,
         dioceseId: selectedDiocese
       }))
-    : chileDioceses.flatMap(d => d.parishes.map(p => ({
+    : dioceses.flatMap(d => d.parishes.map(p => ({
         ...p,
         choirCount: 0,
         memberCount: 0,
@@ -184,11 +199,13 @@ export function ParishManager() {
   };
 
   const handleAddParish = () => {
+    setNewParishCountry(selectedCountry);
+    setNewParishDiocese('');
     setShowAddParishDialog(true);
   };
 
   const handleSaveParish = async () => {
-    const dioceseName = chileDioceses.find(d => d.id === newParishDiocese)?.name || '';
+    const dioceseName = getDiocesesByCountry(newParishCountry).find(d => d.id === newParishDiocese)?.name || '';
     if (!newParishName.trim()) { toast.error('Escribe el nombre de la parroquia'); return; }
     if (!newParishDiocese) { toast.error('Elige una diócesis'); return; }
 
@@ -238,7 +255,7 @@ export function ParishManager() {
             </div>
           </div>
           <h1 className="text-4xl font-bold text-purple-900 dark:text-white mb-2">Gestión de Parroquias y Capillas</h1>
-          <p className="text-xl text-purple-700 dark:text-purple-300">Base de datos de Chile</p>
+          <p className="text-xl text-purple-700 dark:text-purple-300">Base de datos de {country?.name ?? '—'}</p>
         </div>
 
         {/* Parroquias activas en la app — datos reales de Supabase */}
@@ -302,18 +319,36 @@ export function ParishManager() {
           Catálogo de parroquias
         </div>
 
-        {/* Diocese Filter */}
-        <div className="mb-6">
+        {/* Country + Diocese Filter */}
+        <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <select
+            value={selectedCountry}
+            onChange={(e) => { setSelectedCountry(e.target.value); setSelectedDiocese(''); }}
+            aria-label="Filtrar por país"
+            className="w-full px-3 sm:px-4 py-4 text-lg border-2 border-amber-200 dark:border-amber-700 rounded-xl focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-white transition-colors"
+          >
+            {americanCountries.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.flag} {c.name}{c.dioceses.length === 0 ? ' (próximamente)' : ''}
+              </option>
+            ))}
+          </select>
           <select
             value={selectedDiocese}
             onChange={(e) => setSelectedDiocese(e.target.value)}
-            className="w-full px-3 sm:px-4 py-4 text-lg border-2 border-amber-200 dark:border-amber-700 rounded-xl focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-white transition-colors"
+            aria-label="Filtrar por diócesis"
+            disabled={dioceses.length === 0}
+            className="w-full px-3 sm:px-4 py-4 text-lg border-2 border-amber-200 dark:border-amber-700 rounded-xl focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-white transition-colors disabled:opacity-50"
           >
-            <option value="">Todas las Diócesis de Chile</option>
-            {chileDioceses.map((diocese) => (
-              <option key={diocese.id} value={diocese.id}>
-                {diocese.name} - {diocese.region}
-              </option>
+            <option value="">Todas las Diócesis de {country?.name ?? '—'}</option>
+            {Object.entries(diocesesByRegion).map(([region, ds]) => (
+              <optgroup key={region} label={region}>
+                {ds.map((diocese) => (
+                  <option key={diocese.id} value={diocese.id}>
+                    {diocese.name}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>
@@ -470,11 +505,11 @@ export function ParishManager() {
 
         {/* Stats Summary */}
         <div className="mt-8 bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-6 border-2 border-purple-200 dark:border-purple-700 transition-colors">
-          <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Estadísticas de Chile</h3>
+          <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Estadísticas de {country?.name ?? '—'}</h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-purple-50 dark:bg-purple-900/30 rounded-xl p-4 border-2 border-purple-200 dark:border-purple-700 transition-colors">
               <div className="text-lg sm:text-2xl font-bold text-purple-700 dark:text-purple-300">
-                {chileDioceses.length}
+                {dioceses.length}
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">Diócesis</div>
             </div>
@@ -607,21 +642,41 @@ export function ParishManager() {
             </div>
             
             <div className="mb-4">
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Diócesis *</label>
+              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">País *</label>
               <select
-                value={newParishDiocese}
-                onChange={(e) => setNewParishDiocese(e.target.value)}
+                value={newParishCountry}
+                onChange={(e) => { setNewParishCountry(e.target.value); setNewParishDiocese(''); }}
                 className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:border-green-500 dark:focus:border-green-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-white transition-colors"
               >
-                <option value="">Seleccionar Diócesis</option>
-                {chileDioceses.map((diocese) => (
-                  <option key={diocese.id} value={diocese.id}>
-                    {diocese.name} - {diocese.region}
+                {americanCountries.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.flag} {c.name}{c.dioceses.length === 0 ? ' (próximamente)' : ''}
                   </option>
                 ))}
               </select>
             </div>
-            
+
+            <div className="mb-4">
+              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Diócesis *</label>
+              <select
+                value={newParishDiocese}
+                onChange={(e) => setNewParishDiocese(e.target.value)}
+                disabled={getDiocesesByCountry(newParishCountry).length === 0}
+                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:border-green-500 dark:focus:border-green-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-white transition-colors disabled:opacity-50"
+              >
+                <option value="">Seleccionar Diócesis</option>
+                {Object.entries(groupByRegion(getDiocesesByCountry(newParishCountry))).map(([region, ds]) => (
+                  <optgroup key={region} label={region}>
+                    {ds.map((diocese) => (
+                      <option key={diocese.id} value={diocese.id}>
+                        {diocese.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+
             <div className="flex gap-3">
               <button
                 className="flex-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-white px-3 sm:px-4 py-3 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-500 transition-all"
@@ -699,10 +754,14 @@ export function ParishManager() {
                 className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:border-green-500 dark:focus:border-green-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-white transition-colors"
               >
                 <option value="">Seleccionar Diócesis</option>
-                {chileDioceses.map((diocese) => (
-                  <option key={diocese.id} value={diocese.id}>
-                    {diocese.name} - {diocese.region}
-                  </option>
+                {Object.entries(diocesesByRegion).map(([region, ds]) => (
+                  <optgroup key={region} label={region}>
+                    {ds.map((diocese) => (
+                      <option key={diocese.id} value={diocese.id}>
+                        {diocese.name}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>
