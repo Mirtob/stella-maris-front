@@ -5,6 +5,7 @@ import { getCurrentLiturgicalSeason } from './liturgicalSeason';
 import { getChannelUrl } from '../services/youtube';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
 import eucharisticWreath from '../assets/eucharistic-wreath.jpg';
+import sectionArch from '../assets/section-arch.png';
 
 interface PDFGeneratorOptions {
   cantoral: PublishedCantoral;
@@ -61,7 +62,13 @@ async function loadImage(src: string): Promise<HTMLImageElement | null> {
  *    dejando solo las vides/medallones flotando sobre la hoja.
  * `flip` refleja horizontalmente (para que el adorno derecho mire al centro).
  */
-function tintWreath(img: HTMLImageElement, color: RGB, crop: Crop, flip = false): TintedImage | null {
+function tintWreath(
+  img: HTMLImageElement,
+  color: RGB,
+  crop: Crop,
+  flip = false,
+  clearFrac?: { x0: number; y0: number; x1: number; y1: number },
+): TintedImage | null {
   const { sx, sy, sw, sh } = crop;
   const canvas = document.createElement('canvas');
   canvas.width = sw;
@@ -84,6 +91,17 @@ function tintWreath(img: HTMLImageElement, color: RGB, crop: Crop, flip = false)
       const lum = 0.299 * a[i] + 0.587 * a[i + 1] + 0.114 * a[i + 2];
       if (lum > 205) a[i + 3] = 0;
       else if (lum > 150) a[i + 3] = Math.round(a[i + 3] * (205 - lum) / 55);
+    }
+    // Vaciar una zona central (donde el arco trae texto propio) para escribir el
+    // título del momento encima sin que se superponga al rótulo de la imagen.
+    if (clearFrac) {
+      const x0 = Math.max(0, Math.floor(clearFrac.x0 * sw));
+      const x1 = Math.min(sw, Math.ceil(clearFrac.x1 * sw));
+      const y0 = Math.max(0, Math.floor(clearFrac.y0 * sh));
+      const y1 = Math.min(sh, Math.ceil(clearFrac.y1 * sh));
+      for (let yy = y0; yy < y1; yy++) {
+        for (let xx = x0; xx < x1; xx++) a[(yy * sw + xx) * 4 + 3] = 0;
+      }
     }
     ctx.putImageData(data, 0, 0);
   } catch {
@@ -222,13 +240,16 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   // Logo redondo de la app para el encabezado (si falla la carga, se usa el texto).
   const logo = await loadCircularLogo(logoStellaMaris);
 
-  // Corona eucarística tintada al color litúrgico: corona completa para la portada
-  // y dos franjas (izquierda y su reflejo) para flanquear cada parte de la Misa.
+  // Corona eucarística (portada) y arco de sección, ambos tintados al color
+  // litúrgico. El arco lleva su propio texto al centro: se vacía esa zona para
+  // escribir encima el título del momento de la Misa.
   const wreathImg = await loadImage(eucharisticWreath);
   const wreathSquare = wreathImg ? tintWreath(wreathImg, colors.primary, { sx: 232, sy: 0, sw: 559, sh: 559 }) : null;
-  const stripCrop: Crop = { sx: 240, sy: 18, sw: 300, sh: 165 };
-  const stripLeft = wreathImg ? tintWreath(wreathImg, colors.primary, stripCrop, false) : null;
-  const stripRight = wreathImg ? tintWreath(wreathImg, colors.primary, stripCrop, true) : null;
+  const archImg = await loadImage(sectionArch);
+  const archTinted = archImg
+    ? tintWreath(archImg, colors.primary, { sx: 0, sy: 0, sw: 1408, sh: 492 }, false,
+        { x0: 0.30, y0: 0.40, x1: 0.70, y1: 0.86 })
+    : null;
 
   // Header en cada página
   const addPageHeader = () => {
@@ -363,44 +384,55 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   );
 
   sortedCategories.forEach((category) => {
-    // Cabecera de categoría: la parte de la Misa centrada (en color litúrgico) con
-    // una franja de vid de la corona eucarística flanqueándola a ambos lados.
+    // Cabecera de categoría: arco eucarístico (tintado al color litúrgico) con el
+    // título del momento de la Misa centrado en su hueco (donde la imagen original
+    // dice "MISSA DE ANGELIS").
     const label = cleanText(category).toUpperCase();
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(14);
-    pdf.setTextColor(...colors.primary);
-    const labelW = pdf.getTextWidth(label);
 
-    const stripH = 13;
-    const stripW = stripLeft ? stripH * (stripLeft.w / stripLeft.h) : 26;
-    needPage(stripH + 10);
-    const midY = y + stripH / 2;
-    const gap = 4;
-    const leftX = pageW / 2 - labelW / 2 - gap - stripW;
-    const rightX = pageW / 2 + labelW / 2 + gap;
-
-    if (stripLeft && stripRight) {
-      pdf.addImage(stripLeft.dataUrl, 'PNG', leftX, midY - stripH / 2, stripW, stripH);
-      pdf.addImage(stripRight.dataUrl, 'PNG', rightX, midY - stripH / 2, stripW, stripH);
+    if (archTinted) {
+      const aW = 128;
+      const aH = aW * (archTinted.h / archTinted.w);
+      needPage(aH + 6);
+      // Reusar la misma imagen (alias) para no inflar el PDF en cada sección.
+      pdf.addImage(archTinted.dataUrl, 'PNG', pageW / 2 - aW / 2, y, aW, aH, 'arco-seccion', 'FAST');
+      // Título adaptativo para que entre en el hueco del arco.
+      pdf.setFont('helvetica', 'bold');
+      let fs = 15;
+      pdf.setFontSize(fs);
+      const maxTitleW = aW * 0.46;
+      while (pdf.getTextWidth(label) > maxTitleW && fs > 9) { fs -= 0.5; pdf.setFontSize(fs); }
+      pdf.setTextColor(...colors.primary);
+      pdf.text(label, pageW / 2, y + aH * 0.62, { align: 'center' });
+      y += aH + 2;
     } else {
+      // Respaldo si la imagen no carga: título centrado con líneas a los lados.
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(14);
+      pdf.setTextColor(...colors.primary);
+      const labelW = pdf.getTextWidth(label);
+      const gap = 4;
+      needPage(16);
+      const midY = y + 6;
       pdf.setDrawColor(...colors.primary);
       pdf.setLineWidth(0.5);
       pdf.line(margin + 6, midY, pageW / 2 - labelW / 2 - gap, midY);
       pdf.line(pageW / 2 + labelW / 2 + gap, midY, pageW - margin - 6, midY);
+      pdf.text(label, pageW / 2, midY + 1.8, { align: 'center' });
+      y = midY + 8;
     }
-    pdf.text(label, pageW / 2, midY + 1.8, { align: 'center' });
-    y = midY + stripH / 2 + 6;
 
     byCategory[category].forEach((song, idx) => {
       needPage(20);
 
       // Título del canto
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(12);
-      pdf.setTextColor(...colors.primary);
       const titleLines = pdf.splitTextToSize(cleanText(song.title), contentW) as string[];
       titleLines.forEach((line) => {
         needPage(6);
+        // Reaplicar estilo DESPUÉS de needPage: si saltó de página, addPageHeader
+        // dejó el color en gris y el texto saldría descolorido.
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(12);
+        pdf.setTextColor(...colors.primary);
         pdf.text(line, margin, y);
         y += 6;
       });
@@ -419,10 +451,6 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
       // Letra limpia
       const lyrics = cleanLyrics(song.lyrics || '');
       if (lyrics) {
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(10.5);
-        pdf.setTextColor(40, 40, 40);
-
         const lyricLines = lyrics.split('\n');
         for (const rawLine of lyricLines) {
           const line = rawLine.replace(/\s+$/, ''); // trim trailing spaces
@@ -436,18 +464,23 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
           const isSection = /^(Coro|Estrofa\s*\d*|Puente|Final|Refrán|Recitativo)\s*:?\s*$/i.test(line.trim());
 
           if (isSection) {
-            pdf.setFont('helvetica', 'bold');
-            pdf.setTextColor(80, 80, 80);
             needPage(6);
+            // Estilo SIEMPRE tras needPage para mantener color parejo al cambiar de hoja.
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(10.5);
+            pdf.setTextColor(80, 80, 80);
             pdf.text(line.trim(), margin, y);
             y += 6;
-            pdf.setFont('helvetica', 'normal');
-            pdf.setTextColor(40, 40, 40);
           } else {
             // Texto normal — wrap si la línea es muy larga
             const wrapped = pdf.splitTextToSize(line, contentW) as string[];
             for (const wl of wrapped) {
               needPage(5.5);
+              // Reaplicar el color/fuente de la letra tras cada posible salto de
+              // página (evita que la segunda hoja salga más gris).
+              pdf.setFont('helvetica', 'normal');
+              pdf.setFontSize(10.5);
+              pdf.setTextColor(40, 40, 40);
               pdf.text(wl, margin, y);
               y += 5.5;
             }
