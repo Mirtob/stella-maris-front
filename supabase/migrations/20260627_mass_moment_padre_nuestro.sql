@@ -44,7 +44,10 @@ ALTER TABLE public.songs ADD CONSTRAINT songs_extra_moments_valid
   ]::text[]);
 
 -- Vista de etiquetas: mapear el nuevo momento a su rótulo legible.
-CREATE OR REPLACE VIEW public.songs_with_labels
+-- DROP + CREATE (no REPLACE): al agregarse `extra_moments` a la tabla, `s.*`
+-- cambió el orden de columnas y CREATE OR REPLACE no permite reordenar/renombrar.
+DROP VIEW IF EXISTS public.songs_with_labels;
+CREATE VIEW public.songs_with_labels
 WITH (security_invoker = on) AS
 SELECT
   s.*,
