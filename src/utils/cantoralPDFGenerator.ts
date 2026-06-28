@@ -252,7 +252,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   const archTinted = archImg
     ? tintWreath(archImg, colors.primary,
         { sx: 0, sy: 0, sw: archImg.naturalWidth, sh: archImg.naturalHeight }, false,
-        { x0: 0.30, y0: 0.40, x1: 0.70, y1: 0.86 })
+        { x0: 0.32, y0: 0.36, x1: 0.68, y1: 0.70 })
     : null;
 
   // Header en cada página
@@ -399,14 +399,14 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
       needPage(aH + 6);
       // Reusar la misma imagen (alias) para no inflar el PDF en cada sección.
       pdf.addImage(archTinted.dataUrl, 'PNG', pageW / 2 - aW / 2, y, aW, aH, 'arco-seccion', 'FAST');
-      // Título adaptativo para que entre en el hueco del arco.
+      // Título adaptativo para que entre en la banda central del banner.
       pdf.setFont('helvetica', 'bold');
       let fs = 15;
       pdf.setFontSize(fs);
-      const maxTitleW = aW * 0.46;
+      const maxTitleW = aW * 0.32;
       while (pdf.getTextWidth(label) > maxTitleW && fs > 9) { fs -= 0.5; pdf.setFontSize(fs); }
       pdf.setTextColor(...colors.primary);
-      pdf.text(label, pageW / 2, y + aH * 0.62, { align: 'center' });
+      pdf.text(label, pageW / 2, y + aH * 0.59, { align: 'center' });
       y += aH + 2;
     } else {
       // Respaldo si la imagen no carga: título centrado con líneas a los lados.
