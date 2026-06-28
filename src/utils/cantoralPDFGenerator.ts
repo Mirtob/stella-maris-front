@@ -246,8 +246,12 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   const wreathImg = await loadImage(eucharisticWreath);
   const wreathSquare = wreathImg ? tintWreath(wreathImg, colors.primary, { sx: 232, sy: 0, sw: 559, sh: 559 }) : null;
   const archImg = await loadImage(sectionArch);
+  // El asset ya viene recortado a SOLO la guirnalda con el texto embebido, así que
+  // se usa completo. Se vacía la banda central (donde dice "TITULO DEL CANTO") para
+  // escribir encima el momento de la Misa.
   const archTinted = archImg
-    ? tintWreath(archImg, colors.primary, { sx: 0, sy: 0, sw: 1408, sh: 492 }, false,
+    ? tintWreath(archImg, colors.primary,
+        { sx: 0, sy: 0, sw: archImg.naturalWidth, sh: archImg.naturalHeight }, false,
         { x0: 0.30, y0: 0.40, x1: 0.70, y1: 0.86 })
     : null;
 
