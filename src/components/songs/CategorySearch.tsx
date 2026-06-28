@@ -226,29 +226,58 @@ export function CategorySearch({
     }
   };
 
+  // Texto buscable de un canto, sin acentos y en minúscula.
+  const haystack = (s: Song) =>
+    `${s.title} ${s.author ?? ''} ${s.artist ?? ''}`
+      .normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+  // Busca en el CATÁLOGO el Padre Nuestro / Pater noster cargado manualmente.
+  // Distingue idioma por el texto; tolera que la etiqueta de parte no sea exacta.
+  const findCatalogPadreNuestro = (language: PadreNuestroLanguage): Song | undefined => {
+    const isLatin = language === 'la';
+    const isLatinSong = (s: Song) => /\bpater\b|latin|gregor/.test(haystack(s));
+    const candidates = songs.filter(
+      s => songInCategory(s, 'Padre Nuestro') || /padre nuestro|pater noster/.test(haystack(s)),
+    );
+    return candidates.find(s => (isLatin ? isLatinSong(s) : !isLatinSong(s))) ?? candidates[0];
+  };
+
   // Confirma agregar el Padre Nuestro cantado, en español o en gregoriano (latín).
-  // Siempre inserta la partitura nombrada correspondiente (no usa el resolver del
-  // ordinario, que no distingue idioma).
+  // Prioridad de origen: (1) el canto del catálogo cargado manualmente (trae la
+  // partitura desde su driveFileId y, si tiene, la letra); (2) respaldo: el PDF
+  // por nombre en la carpeta de partituras de Drive.
   const handleConfirmPadreNuestro = async (language: PadreNuestroLanguage) => {
     const isLatin = language === 'la';
-    const sheetMusicUrl = await fetchPadreNuestroSheet(language);
 
-    const padreNuestroSong: Song = {
-      id: `padre-nuestro-${language}-${Date.now()}`,
-      title: isLatin ? 'Padre Nuestro (Gregoriano)' : 'Padre Nuestro',
-      category: 'Padre Nuestro',
-      youtubeId: '',
-      duration: '0:00',
-      author: isLatin ? 'Pater noster (latín)' : 'Misa',
-      version: 'Coro',
-      sheetMusicUrl,
-      isLiturgical: true,
-    };
+    const catalogSong = findCatalogPadreNuestro(language);
+    const sheetMusicUrl =
+      catalogSong?.sheetMusicUrl ?? (await fetchPadreNuestroSheet(language));
+
+    const padreNuestroSong: Song = catalogSong
+      ? {
+          ...catalogSong,
+          // id único por instancia (evita colisión con el dedup del cantoral) y
+          // categoría/partitura fijadas para que se muestre como Padre Nuestro.
+          id: `padre-nuestro-${language}-${Date.now()}`,
+          category: 'Padre Nuestro',
+          sheetMusicUrl,
+        }
+      : {
+          id: `padre-nuestro-${language}-${Date.now()}`,
+          title: isLatin ? 'Padre Nuestro (Gregoriano)' : 'Padre Nuestro',
+          category: 'Padre Nuestro',
+          youtubeId: '',
+          duration: '0:00',
+          author: isLatin ? 'Pater noster (latín)' : 'Misa',
+          version: 'Coro',
+          sheetMusicUrl,
+          isLiturgical: true,
+        };
     onAddToCantoral(padreNuestroSong);
 
-    if (!sheetMusicUrl) {
+    if (!sheetMusicUrl && !padreNuestroSong.lyrics) {
       toast.warning('No encontré la partitura', {
-        description: `Agregué el Padre Nuestro, pero no hallé el PDF «${isLatin ? 'Pater noster' : 'Padre nuestro'}» en Drive.`,
+        description: `Agregué el Padre Nuestro, pero no hallé el «${isLatin ? 'Pater noster' : 'Padre nuestro'}» ni en el catálogo ni en Drive.`,
       });
     }
 
