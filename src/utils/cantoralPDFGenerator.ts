@@ -4,12 +4,15 @@ import { PublishedCantoral, Song } from '../types';
 import { getCurrentLiturgicalSeason } from './liturgicalSeason';
 import { getChannelUrl } from '../services/youtube';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
+import eucharisticWreath from '../assets/eucharistic-wreath.jpg';
 
 interface PDFGeneratorOptions {
   cantoral: PublishedCantoral;
 }
 
 type RGB = [number, number, number];
+interface Crop { sx: number; sy: number; sw: number; sh: number }
+interface TintedImage { dataUrl: string; w: number; h: number }
 
 /** Carga el logo recortado en CÍRCULO (con fondo transparente), listo para addImage. */
 async function loadCircularLogo(src: string): Promise<{ dataUrl: string; size: number } | null> {
@@ -39,74 +42,54 @@ async function loadCircularLogo(src: string): Promise<{ dataUrl: string; size: n
   });
 }
 
-/** Espiga de trigo: tallo con granos a ambos lados. `dir` = +1 derecha / -1 izquierda. */
-function drawWheat(pdf: jsPDF, x: number, y: number, color: RGB, scale = 1, dir = 1) {
-  pdf.setDrawColor(...color);
-  pdf.setFillColor(...color);
-  pdf.setLineWidth(0.25 * scale);
-  const len = 4 * scale;
-  const tipX = x + dir * len, tipY = y - len * 0.9;
-  pdf.line(x, y, tipX, tipY);
-  const grains = 4;
-  for (let i = 1; i <= grains; i++) {
-    const t = i / (grains + 1);
-    const gx = x + dir * len * t, gy = y - len * 0.9 * t;
-    pdf.ellipse(gx - dir * 0.7 * scale, gy, 0.4 * scale, 0.85 * scale, 'F');
-    pdf.ellipse(gx + dir * 0.7 * scale, gy, 0.4 * scale, 0.85 * scale, 'F');
-  }
-  pdf.ellipse(tipX, tipY, 0.4 * scale, 0.85 * scale, 'F');
-}
-
-/** Racimo de uvas: pirámide de granos que cuelga, con tallito arriba. */
-function drawGrapes(pdf: jsPDF, cx: number, y: number, color: RGB, scale = 1) {
-  pdf.setFillColor(...color);
-  pdf.setDrawColor(...color);
-  pdf.setLineWidth(0.2 * scale);
-  const r = 0.65 * scale;
-  pdf.line(cx, y - r, cx, y - r - 1.2 * scale); // tallo
-  let gy = y;
-  [3, 2, 1].forEach((n) => {
-    const rowW = (n - 1) * r * 1.7;
-    for (let i = 0; i < n; i++) {
-      pdf.circle(cx - rowW / 2 + i * r * 1.7, gy, r, 'F');
-    }
-    gy += r * 1.5;
+/** Carga una imagen y resuelve cuando está lista (o null si falla). */
+async function loadImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
   });
 }
 
 /**
- * Guirnalda eucarística de estilo románico/gótico: una cinta con hojas y motivos
- * eucarísticos (espigas de trigo y un racimo de uvas al centro), simétrica respecto
- * a su punto medio. Su FORMA distingue las secciones aunque se imprima en B/N.
- * Se dibuja a lo largo del tramo [x1, x2] centrado verticalmente en `y`.
+ * Recorta una región de la corona iluminada y la tinta al color litúrgico:
+ *  · blend 'color' → conserva el claroscuro del dibujo pero impone el tono litúrgico
+ *    (haciendo "prevalecer" ese color).
+ *  · recorte por luminancia → el fondo de pergamino claro se vuelve transparente,
+ *    dejando solo las vides/medallones flotando sobre la hoja.
+ * `flip` refleja horizontalmente (para que el adorno derecho mire al centro).
  */
-function drawEucharisticGarland(pdf: jsPDF, x1: number, x2: number, y: number, color: RGB, scale = 1) {
-  const w = x2 - x1;
-  pdf.setDrawColor(...color);
-  pdf.setFillColor(...color);
-  pdf.setLineWidth(0.3 * scale);
-  if (w < 10) {
-    pdf.line(x1, y, x2, y);
-    pdf.circle(x1, y, 0.6 * scale, 'F');
-    pdf.circle(x2, y, 0.6 * scale, 'F');
-    return;
+function tintWreath(img: HTMLImageElement, color: RGB, crop: Crop, flip = false): TintedImage | null {
+  const { sx, sy, sw, sh } = crop;
+  const canvas = document.createElement('canvas');
+  canvas.width = sw;
+  canvas.height = sh;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  if (flip) { ctx.translate(sw, 0); ctx.scale(-1, 1); }
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  // Imponer el tono litúrgico conservando el claroscuro.
+  ctx.globalCompositeOperation = 'color';
+  ctx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+  ctx.fillRect(0, 0, sw, sh);
+  ctx.globalCompositeOperation = 'source-over';
+  // Recortar el fondo claro (pergamino) por luminancia.
+  try {
+    const data = ctx.getImageData(0, 0, sw, sh);
+    const a = data.data;
+    for (let i = 0; i < a.length; i += 4) {
+      const lum = 0.299 * a[i] + 0.587 * a[i + 1] + 0.114 * a[i + 2];
+      if (lum > 205) a[i + 3] = 0;
+      else if (lum > 150) a[i + 3] = Math.round(a[i + 3] * (205 - lum) / 55);
+    }
+    ctx.putImageData(data, 0, 0);
+  } catch {
+    // Si el canvas quedara "tainted", se entrega sin recorte (igual luce bien).
   }
-  // Cinta base + remates redondos en las puntas.
-  pdf.line(x1, y, x2, y);
-  pdf.circle(x1, y, 0.6 * scale, 'F');
-  pdf.circle(x2, y, 0.6 * scale, 'F');
-  const cx = (x1 + x2) / 2;
-  // Hojas alternadas (volutas) a lo largo de la cinta.
-  [0.32, 0.5, 0.68].forEach((t, i) => {
-    const lx = x1 + w * t;
-    const up = i % 2 === 0;
-    pdf.ellipse(lx, y + (up ? -1.3 : 1.3) * scale, 0.5 * scale, 1.2 * scale, 'F');
-  });
-  // Racimo de uvas al centro (colgando).
-  drawGrapes(pdf, cx, y + 0.6 * scale, color, 0.75 * scale);
-  // Espigas de trigo hacia afuera en ambos extremos.
-  drawWheat(pdf, x1 + w * 0.16, y, color, 0.75 * scale, -1);
-  drawWheat(pdf, x2 - w * 0.16, y, color, 0.75 * scale, +1);
+  return { dataUrl: canvas.toDataURL('image/png'), w: sw, h: sh };
 }
 
 const CATEGORY_ORDER = [
@@ -239,6 +222,14 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   // Logo redondo de la app para el encabezado (si falla la carga, se usa el texto).
   const logo = await loadCircularLogo(logoStellaMaris);
 
+  // Corona eucarística tintada al color litúrgico: corona completa para la portada
+  // y dos franjas (izquierda y su reflejo) para flanquear cada parte de la Misa.
+  const wreathImg = await loadImage(eucharisticWreath);
+  const wreathSquare = wreathImg ? tintWreath(wreathImg, colors.primary, { sx: 232, sy: 0, sw: 559, sh: 559 }) : null;
+  const stripCrop: Crop = { sx: 240, sy: 18, sw: 300, sh: 165 };
+  const stripLeft = wreathImg ? tintWreath(wreathImg, colors.primary, stripCrop, false) : null;
+  const stripRight = wreathImg ? tintWreath(wreathImg, colors.primary, stripCrop, true) : null;
+
   // Header en cada página
   const addPageHeader = () => {
     if (logo) {
@@ -299,25 +290,34 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
 
   // ─── PORTADA ───
   addPageHeader();
-  y = 60;
+
+  // Corona eucarística como pieza central (color litúrgico predominante).
+  if (wreathSquare) {
+    const wW = 84;
+    const wH = wW * (wreathSquare.h / wreathSquare.w);
+    pdf.addImage(wreathSquare.dataUrl, 'PNG', pageW / 2 - wW / 2, 16, wW, wH);
+    y = 16 + wH + 10;
+  } else {
+    y = 64;
+  }
 
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(22);
   pdf.setTextColor(...colors.primary);
   pdf.text('Cantoral de la Misa', pageW / 2, y, { align: 'center' });
-  y += 8;
+  y += 9;
 
   // Badge del tiempo litúrgico
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(10);
   pdf.setTextColor(...colors.primary);
   pdf.text(`Tiempo: ${colors.seasonName}`, pageW / 2, y, { align: 'center' });
-  y += 6;
+  y += 7;
 
   pdf.setFontSize(16);
   pdf.setTextColor(80, 80, 80);
   pdf.text(cleanText(cantoral.liturgicalDate), pageW / 2, y, { align: 'center' });
-  y += 10;
+  y += 9;
 
   // Fecha y hora
   const dateObj = new Date(cantoral.date);
@@ -333,10 +333,6 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   pdf.setFontSize(13);
   pdf.setTextColor(60, 60, 60);
   pdf.text(cleanText(cantoral.massTime), pageW / 2, y, { align: 'center' });
-  y += 14;
-
-  // Guirnalda eucarística (trigo y uvas) en el color litúrgico
-  drawEucharisticGarland(pdf, pageW / 2 - 45, pageW / 2 + 45, y, colors.primary, 1.1);
   y += 12;
 
   // Parroquia
@@ -367,28 +363,33 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   );
 
   sortedCategories.forEach((category) => {
-    // Cabecera de categoría: cinta del color litúrgico con la parte de la Misa
-    // centrada y la guirnalda eucarística ocupando el espacio a ambos lados.
-    needPage(22);
-    const bandTop = y - 7;
-    const bandH = 12;
-    pdf.setFillColor(...colors.primary);
-    pdf.rect(margin, bandTop, contentW, bandH, 'F');
-
+    // Cabecera de categoría: la parte de la Misa centrada (en color litúrgico) con
+    // una franja de vid de la corona eucarística flanqueándola a ambos lados.
     const label = cleanText(category).toUpperCase();
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(13);
-    pdf.setTextColor(...colors.textOnPrimary);
+    pdf.setFontSize(14);
+    pdf.setTextColor(...colors.primary);
     const labelW = pdf.getTextWidth(label);
-    const cxBand = pageW / 2;
-    const garlandY = bandTop + bandH / 2;
-    pdf.text(label, cxBand, garlandY + 1.6, { align: 'center' });
 
-    const gap = 6;        // separación entre la palabra y la guirnalda
-    const sidePad = 7;    // margen interno de la cinta
-    drawEucharisticGarland(pdf, margin + sidePad, cxBand - labelW / 2 - gap, garlandY, colors.textOnPrimary, 0.8);
-    drawEucharisticGarland(pdf, cxBand + labelW / 2 + gap, pageW - margin - sidePad, garlandY, colors.textOnPrimary, 0.8);
-    y += 13;
+    const stripH = 13;
+    const stripW = stripLeft ? stripH * (stripLeft.w / stripLeft.h) : 26;
+    needPage(stripH + 10);
+    const midY = y + stripH / 2;
+    const gap = 4;
+    const leftX = pageW / 2 - labelW / 2 - gap - stripW;
+    const rightX = pageW / 2 + labelW / 2 + gap;
+
+    if (stripLeft && stripRight) {
+      pdf.addImage(stripLeft.dataUrl, 'PNG', leftX, midY - stripH / 2, stripW, stripH);
+      pdf.addImage(stripRight.dataUrl, 'PNG', rightX, midY - stripH / 2, stripW, stripH);
+    } else {
+      pdf.setDrawColor(...colors.primary);
+      pdf.setLineWidth(0.5);
+      pdf.line(margin + 6, midY, pageW / 2 - labelW / 2 - gap, midY);
+      pdf.line(pageW / 2 + labelW / 2 + gap, midY, pageW - margin - 6, midY);
+    }
+    pdf.text(label, pageW / 2, midY + 1.8, { align: 'center' });
+    y = midY + stripH / 2 + 6;
 
     byCategory[category].forEach((song, idx) => {
       needPage(20);
@@ -460,11 +461,13 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
         y += 6;
       }
 
-      // Separador entre cantos de la misma categoría (guirnalda tenue)
+      // Separador entre cantos de la misma categoría (línea fina en color litúrgico)
       if (idx < byCategory[category].length - 1) {
-        y += 5;
-        drawEucharisticGarland(pdf, pageW / 2 - 26, pageW / 2 + 26, y, colors.primary, 0.7);
-        y += 7;
+        y += 4;
+        pdf.setDrawColor(...colors.primary);
+        pdf.setLineWidth(0.2);
+        pdf.line(pageW / 2 - 24, y, pageW / 2 + 24, y);
+        y += 6;
       }
     });
 
