@@ -11,6 +11,7 @@ export type MassMoment =
   | 'aleluya'
   | 'ofertorio'
   | 'santo'
+  | 'padre_nuestro'
   | 'cordero'
   | 'comunion'
   | 'final'
@@ -41,6 +42,7 @@ export const MASS_MOMENT_LABELS: Record<MassMoment, string> = {
   aleluya:       'Aleluya / Aclamación',
   ofertorio:     'Ofertorio',
   santo:         'Santo',
+  padre_nuestro: 'Padre Nuestro',
   cordero:       'Cordero de Dios',
   comunion:      'Comunión',
   final:         'Final / Salida',

@@ -1,26 +1,37 @@
 import { jsPDF } from 'jspdf';
+import QRCode from 'qrcode';
 import { PublishedCantoral, Song } from '../types';
 import { getCurrentLiturgicalSeason } from './liturgicalSeason';
+import { getChannelUrl } from '../services/youtube';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
 
 interface PDFGeneratorOptions {
   cantoral: PublishedCantoral;
 }
 
-/** Carga una imagen (el logo) como dataURL + dimensiones, para jsPDF.addImage. */
-async function loadImageData(src: string): Promise<{ dataUrl: string; width: number; height: number } | null> {
+type RGB = [number, number, number];
+
+/** Carga el logo recortado en CÍRCULO (con fondo transparente), listo para addImage. */
+async function loadCircularLogo(src: string): Promise<{ dataUrl: string; size: number } | null> {
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       try {
+        const side = Math.min(img.naturalWidth, img.naturalHeight) || 1;
         const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth || 1;
-        canvas.height = img.naturalHeight || 1;
+        canvas.width = side;
+        canvas.height = side;
         const ctx = canvas.getContext('2d');
         if (!ctx) return resolve(null);
-        ctx.drawImage(img, 0, 0);
-        resolve({ dataUrl: canvas.toDataURL('image/png'), width: canvas.width, height: canvas.height });
+        ctx.beginPath();
+        ctx.arc(side / 2, side / 2, side / 2, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        const sx = (img.naturalWidth - side) / 2;
+        const sy = (img.naturalHeight - side) / 2;
+        ctx.drawImage(img, sx, sy, side, side, 0, 0, side, side);
+        resolve({ dataUrl: canvas.toDataURL('image/png'), size: side });
       } catch { resolve(null); }
     };
     img.onerror = () => resolve(null);
@@ -28,28 +39,74 @@ async function loadImageData(src: string): Promise<{ dataUrl: string; width: num
   });
 }
 
-/**
- * Dibuja un divisor ornamental tipo "enredadera": un tallo con hojitas alternadas,
- * un motivo central y remates en las puntas. Se dibuja en el color litúrgico, pero
- * su FORMA distingue las secciones aunque el folleto se imprima en blanco y negro.
- */
-function drawVineDivider(pdf: jsPDF, cx: number, y: number, halfW: number, color: [number, number, number]) {
+/** Espiga de trigo: tallo con granos a ambos lados. `dir` = +1 derecha / -1 izquierda. */
+function drawWheat(pdf: jsPDF, x: number, y: number, color: RGB, scale = 1, dir = 1) {
   pdf.setDrawColor(...color);
   pdf.setFillColor(...color);
-  pdf.setLineWidth(0.3);
-  pdf.line(cx - halfW, y, cx + halfW, y);
-  const leaves = 3;
-  for (let i = 1; i <= leaves; i++) {
-    const dx = (halfW / (leaves + 1)) * i;
-    const dy = i % 2 === 1 ? -1.1 : 1.1; // hojas alternadas arriba/abajo
-    pdf.ellipse(cx + dx, y + dy, 0.5, 1.1, 'F');
-    pdf.ellipse(cx - dx, y + dy, 0.5, 1.1, 'F');
+  pdf.setLineWidth(0.25 * scale);
+  const len = 4 * scale;
+  const tipX = x + dir * len, tipY = y - len * 0.9;
+  pdf.line(x, y, tipX, tipY);
+  const grains = 4;
+  for (let i = 1; i <= grains; i++) {
+    const t = i / (grains + 1);
+    const gx = x + dir * len * t, gy = y - len * 0.9 * t;
+    pdf.ellipse(gx - dir * 0.7 * scale, gy, 0.4 * scale, 0.85 * scale, 'F');
+    pdf.ellipse(gx + dir * 0.7 * scale, gy, 0.4 * scale, 0.85 * scale, 'F');
   }
-  // Motivo central (rombo) y remates redondos en las puntas.
-  pdf.triangle(cx - 1.4, y, cx, y - 1.9, cx + 1.4, y, 'F');
-  pdf.triangle(cx - 1.4, y, cx, y + 1.9, cx + 1.4, y, 'F');
-  pdf.circle(cx - halfW, y, 0.6, 'F');
-  pdf.circle(cx + halfW, y, 0.6, 'F');
+  pdf.ellipse(tipX, tipY, 0.4 * scale, 0.85 * scale, 'F');
+}
+
+/** Racimo de uvas: pirámide de granos que cuelga, con tallito arriba. */
+function drawGrapes(pdf: jsPDF, cx: number, y: number, color: RGB, scale = 1) {
+  pdf.setFillColor(...color);
+  pdf.setDrawColor(...color);
+  pdf.setLineWidth(0.2 * scale);
+  const r = 0.65 * scale;
+  pdf.line(cx, y - r, cx, y - r - 1.2 * scale); // tallo
+  let gy = y;
+  [3, 2, 1].forEach((n) => {
+    const rowW = (n - 1) * r * 1.7;
+    for (let i = 0; i < n; i++) {
+      pdf.circle(cx - rowW / 2 + i * r * 1.7, gy, r, 'F');
+    }
+    gy += r * 1.5;
+  });
+}
+
+/**
+ * Guirnalda eucarística de estilo románico/gótico: una cinta con hojas y motivos
+ * eucarísticos (espigas de trigo y un racimo de uvas al centro), simétrica respecto
+ * a su punto medio. Su FORMA distingue las secciones aunque se imprima en B/N.
+ * Se dibuja a lo largo del tramo [x1, x2] centrado verticalmente en `y`.
+ */
+function drawEucharisticGarland(pdf: jsPDF, x1: number, x2: number, y: number, color: RGB, scale = 1) {
+  const w = x2 - x1;
+  pdf.setDrawColor(...color);
+  pdf.setFillColor(...color);
+  pdf.setLineWidth(0.3 * scale);
+  if (w < 10) {
+    pdf.line(x1, y, x2, y);
+    pdf.circle(x1, y, 0.6 * scale, 'F');
+    pdf.circle(x2, y, 0.6 * scale, 'F');
+    return;
+  }
+  // Cinta base + remates redondos en las puntas.
+  pdf.line(x1, y, x2, y);
+  pdf.circle(x1, y, 0.6 * scale, 'F');
+  pdf.circle(x2, y, 0.6 * scale, 'F');
+  const cx = (x1 + x2) / 2;
+  // Hojas alternadas (volutas) a lo largo de la cinta.
+  [0.32, 0.5, 0.68].forEach((t, i) => {
+    const lx = x1 + w * t;
+    const up = i % 2 === 0;
+    pdf.ellipse(lx, y + (up ? -1.3 : 1.3) * scale, 0.5 * scale, 1.2 * scale, 'F');
+  });
+  // Racimo de uvas al centro (colgando).
+  drawGrapes(pdf, cx, y + 0.6 * scale, color, 0.75 * scale);
+  // Espigas de trigo hacia afuera en ambos extremos.
+  drawWheat(pdf, x1 + w * 0.16, y, color, 0.75 * scale, -1);
+  drawWheat(pdf, x2 - w * 0.16, y, color, 0.75 * scale, +1);
 }
 
 const CATEGORY_ORDER = [
@@ -179,15 +236,14 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   let y = margin;
   let pageNum = 1;
 
-  // Logo de la app para el encabezado (si falla la carga, se usa el texto).
-  const logo = await loadImageData(logoStellaMaris);
+  // Logo redondo de la app para el encabezado (si falla la carga, se usa el texto).
+  const logo = await loadCircularLogo(logoStellaMaris);
 
   // Header en cada página
   const addPageHeader = () => {
     if (logo) {
-      const h = 7;
-      const w = (logo.width / logo.height) * h;
-      pdf.addImage(logo.dataUrl, 'PNG', margin, 3, w, h);
+      const d = 12; // diámetro: redondo y un poco más grande
+      pdf.addImage(logo.dataUrl, 'PNG', margin, 1, d, d);
     } else {
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(10);
@@ -279,8 +335,8 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   pdf.text(cleanText(cantoral.massTime), pageW / 2, y, { align: 'center' });
   y += 14;
 
-  // Adorno decorativo (enredadera) en el color litúrgico
-  drawVineDivider(pdf, pageW / 2, y, 34, colors.primary);
+  // Guirnalda eucarística (trigo y uvas) en el color litúrgico
+  drawEucharisticGarland(pdf, pageW / 2 - 45, pageW / 2 + 45, y, colors.primary, 1.1);
   y += 12;
 
   // Parroquia
@@ -311,18 +367,28 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   );
 
   sortedCategories.forEach((category) => {
-    // Cabecera de categoría con color del tiempo litúrgico
-    needPage(20);
+    // Cabecera de categoría: cinta del color litúrgico con la parte de la Misa
+    // centrada y la guirnalda eucarística ocupando el espacio a ambos lados.
+    needPage(22);
+    const bandTop = y - 7;
+    const bandH = 12;
     pdf.setFillColor(...colors.primary);
-    pdf.rect(margin, y - 6, contentW, 9, 'F');
+    pdf.rect(margin, bandTop, contentW, bandH, 'F');
+
+    const label = cleanText(category).toUpperCase();
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(13);
     pdf.setTextColor(...colors.textOnPrimary);
-    pdf.text(cleanText(category).toUpperCase(), margin + 3, y);
-    y += 10;
-    // Enredadera bajo la cabecera: distingue la sección aunque se imprima en B/N.
-    drawVineDivider(pdf, pageW / 2, y - 2, 26, colors.primary);
-    y += 4;
+    const labelW = pdf.getTextWidth(label);
+    const cxBand = pageW / 2;
+    const garlandY = bandTop + bandH / 2;
+    pdf.text(label, cxBand, garlandY + 1.6, { align: 'center' });
+
+    const gap = 6;        // separación entre la palabra y la guirnalda
+    const sidePad = 7;    // margen interno de la cinta
+    drawEucharisticGarland(pdf, margin + sidePad, cxBand - labelW / 2 - gap, garlandY, colors.textOnPrimary, 0.8);
+    drawEucharisticGarland(pdf, cxBand + labelW / 2 + gap, pageW - margin - sidePad, garlandY, colors.textOnPrimary, 0.8);
+    y += 13;
 
     byCategory[category].forEach((song, idx) => {
       needPage(20);
@@ -394,16 +460,42 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
         y += 6;
       }
 
-      // Separador entre cantos de la misma categoría (enredadera tenue)
+      // Separador entre cantos de la misma categoría (guirnalda tenue)
       if (idx < byCategory[category].length - 1) {
         y += 5;
-        drawVineDivider(pdf, pageW / 2, y, 20, colors.primary);
+        drawEucharisticGarland(pdf, pageW / 2 - 26, pageW / 2 + 26, y, colors.primary, 0.7);
         y += 7;
       }
     });
 
     y += 6; // espacio entre categorías
   });
+
+  // ─── QR al canal de YouTube (esquina inferior derecha de la última hoja) ───
+  try {
+    const qrDataUrl = await QRCode.toDataURL(getChannelUrl(), { margin: 0, width: 240 });
+    const qrSize = 26;
+    const bottomLimit = pageH - 16;          // justo por encima de la línea del footer
+    const qrY = bottomLimit - qrSize;        // borde superior del QR
+    const qrTopWithCaption = qrY - 8;        // reservar el rótulo de dos líneas
+
+    // Si el contenido llega hasta esa zona, llevar el QR a una página nueva.
+    if (y > qrTopWithCaption) {
+      addPageFooter();
+      pdf.addPage();
+      pageNum++;
+      addPageHeader();
+    }
+    const qrX = pageW - margin - qrSize;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8);
+    pdf.setTextColor(...colors.primary);
+    pdf.text('Escúchalos en nuestro', qrX + qrSize / 2, qrY - 4.5, { align: 'center' });
+    pdf.text('canal de YouTube', qrX + qrSize / 2, qrY - 1, { align: 'center' });
+    pdf.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+  } catch {
+    // Si falla la generación del QR, el folleto se entrega igual.
+  }
 
   addPageFooter();
 
