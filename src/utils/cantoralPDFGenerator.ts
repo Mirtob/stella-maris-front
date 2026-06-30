@@ -4,7 +4,6 @@ import { PublishedCantoral, Song } from '../types';
 import { getCurrentLiturgicalSeason } from './liturgicalSeason';
 import { getChannelUrl } from '../services/youtube';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
-import eucharisticWreath from '../assets/eucharistic-wreath.jpg';
 import sectionArch from '../assets/section-arch.png';
 
 interface PDFGeneratorOptions {
@@ -240,20 +239,15 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   // Logo redondo de la app para el encabezado (si falla la carga, se usa el texto).
   const logo = await loadCircularLogo(logoStellaMaris);
 
-  // Corona eucarística (portada) y arco de sección, ambos tintados al color
-  // litúrgico. El arco lleva su propio texto al centro: se vacía esa zona para
-  // escribir encima el título del momento de la Misa.
-  const wreathImg = await loadImage(eucharisticWreath);
-  const wreathSquare = wreathImg ? tintWreath(wreathImg, colors.primary, { sx: 232, sy: 0, sw: 559, sh: 559 }) : null;
+  // Guirnalda de sección (banner horizontal), tintada al color litúrgico. El asset trae
+  // el óvalo central EN BLANCO (sin texto horneado): el recorte por luminancia lo deja
+  // transparente y escribimos ahí el título del momento. No hace falta vaciar ninguna
+  // banda; los medallones (Cordero / Cáliz), el marco dorado y los racimos de uvas
+  // quedan intactos alrededor del texto.
   const archImg = await loadImage(sectionArch);
-  // El asset ya viene recortado a SOLO la guirnalda con el texto embebido, así que
-  // se usa completo. Se vacía la banda central (donde dice "TITULO DEL CANTO") para
-  // escribir encima el momento de la Misa.
   const archTinted = archImg
     ? tintWreath(archImg, colors.primary,
-        { sx: 0, sy: 0, sw: archImg.naturalWidth, sh: archImg.naturalHeight }, false,
-        // Banda central vaciada más ancha → más espacio para el título del momento.
-        { x0: 0.12, y0: 0.30, x1: 0.88, y1: 0.66 })
+        { sx: 0, sy: 0, sw: archImg.naturalWidth, sh: archImg.naturalHeight })
     : null;
 
   // Header en cada página
@@ -317,15 +311,8 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   // ─── PORTADA ───
   addPageHeader();
 
-  // Corona eucarística como pieza central (color litúrgico predominante).
-  if (wreathSquare) {
-    const wW = 84;
-    const wH = wW * (wreathSquare.h / wreathSquare.w);
-    pdf.addImage(wreathSquare.dataUrl, 'PNG', pageW / 2 - wW / 2, 16, wW, wH);
-    y = 16 + wH + 10;
-  } else {
-    y = 64;
-  }
+  // Portada sin guirnalda/adorno: solo el título y los datos de la Misa.
+  y = 46;
 
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(22);
@@ -389,28 +376,27 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   );
 
   sortedCategories.forEach((category) => {
-    // Cabecera de categoría: arco eucarístico (tintado al color litúrgico) con el
-    // título del momento de la Misa centrado en su hueco (donde la imagen original
-    // dice "MISSA DE ANGELIS").
+    // Cabecera de categoría: guirnalda eucarística (tintada al color litúrgico) con el
+    // título del momento de la Misa centrado en el óvalo blanco del banner.
     const label = cleanText(category).toUpperCase();
 
     if (archTinted) {
       const aW = pageW; // guirnalda a sangre: ocupa el ancho COMPLETO de la hoja (borde a borde)
-      // Banner un 25% más angosto (más fino verticalmente) → deja más espacio para la letra.
-      const aH = aW * (archTinted.h / archTinted.w) * 0.75;
+      const aH = 10;    // 1 cm de grosor: banner fino y poco invasivo
       needPage(aH + 6);
       // Reusar la misma imagen (alias) para no inflar el PDF en cada sección.
       pdf.addImage(archTinted.dataUrl, 'PNG', 0, y, aW, aH, 'arco-seccion', 'FAST');
-      // Título adaptativo: arranca grande y se achica solo si no entra en la banda
-      // central (dimensionada para el título más largo, "CORDERO DE DIOS").
+      // Título centrado en el óvalo blanco (mide ~55% del ancho × ~51% del alto del
+      // banner, centrado). Arranca a un tamaño que entra en el alto del óvalo y se achica
+      // solo si no cabe a lo ancho, para que quede proporcionado al espacio en blanco.
       pdf.setFont('helvetica', 'bold');
-      let fs = 30;
+      let fs = 15;
       pdf.setFontSize(fs);
-      const maxTitleW = aW * 0.68;
-      while (pdf.getTextWidth(label) > maxTitleW && fs > 12) { fs -= 0.5; pdf.setFontSize(fs); }
+      const maxTitleW = aW * 0.50; // ancho útil del óvalo (con margen ante las uvas)
+      while (pdf.getTextWidth(label) > maxTitleW && fs > 8) { fs -= 0.5; pdf.setFontSize(fs); }
       pdf.setTextColor(...colors.primary);
-      pdf.text(label, pageW / 2, y + aH * 0.58, { align: 'center' });
-      y += aH + 2;
+      pdf.text(label, pageW / 2, y + aH * 0.51, { align: 'center', baseline: 'middle' });
+      y += aH + 4;
     } else {
       // Respaldo si la imagen no carga: título centrado con líneas a los lados.
       pdf.setFont('helvetica', 'bold');
