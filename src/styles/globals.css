@@ -61,6 +61,11 @@
   --gold-strong: #d97706;       /* amber-600 */
   --gold-foreground: #ffffff;   /* texto sobre relleno dorado */
   --gold-soft: #fef3c7;         /* amber-100 (superficies suaves de acento) */
+
+  --brand-border: #1e40af;      /* blue-800 (borde de botones de marca) */
+  --danger: #b91c1c;            /* red-700  (acciones destructivas) */
+  --danger-strong: #7f1d1d;     /* red-900  */
+  --danger-foreground: #ffffff;
 }
 
 .dark {
@@ -113,6 +118,13 @@
   --gold-strong: #d97706;
   --gold-foreground: #ffffff;
   --gold-soft: #78350f;         /* amber-900 (superficie suave de acento en oscuro) */
+
+  /* Borde de marca y "peligro" se mantienen igual en oscuro (los botones conservan
+   * su aspecto). */
+  --brand-border: #1e40af;
+  --danger: #b91c1c;
+  --danger-strong: #7f1d1d;
+  --danger-foreground: #ffffff;
 }
 
 @theme inline {
@@ -167,6 +179,10 @@
   --color-gold-strong: var(--gold-strong);
   --color-gold-foreground: var(--gold-foreground);
   --color-gold-soft: var(--gold-soft);
+  --color-brand-border: var(--brand-border);
+  --color-danger: var(--danger);
+  --color-danger-strong: var(--danger-strong);
+  --color-danger-foreground: var(--danger-foreground);
 }
 
 @layer base {
