@@ -411,19 +411,92 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   // centrada entre el canto anterior y el siguiente que separa.
   const bandGap = adv(8);
 
+  // Marcas de sección dentro de la letra ("Coro:", "Estrofa 2", etc.).
+  const SECTION_RE = /^(Coro|Estrofa\s*\d*|Puente|Final|Refrán|Recitativo)\s*:?\s*$/i;
+
+  // Alto utilizable de una página (de y=22 tras el encabezado al límite inferior).
+  const usableH = (pageH - 18) - 22;
+
+  // Mide el alto (mm, ya escalado) de un grupo de líneas de letra, con el MISMO
+  // criterio con que se dibuja: marcas de sección, líneas en blanco y wrap del texto.
+  const measureLyricLines = (lines: string[]): number => {
+    let h = 0;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10.5);
+    for (const raw of lines) {
+      const line = raw.replace(/\s+$/, '');
+      if (line === '') { h += adv(3); continue; }
+      if (SECTION_RE.test(line.trim())) { h += adv(6); continue; }
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10.5);
+      const wrapped = pdf.splitTextToSize(line, contentW) as string[];
+      h += wrapped.length * adv(5.5);
+    }
+    return h;
+  };
+
+  // Mide el alto total de un canto (título + autor + letra) para decidir si cabe
+  // completo en lo que queda de página.
+  const measureSongHeight = (song: Song): number => {
+    let h = 0;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    const titleLines = pdf.splitTextToSize(cleanText(song.title), contentW) as string[];
+    h += titleLines.length * adv(6);
+    if (song.author) h += adv(5);
+    h += adv(2);
+    const lyrics = cleanLyrics(song.lyrics || '');
+    h += lyrics ? measureLyricLines(lyrics.split('\n')) : adv(6);
+    return h;
+  };
+
+  // Dibuja una línea de letra (marca de sección o texto justificado). Hace su propio
+  // needPage por si una estrofa enorme excede una página completa (último recurso).
+  const renderLyricLine = (rawLine: string) => {
+    const line = rawLine.replace(/\s+$/, '');
+    if (line === '') { y += adv(3); return; }
+    if (SECTION_RE.test(line.trim())) {
+      needPage(adv(6));
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10.5);
+      pdf.setTextColor(80, 80, 80);
+      pdf.text(line.trim(), margin, y);
+      y += adv(6);
+      return;
+    }
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10.5);
+    const wrapped = pdf.splitTextToSize(line, contentW) as string[];
+    wrapped.forEach((wl, wi) => {
+      needPage(adv(5.5));
+      // Reaplicar color/fuente tras cada posible salto de página (evita que la
+      // segunda hoja salga más gris).
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10.5);
+      pdf.setTextColor(40, 40, 40);
+      if (wi < wrapped.length - 1) drawJustifiedLine(pdf, wl, margin, y, contentW);
+      else pdf.text(wl, margin, y);
+      y += adv(5.5);
+    });
+  };
+
   sortedCategories.forEach((category, catIdx) => {
     // Cabecera de categoría: la guirnalda con el título del momento, centrada entre
     // los dos cantos que separa (mismo espacio arriba y abajo).
     const label = cleanText(category).toUpperCase();
 
-    // Gap superior (la primera categoría no lo lleva: va arriba de todo).
-    if (catIdx > 0) y += bandGap;
+    // Gap superior. El contenido anterior dejó ~un avance de línea final (adv(5.5)),
+    // que también es aire; lo descontamos para que el espacio de ARRIBA quede igual al
+    // de ABAJO y la guirnalda caiga centrada entre ambos cantos.
+    if (catIdx > 0) y += Math.max(adv(2), bandGap - adv(5.5));
 
     // Guirnalda de sección: cenefa vectorial sencilla (laurel fino y poco invasivo,
     // del mismo color que la letra) con el título del momento centrado, ocupando el
-    // resto del ancho de la hoja. La banda mide 1.2 cm de grosor.
+    // resto del ancho de la hoja. La banda mide 1.2 cm de grosor. Reservamos también el
+    // comienzo del primer canto para que la guirnalda no quede huérfana al pie de hoja.
     const bandH = adv(12); // 1.2 cm de grosor de la banda
-    needPage(bandH + adv(4));
+    const firstSongStart = Math.min(measureSongHeight(byCategory[category][0]), adv(28));
+    needPage(bandH + adv(4) + bandGap + firstSongStart);
     const midY = y + bandH / 2;
 
     // Título del momento, centrado (se achica si no cabe, dejando aire a los lados).
@@ -450,7 +523,13 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     y += bandGap;
 
     byCategory[category].forEach((song, idx) => {
-      needPage(adv(20));
+      const songH = measureSongHeight(song);
+      // Mantener cada canto entero en una página cuando quepa: si no cabe en lo que
+      // resta de hoja, saltar de página ANTES de empezarlo (sin cortes a media hoja).
+      // El primer canto tras la guirnalda no fuerza salto (la guirnalda ya reservó su
+      // comienzo, así no queda huérfana); si es muy largo, igual cortará entre estrofas.
+      if (idx > 0 && songH <= usableH) needPage(songH);
+      else needPage(adv(20));
 
       // Título del canto. Fija fuente y tamaño ANTES de medir, para que el ajuste de
       // línea se calcule al mismo tamaño con que se dibuja y nunca exceda el ancho.
@@ -479,55 +558,28 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
 
       y += adv(2);
 
-      // Letra limpia
+      // Letra agrupada en ESTROFAS (bloques separados por líneas en blanco) para no
+      // partir una estrofa por la mitad: si una estrofa no entra en lo que queda de
+      // hoja, salta de página ANTES de empezarla → el corte cae al final de la estrofa
+      // anterior. (Una estrofa que no cabe ni en una página entera se parte por líneas,
+      // último recurso.)
       const lyrics = cleanLyrics(song.lyrics || '');
       if (lyrics) {
-        const lyricLines = lyrics.split('\n');
-        for (const rawLine of lyricLines) {
-          const line = rawLine.replace(/\s+$/, ''); // trim trailing spaces
-
-          if (line === '') {
-            y += adv(3); // espacio entre estrofas
-            continue;
-          }
-
-          // Detectar marcas de sección: "Coro:", "Estrofa 1:", etc.
-          const isSection = /^(Coro|Estrofa\s*\d*|Puente|Final|Refrán|Recitativo)\s*:?\s*$/i.test(line.trim());
-
-          if (isSection) {
-            needPage(adv(6));
-            // Estilo SIEMPRE tras needPage para mantener color parejo al cambiar de hoja.
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(10.5);
-            pdf.setTextColor(80, 80, 80);
-            pdf.text(line.trim(), margin, y);
-            y += adv(6);
-          } else {
-            // Texto del canto. Fija fuente y tamaño ANTES de medir, para que el ajuste
-            // de línea se calcule al mismo tamaño con que se dibuja: así NUNCA excede el
-            // ancho de la hoja, sea cual sea el tamaño de letra elegido. Las líneas que
-            // ocupan el ancho completo se justifican; la última de cada wrap (y los
-            // versos cortos de una sola línea) van a la izquierda para no deformar las
-            // proporciones estirando pocas palabras.
-            pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(10.5);
-            const wrapped = pdf.splitTextToSize(line, contentW) as string[];
-            wrapped.forEach((wl, wi) => {
-              needPage(adv(5.5));
-              // Reaplicar color/fuente tras cada posible salto de página (evita que la
-              // segunda hoja salga más gris).
-              pdf.setFont('helvetica', 'normal');
-              pdf.setFontSize(10.5);
-              pdf.setTextColor(40, 40, 40);
-              if (wi < wrapped.length - 1) {
-                drawJustifiedLine(pdf, wl, margin, y, contentW);
-              } else {
-                pdf.text(wl, margin, y);
-              }
-              y += adv(5.5);
-            });
-          }
+        const stanzas: string[][] = [];
+        let cur: string[] = [];
+        for (const raw of lyrics.split('\n')) {
+          const l = raw.replace(/\s+$/, '');
+          if (l === '') { if (cur.length) { stanzas.push(cur); cur = []; } }
+          else cur.push(l);
         }
+        if (cur.length) stanzas.push(cur);
+
+        stanzas.forEach((stanza, si) => {
+          const stanzaH = measureLyricLines(stanza);
+          if (stanzaH <= usableH) needPage(stanzaH); // no partir la estrofa
+          stanza.forEach((l) => renderLyricLine(l));
+          if (si < stanzas.length - 1) y += adv(3); // espacio entre estrofas
+        });
       } else {
         pdf.setFont('helvetica', 'italic');
         pdf.setFontSize(9);
