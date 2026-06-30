@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { BookOpen, Calendar, Church, Play, Music as MusicIcon, Clock, BookText, ChevronDown, ChevronUp, Download, Filter, Search, Headphones, Edit2, Trash2, QrCode } from 'lucide-react';
+import { BookOpen, Calendar, Church, Play, Music as MusicIcon, Clock, BookText, ChevronDown, ChevronUp, Download, Filter, Search, Headphones, Edit2, Trash2, QrCode, Archive, SearchX } from 'lucide-react';
+import { EmptyState } from '../common/EmptyState';
 import { PublishedCantoral, Song } from '../../types';
 import { getCategoryColors } from '../../utils/colors';
 import { CantoralWithOrdinary } from './CantoralWithOrdinary';
@@ -519,9 +520,16 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
             {vigentes.length > 0 ? (
               renderDateGroups(vigentes)
             ) : (
-              <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/40 dark:border-white/20 text-center text-sm text-blue-900 dark:text-blue-100 mb-2">
-                No hay cantorales vigentes. Publica uno desde el constructor.
-              </div>
+              <EmptyState
+                compact
+                Icon={Calendar}
+                title="No hay cantorales vigentes"
+                description={
+                  userRole === 'Pueblo fiel'
+                    ? 'Cuando tu coro publique una misa próxima, aparecerá aquí.'
+                    : 'Arma y publica un cantoral desde el Inicio para que aparezca aquí.'
+                }
+              />
             )}
 
             {/* Archivo por meses */}
@@ -575,9 +583,16 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
             </div>
 
             {archivoFiltered.length === 0 ? (
-              <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/40 dark:border-white/20 text-center text-sm text-blue-900 dark:text-blue-100">
-                {archivo.length === 0 ? 'Aún no hay cantorales archivados.' : 'Ningún cantoral coincide con los filtros.'}
-              </div>
+              <EmptyState
+                compact
+                Icon={archivo.length === 0 ? Archive : SearchX}
+                title={archivo.length === 0 ? 'Aún no hay cantorales archivados' : 'Sin coincidencias'}
+                description={
+                  archivo.length === 0
+                    ? 'Los cantorales pasados se guardarán aquí automáticamente.'
+                    : 'Ningún cantoral coincide con los filtros. Prueba con otros términos.'
+                }
+              />
             ) : (
               <div className="space-y-6">
                 {groupByMonth(archivoFiltered).map(([monthYear, list]) => (

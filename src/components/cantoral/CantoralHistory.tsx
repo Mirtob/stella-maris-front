@@ -6,6 +6,7 @@ import { parseParishChapel, splitActiveParish } from '../../utils/parish';
 import { parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
 import { massTypeBadge } from '../../utils/massType';
 import { LiturgicalColorBadge } from '../liturgy/LiturgicalColorBadge';
+import { EmptyState } from '../common/EmptyState';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 
@@ -157,14 +158,11 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
             </h1>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-12 border-4 border-purple-200 dark:border-purple-700 text-center transition-colors">
-            <History className="w-20 h-20 mx-auto mb-6 text-gray-300 dark:text-gray-600" strokeWidth={2} />
-            <h2 className="text-lg sm:text-2xl font-bold text-gray-800 dark:text-white mb-4">No hay cantorales guardados</h2>
-            <p className="text-xl text-gray-600 dark:text-gray-400">
-              Los cantorales publicados se guardarán aquí<br />
-              para que puedas consultarlos en cualquier momento
-            </p>
-          </div>
+          <EmptyState
+            Icon={History}
+            title="No hay cantorales guardados"
+            description="Los cantorales que publiques se guardarán aquí para que puedas consultarlos en cualquier momento."
+          />
         </div>
       </div>
     );

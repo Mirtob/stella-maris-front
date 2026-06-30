@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Music, Search, ChevronDown, ChevronUp, Play, Calendar, FileText } from 'lucide-react';
+import { Music, Search, ChevronDown, ChevronUp, Play, Calendar, FileText, SearchX } from 'lucide-react';
 import { Song } from '../../types';
 import { useSongs } from '../../hooks/useSongs';
 import { LyricsWithChords } from './LyricsWithChords';
 import { matchesSearch } from '../../utils/textSearch';
+import { EmptyState } from '../common/EmptyState';
 
 interface SheetMusicLibraryProps {
   onPlaySong: (song: Song) => void;
@@ -340,15 +341,12 @@ export function SheetMusicLibrary({ onPlaySong }: SheetMusicLibraryProps) {
           })}
 
           {filteredParts.length === 0 && (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🔍</div>
-              <p className="text-xl font-bold text-purple-900 dark:text-purple-100 mb-2">
-                No se encontraron cantos
-              </p>
-              <p className="text-base text-purple-700 dark:text-purple-300">
-                Intenta con otros términos de búsqueda
-              </p>
-            </div>
+            <EmptyState
+              compact
+              Icon={SearchX}
+              title="No se encontraron cantos"
+              description="Prueba con otros términos de búsqueda o revisa la ortografía."
+            />
           )}
         </div>
 
