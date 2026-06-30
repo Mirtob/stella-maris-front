@@ -156,6 +156,7 @@ export function ChoirView({
       publishedAt: now,
       songs: cantoral,
       status: 'published',
+      garland: t.garland,
     }));
 
     // Delegate to App.handlePublishCantoral which:

@@ -4,15 +4,15 @@ import { PublishedCantoral, Song } from '../types';
 import { getCurrentLiturgicalSeason } from './liturgicalSeason';
 import { getChannelUrl } from '../services/youtube';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
-import sectionArch from '../assets/section-arch.png';
+import { getGarland } from '../data/garlands';
 
 interface PDFGeneratorOptions {
   cantoral: PublishedCantoral;
+  /** Si es false, no descarga el archivo: solo devuelve el blob (para previsualizar). */
+  download?: boolean;
 }
 
-type RGB = [number, number, number];
-interface Crop { sx: number; sy: number; sw: number; sh: number }
-interface TintedImage { dataUrl: string; w: number; h: number }
+interface GarlandImg { dataUrl: string; w: number; h: number }
 
 /** Carga el logo recortado en CÍRCULO (con fondo transparente), listo para addImage. */
 async function loadCircularLogo(src: string): Promise<{ dataUrl: string; size: number } | null> {
@@ -54,57 +54,30 @@ async function loadImage(src: string): Promise<HTMLImageElement | null> {
 }
 
 /**
- * Recorta una región de la corona iluminada y la tinta al color litúrgico:
- *  · blend 'color' → conserva el claroscuro del dibujo pero impone el tono litúrgico
- *    (haciendo "prevalecer" ese color).
- *  · recorte por luminancia → el fondo de pergamino claro se vuelve transparente,
- *    dejando solo las vides/medallones flotando sobre la hoja.
- * `flip` refleja horizontalmente (para que el adorno derecho mire al centro).
+ * Convierte el fondo casi-blanco de una cenefa en transparente (recorte por
+ * luminancia), conservando los colores naturales del adorno. Así la guirnalda se
+ * compone limpia sobre la hoja y la caja blanca del título "corta" el dibujo dejando
+ * el centro en blanco.
  */
-function tintWreath(
-  img: HTMLImageElement,
-  color: RGB,
-  crop: Crop,
-  flip = false,
-  clearFrac?: { x0: number; y0: number; x1: number; y1: number },
-): TintedImage | null {
-  const { sx, sy, sw, sh } = crop;
+function clipWhite(img: HTMLImageElement): GarlandImg | null {
+  const sw = img.naturalWidth, sh = img.naturalHeight;
   const canvas = document.createElement('canvas');
   canvas.width = sw;
   canvas.height = sh;
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
-  if (flip) { ctx.translate(sw, 0); ctx.scale(-1, 1); }
-  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  // Imponer el tono litúrgico conservando el claroscuro.
-  ctx.globalCompositeOperation = 'color';
-  ctx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
-  ctx.fillRect(0, 0, sw, sh);
-  ctx.globalCompositeOperation = 'source-over';
-  // Recortar el fondo claro (pergamino) por luminancia.
+  ctx.drawImage(img, 0, 0, sw, sh);
   try {
     const data = ctx.getImageData(0, 0, sw, sh);
     const a = data.data;
     for (let i = 0; i < a.length; i += 4) {
       const lum = 0.299 * a[i] + 0.587 * a[i + 1] + 0.114 * a[i + 2];
-      if (lum > 205) a[i + 3] = 0;
-      else if (lum > 150) a[i + 3] = Math.round(a[i + 3] * (205 - lum) / 55);
-    }
-    // Vaciar una zona central (donde el arco trae texto propio) para escribir el
-    // título del momento encima sin que se superponga al rótulo de la imagen.
-    if (clearFrac) {
-      const x0 = Math.max(0, Math.floor(clearFrac.x0 * sw));
-      const x1 = Math.min(sw, Math.ceil(clearFrac.x1 * sw));
-      const y0 = Math.max(0, Math.floor(clearFrac.y0 * sh));
-      const y1 = Math.min(sh, Math.ceil(clearFrac.y1 * sh));
-      for (let yy = y0; yy < y1; yy++) {
-        for (let xx = x0; xx < x1; xx++) a[(yy * sw + xx) * 4 + 3] = 0;
-      }
+      if (lum > 240) a[i + 3] = 0;
+      else if (lum > 215) a[i + 3] = Math.round(a[i + 3] * (240 - lum) / 25);
     }
     ctx.putImageData(data, 0, 0);
   } catch {
-    // Si el canvas quedara "tainted", se entrega sin recorte (igual luce bien).
+    // Si el canvas quedara "tainted", se entrega sin recorte (luce bien igual).
   }
   return { dataUrl: canvas.toDataURL('image/png'), w: sw, h: sh };
 }
@@ -225,11 +198,11 @@ function cleanLyrics(lyrics: string): string {
 // Generador principal
 // ──────────────────────────────────────────────
 
-export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise<void> {
-  const { cantoral } = options;
+export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise<{ blob: Blob; url: string }> {
+  const { cantoral, download = true } = options;
   const colors = getColorsForDate(cantoral.date);
 
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
   const margin = 18;
@@ -241,16 +214,12 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   // Logo redondo de la app para el encabezado (si falla la carga, se usa el texto).
   const logo = await loadCircularLogo(logoStellaMaris);
 
-  // Guirnalda de sección (banner horizontal), tintada al color litúrgico. El asset trae
-  // el óvalo central EN BLANCO (sin texto horneado): el recorte por luminancia lo deja
-  // transparente y escribimos ahí el título del momento. No hace falta vaciar ninguna
-  // banda; los medallones (Cordero / Cáliz), el marco dorado y los racimos de uvas
-  // quedan intactos alrededor del texto.
-  const archImg = await loadImage(sectionArch);
-  const archTinted = archImg
-    ? tintWreath(archImg, colors.primary,
-        { sx: 0, sy: 0, sw: archImg.naturalWidth, sh: archImg.naturalHeight })
-    : null;
+  // Guirnalda elegida al publicar (colores naturales; fondo blanco → transparente).
+  // En cada título se usa a todo el ancho y se "corta" al medio con una caja blanca
+  // para el título; en la portada va completa, arriba y abajo del texto.
+  const garlandStyle = getGarland(cantoral.garland);
+  const garlandImg = await loadImage(garlandStyle.src);
+  const garland = garlandImg ? clipWhite(garlandImg) : null;
 
   // Header en cada página
   const addPageHeader = () => {
@@ -311,54 +280,44 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   };
 
   // ─── PORTADA ───
-  addPageHeader();
-
-  // Portada sin guirnalda/adorno: solo el título y los datos de la Misa.
-  y = 46;
-
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(22);
-  pdf.setTextColor(...colors.primary);
-  pdf.text('Cantoral de la Misa', pageW / 2, y, { align: 'center' });
-  y += 9;
-
-  // Badge del tiempo litúrgico
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(10);
-  pdf.setTextColor(...colors.primary);
-  pdf.text(`Tiempo: ${colors.seasonName}`, pageW / 2, y, { align: 'center' });
-  y += 7;
-
-  pdf.setFontSize(16);
-  pdf.setTextColor(80, 80, 80);
-  pdf.text(cleanText(cantoral.liturgicalDate), pageW / 2, y, { align: 'center' });
-  y += 9;
-
-  // Fecha y hora
+  // Guirnalda completa arriba y abajo; todo el texto centrado horizontal y
+  // verticalmente en el espacio entre ambas.
   const dateObj = new Date(cantoral.date);
   const formattedDate = dateObj.toLocaleDateString('es-ES', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(12);
-  pdf.setTextColor(100, 100, 100);
-  pdf.text(cleanText(formattedDate), pageW / 2, y, { align: 'center' });
-  y += 7;
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(13);
-  pdf.setTextColor(60, 60, 60);
-  pdf.text(cleanText(cantoral.massTime), pageW / 2, y, { align: 'center' });
-  y += 12;
 
-  // Parroquia
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(11);
-  pdf.setTextColor(80, 80, 80);
-  pdf.text(cleanText(cantoral.parishName), pageW / 2, y, { align: 'center' });
-  y += 6;
-  pdf.text(`Coro: ${cleanText(cantoral.choirName)}`, pageW / 2, y, { align: 'center' });
+  let coverTop = margin;
+  let coverBottom = pageH - margin;
+  if (garland) {
+    const gW = pageW;
+    const gH = gW * (garland.h / garland.w);
+    pdf.addImage(garland.dataUrl, 'PNG', 0, 16, gW, gH, 'garland', 'FAST');
+    pdf.addImage(garland.dataUrl, 'PNG', 0, pageH - 16 - gH, gW, gH, 'garland', 'FAST');
+    coverTop = 16 + gH;
+    coverBottom = pageH - 16 - gH;
+  }
 
-  addPageFooter();
+  type CoverLine = { t: string; s: number; b: boolean; c: [number, number, number]; h: number };
+  const coverLines: CoverLine[] = ([
+    { t: 'Cantoral de la Misa', s: 24, b: true, c: colors.primary, h: 14 },
+    { t: `Tiempo: ${colors.seasonName}`, s: 11, b: false, c: colors.primary, h: 9 },
+    { t: cleanText(cantoral.liturgicalDate), s: 16, b: false, c: [80, 80, 80], h: 11 },
+    { t: cleanText(formattedDate), s: 12, b: false, c: [100, 100, 100], h: 9 },
+    { t: cleanText(cantoral.massTime), s: 14, b: true, c: [60, 60, 60], h: 14 },
+    { t: cleanText(cantoral.parishName), s: 12, b: false, c: [80, 80, 80], h: 8 },
+    { t: cantoral.choirName ? `Coro: ${cleanText(cantoral.choirName)}` : '', s: 11, b: false, c: [80, 80, 80], h: 8 },
+  ] as CoverLine[]).filter(l => l.t.trim() !== '');
+
+  const totalH = coverLines.reduce((s, l) => s + l.h, 0);
+  let cy = coverTop + Math.max(0, (coverBottom - coverTop - totalH) / 2);
+  for (const line of coverLines) {
+    pdf.setFont('helvetica', line.b ? 'bold' : 'normal');
+    pdf.setFontSize(line.s);
+    pdf.setTextColor(...line.c);
+    pdf.text(line.t, pageW / 2, cy + line.h * 0.72, { align: 'center' });
+    cy += line.h;
+  }
 
   // ─── CANTOS POR CATEGORÍA ───
   pdf.addPage();
@@ -382,22 +341,24 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     // título del momento de la Misa centrado en el óvalo blanco del banner.
     const label = cleanText(category).toUpperCase();
 
-    if (archTinted) {
+    if (garland) {
       const aW = pageW; // guirnalda a sangre: ocupa el ancho COMPLETO de la hoja (borde a borde)
-      const aH = 10;    // 1 cm de grosor: banner fino y poco invasivo
+      const aH = aW * (garland.h / garland.w); // alto natural (sin distorsión)
       needPage(aH + 6);
       // Reusar la misma imagen (alias) para no inflar el PDF en cada sección.
-      pdf.addImage(archTinted.dataUrl, 'PNG', 0, y, aW, aH, 'arco-seccion', 'FAST');
-      // Título centrado en el óvalo blanco (mide ~55% del ancho × ~51% del alto del
-      // banner, centrado). Arranca a un tamaño que entra en el alto del óvalo y se achica
-      // solo si no cabe a lo ancho, para que quede proporcionado al espacio en blanco.
+      pdf.addImage(garland.dataUrl, 'PNG', 0, y, aW, aH, 'garland', 'FAST');
+      // Caja blanca central que "corta" la guirnalda al medio y deja el título en blanco.
+      // Su ancho se ajusta al título; el tipo arranca grande y se achica si no entra.
       pdf.setFont('helvetica', 'bold');
-      let fs = 15;
+      let fs = 19;
       pdf.setFontSize(fs);
-      const maxTitleW = aW * 0.50; // ancho útil del óvalo (con margen ante las uvas)
-      while (pdf.getTextWidth(label) > maxTitleW && fs > 8) { fs -= 0.5; pdf.setFontSize(fs); }
+      const maxBoxW = aW * 0.62;
+      while (pdf.getTextWidth(label) + 16 > maxBoxW && fs > 9) { fs -= 0.5; pdf.setFontSize(fs); }
+      const boxW = Math.min(maxBoxW, Math.max(pdf.getTextWidth(label) + 16, aW * 0.30));
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(pageW / 2 - boxW / 2, y, boxW, aH, 'F');
       pdf.setTextColor(...colors.primary);
-      pdf.text(label, pageW / 2, y + aH * 0.51, { align: 'center', baseline: 'middle' });
+      pdf.text(label, pageW / 2, y + aH * 0.52, { align: 'center', baseline: 'middle' });
       y += aH + 4;
     } else {
       // Respaldo si la imagen no carga: título centrado con líneas a los lados.
@@ -532,7 +493,9 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
 
   // El folleto del Pueblo fiel es SOLO la letra (sin acordes ni partituras).
 
-  // Descargar
+  // Descargar (o solo devolver el blob para previsualización, sin descargar).
   const safeFileName = cleanText(cantoral.liturgicalDate).replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
-  pdf.save(`Cantoral_${safeFileName}.pdf`);
+  if (download) pdf.save(`Cantoral_${safeFileName}.pdf`);
+  const blob = pdf.output('blob');
+  return { blob, url: URL.createObjectURL(blob) };
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, Send, Calendar, Church, Clock, Plus } from 'lucide-react';
-import { Song, InstrumentType } from '../../types';
+import { X, Send, Calendar, Church, Clock, Plus, Eye, ExternalLink } from 'lucide-react';
+import { Song, InstrumentType, PublishedCantoral } from '../../types';
+import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
 import { getTodayLocal, formatYmdForDisplay, addDaysLocal } from '../../utils/dateLocal';
 import { formatActiveParishLabel } from '../../utils/parish';
 import { MassType } from '../../types';
@@ -11,6 +12,7 @@ import { validateCantoral, LiturgicalWarning } from '../../utils/liturgicalValid
 import { AddSolemnityModal } from '../liturgy/AddSolemnityModal';
 import { CantoralPDFPreview } from './CantoralPDFPreview';
 import { PostPublishModal } from './PostPublishModal';
+import { GARLANDS, DEFAULT_GARLAND_ID } from '../../data/garlands';
 import { toast } from 'sonner';
 
 /** Destino de publicación: una parroquia con su propia fecha/celebración/horario. */
@@ -24,6 +26,8 @@ export interface PublishTarget {
   massType: MassType;
   /** Legacy: equivale a massType === 'visperas_i'. */
   vigil: boolean;
+  /** Id de la guirnalda elegida para adornar el folleto PDF. */
+  garland: string;
 }
 
 interface PublishCantoralModalProps {
@@ -101,6 +105,11 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
   });
 
   // ── Estado compartido ─────────────────────────────────────────────────────
+  // Guirnalda elegida para adornar el folleto PDF (común a todos los destinos).
+  const [garland, setGarland] = useState<string>(DEFAULT_GARLAND_ID);
+  // Vista previa del folleto (PDF real con la guirnalda) antes de publicar.
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [generatingPreview, setGeneratingPreview] = useState(false);
   const [showAddSolemnityModal, setShowAddSolemnityModal] = useState(false);
   const [showDownloadPDFModal, setShowDownloadPDFModal] = useState(false);
   const [showPostPublishModal, setShowPostPublishModal] = useState(false);
@@ -214,6 +223,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
           massTime: normalizeMassTime(s.massTime),
           massType: s.massType,
           vigil: s.massType === 'visperas_i',
+          garland,
         };
       });
     }
@@ -224,6 +234,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
       massTime: normalizeMassTime(massTime),
       massType,
       vigil: massType === 'visperas_i',
+      garland,
     }];
   };
 
@@ -249,6 +260,50 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
       setIsPublishing(false);
     }
   };
+
+  // ── Vista previa del folleto (PDF real con la guirnalda) antes de publicar ──
+  // Arma un cantoral temporal con la guirnalda elegida y el primer destino, y genera
+  // el PDF del Pueblo fiel SIN descargarlo para mostrarlo en un visor.
+  const buildPreviewCantoral = (): PublishedCantoral => {
+    const p = isMulti
+      ? (Array.from(selectedParishes)[0] ?? allParishes[0] ?? parishName)
+      : (allParishes[0] || parishName);
+    const s = isMulti ? schedules[p] : undefined;
+    return {
+      id: 'preview',
+      choirId: '',
+      choirName: 'Mi Coro',
+      parishName: p,
+      date: (s?.date || selectedDate) || getTodayLocal(),
+      liturgicalDate: (s?.liturgicalDate ?? liturgicalDate) || '',
+      massTime: (s?.massTime ?? massTime) || '',
+      massType: s?.massType ?? massType,
+      songs: cantoral,
+      status: 'published',
+      createdAt: new Date().toISOString(),
+      garland,
+    };
+  };
+
+  const handlePreview = async () => {
+    if (generatingPreview || cantoral.length === 0) return;
+    setGeneratingPreview(true);
+    try {
+      const { url } = await generateCantoralPDF({ cantoral: buildPreviewCantoral(), download: false });
+      setPreviewUrl(prev => { if (prev) URL.revokeObjectURL(prev); return url; });
+    } catch (e: any) {
+      toast.error('No se pudo generar la vista previa', { description: e?.message });
+    } finally {
+      setGeneratingPreview(false);
+    }
+  };
+
+  const closePreview = () => {
+    setPreviewUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
+  };
+
+  // Liberar el object URL del preview al desmontar / al cambiar.
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
   // Opciones de celebración litúrgica para un año dado (+ solemnidades custom).
   const liturgicalOptions = (year: number) => [
@@ -640,6 +695,40 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                 </div>
               </div>
 
+              {/* Adorno del folleto — guirnalda para los títulos del PDF */}
+              <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800 flex-shrink-0">
+                    <span className="text-xl">🎨</span>
+                  </div>
+                  <div>
+                    <div className="text-xl font-bold text-blue-950 dark:text-white">Adorno del folleto</div>
+                    <div className="text-sm text-blue-900 dark:text-blue-200">Elegí la guirnalda que decorará los títulos del PDF</div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {GARLANDS.map((g) => (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => setGarland(g.id)}
+                      aria-pressed={garland === g.id}
+                      className={`w-full rounded-xl border-2 p-2 transition-all active:scale-[0.99] ${
+                        garland === g.id
+                          ? 'border-blue-600 dark:border-blue-400 bg-white/70 dark:bg-white/15 ring-2 ring-blue-400/40'
+                          : 'border-white/50 dark:border-white/20 bg-white/30 dark:bg-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1 px-1">
+                        <span className="text-sm font-bold text-blue-950 dark:text-white">{g.name}</span>
+                        {garland === g.id && <span className="text-xs font-bold text-blue-700 dark:text-blue-300">✓ Elegida</span>}
+                      </div>
+                      <img src={g.src} alt={g.name} loading="lazy" className="w-full h-auto rounded-md bg-white" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Folleto PDF Info */}
               <div className="bg-gradient-to-br from-green-100 to-green-50 dark:from-green-950 dark:to-green-900 rounded-2xl p-5 border-2 border-green-300 dark:border-green-700 shadow-lg transition-colors">
                 <div className="flex gap-3">
@@ -661,6 +750,27 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
             {/* Footer — fixed bottom of the flex column. Stays visible even
                 when the mobile virtual keyboard shrinks the viewport. */}
             <div className="flex-shrink-0 bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-950 dark:to-orange-950 border-t-4 border-blue-800 p-3 sm:p-5" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
+              {/* Vista previa del folleto (PDF real con la guirnalda) antes de publicar */}
+              <button
+                onClick={handlePreview}
+                disabled={cantoral.length === 0 || generatingPreview || isPublishing}
+                className="w-full mb-3 bg-white/70 dark:bg-white/15 text-blue-950 dark:text-white py-3 px-4 rounded-xl font-bold text-base border-2 border-blue-300 dark:border-white/25 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {generatingPreview ? (
+                  <>
+                    <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                    </svg>
+                    Generando vista previa…
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-5 h-5" />
+                    Vista previa del folleto
+                  </>
+                )}
+              </button>
               <div className="flex gap-3">
                 <button
                   onClick={onClose}
@@ -739,6 +849,58 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
             setShowDownloadPDFModal(true); // Mostrar vista previa del folleto
           }}
         />
+      )}
+
+      {/* Visor de vista previa del folleto (PDF real con la guirnalda) */}
+      {previewUrl && (
+        <div className="fixed inset-0 z-[60] flex flex-col bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="flex-shrink-0 bg-gradient-to-r from-blue-900 to-blue-950 text-white p-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <Eye className="w-6 h-6 flex-shrink-0" />
+              <h3 className="text-base sm:text-lg font-bold truncate">Vista previa del folleto</h3>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <a
+                href={previewUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 px-3 py-2 rounded-lg text-sm font-bold transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" /> Abrir
+              </a>
+              <button
+                onClick={closePreview}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                aria-label="Cerrar vista previa"
+              >
+                <X className="w-7 h-7" strokeWidth={2.5} />
+              </button>
+            </div>
+          </div>
+          <iframe src={previewUrl} title="Vista previa del folleto" className="flex-1 w-full bg-white" />
+          <div
+            className="flex-shrink-0 bg-white dark:bg-slate-900 border-t-4 border-blue-800 p-3 flex gap-3"
+            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+          >
+            <button
+              onClick={closePreview}
+              className="flex-1 bg-gray-100 dark:bg-slate-700 text-blue-950 dark:text-white py-3 px-4 rounded-xl font-bold border-2 border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+            >
+              Volver a editar
+            </button>
+            <button
+              onClick={() => { closePreview(); handlePublish(); }}
+              disabled={!canPublish}
+              className={`flex-1 py-3 px-4 rounded-xl font-bold border-2 flex items-center justify-center gap-2 transition-all ${
+                canPublish
+                  ? 'bg-gradient-to-r from-blue-900 to-blue-950 text-white border-blue-800 hover:shadow-lg active:scale-95'
+                  : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <Send className="w-5 h-5" /> Publicar
+            </button>
+          </div>
+        </div>
       )}
     </>
   );
