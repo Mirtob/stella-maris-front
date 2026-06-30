@@ -792,8 +792,8 @@ export function ParishManager() {
       {editingCustom && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEditingCustom(null)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full border-4 border-blue-800" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-gradient-to-br from-blue-900 to-blue-950 text-white p-5 flex items-center gap-3 border-b-4 border-blue-800">
+          <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full border-4 border-brand-border" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-gradient-to-br from-brand to-brand-strong text-white p-5 flex items-center gap-3 border-b-4 border-brand-border">
               <Church className="w-6 h-6 flex-shrink-0" strokeWidth={2.5} />
               <h2 className="text-xl font-bold min-w-0 truncate">Editar parroquia</h2>
             </div>
@@ -830,8 +830,8 @@ export function ParishManager() {
       {editingChapel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEditingChapel(null)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full border-4 border-blue-800" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-gradient-to-br from-blue-900 to-blue-950 text-white p-5 flex items-center gap-3 border-b-4 border-blue-800">
+          <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full border-4 border-brand-border" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-gradient-to-br from-brand to-brand-strong text-white p-5 flex items-center gap-3 border-b-4 border-brand-border">
               <Building2 className="w-6 h-6 flex-shrink-0" strokeWidth={2.5} />
               <h2 className="text-xl font-bold min-w-0 truncate">Editar capilla</h2>
             </div>

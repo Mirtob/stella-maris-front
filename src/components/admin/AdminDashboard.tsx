@@ -47,12 +47,12 @@ export function AdminDashboard() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-900 to-blue-950 rounded-full flex items-center justify-center shadow-lg border-4 border-blue-800">
+            <div className="w-20 h-20 bg-gradient-to-br from-brand to-brand-strong rounded-full flex items-center justify-center shadow-lg border-4 border-brand-border">
               <ShieldCheck className="w-12 h-12 text-white" strokeWidth={2.5} />
             </div>
           </div>
-          <h1 className="text-4xl font-bold text-blue-950 dark:text-white mb-2">Panel Administrativo</h1>
-          <p className="text-xl text-blue-900 dark:text-blue-100">Gestión completa del sistema</p>
+          <h1 className="text-4xl font-bold text-brand-ink mb-2">Panel Administrativo</h1>
+          <p className="text-xl text-brand-ink-soft">Gestión completa del sistema</p>
         </div>
 
         {/* Admin Menu Cards */}
@@ -60,7 +60,7 @@ export function AdminDashboard() {
           {/* Users Management */}
           <button
             onClick={() => setCurrentView('users')}
-            className="w-full bg-gradient-to-br from-blue-900 to-blue-950 rounded-2xl shadow-xl p-6 border-2 border-blue-800 hover:border-blue-600 active:scale-98 transition-all"
+            className="w-full bg-gradient-to-br from-brand to-brand-strong rounded-2xl shadow-xl p-6 border-2 border-brand-border hover:border-blue-600 active:scale-98 transition-all"
           >
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
@@ -79,7 +79,7 @@ export function AdminDashboard() {
           {/* Parishes Management */}
           <button
             onClick={() => setCurrentView('parishes')}
-            className="w-full bg-gradient-to-br from-blue-900 to-blue-950 rounded-2xl shadow-xl p-6 border-2 border-blue-800 hover:border-blue-600 active:scale-98 transition-all"
+            className="w-full bg-gradient-to-br from-brand to-brand-strong rounded-2xl shadow-xl p-6 border-2 border-brand-border hover:border-blue-600 active:scale-98 transition-all"
           >
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
@@ -99,7 +99,7 @@ export function AdminDashboard() {
           <button
             data-tour="admin-songs"
             onClick={() => setCurrentView('songs')}
-            className="w-full bg-gradient-to-br from-blue-900 to-blue-950 rounded-2xl shadow-xl p-6 border-2 border-blue-800 hover:border-blue-600 active:scale-98 transition-all"
+            className="w-full bg-gradient-to-br from-brand to-brand-strong rounded-2xl shadow-xl p-6 border-2 border-brand-border hover:border-blue-600 active:scale-98 transition-all"
           >
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
