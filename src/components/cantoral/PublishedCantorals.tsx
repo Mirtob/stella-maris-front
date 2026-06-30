@@ -226,7 +226,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
             )}
             <button
               onClick={() => setViewingOrdinary(cantoral.id)}
-              className="bg-gradient-to-br from-blue-900 to-blue-950 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-sm sm:text-base font-bold shadow-lg border-2 border-blue-800 leading-tight text-center"
+              className="bg-gradient-to-br from-brand to-brand-strong text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-sm sm:text-base font-bold shadow-lg border-2 border-brand-border leading-tight text-center"
             >
               <BookText className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
               Ver Ordinario
@@ -269,7 +269,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
               {canManage && onEdit && (
                 <button
                   onClick={() => onEdit(cantoral.id)}
-                  className="bg-gradient-to-br from-blue-700 to-blue-900 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-blue-800"
+                  className="bg-gradient-to-br from-blue-700 to-blue-900 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-brand-border"
                 >
                   <Edit2 className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
                   Editar
@@ -318,7 +318,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                             <MusicIcon className="w-6 h-6 text-white" strokeWidth={2.5} />
                           </div>
                           <div className="text-left flex-1 min-w-0">
-                            <div className="font-bold text-base text-blue-950 dark:text-white truncate">
+                            <div className="font-bold text-base text-brand-ink truncate">
                               {song.title}
                             </div>
                             {song.version && (
@@ -352,7 +352,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
           <div key={date} className="space-y-3">
             <button
               onClick={() => setExpandedDate(isExpanded ? null : date)}
-              className="w-full bg-gradient-to-r from-blue-900 to-blue-950 text-white rounded-xl p-3 shadow border-2 border-blue-800 active:scale-98 transition-all"
+              className="w-full bg-gradient-to-r from-brand to-brand-strong text-white rounded-xl p-3 shadow border-2 border-brand-border active:scale-98 transition-all"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4 min-w-0 flex-1">
@@ -412,11 +412,11 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
         <div className="pt-8">
           <div className="text-center mb-3">
             <div className="flex items-center justify-center mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-900 to-blue-950 rounded-full flex items-center justify-center shadow border-2 border-blue-800">
+              <div className="w-10 h-10 bg-gradient-to-br from-brand to-brand-strong rounded-full flex items-center justify-center shadow border-2 border-brand-border">
                 <BookOpen className="w-5 h-5 text-white" strokeWidth={2.5} />
               </div>
             </div>
-            <h1 className="text-xl font-bold text-blue-950 dark:text-white mb-1">
+            <h1 className="text-xl font-bold text-brand-ink mb-1">
               {userRole === 'Pueblo fiel' ? 'Misas Programadas' : 'Cantorales Publicados'}
             </h1>
           </div>
@@ -440,12 +440,12 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
           ) : (
             <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/40 dark:border-white/20 text-center transition-colors">
               <MusicIcon className="w-10 h-10 mx-auto mb-2 text-blue-400 dark:text-blue-300" />
-              <h2 className="text-base font-bold text-blue-950 dark:text-white mb-2">
+              <h2 className="text-base font-bold text-brand-ink mb-2">
                 {userRole === 'Pueblo fiel'
                   ? 'No hay misas programadas próximas'
                   : 'No hay cantorales publicados'}
               </h2>
-              <p className="text-xs text-blue-900 dark:text-blue-100 mb-3">
+              <p className="text-xs text-brand-ink-soft mb-3">
                 {userRole === 'Pueblo fiel' ? (
                   <>Las misas de las próximas dos semanas<br />aparecerán aquí cuando tu coro las publique</>
                 ) : (
@@ -478,14 +478,14 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
         {/* Header */}
         <div className="text-center mb-3">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-900 to-blue-950 rounded-full flex items-center justify-center shadow border-2 border-blue-800">
+            <div className="w-10 h-10 bg-gradient-to-br from-brand to-brand-strong rounded-full flex items-center justify-center shadow border-2 border-brand-border">
               <BookOpen className="w-5 h-5 text-white" strokeWidth={2.5} />
             </div>
           </div>
-          <h1 className="text-xl font-bold text-blue-950 dark:text-white mb-1">
+          <h1 className="text-xl font-bold text-brand-ink mb-1">
             {userRole === 'Pueblo fiel' ? 'Misas Programadas' : 'Cantorales Publicados'}
           </h1>
-          <p className="text-sm text-blue-900 dark:text-blue-100">
+          <p className="text-sm text-brand-ink-soft">
             {userRole === 'Pueblo fiel'
               ? 'Elige el horario de tu Misa'
               : `${vigentes.length} vigente${vigentes.length === 1 ? '' : 's'} · ${archivo.length} en archivo`}
@@ -515,7 +515,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
           <>
             <div className="flex items-center gap-2 mb-3 mt-1">
               <span className="text-xl">📅</span>
-              <h2 className="text-lg font-bold text-blue-950 dark:text-white">Vigentes</h2>
+              <h2 className="text-lg font-bold text-brand-ink">Vigentes</h2>
             </div>
             {vigentes.length > 0 ? (
               renderDateGroups(vigentes)
@@ -535,7 +535,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
             {/* Archivo por meses */}
             <div className="flex items-center gap-2 mb-3 mt-8">
               <span className="text-xl">🗂️</span>
-              <h2 className="text-lg font-bold text-blue-950 dark:text-white">Archivo</h2>
+              <h2 className="text-lg font-bold text-brand-ink">Archivo</h2>
             </div>
 
             {/* Filtros: parroquia → capilla → búsqueda */}
@@ -548,7 +548,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                   <select
                     value={archiveParish}
                     onChange={(e) => { setArchiveParish(e.target.value); setArchiveChapel('all'); }}
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-white/60 dark:border-white/20 bg-white/70 dark:bg-white/10 text-blue-950 dark:text-white font-semibold focus:outline-none focus:border-blue-600"
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-white/60 dark:border-white/20 bg-white/70 dark:bg-white/10 text-brand-ink font-semibold focus:outline-none focus:border-blue-600"
                   >
                     <option value="all">🌍 Todas</option>
                     {archiveParishOptions.map(p => <option key={p} value={p}>⛪ {parseParishChapel(p).parish}</option>)}
@@ -562,7 +562,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                     <select
                       value={archiveChapel}
                       onChange={(e) => setArchiveChapel(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-white/60 dark:border-white/20 bg-white/70 dark:bg-white/10 text-blue-950 dark:text-white font-semibold focus:outline-none focus:border-blue-600"
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-white/60 dark:border-white/20 bg-white/70 dark:bg-white/10 text-brand-ink font-semibold focus:outline-none focus:border-blue-600"
                     >
                       <option value="all">Todas las capillas</option>
                       {archiveChapelOptions.map(ch => <option key={ch} value={ch}>{ch}</option>)}
@@ -577,7 +577,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                   value={archiveSearch}
                   onChange={(e) => setArchiveSearch(e.target.value)}
                   placeholder="Buscar por fecha litúrgica, canto, horario…"
-                  className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-white/60 dark:border-white/20 bg-white/70 dark:bg-white/10 text-blue-950 dark:text-white focus:outline-none focus:border-blue-600"
+                  className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-white/60 dark:border-white/20 bg-white/70 dark:bg-white/10 text-brand-ink focus:outline-none focus:border-blue-600"
                 />
               </div>
             </div>
@@ -597,7 +597,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
               <div className="space-y-6">
                 {groupByMonth(archivoFiltered).map(([monthYear, list]) => (
                   <div key={monthYear}>
-                    <h3 className="text-base font-bold text-blue-950 dark:text-white mb-3 capitalize">{monthYear}</h3>
+                    <h3 className="text-base font-bold text-brand-ink mb-3 capitalize">{monthYear}</h3>
                     <div className="space-y-3">
                       {list.map((cantoral) => renderCantoralCard(cantoral, true))}
                     </div>

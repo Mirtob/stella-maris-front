@@ -244,8 +244,8 @@ export function ChoirView({
                 {preferredInstrument === 'Órgano' && '🎹'}
               </div>
               <div>
-                <h3 className="text-lg font-bold text-blue-950 dark:text-white mb-1">Instrumento: {preferredInstrument}</h3>
-                <p className="text-base text-blue-900 dark:text-blue-100">
+                <h3 className="text-lg font-bold text-brand-ink mb-1">Instrumento: {preferredInstrument}</h3>
+                <p className="text-base text-brand-ink-soft">
                   Los cantos con {preferredInstrument} aparecen primero en las búsquedas
                 </p>
               </div>
@@ -372,7 +372,7 @@ export function ChoirView({
             <button
               onClick={() => setShowPublishModal(true)}
               data-tour="coro-publicar"
-              className="w-full bg-gradient-to-br from-blue-900 to-blue-950 text-white py-4 px-3 sm:px-4 rounded-2xl shadow-2xl active:scale-98 transition-all flex items-center justify-center gap-3 border-2 border-blue-800"
+              className="w-full bg-gradient-to-br from-brand to-brand-strong text-white py-4 px-3 sm:px-4 rounded-2xl shadow-2xl active:scale-98 transition-all flex items-center justify-center gap-3 border-2 border-brand-border"
             >
               <Send className="w-6 h-6 flex-shrink-0" />
               <span className="text-base sm:text-lg font-bold min-w-0 leading-tight">
@@ -449,7 +449,7 @@ export function ChoirView({
               </p>
               <button
                 onClick={() => handleChoosePenitential('kyrie')}
-                className="w-full bg-white dark:bg-slate-700 text-blue-950 dark:text-white p-4 rounded-2xl flex items-center gap-3 border-2 border-blue-300 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-slate-600 active:scale-95 transition-all text-left"
+                className="w-full bg-white dark:bg-slate-700 text-brand-ink p-4 rounded-2xl flex items-center gap-3 border-2 border-blue-300 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-slate-600 active:scale-95 transition-all text-left"
               >
                 <span className="text-2xl flex-shrink-0">🙏</span>
                 <span className="min-w-0">
