@@ -1,6 +1,7 @@
 import { X, Home, BookOpen, GraduationCap, ShieldCheck, Music, LogOut, User, Settings, List, History, Calendar, Church, Book, Cross, ChevronDown, Check } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { UserProfile, UserRole } from '../../types';
+import { IconButton } from '../common/IconButton';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
 
 interface SidebarProps {
@@ -250,50 +251,35 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
           <div className="p-4 border-t-2 border-blue-900/20 bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center gap-4 shadow-2xl">
             {/* Botón Ver tutorial */}
             {onReplayTour && (
-              <div className="relative group">
-                <button
-                  onClick={() => { onReplayTour(); onClose(); }}
-                  className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-900 to-blue-950 text-white rounded-xl flex items-center justify-center hover:from-blue-800 hover:to-blue-900 active:scale-95 transition-all border-2 border-blue-800 shadow-lg hover:shadow-xl"
-                  aria-label="Ver tutorial"
-                >
-                  <GraduationCap className="w-6 h-6" strokeWidth={2.5} />
-                </button>
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-blue-950 text-white text-sm font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-xl">
-                  Ver tutorial
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-blue-950"></div>
-                </div>
-              </div>
-            )}
-
-            {/* Botón Configuración - Solo icono con tooltip */}
-            <div className="relative group">
-              <button
-                onClick={handleSettings}
+              <IconButton
+                label="Ver tutorial"
+                side="top"
+                onClick={() => { onReplayTour(); onClose(); }}
                 className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-900 to-blue-950 text-white rounded-xl flex items-center justify-center hover:from-blue-800 hover:to-blue-900 active:scale-95 transition-all border-2 border-blue-800 shadow-lg hover:shadow-xl"
               >
-                <Settings className="w-6 h-6" strokeWidth={2.5} />
-              </button>
-              {/* Tooltip */}
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-blue-950 text-white text-sm font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-xl">
-                Configuración
-                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-blue-950"></div>
-              </div>
-            </div>
-            
-            {/* Botón Cerrar Sesión - Solo icono con tooltip */}
-            <div className="relative group">
-              <button
-                onClick={onLogout}
-                className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-red-700 to-red-900 text-white rounded-xl flex items-center justify-center hover:from-red-600 hover:to-red-800 active:scale-95 transition-all border-2 border-red-800 shadow-lg hover:shadow-xl"
-              >
-                <LogOut className="w-6 h-6" strokeWidth={2.5} />
-              </button>
-              {/* Tooltip */}
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-red-950 text-white text-sm font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-xl">
-                Cambiar perfil
-                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-red-950"></div>
-              </div>
-            </div>
+                <GraduationCap className="w-6 h-6" strokeWidth={2.5} />
+              </IconButton>
+            )}
+
+            {/* Botón Configuración */}
+            <IconButton
+              label="Configuración"
+              side="top"
+              onClick={handleSettings}
+              className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-900 to-blue-950 text-white rounded-xl flex items-center justify-center hover:from-blue-800 hover:to-blue-900 active:scale-95 transition-all border-2 border-blue-800 shadow-lg hover:shadow-xl"
+            >
+              <Settings className="w-6 h-6" strokeWidth={2.5} />
+            </IconButton>
+
+            {/* Botón Cerrar Sesión / Cambiar perfil */}
+            <IconButton
+              label="Cambiar perfil"
+              side="top"
+              onClick={onLogout}
+              className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-red-700 to-red-900 text-white rounded-xl flex items-center justify-center hover:from-red-600 hover:to-red-800 active:scale-95 transition-all border-2 border-red-800 shadow-lg hover:shadow-xl"
+            >
+              <LogOut className="w-6 h-6" strokeWidth={2.5} />
+            </IconButton>
           </div>
         </div>
       </div>
