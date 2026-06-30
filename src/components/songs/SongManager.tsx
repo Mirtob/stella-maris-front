@@ -362,7 +362,7 @@ export function SongManager() {
         {/* Agregar canto manualmente (p. ej. de un canal ajeno: la metadata la pones tú) */}
         <button
           onClick={openAddSong}
-          className="w-full mb-3 py-3 bg-gradient-to-br from-blue-700 to-blue-900 text-white border-2 border-blue-800 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95"
+          className="w-full mb-3 py-3 bg-gradient-to-br from-blue-700 to-blue-900 text-white border-2 border-brand-border rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95"
         >
           <Plus className="w-5 h-5" strokeWidth={3} />
           Agregar canto manualmente
@@ -557,8 +557,8 @@ export function SongManager() {
       {editSong && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEditSong(null)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-lg w-full border-4 border-blue-800 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-gradient-to-br from-blue-900 to-blue-950 text-white p-5 flex items-center justify-between border-b-4 border-blue-800 z-10">
+          <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-lg w-full border-4 border-brand-border max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-gradient-to-br from-brand to-brand-strong text-white p-5 flex items-center justify-between border-b-4 border-brand-border z-10">
               <div className="flex items-center gap-3 min-w-0"><Pencil className="w-6 h-6 flex-shrink-0" strokeWidth={2.5} /><h2 className="text-xl font-bold min-w-0 truncate">Editar canto</h2></div>
               <button onClick={() => setEditSong(null)} className="p-2 hover:bg-white/20 rounded-xl flex-shrink-0"><X className="w-6 h-6" strokeWidth={2.5} /></button>
             </div>
@@ -624,7 +624,7 @@ export function SongManager() {
                         onClick={() => toggleMomentIn(setF, o.value)}
                         className={`px-3 py-1.5 rounded-full text-sm font-bold border-2 active:scale-95 transition-all ${
                           on
-                            ? 'bg-blue-700 text-white border-blue-800'
+                            ? 'bg-blue-700 text-white border-brand-border'
                             : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
                         }`}
                       >
@@ -651,7 +651,7 @@ export function SongManager() {
                         onClick={() => toggleInstrumentIn(setF, i)}
                         className={`px-3 py-1.5 rounded-full text-sm font-bold border-2 active:scale-95 transition-all ${
                           on
-                            ? 'bg-blue-700 text-white border-blue-800'
+                            ? 'bg-blue-700 text-white border-brand-border'
                             : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
                         }`}
                       >
@@ -678,7 +678,7 @@ export function SongManager() {
                         onClick={() => toggleSeasonIn(setF, s)}
                         className={`px-3 py-1.5 rounded-full text-sm font-bold border-2 active:scale-95 transition-all ${
                           on
-                            ? 'bg-blue-700 text-white border-blue-800'
+                            ? 'bg-blue-700 text-white border-brand-border'
                             : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
                         }`}
                       >
@@ -698,7 +698,7 @@ export function SongManager() {
                     onClick={() => setF(prev => ({ ...prev, isLiturgical: true }))}
                     className={`px-3 py-2.5 rounded-xl text-sm font-bold border-2 active:scale-95 transition-all ${
                       f.isLiturgical
-                        ? 'bg-blue-700 text-white border-blue-800'
+                        ? 'bg-blue-700 text-white border-brand-border'
                         : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
                     }`}
                   >
@@ -750,14 +750,14 @@ export function SongManager() {
       {showAdd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowAdd(false)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-lg w-full border-4 border-blue-800 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-gradient-to-br from-blue-900 to-blue-950 text-white p-5 flex items-center justify-between border-b-4 border-blue-800 z-10">
+          <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-lg w-full border-4 border-brand-border max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-gradient-to-br from-brand to-brand-strong text-white p-5 flex items-center justify-between border-b-4 border-brand-border z-10">
               <div className="flex items-center gap-3 min-w-0"><Plus className="w-6 h-6 flex-shrink-0" strokeWidth={2.5} /><h2 className="text-xl font-bold min-w-0 truncate">Agregar canto</h2></div>
               <button onClick={() => setShowAdd(false)} className="p-2 hover:bg-white/20 rounded-xl flex-shrink-0"><X className="w-6 h-6" strokeWidth={2.5} /></button>
             </div>
             <div className="p-6 space-y-3">
               {/* Traer datos desde una URL/ID de YouTube (cualquier canal público) */}
-              <div className="bg-blue-50 dark:bg-blue-950/40 rounded-xl p-3 border-2 border-blue-200 dark:border-blue-800">
+              <div className="bg-blue-50 dark:bg-blue-950/40 rounded-xl p-3 border-2 border-blue-200 dark:border-brand-border">
                 <label className="text-sm font-bold text-blue-900 dark:text-blue-200 mb-1 block">Video de YouTube (URL o ID)</label>
                 <div className="flex gap-2">
                   <input
@@ -833,7 +833,7 @@ export function SongManager() {
                         onClick={() => toggleMomentIn(setNa, o.value)}
                         className={`px-3 py-1.5 rounded-full text-sm font-bold border-2 active:scale-95 transition-all ${
                           on
-                            ? 'bg-blue-700 text-white border-blue-800'
+                            ? 'bg-blue-700 text-white border-brand-border'
                             : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
                         }`}
                       >
@@ -860,7 +860,7 @@ export function SongManager() {
                         onClick={() => toggleInstrumentIn(setNa, i)}
                         className={`px-3 py-1.5 rounded-full text-sm font-bold border-2 active:scale-95 transition-all ${
                           on
-                            ? 'bg-blue-700 text-white border-blue-800'
+                            ? 'bg-blue-700 text-white border-brand-border'
                             : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
                         }`}
                       >
@@ -887,7 +887,7 @@ export function SongManager() {
                         onClick={() => toggleSeasonIn(setNa, s)}
                         className={`px-3 py-1.5 rounded-full text-sm font-bold border-2 active:scale-95 transition-all ${
                           on
-                            ? 'bg-blue-700 text-white border-blue-800'
+                            ? 'bg-blue-700 text-white border-brand-border'
                             : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
                         }`}
                       >
@@ -907,7 +907,7 @@ export function SongManager() {
                     onClick={() => setNa(prev => ({ ...prev, isLiturgical: true }))}
                     className={`px-3 py-2.5 rounded-xl text-sm font-bold border-2 active:scale-95 transition-all ${
                       na.isLiturgical
-                        ? 'bg-blue-700 text-white border-blue-800'
+                        ? 'bg-blue-700 text-white border-brand-border'
                         : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
                     }`}
                   >

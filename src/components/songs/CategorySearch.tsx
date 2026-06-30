@@ -398,7 +398,7 @@ export function CategorySearch({
       {/* Header */}
       <button
         onClick={onToggle}
-        className={`w-full ${colors.gradient} text-white p-3 sm:p-4 flex items-center justify-between active:opacity-90 border-2 border-blue-800 transition-all hover:scale-[1.01] group`}
+        className={`w-full ${colors.gradient} text-white p-3 sm:p-4 flex items-center justify-between active:opacity-90 border-2 border-brand-border transition-all hover:scale-[1.01] group`}
         aria-expanded={isExpanded}
         aria-label={`${isExpanded ? 'Cerrar' : 'Abrir'} categoría ${category}`}
       >
@@ -431,7 +431,7 @@ export function CategorySearch({
           {cantoral.filter(s => s.category === category).map((s) => (
             <div key={s.id} className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-xl p-2.5 border border-green-200 dark:border-green-700">
               <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" strokeWidth={2.5} />
-              <span className="flex-1 min-w-0 text-sm sm:text-base font-bold text-blue-950 dark:text-white truncate">{s.title}</span>
+              <span className="flex-1 min-w-0 text-sm sm:text-base font-bold text-brand-ink truncate">{s.title}</span>
               <button
                 onClick={() => onPlaySong(s)}
                 aria-label={`Ver ${s.title}`}
@@ -471,7 +471,7 @@ export function CategorySearch({
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
-                        <h4 className="text-sm font-bold text-blue-950 dark:text-white leading-tight">
+                        <h4 className="text-sm font-bold text-brand-ink leading-tight">
                           {song.title}
                         </h4>
                         {song.author && (
@@ -528,7 +528,7 @@ export function CategorySearch({
               placeholder="Buscar por título, autor o misa..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 rounded-xl text-lg text-blue-950 dark:text-white bg-white/70 dark:bg-white/15 border-2 border-white/60 dark:border-white/20 focus:outline-none focus:ring-4 focus:ring-blue-400/30 focus:border-blue-600 dark:focus:border-blue-400 placeholder-blue-700/70 dark:placeholder-blue-300/70 transition-all"
+              className="w-full pl-12 pr-4 py-4 rounded-xl text-lg text-brand-ink bg-white/70 dark:bg-white/15 border-2 border-white/60 dark:border-white/20 focus:outline-none focus:ring-4 focus:ring-blue-400/30 focus:border-blue-600 dark:focus:border-blue-400 placeholder-blue-700/70 dark:placeholder-blue-300/70 transition-all"
             />
           </div>
 
@@ -543,7 +543,7 @@ export function CategorySearch({
                     sincronizar con YouTube primero. */}
                 {categorySongs.length === 0 ? (
                   <>
-                    <p className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-2">
+                    <p className="text-xl font-bold text-brand-ink-soft mb-2">
                       Aún no hay cantos sincronizados
                     </p>
                     <p className="text-sm text-blue-800 dark:text-blue-200">
@@ -553,7 +553,7 @@ export function CategorySearch({
                   </>
                 ) : (
                   <>
-                    <p className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-2">No se encontraron cantos</p>
+                    <p className="text-xl font-bold text-brand-ink-soft mb-2">No se encontraron cantos</p>
                     <p className="text-base text-blue-800 dark:text-blue-200">Intentá con otros términos de búsqueda</p>
                   </>
                 )}
@@ -577,14 +577,14 @@ export function CategorySearch({
                         natural width, which lets the title truncate instead of
                         forcing horizontal overflow on narrow phones. */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-base sm:text-lg font-bold text-blue-950 dark:text-white leading-tight mb-1 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors line-clamp-2">
+                      <h3 className="text-base sm:text-lg font-bold text-brand-ink leading-tight mb-1 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors line-clamp-2">
                         {song.title}
                       </h3>
                       
                       {/* Mass Name Badge */}
                       {song.massName && (
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="inline-flex items-center gap-1.5 bg-gradient-to-br from-blue-900 to-blue-950 text-white px-3 py-1.5 rounded-lg text-sm font-bold border-2 border-blue-800 shadow-md">
+                          <span className="inline-flex items-center gap-1.5 bg-gradient-to-br from-brand to-brand-strong text-white px-3 py-1.5 rounded-lg text-sm font-bold border-2 border-brand-border shadow-md">
                             <Music className="w-3.5 h-3.5" />
                             {song.massName}
                           </span>
@@ -598,7 +598,7 @@ export function CategorySearch({
                           </span>
                         )}
                         {song.version && (
-                          <span className="inline-flex items-center bg-gradient-to-br from-amber-500 to-amber-600 text-white px-2.5 py-1 rounded-lg text-sm font-semibold border border-amber-700 shadow-sm">
+                          <span className="inline-flex items-center bg-gradient-to-br from-gold to-gold-strong text-white px-2.5 py-1 rounded-lg text-sm font-semibold border border-amber-700 shadow-sm">
                             {song.version === 'Coro' && '👥'}
                             {song.version === 'Guitarra' && '🎶'}
                             {song.version === 'Órgano' && '🎹'}
@@ -623,7 +623,7 @@ export function CategorySearch({
                   <div className="flex gap-2">
                     <button
                       onClick={() => onPlaySong(song)}
-                      className={`flex-1 ${colors.gradient} text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold border-2 border-blue-800 shadow-md hover:shadow-lg`}
+                      className={`flex-1 ${colors.gradient} text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold border-2 border-brand-border shadow-md hover:shadow-lg`}
                       aria-label={`Ver detalles de ${song.title}`}
                     >
                       <Play className="w-5 h-5" strokeWidth={2.5} fill="currentColor" />
@@ -672,7 +672,7 @@ export function CategorySearch({
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
           <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border-4 border-blue-900 dark:border-blue-700 animate-scaleIn transition-colors">
             {/* Header */}
-            <div className="bg-gradient-to-br from-blue-900 to-blue-950 p-6 border-b-4 border-blue-800">
+            <div className="bg-gradient-to-br from-brand to-brand-strong p-6 border-b-4 border-brand-border">
               <div className="flex items-center gap-4 mb-3">
                 <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border-2 border-white/30">
                   <Music className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={2.5} />
@@ -691,16 +691,16 @@ export function CategorySearch({
             {/* Content */}
             <div className="p-6">
               <div className="mb-6">
-                <p className="text-xl font-bold text-blue-950 dark:text-white mb-4 leading-relaxed">
+                <p className="text-xl font-bold text-brand-ink mb-4 leading-relaxed">
                   ¿Deseas agregar el <span className="text-blue-700 dark:text-blue-400">Santo</span> y el <span className="text-blue-700 dark:text-blue-400">Cordero de Dios</span> de la misma Misa?
                 </p>
                 
                 {/* Detalles de los cantos */}
-                <div className="space-y-3 bg-blue-50 dark:bg-slate-700/50 rounded-2xl p-4 border-2 border-blue-200 dark:border-blue-800 transition-colors">
+                <div className="space-y-3 bg-blue-50 dark:bg-slate-700/50 rounded-2xl p-4 border-2 border-blue-200 dark:border-brand-border transition-colors">
                   <div className="flex items-start gap-3">
                     <span className="text-2xl flex-shrink-0">✝️</span>
                     <div className="flex-1">
-                      <div className="font-bold text-blue-950 dark:text-white text-lg">Santo</div>
+                      <div className="font-bold text-brand-ink text-lg">Santo</div>
                       {pendingSanto && (
                         <div className="text-sm text-blue-800 dark:text-blue-200 mt-1">
                           {pendingSanto.title}
@@ -712,7 +712,7 @@ export function CategorySearch({
                   <div className="flex items-start gap-3">
                     <span className="text-2xl flex-shrink-0">🙏</span>
                     <div className="flex-1">
-                      <div className="font-bold text-blue-950 dark:text-white text-lg">Cordero de Dios</div>
+                      <div className="font-bold text-brand-ink text-lg">Cordero de Dios</div>
                       {pendingCordero && (
                         <div className="text-sm text-blue-800 dark:text-blue-200 mt-1">
                           {pendingCordero.title}
@@ -734,7 +734,7 @@ export function CategorySearch({
                 
                 <button
                   onClick={handleCancelSantoCordero}
-                  className="w-full bg-white dark:bg-slate-700 text-blue-950 dark:text-white py-4 px-3 sm:px-4 rounded-2xl font-bold text-lg active:scale-95 transition-all border-2 border-gray-300 dark:border-slate-600 shadow-md hover:bg-gray-50 dark:hover:bg-slate-600"
+                  className="w-full bg-white dark:bg-slate-700 text-brand-ink py-4 px-3 sm:px-4 rounded-2xl font-bold text-lg active:scale-95 transition-all border-2 border-gray-300 dark:border-slate-600 shadow-md hover:bg-gray-50 dark:hover:bg-slate-600"
                 >
                   No, elegiré después
                 </button>

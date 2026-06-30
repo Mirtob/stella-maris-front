@@ -289,7 +289,7 @@ export function SheetMusicLibrary({ onPlaySong }: SheetMusicLibraryProps) {
                                 >
                                   <div className="flex items-start justify-between mb-2">
                                     <div className="flex-1">
-                                      <h4 className="text-base font-bold text-blue-950 dark:text-white leading-tight">
+                                      <h4 className="text-base font-bold text-brand-ink leading-tight">
                                         {song.title}
                                       </h4>
                                       {song.author && (
@@ -414,7 +414,7 @@ export function SheetMusicLibrary({ onPlaySong }: SheetMusicLibraryProps) {
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
-                            <h4 className="text-base font-bold text-blue-950 dark:text-white leading-tight">
+                            <h4 className="text-base font-bold text-brand-ink leading-tight">
                               {song.title}
                             </h4>
                             {song.author && (
