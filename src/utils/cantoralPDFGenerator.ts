@@ -417,26 +417,75 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   // Alto utilizable de una página (de y=22 tras el encabezado al límite inferior).
   const usableH = (pageH - 18) - 22;
 
-  // Mide el alto (mm, ya escalado) de un grupo de líneas de letra, con el MISMO
-  // criterio con que se dibuja: marcas de sección, líneas en blanco y wrap del texto.
-  const measureLyricLines = (lines: string[]): number => {
+  // ── Maquetación a DOS COLUMNAS ──
+  // Las estrofas se reparten en dos columnas para aprovechar el ancho de la hoja:
+  // estrofa 1 arriba-izquierda, 2 arriba-derecha, 3 debajo de la 1, 4 debajo de la 2…
+  // (columna izquierda = estrofas impares, derecha = pares). Cada fila avanza según la
+  // estrofa más alta del par, así ambas columnas quedan alineadas. Las proporciones se
+  // mantienen porque el ancho de columna se deriva del ancho de contenido escalado.
+  const gutter = adv(8); // separación entre columnas
+  const colW = (contentW - gutter) / 2; // ancho de cada columna
+  const colX = [margin, margin + colW + gutter]; // x de inicio de cada columna
+
+  // Parte la letra en estrofas: bloques de líneas separados por líneas en blanco.
+  const parseStanzas = (lyrics: string): string[][] => {
+    const stanzas: string[][] = [];
+    let cur: string[] = [];
+    for (const raw of lyrics.split('\n')) {
+      const l = raw.replace(/\s+$/, '');
+      if (l === '') { if (cur.length) { stanzas.push(cur); cur = []; } }
+      else cur.push(l);
+    }
+    if (cur.length) stanzas.push(cur);
+    return stanzas;
+  };
+
+  // Mide el alto (mm, ya escalado) de una estrofa a un ancho de columna dado, con el
+  // mismo criterio con que se dibuja (marcas de sección + wrap del texto).
+  const measureStanza = (stanza: string[], width: number): number => {
     let h = 0;
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10.5);
-    for (const raw of lines) {
+    for (const raw of stanza) {
       const line = raw.replace(/\s+$/, '');
-      if (line === '') { h += adv(3); continue; }
       if (SECTION_RE.test(line.trim())) { h += adv(6); continue; }
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(10.5);
-      const wrapped = pdf.splitTextToSize(line, contentW) as string[];
+      const wrapped = pdf.splitTextToSize(line, width) as string[];
       h += wrapped.length * adv(5.5);
     }
     return h;
   };
 
-  // Mide el alto total de un canto (título + autor + letra) para decidir si cabe
-  // completo en lo que queda de página.
+  // Dibuja una estrofa en una columna (x fijo, desde startY), justificada al ancho de
+  // columna; la última línea de cada wrap y las de una sola línea quedan a la izquierda.
+  // No hace saltos de página: el salto se decide por FILA (par de estrofas) más arriba.
+  const drawStanzaAt = (stanza: string[], x: number, startY: number, width: number) => {
+    let yy = startY;
+    for (const raw of stanza) {
+      const line = raw.replace(/\s+$/, '');
+      if (SECTION_RE.test(line.trim())) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(10.5);
+        pdf.setTextColor(80, 80, 80);
+        pdf.text(line.trim(), x, yy);
+        yy += adv(6);
+        continue;
+      }
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10.5);
+      pdf.setTextColor(40, 40, 40);
+      const wrapped = pdf.splitTextToSize(line, width) as string[];
+      wrapped.forEach((wl, wi) => {
+        if (wi < wrapped.length - 1) drawJustifiedLine(pdf, wl, x, yy, width);
+        else pdf.text(wl, x, yy);
+        yy += adv(5.5);
+      });
+    }
+  };
+
+  // Mide el alto total de un canto en dos columnas (título + autor + filas de estrofas)
+  // para decidir si cabe completo en lo que queda de página.
   const measureSongHeight = (song: Song): number => {
     let h = 0;
     pdf.setFont('helvetica', 'bold');
@@ -446,38 +495,15 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     if (song.author) h += adv(5);
     h += adv(2);
     const lyrics = cleanLyrics(song.lyrics || '');
-    h += lyrics ? measureLyricLines(lyrics.split('\n')) : adv(6);
-    return h;
-  };
-
-  // Dibuja una línea de letra (marca de sección o texto justificado). Hace su propio
-  // needPage por si una estrofa enorme excede una página completa (último recurso).
-  const renderLyricLine = (rawLine: string) => {
-    const line = rawLine.replace(/\s+$/, '');
-    if (line === '') { y += adv(3); return; }
-    if (SECTION_RE.test(line.trim())) {
-      needPage(adv(6));
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(10.5);
-      pdf.setTextColor(80, 80, 80);
-      pdf.text(line.trim(), margin, y);
-      y += adv(6);
-      return;
+    if (!lyrics) return h + adv(6);
+    const stanzas = parseStanzas(lyrics);
+    for (let i = 0; i < stanzas.length; i += 2) {
+      const lh = measureStanza(stanzas[i], colW);
+      const rh = stanzas[i + 1] ? measureStanza(stanzas[i + 1], colW) : 0;
+      h += Math.max(lh, rh);
+      if (i + 2 < stanzas.length) h += adv(3); // separación entre filas
     }
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10.5);
-    const wrapped = pdf.splitTextToSize(line, contentW) as string[];
-    wrapped.forEach((wl, wi) => {
-      needPage(adv(5.5));
-      // Reaplicar color/fuente tras cada posible salto de página (evita que la
-      // segunda hoja salga más gris).
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10.5);
-      pdf.setTextColor(40, 40, 40);
-      if (wi < wrapped.length - 1) drawJustifiedLine(pdf, wl, margin, y, contentW);
-      else pdf.text(wl, margin, y);
-      y += adv(5.5);
-    });
+    return h;
   };
 
   sortedCategories.forEach((category, catIdx) => {
@@ -558,28 +584,26 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
 
       y += adv(2);
 
-      // Letra agrupada en ESTROFAS (bloques separados por líneas en blanco) para no
-      // partir una estrofa por la mitad: si una estrofa no entra en lo que queda de
-      // hoja, salta de página ANTES de empezarla → el corte cae al final de la estrofa
-      // anterior. (Una estrofa que no cabe ni en una página entera se parte por líneas,
-      // último recurso.)
+      // Letra a DOS COLUMNAS, por filas de dos estrofas (1 izq, 2 der, 3 bajo la 1…).
+      // Cada fila es atómica: si no entra en lo que queda de hoja, salta de página
+      // ANTES de empezarla → el corte cae siempre al final de una fila de estrofas,
+      // nunca a media estrofa. Cada estrofa queda justificada al ancho de su columna.
       const lyrics = cleanLyrics(song.lyrics || '');
       if (lyrics) {
-        const stanzas: string[][] = [];
-        let cur: string[] = [];
-        for (const raw of lyrics.split('\n')) {
-          const l = raw.replace(/\s+$/, '');
-          if (l === '') { if (cur.length) { stanzas.push(cur); cur = []; } }
-          else cur.push(l);
+        const stanzas = parseStanzas(lyrics);
+        for (let i = 0; i < stanzas.length; i += 2) {
+          const left = stanzas[i];
+          const right = stanzas[i + 1];
+          const lh = measureStanza(left, colW);
+          const rh = right ? measureStanza(right, colW) : 0;
+          const rowH = Math.max(lh, rh);
+          if (rowH <= usableH) needPage(rowH); // mantener la fila (par de estrofas) junta
+          const rowY = y;
+          drawStanzaAt(left, colX[0], rowY, colW);
+          if (right) drawStanzaAt(right, colX[1], rowY, colW);
+          y = rowY + rowH;
+          if (i + 2 < stanzas.length) y += adv(3); // separación entre filas
         }
-        if (cur.length) stanzas.push(cur);
-
-        stanzas.forEach((stanza, si) => {
-          const stanzaH = measureLyricLines(stanza);
-          if (stanzaH <= usableH) needPage(stanzaH); // no partir la estrofa
-          stanza.forEach((l) => renderLyricLine(l));
-          if (si < stanzas.length - 1) y += adv(3); // espacio entre estrofas
-        });
       } else {
         pdf.setFont('helvetica', 'italic');
         pdf.setFontSize(9);
