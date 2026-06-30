@@ -119,6 +119,27 @@ function drawSideGarland(
   pdf.circle(xOuter, midY, 0.5, 'F');
 }
 
+/**
+ * Dibuja una línea de texto JUSTIFICADA a un ancho fijo, repartiendo el sobrante de
+ * forma pareja entre las palabras. No estira líneas de una sola palabra. El texto
+ * queda SIEMPRE dentro del ancho indicado, sea cual sea el tamaño de letra elegido.
+ */
+function drawJustifiedLine(pdf: any, text: string, x: number, y: number, width: number) {
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length < 2) {
+    pdf.text(text, x, y);
+    return;
+  }
+  const widths = words.map((w) => pdf.getTextWidth(w));
+  const wordsW = widths.reduce((a, b) => a + b, 0);
+  const gap = (width - wordsW) / (words.length - 1);
+  let cx = x;
+  words.forEach((w, i) => {
+    pdf.text(w, cx, y);
+    cx += widths[i] + gap;
+  });
+}
+
 const CATEGORY_ORDER = [
   'Entrada', 'Rito de Aspersión', 'Kyrie', 'Gloria', 'Salmo', 'Aleluya',
   'Post Evangelio', 'Respuesta a Oración Universal', 'Ofertorio', 'Santo',
@@ -431,7 +452,10 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     byCategory[category].forEach((song, idx) => {
       needPage(adv(20));
 
-      // Título del canto
+      // Título del canto. Fija fuente y tamaño ANTES de medir, para que el ajuste de
+      // línea se calcule al mismo tamaño con que se dibuja y nunca exceda el ancho.
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(12);
       const titleLines = pdf.splitTextToSize(cleanText(song.title), contentW) as string[];
       titleLines.forEach((line) => {
         needPage(adv(6));
@@ -479,18 +503,29 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
             pdf.text(line.trim(), margin, y);
             y += adv(6);
           } else {
-            // Texto normal — wrap si la línea es muy larga
+            // Texto del canto. Fija fuente y tamaño ANTES de medir, para que el ajuste
+            // de línea se calcule al mismo tamaño con que se dibuja: así NUNCA excede el
+            // ancho de la hoja, sea cual sea el tamaño de letra elegido. Las líneas que
+            // ocupan el ancho completo se justifican; la última de cada wrap (y los
+            // versos cortos de una sola línea) van a la izquierda para no deformar las
+            // proporciones estirando pocas palabras.
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(10.5);
             const wrapped = pdf.splitTextToSize(line, contentW) as string[];
-            for (const wl of wrapped) {
+            wrapped.forEach((wl, wi) => {
               needPage(adv(5.5));
-              // Reaplicar el color/fuente de la letra tras cada posible salto de
-              // página (evita que la segunda hoja salga más gris).
+              // Reaplicar color/fuente tras cada posible salto de página (evita que la
+              // segunda hoja salga más gris).
               pdf.setFont('helvetica', 'normal');
               pdf.setFontSize(10.5);
               pdf.setTextColor(40, 40, 40);
-              pdf.text(wl, margin, y);
+              if (wi < wrapped.length - 1) {
+                drawJustifiedLine(pdf, wl, margin, y, contentW);
+              } else {
+                pdf.text(wl, margin, y);
+              }
               y += adv(5.5);
-            }
+            });
           }
         }
       } else {
