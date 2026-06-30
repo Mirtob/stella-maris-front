@@ -41,7 +41,7 @@ export function YouTubeSyncDialog({ onBack }: YouTubeSyncDialogProps) {
               <Youtube className="w-10 h-10 text-white" strokeWidth={2} />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-blue-950 dark:text-white mb-2">
+          <h1 className="text-3xl font-bold text-brand-ink mb-2">
             Sincronizar con YouTube
           </h1>
           <p className="text-lg text-blue-800 dark:text-blue-200">
@@ -51,7 +51,7 @@ export function YouTubeSyncDialog({ onBack }: YouTubeSyncDialogProps) {
 
         {/* Info */}
         <div className="bg-white/50 dark:bg-white/10 backdrop-blur-sm rounded-2xl border-2 border-blue-200 dark:border-blue-700 p-5 mb-6 space-y-3">
-          <p className="text-base text-blue-900 dark:text-blue-100 font-semibold">¿Cómo funciona?</p>
+          <p className="text-base text-brand-ink-soft font-semibold">¿Cómo funciona?</p>
           <ul className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
             <li className="flex gap-2">
               <span className="font-bold">1.</span>
@@ -102,7 +102,7 @@ Letra del canto...`}</pre>
         {status === 'running' && (
           <div className="flex flex-col items-center gap-4 py-10">
             <Loader2 className="w-14 h-14 text-red-500 animate-spin" />
-            <p className="text-lg font-semibold text-blue-900 dark:text-blue-100">
+            <p className="text-lg font-semibold text-brand-ink-soft">
               Leyendo canal de YouTube…
             </p>
             <p className="text-sm text-blue-700 dark:text-blue-300">
@@ -126,7 +126,7 @@ Letra del canto...`}</pre>
                   ? <AlertCircle className="w-7 h-7 text-red-600 flex-shrink-0" />
                   : <CheckCircle className="w-7 h-7 text-emerald-600 flex-shrink-0" />
                 }
-                <span className="text-lg font-bold text-blue-950 dark:text-white">
+                <span className="text-lg font-bold text-brand-ink">
                   {result.inserted > 0 || result.updated > 0
                     ? [
                         result.inserted > 0 ? `${result.inserted} nueva${result.inserted > 1 ? 's' : ''}` : null,
@@ -140,7 +140,7 @@ Letra del canto...`}</pre>
 
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div className="bg-white/60 dark:bg-white/10 rounded-xl p-3">
-                  <p className="text-2xl font-bold text-blue-950 dark:text-white">{result.total}</p>
+                  <p className="text-2xl font-bold text-brand-ink">{result.total}</p>
                   <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">En YouTube</p>
                 </div>
                 <div className="bg-white/60 dark:bg-white/10 rounded-xl p-3">
@@ -155,7 +155,7 @@ Letra del canto...`}</pre>
             </div>
 
             {result.details.length > 0 && (
-              <div className="bg-white/40 dark:bg-white/5 rounded-xl border border-blue-200 dark:border-blue-800 p-4 max-h-48 overflow-y-auto">
+              <div className="bg-white/40 dark:bg-white/5 rounded-xl border border-blue-200 dark:border-brand-border p-4 max-h-48 overflow-y-auto">
                 <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-2 uppercase tracking-wide">
                   Detalle
                 </p>
@@ -167,7 +167,7 @@ Letra del canto...`}</pre>
 
             <button
               onClick={runSync}
-              className="w-full py-4 bg-white/50 dark:bg-white/10 border-2 border-blue-300 dark:border-blue-600 text-blue-900 dark:text-blue-100 rounded-2xl text-base font-bold hover:bg-white/70 active:scale-95 transition-all flex items-center justify-center gap-2"
+              className="w-full py-4 bg-white/50 dark:bg-white/10 border-2 border-blue-300 dark:border-blue-600 text-brand-ink-soft rounded-2xl text-base font-bold hover:bg-white/70 active:scale-95 transition-all flex items-center justify-center gap-2"
             >
               <RefreshCw className="w-5 h-5" />
               Sincronizar de nuevo

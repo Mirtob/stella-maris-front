@@ -125,7 +125,7 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
         {loading && (
           <div className="flex flex-col items-center gap-4 py-20">
             <div className="w-14 h-14 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin" />
-            <p className="text-base font-semibold text-blue-900 dark:text-blue-100">Cargando cantoral…</p>
+            <p className="text-base font-semibold text-brand-ink-soft">Cargando cantoral…</p>
           </div>
         )}
 
@@ -148,14 +148,14 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
             {/* Header */}
             <div className="text-center mb-5">
               <div className="text-4xl mb-2">📖</div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-blue-950 dark:text-white">{cantoral.parishName}</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-brand-ink">{cantoral.parishName}</h1>
               <p className="text-base text-blue-800 dark:text-blue-200 mt-1">{cantoral.liturgicalDate}</p>
               <p className="text-sm text-blue-700 dark:text-blue-300">{cantoral.massTime} · {cantoral.songs?.length ?? 0} cantos</p>
             </div>
 
             {/* Sugerencia de instalación (oculta si ya está instalada) */}
             {!standalone && (
-              <div className="mb-5 bg-gradient-to-br from-blue-900 to-blue-950 text-white rounded-2xl p-4 border-2 border-blue-800 shadow-lg">
+              <div className="mb-5 bg-gradient-to-br from-brand to-brand-strong text-white rounded-2xl p-4 border-2 border-brand-border shadow-lg">
                 <div className="flex items-center gap-3">
                   <Smartphone className="w-8 h-8 flex-shrink-0" />
                   <div className="flex-1">
@@ -202,7 +202,7 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
               )}
               <button
                 onClick={() => cantoral && onOpenInApp(cantoral)}
-                className="flex-1 bg-white/70 dark:bg-white/10 text-blue-950 dark:text-white py-4 px-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-white active:scale-95 transition-all border-2 border-blue-200 dark:border-white/20"
+                className="flex-1 bg-white/70 dark:bg-white/10 text-brand-ink py-4 px-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-white active:scale-95 transition-all border-2 border-blue-200 dark:border-white/20"
               >
                 <LogIn className="w-5 h-5" />
                 <span className="font-bold">Abrir en la app</span>
@@ -216,12 +216,12 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
                   <section key={category}>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-2xl">{CATEGORY_ICONS[category] || '🎵'}</span>
-                      <h2 className="text-xl font-bold text-blue-950 dark:text-white">{category}</h2>
+                      <h2 className="text-xl font-bold text-brand-ink">{category}</h2>
                     </div>
                     <div className="space-y-3">
                       {songs.map((song) => (
                         <div key={song.id}>
-                          <h3 className="text-lg font-bold text-blue-900 dark:text-blue-100 mb-1">
+                          <h3 className="text-lg font-bold text-brand-ink-soft mb-1">
                             {song.title}
                             {song.author && (
                               <span className="text-sm font-normal text-blue-700 dark:text-blue-300"> · {song.author}</span>

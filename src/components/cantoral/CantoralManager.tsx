@@ -46,12 +46,12 @@ export function CantoralManager({ cantorals, onEdit, onDelete, onShare }: Cantor
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-900 to-blue-950 rounded-full flex items-center justify-center shadow-2xl border-4 border-blue-800">
+            <div className="w-20 h-20 bg-gradient-to-br from-brand to-brand-strong rounded-full flex items-center justify-center shadow-2xl border-4 border-brand-border">
               <BookOpen className="w-12 h-12 text-white" strokeWidth={2.5} />
             </div>
           </div>
-          <h1 className="text-4xl font-bold text-blue-950 dark:text-white mb-2">Mis Cantorales</h1>
-          <p className="text-xl text-blue-900 dark:text-blue-100">Gestiona tus cantorales publicados</p>
+          <h1 className="text-4xl font-bold text-brand-ink mb-2">Mis Cantorales</h1>
+          <p className="text-xl text-brand-ink-soft">Gestiona tus cantorales publicados</p>
         </div>
 
         {/* Filter Tabs */}
@@ -62,8 +62,8 @@ export function CantoralManager({ cantorals, onEdit, onDelete, onShare }: Cantor
               onClick={() => setFilterStatus(status)}
               className={`flex-1 py-3 rounded-xl text-base font-bold transition-all ${
                 filterStatus === status
-                  ? 'bg-gradient-to-br from-blue-900 to-blue-950 text-white shadow-xl border-2 border-blue-800'
-                  : 'text-blue-950 dark:text-white hover:bg-white/30 dark:hover:bg-white/20'
+                  ? 'bg-gradient-to-br from-brand to-brand-strong text-white shadow-xl border-2 border-brand-border'
+                  : 'text-brand-ink hover:bg-white/30 dark:hover:bg-white/20'
               }`}
             >
               {status}
@@ -81,11 +81,11 @@ export function CantoralManager({ cantorals, onEdit, onDelete, onShare }: Cantor
               {/* Header */}
               <div className={`p-5 ${
                 cantoral.statusLabel === 'Publicados'
-                  ? 'bg-gradient-to-br from-blue-900 to-blue-950'
+                  ? 'bg-gradient-to-br from-brand to-brand-strong'
                   : 'bg-gradient-to-br from-gray-600 to-gray-700'
               } text-white border-b-2 ${
                 cantoral.statusLabel === 'Publicados'
-                  ? 'border-blue-800'
+                  ? 'border-brand-border'
                   : 'border-gray-800'
               }`}>
                 <div className="flex items-center justify-between mb-2">
@@ -115,14 +115,14 @@ export function CantoralManager({ cantorals, onEdit, onDelete, onShare }: Cantor
               <div className="p-5 bg-amber-50/50 dark:bg-amber-900/20 border-b-2 border-white/40 dark:border-white/10 backdrop-blur-sm">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-sm text-blue-900 dark:text-blue-100 mb-1 font-bold">Cantos</div>
-                    <div className="text-2xl font-bold text-blue-950 dark:text-white">
+                    <div className="text-sm text-brand-ink-soft mb-1 font-bold">Cantos</div>
+                    <div className="text-2xl font-bold text-brand-ink">
                       {cantoral.songs?.length || 0}
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm text-blue-900 dark:text-blue-100 mb-1 font-bold">Publicado por</div>
-                    <div className="text-base font-bold text-blue-950 dark:text-white truncate">
+                    <div className="text-sm text-brand-ink-soft mb-1 font-bold">Publicado por</div>
+                    <div className="text-base font-bold text-brand-ink truncate">
                       {cantoral.publishedBy}
                     </div>
                   </div>
@@ -133,7 +133,7 @@ export function CantoralManager({ cantorals, onEdit, onDelete, onShare }: Cantor
               <div className="p-4 flex gap-2 bg-white/20 dark:bg-white/5 backdrop-blur-sm">
                 <button 
                   onClick={() => onEdit?.(cantoral.id)}
-                  className="flex-1 bg-gradient-to-br from-blue-900 to-blue-950 text-white py-3 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg border-2 border-blue-800 hover:shadow-xl"
+                  className="flex-1 bg-gradient-to-br from-brand to-brand-strong text-white py-3 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg border-2 border-brand-border hover:shadow-xl"
                 >
                   <Edit2 className="w-5 h-5" strokeWidth={2.5} />
                   <span className="text-base font-bold">Editar</span>
@@ -162,8 +162,8 @@ export function CantoralManager({ cantorals, onEdit, onDelete, onShare }: Cantor
           {filteredCantorals.length === 0 && (
             <div className="text-center py-12 bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl border-2 border-white/60 dark:border-white/20">
               <div className="text-6xl mb-4">📚</div>
-              <p className="text-xl text-blue-950 dark:text-white font-bold mb-2">No hay cantorales</p>
-              <p className="text-base text-blue-900 dark:text-blue-100">
+              <p className="text-xl text-brand-ink font-bold mb-2">No hay cantorales</p>
+              <p className="text-base text-brand-ink-soft">
                 {filterStatus === 'Borradores' 
                   ? 'No tienes borradores guardados' 
                   : 'Comienza creando un nuevo cantoral'}
@@ -174,9 +174,9 @@ export function CantoralManager({ cantorals, onEdit, onDelete, onShare }: Cantor
 
         {/* Stats Summary */}
         <div className="mt-8 bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl shadow-xl p-6 border-2 border-white/60 dark:border-white/20">
-          <h3 className="text-xl font-bold text-blue-950 dark:text-white mb-4">Estadísticas</h3>
+          <h3 className="text-xl font-bold text-brand-ink mb-4">Estadísticas</h3>
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl p-4 border-2 border-blue-800 shadow-lg">
+            <div className="bg-gradient-to-br from-brand to-brand-strong rounded-xl p-4 border-2 border-brand-border shadow-lg">
               <div className="text-lg sm:text-2xl font-bold text-white">
                 {cantoralsWithLabel.filter(c => c.statusLabel === 'Publicados').length}
               </div>

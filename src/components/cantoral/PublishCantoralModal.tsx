@@ -372,11 +372,11 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
             }}
           />
           <div
-            className="relative bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900 dark:to-orange-900 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col border-4 border-blue-800 transition-colors overflow-hidden"
+            className="relative bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900 dark:to-orange-900 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col border-4 border-brand-border transition-colors overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header — fixed top of the flex column */}
-            <div className="flex-shrink-0 bg-gradient-to-r from-blue-900 to-blue-950 text-white p-6 z-10 border-b-4 border-blue-800">
+            <div className="flex-shrink-0 bg-gradient-to-r from-brand to-brand-strong text-white p-6 z-10 border-b-4 border-brand-border">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <Send className="w-10 h-10" strokeWidth={2.5} />
@@ -400,11 +400,11 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                 /* ── Modo multi-parroquia: elegir parroquias + fecha/horario por cada una ── */
                 <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-4 sm:p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800 flex-shrink-0">
+                    <div className="w-12 h-12 bg-gradient-to-br from-brand to-brand-strong rounded-xl flex items-center justify-center border-2 border-brand-border flex-shrink-0">
                       <Church className="w-6 h-6 text-white" strokeWidth={2.5} />
                     </div>
                     <div className="flex-1">
-                      <div className="text-xl font-bold text-blue-950 dark:text-white">¿A qué parroquias?</div>
+                      <div className="text-xl font-bold text-brand-ink">¿A qué parroquias?</div>
                       <div className="text-sm text-blue-900 dark:text-blue-200">
                         Mismos cantos; indica fecha y horario de cada misa.
                       </div>
@@ -439,32 +439,32 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                               onChange={() => toggleParish(parish)}
                               className="w-5 h-5 rounded border-2 border-blue-600 dark:border-blue-400 accent-blue-600 cursor-pointer flex-shrink-0"
                             />
-                            <span className="text-base font-bold text-blue-950 dark:text-white break-words">{formatActiveParishLabel(parish)}</span>
+                            <span className="text-base font-bold text-brand-ink break-words">{formatActiveParishLabel(parish)}</span>
                           </label>
 
                           {checked && (
                             <div className="px-3 pb-4 pt-1 space-y-3 border-t-2 border-white/50 dark:border-white/10">
                               {/* Fecha */}
                               <div>
-                                <label className="flex items-center gap-2 mb-1 text-sm font-bold text-blue-950 dark:text-white">
+                                <label className="flex items-center gap-2 mb-1 text-sm font-bold text-brand-ink">
                                   <Calendar className="w-4 h-4" /> Fecha de la Misa
                                 </label>
                                 <input
                                   type="date"
                                   value={s.date}
                                   onChange={(e) => setParishDate(parish, e.target.value)}
-                                  className="w-full px-3 py-3 text-base rounded-lg border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 bg-white/70 dark:bg-white/10 text-blue-950 dark:text-white font-bold"
+                                  className="w-full px-3 py-3 text-base rounded-lg border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 bg-white/70 dark:bg-white/10 text-brand-ink font-bold"
                                 />
                               </div>
                               {/* Celebración litúrgica */}
                               <div>
-                                <label className="flex items-center gap-2 mb-1 text-sm font-bold text-blue-950 dark:text-white">
+                                <label className="flex items-center gap-2 mb-1 text-sm font-bold text-brand-ink">
                                   📖 Calendario Litúrgico
                                 </label>
                                 <select
                                   value={s.liturgicalDate}
                                   onChange={(e) => updateSchedule(parish, { liturgicalDate: e.target.value })}
-                                  className="w-full px-3 py-3 text-base rounded-lg border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 bg-white/70 dark:bg-white/10 text-blue-950 dark:text-white font-bold"
+                                  className="w-full px-3 py-3 text-base rounded-lg border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 bg-white/70 dark:bg-white/10 text-brand-ink font-bold"
                                 >
                                   <option value="">Seleccionar...</option>
                                   {liturgicalOptions(year).map((name) => (
@@ -474,7 +474,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                               </div>
                               {/* Tipo de horario litúrgico */}
                               <div>
-                                <label className="flex items-center gap-2 mb-1 text-sm font-bold text-blue-950 dark:text-white">
+                                <label className="flex items-center gap-2 mb-1 text-sm font-bold text-brand-ink">
                                   🕯️ Tipo de Misa
                                 </label>
                                 <div className="grid grid-cols-3 gap-2">
@@ -485,8 +485,8 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                                       onClick={() => updateSchedule(parish, { massType: t, vigil: t === 'visperas_i', massTime: '' })}
                                       className={`px-2 py-2 rounded-lg text-xs font-bold border-2 transition-all active:scale-95 leading-tight ${
                                         s.massType === t
-                                          ? 'bg-gradient-to-br from-blue-700 to-blue-900 text-white border-blue-800'
-                                          : 'bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white border-blue-200 dark:border-white/20'
+                                          ? 'bg-gradient-to-br from-blue-700 to-blue-900 text-white border-brand-border'
+                                          : 'bg-white/60 dark:bg-white/10 text-brand-ink border-blue-200 dark:border-white/20'
                                       }`}
                                     >
                                       {MASS_TYPE_LABEL[t]}
@@ -502,13 +502,13 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                               </div>
                               {/* Horario */}
                               <div>
-                                <label className="flex items-center gap-2 mb-1 text-sm font-bold text-blue-950 dark:text-white">
+                                <label className="flex items-center gap-2 mb-1 text-sm font-bold text-brand-ink">
                                   <Clock className="w-4 h-4" /> Horario de la Misa
                                 </label>
                                 <select
                                   value={s.massTime}
                                   onChange={(e) => updateSchedule(parish, { massTime: e.target.value })}
-                                  className="w-full px-3 py-3 text-base rounded-lg border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 bg-white/70 dark:bg-white/10 text-blue-950 dark:text-white font-bold"
+                                  className="w-full px-3 py-3 text-base rounded-lg border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 bg-white/70 dark:bg-white/10 text-brand-ink font-bold"
                                 >
                                   <option value="">Seleccionar...</option>
                                   {MASS_TIME_BY_TYPE[s.massType].map((time) => (
@@ -529,12 +529,12 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                   {/* Parish Name */}
                   <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800">
+                      <div className="w-12 h-12 bg-gradient-to-br from-brand to-brand-strong rounded-xl flex items-center justify-center border-2 border-brand-border">
                         <Church className="w-6 h-6 text-white" strokeWidth={2.5} />
                       </div>
                       <div>
                         <div className="text-sm text-blue-900 dark:text-blue-200">Parroquia</div>
-                        <div className="text-xl font-bold text-blue-950 dark:text-white">{formatActiveParishLabel(parishName)}</div>
+                        <div className="text-xl font-bold text-brand-ink">{formatActiveParishLabel(parishName)}</div>
                       </div>
                     </div>
                   </div>
@@ -542,10 +542,10 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                   {/* Date Selection */}
                   <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
                     <label className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800">
+                      <div className="w-12 h-12 bg-gradient-to-br from-brand to-brand-strong rounded-xl flex items-center justify-center border-2 border-brand-border">
                         <Calendar className="w-6 h-6 text-white" strokeWidth={2.5} />
                       </div>
-                      <span className="text-xl font-bold text-blue-950 dark:text-white">Fecha de la Misa</span>
+                      <span className="text-xl font-bold text-brand-ink">Fecha de la Misa</span>
                     </label>
                     <input
                       type="date"
@@ -554,17 +554,17 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                         setSelectedDate(e.target.value);
                         setDateChangeSource('calendar');
                       }}
-                      className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white font-bold shadow-lg transition-colors"
+                      className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/60 dark:bg-white/10 text-brand-ink font-bold shadow-lg transition-colors"
                     />
                   </div>
 
                   {/* Liturgical Date Selection */}
                   <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
                     <label className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800">
+                      <div className="w-12 h-12 bg-gradient-to-br from-brand to-brand-strong rounded-xl flex items-center justify-center border-2 border-brand-border">
                         <span className="text-xl">📖</span>
                       </div>
-                      <span className="text-xl font-bold text-blue-950 dark:text-white">Calendario Litúrgico</span>
+                      <span className="text-xl font-bold text-brand-ink">Calendario Litúrgico</span>
                     </label>
                     <select
                       value={liturgicalDate}
@@ -572,7 +572,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                         setLiturgicalDate(e.target.value);
                         setDateChangeSource('liturgical');
                       }}
-                      className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white font-bold shadow-lg transition-colors"
+                      className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/60 dark:bg-white/10 text-brand-ink font-bold shadow-lg transition-colors"
                     >
                       <option value="">Seleccionar...</option>
                       {liturgicalOptions(new Date(selectedDate).getFullYear()).map((date) => (
@@ -599,10 +599,10 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                   {/* Tipo de horario litúrgico: I Vísperas / del día / II Vísperas */}
                   <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
                     <label className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800">
+                      <div className="w-12 h-12 bg-gradient-to-br from-brand to-brand-strong rounded-xl flex items-center justify-center border-2 border-brand-border">
                         <span className="text-xl">🕯️</span>
                       </div>
-                      <span className="text-xl font-bold text-blue-950 dark:text-white">Tipo de Misa</span>
+                      <span className="text-xl font-bold text-brand-ink">Tipo de Misa</span>
                     </label>
                     <div className="grid grid-cols-3 gap-2">
                       {(['visperas_i', 'dia', 'visperas_ii'] as MassType[]).map((t) => (
@@ -612,8 +612,8 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                           onClick={() => { setMassType(t); setMassTime(''); }}
                           className={`p-3 rounded-xl border-2 text-left transition-all active:scale-95 ${
                             massType === t
-                              ? 'bg-gradient-to-br from-blue-700 to-blue-900 text-white border-blue-800 shadow-lg'
-                              : 'bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white border-blue-200 dark:border-white/20'
+                              ? 'bg-gradient-to-br from-blue-700 to-blue-900 text-white border-brand-border shadow-lg'
+                              : 'bg-white/60 dark:bg-white/10 text-brand-ink border-blue-200 dark:border-white/20'
                           }`}
                         >
                           <span className="block font-bold text-sm leading-tight">{MASS_TYPE_LABEL[t]}</span>
@@ -638,15 +638,15 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                   {/* Mass Time Selection */}
                   <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
                     <label className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800">
+                      <div className="w-12 h-12 bg-gradient-to-br from-brand to-brand-strong rounded-xl flex items-center justify-center border-2 border-brand-border">
                         <Clock className="w-6 h-6 text-white" strokeWidth={2.5} />
                       </div>
-                      <span className="text-xl font-bold text-blue-950 dark:text-white">Horario de la Misa</span>
+                      <span className="text-xl font-bold text-brand-ink">Horario de la Misa</span>
                     </label>
                     <select
                       value={massTime}
                       onChange={(e) => setMassTime(e.target.value)}
-                      className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white font-bold shadow-lg transition-colors"
+                      className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/60 dark:bg-white/10 text-brand-ink font-bold shadow-lg transition-colors"
                     >
                       <option value="">Seleccionar...</option>
                       {MASS_TIME_BY_TYPE[massType].map((time) => (
@@ -705,8 +705,8 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                 <div className="flex gap-3">
                   <div className="text-2xl">ℹ️</div>
                   <div>
-                    <h4 className="text-base font-bold text-blue-950 dark:text-white mb-1">Vista previa</h4>
-                    <p className="text-sm text-blue-900 dark:text-blue-100">
+                    <h4 className="text-base font-bold text-brand-ink mb-1">Vista previa</h4>
+                    <p className="text-sm text-brand-ink-soft">
                       {isMulti
                         ? `Se publicará el mismo cantoral en ${selectedParishes.size} parroquia${selectedParishes.size === 1 ? '' : 's'}, con la fecha y horario de cada misa.`
                         : 'Este cantoral estará disponible para que los fieles de tu parroquia puedan seguir la liturgia con los cantos seleccionados.'}
@@ -718,11 +718,11 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
               {/* Adorno del folleto — guirnalda para los títulos del PDF */}
               <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800 flex-shrink-0">
+                  <div className="w-12 h-12 bg-gradient-to-br from-brand to-brand-strong rounded-xl flex items-center justify-center border-2 border-brand-border flex-shrink-0">
                     <span className="text-xl">🎨</span>
                   </div>
                   <div>
-                    <div className="text-xl font-bold text-blue-950 dark:text-white">Adorno del folleto</div>
+                    <div className="text-xl font-bold text-brand-ink">Adorno del folleto</div>
                     <div className="text-sm text-blue-900 dark:text-blue-200">Elige la guirnalda que decorará los títulos del PDF</div>
                   </div>
                 </div>
@@ -740,7 +740,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1 px-1">
-                        <span className="text-sm font-bold text-blue-950 dark:text-white">{g.name}</span>
+                        <span className="text-sm font-bold text-brand-ink">{g.name}</span>
                         {garland === g.id && <span className="text-xs font-bold text-blue-700 dark:text-blue-300">✓ Elegida</span>}
                       </div>
                       <img src={g.src} alt={g.name} loading="lazy" className="w-full h-auto rounded-md bg-white" />
@@ -752,16 +752,16 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
               {/* Letra del folleto — fuente y tamaño editables */}
               <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800 flex-shrink-0">
+                  <div className="w-12 h-12 bg-gradient-to-br from-brand to-brand-strong rounded-xl flex items-center justify-center border-2 border-brand-border flex-shrink-0">
                     <span className="text-xl">🔤</span>
                   </div>
                   <div>
-                    <div className="text-xl font-bold text-blue-950 dark:text-white">Letra del folleto</div>
+                    <div className="text-xl font-bold text-brand-ink">Letra del folleto</div>
                     <div className="text-sm text-blue-900 dark:text-blue-200">Elige la fuente y el tamaño de la letra del PDF</div>
                   </div>
                 </div>
 
-                <div className="text-sm font-bold text-blue-950 dark:text-white mb-1.5">Fuente</div>
+                <div className="text-sm font-bold text-brand-ink mb-1.5">Fuente</div>
                 <div className="grid grid-cols-3 gap-2 mb-4">
                   {PDF_FONTS.map((f) => (
                     <button
@@ -771,8 +771,8 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                       aria-pressed={pdfFont === f.id}
                       className={`px-2 py-2 rounded-lg text-xs font-bold border-2 transition-all active:scale-95 leading-tight ${
                         pdfFont === f.id
-                          ? 'bg-gradient-to-br from-blue-700 to-blue-900 text-white border-blue-800'
-                          : 'bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white border-blue-200 dark:border-white/20'
+                          ? 'bg-gradient-to-br from-blue-700 to-blue-900 text-white border-brand-border'
+                          : 'bg-white/60 dark:bg-white/10 text-brand-ink border-blue-200 dark:border-white/20'
                       }`}
                     >
                       {f.name}
@@ -780,7 +780,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                   ))}
                 </div>
 
-                <div className="text-sm font-bold text-blue-950 dark:text-white mb-1.5">Tamaño de letra</div>
+                <div className="text-sm font-bold text-brand-ink mb-1.5">Tamaño de letra</div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {PDF_SIZES.map((s) => (
                     <button
@@ -790,8 +790,8 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                       aria-pressed={pdfSize === s.id}
                       className={`px-2 py-2 rounded-lg text-xs font-bold border-2 transition-all active:scale-95 ${
                         pdfSize === s.id
-                          ? 'bg-gradient-to-br from-blue-700 to-blue-900 text-white border-blue-800'
-                          : 'bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white border-blue-200 dark:border-white/20'
+                          ? 'bg-gradient-to-br from-blue-700 to-blue-900 text-white border-brand-border'
+                          : 'bg-white/60 dark:bg-white/10 text-brand-ink border-blue-200 dark:border-white/20'
                       }`}
                     >
                       {s.name}
@@ -823,12 +823,12 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
 
             {/* Footer — fixed bottom of the flex column. Stays visible even
                 when the mobile virtual keyboard shrinks the viewport. */}
-            <div className="flex-shrink-0 bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-950 dark:to-orange-950 border-t-4 border-blue-800 p-3 sm:p-5" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
+            <div className="flex-shrink-0 bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-950 dark:to-orange-950 border-t-4 border-brand-border p-3 sm:p-5" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
               {/* Vista previa del folleto (PDF real con la guirnalda) antes de publicar */}
               <button
                 onClick={handlePreview}
                 disabled={cantoral.length === 0 || generatingPreview || isPublishing}
-                className="w-full mb-3 bg-white/70 dark:bg-white/15 text-blue-950 dark:text-white py-3 px-4 rounded-xl font-bold text-base border-2 border-blue-300 dark:border-white/25 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full mb-3 bg-white/70 dark:bg-white/15 text-brand-ink py-3 px-4 rounded-xl font-bold text-base border-2 border-blue-300 dark:border-white/25 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {generatingPreview ? (
                   <>
@@ -849,7 +849,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                 <button
                   onClick={onClose}
                   disabled={isPublishing}
-                  className="flex-1 bg-white/50 dark:bg-white/20 text-blue-950 dark:text-white py-4 px-4 rounded-xl font-bold text-lg hover:bg-white/70 dark:hover:bg-white/30 transition-colors border-2 border-white/60 dark:border-white/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-white/50 dark:bg-white/20 text-brand-ink py-4 px-4 rounded-xl font-bold text-lg hover:bg-white/70 dark:hover:bg-white/30 transition-colors border-2 border-white/60 dark:border-white/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancelar
                 </button>
@@ -858,7 +858,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                   disabled={!canPublish}
                   className={`flex-1 py-4 px-4 rounded-xl font-bold text-lg transition-all border-2 ${
                     canPublish
-                      ? 'bg-gradient-to-r from-blue-900 to-blue-950 text-white hover:shadow-lg active:scale-95 border-blue-800'
+                      ? 'bg-gradient-to-r from-brand to-brand-strong text-white hover:shadow-lg active:scale-95 border-brand-border'
                       : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed border-gray-400'
                   }`}
                 >
@@ -928,7 +928,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
       {/* Visor de vista previa del folleto (PDF real con la guirnalda), en canvas */}
       {previewBlob && (
         <div className="fixed inset-0 z-[60] flex flex-col bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="flex-shrink-0 bg-gradient-to-r from-blue-900 to-blue-950 text-white p-4 flex items-center justify-between gap-3">
+          <div className="flex-shrink-0 bg-gradient-to-r from-brand to-brand-strong text-white p-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
               <Eye className="w-6 h-6 flex-shrink-0" />
               <h3 className="text-base sm:text-lg font-bold truncate">Vista previa del folleto</h3>
@@ -954,12 +954,12 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
           </div>
           <PdfBlobViewer blob={previewBlob} />
           <div
-            className="flex-shrink-0 bg-white dark:bg-slate-900 border-t-4 border-blue-800 p-3 flex gap-3"
+            className="flex-shrink-0 bg-white dark:bg-slate-900 border-t-4 border-brand-border p-3 flex gap-3"
             style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
           >
             <button
               onClick={closePreview}
-              className="flex-1 bg-gray-100 dark:bg-slate-700 text-blue-950 dark:text-white py-3 px-4 rounded-xl font-bold border-2 border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+              className="flex-1 bg-gray-100 dark:bg-slate-700 text-brand-ink py-3 px-4 rounded-xl font-bold border-2 border-gray-300 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
             >
               Volver a editar
             </button>
@@ -968,7 +968,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
               disabled={!canPublish}
               className={`flex-1 py-3 px-4 rounded-xl font-bold border-2 flex items-center justify-center gap-2 transition-all ${
                 canPublish
-                  ? 'bg-gradient-to-r from-blue-900 to-blue-950 text-white border-blue-800 hover:shadow-lg active:scale-95'
+                  ? 'bg-gradient-to-r from-brand to-brand-strong text-white border-brand-border hover:shadow-lg active:scale-95'
                   : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-400 cursor-not-allowed'
               }`}
             >

@@ -43,7 +43,7 @@ export function RoleGuard({
         <p className="text-lg text-red-700 dark:text-red-300 mb-8 whitespace-pre-line">{details}</p>
         <button
           onClick={() => navigate(backView)}
-          className="bg-gradient-to-br from-blue-600 to-blue-700 text-white py-4 px-8 rounded-2xl text-xl font-bold hover:shadow-xl active:scale-95 transition-all border-2 border-blue-800"
+          className="bg-gradient-to-br from-blue-600 to-blue-700 text-white py-4 px-8 rounded-2xl text-xl font-bold hover:shadow-xl active:scale-95 transition-all border-2 border-brand-border"
         >
           {buttonLabel}
         </button>

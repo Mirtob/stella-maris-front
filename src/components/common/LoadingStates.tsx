@@ -3,7 +3,7 @@ export function LoadingSpinner() {
     <div className="flex items-center justify-center py-12">
       <div className="relative">
         {/* Outer Ring */}
-        <div className="w-20 h-20 border-4 border-blue-200 dark:border-blue-800 rounded-full"></div>
+        <div className="w-20 h-20 border-4 border-blue-200 dark:border-brand-border rounded-full"></div>
         
         {/* Spinning Ring */}
         <div className="absolute inset-0 w-20 h-20 border-4 border-transparent border-t-blue-900 dark:border-t-blue-400 rounded-full animate-spin"></div>

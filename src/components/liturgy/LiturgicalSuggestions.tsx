@@ -257,14 +257,14 @@ export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = 
             className="flex-shrink-0 p-2 bg-white/60 dark:bg-white/10 rounded-full hover:bg-white/80 dark:hover:bg-white/20 transition-all active:scale-95"
             aria-label="Anterior"
           >
-            <ChevronLeft className="w-5 h-5 text-blue-900 dark:text-blue-100" />
+            <ChevronLeft className="w-5 h-5 text-brand-ink-soft" />
           </button>
 
           {/* Song Card */}
           <div className="flex-1 bg-gradient-to-br from-white/70 to-white/50 dark:from-white/15 dark:to-white/10 rounded-xl p-2 border border-white/80 dark:border-white/25 transition-all">
             <div className="flex items-start justify-between mb-1">
               <div className="flex-1">
-                <h4 className="text-sm font-bold text-blue-950 dark:text-white mb-0.5 line-clamp-1">
+                <h4 className="text-sm font-bold text-brand-ink mb-0.5 line-clamp-1">
                   {currentSong.title}
                 </h4>
                 {currentSong.artist && (
@@ -273,7 +273,7 @@ export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = 
                   </p>
                 )}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="inline-block bg-blue-100 dark:bg-blue-900/40 text-blue-900 dark:text-blue-100 px-2 py-1 rounded-lg text-xs font-bold">
+                  <span className="inline-block bg-blue-100 dark:bg-blue-900/40 text-brand-ink-soft px-2 py-1 rounded-lg text-xs font-bold">
                     {currentSong.category}
                   </span>
                   {currentSong.version && (
@@ -328,7 +328,7 @@ export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = 
             className="flex-shrink-0 p-2 bg-white/60 dark:bg-white/10 rounded-full hover:bg-white/80 dark:hover:bg-white/20 transition-all active:scale-95"
             aria-label="Siguiente"
           >
-            <ChevronRight className="w-5 h-5 text-blue-900 dark:text-blue-100" />
+            <ChevronRight className="w-5 h-5 text-brand-ink-soft" />
           </button>
         </div>
 

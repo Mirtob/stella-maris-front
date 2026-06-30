@@ -50,8 +50,8 @@ export function ForgotPassword({ onClose }: ForgotPasswordProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border-4 border-blue-800" onClick={(e) => e.stopPropagation()}>
-        <div className="bg-gradient-to-br from-blue-900 to-blue-950 text-white p-5 flex items-center justify-between border-b-4 border-blue-800">
+      <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border-4 border-brand-border" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-gradient-to-br from-brand to-brand-strong text-white p-5 flex items-center justify-between border-b-4 border-brand-border">
           <div className="flex items-center gap-3 min-w-0">
             <KeyRound className="w-7 h-7 flex-shrink-0" strokeWidth={2.5} />
             <h2 className="text-xl font-bold min-w-0">Recuperar clave</h2>

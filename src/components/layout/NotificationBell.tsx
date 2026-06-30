@@ -61,7 +61,7 @@ export function NotificationBell({ cantorals, onListen }: NotificationBellProps)
         onClick={toggle}
         data-tour="pf-notifications"
         aria-label={`Notificaciones${unread > 0 ? ` (${unread} sin leer)` : ''}`}
-        className="fixed top-3 right-16 sm:top-4 sm:right-20 z-50 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-600 shadow-lg flex items-center justify-center text-blue-950 dark:text-white active:scale-95 hover:scale-110 transition-all"
+        className="fixed top-3 right-16 sm:top-4 sm:right-20 z-50 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-600 shadow-lg flex items-center justify-center text-brand-ink active:scale-95 hover:scale-110 transition-all"
       >
         <Bell className="w-5 h-5" strokeWidth={2.5} />
         {unread > 0 && (
@@ -76,11 +76,11 @@ export function NotificationBell({ cantorals, onListen }: NotificationBellProps)
           <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)}>
             <div className="absolute inset-0 bg-black/30" />
             <div
-              className="absolute top-16 right-3 left-3 sm:left-auto sm:w-96 max-h-[70vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border-2 border-blue-200 dark:border-blue-800"
+              className="absolute top-16 right-3 left-3 sm:left-auto sm:w-96 max-h-[70vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border-2 border-blue-200 dark:border-brand-border"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between p-4 border-b border-blue-100 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-900">
-                <h3 className="text-base font-bold text-blue-950 dark:text-white flex items-center gap-2">
+                <h3 className="text-base font-bold text-brand-ink flex items-center gap-2">
                   <Bell className="w-4 h-4" /> Notificaciones
                 </h3>
                 <button onClick={() => setOpen(false)} aria-label="Cerrar" className="p-1 text-gray-500 hover:text-gray-800 dark:hover:text-white">
@@ -99,7 +99,7 @@ export function NotificationBell({ cantorals, onListen }: NotificationBellProps)
                       <div className="text-xs text-blue-700 dark:text-blue-300 capitalize mb-0.5">
                         {formatYmdForDisplay(c.date, { weekday: 'short', day: 'numeric', month: 'short' })} · {c.massTime}
                       </div>
-                      <div className="text-sm font-bold text-blue-950 dark:text-white mb-2">{c.liturgicalDate}</div>
+                      <div className="text-sm font-bold text-brand-ink mb-2">{c.liturgicalDate}</div>
                       <button
                         onClick={() => { setOpen(false); onListen(c); }}
                         className="w-full bg-gradient-to-br from-rose-600 to-red-700 text-white py-2 px-3 rounded-lg flex items-center justify-center gap-2 text-sm font-bold active:scale-95 transition-all"

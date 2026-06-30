@@ -88,7 +88,7 @@ export function AddSolemnityModal({ selectedDate, onClose, onAdd }: AddSolemnity
               <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center border-2 border-purple-800">
                 <Sparkles className="w-6 h-6 text-white" strokeWidth={2.5} />
               </div>
-              <span className="text-xl font-bold text-blue-950 dark:text-white">Tipo de Celebración</span>
+              <span className="text-xl font-bold text-brand-ink">Tipo de Celebración</span>
             </label>
             
             <div className="grid grid-cols-2 gap-3">
@@ -98,7 +98,7 @@ export function AddSolemnityModal({ selectedDate, onClose, onAdd }: AddSolemnity
                 className={`py-4 px-5 rounded-xl text-base font-bold transition-all ${
                   solemnityType === 'solemnity'
                     ? 'bg-gradient-to-br from-purple-600 to-purple-700 text-white shadow-lg border-2 border-purple-800'
-                    : 'bg-white/60 dark:bg-white/20 text-blue-900 dark:text-blue-100 hover:bg-white/80 dark:hover:bg-white/30 border-2 border-white/40'
+                    : 'bg-white/60 dark:bg-white/20 text-brand-ink-soft hover:bg-white/80 dark:hover:bg-white/30 border-2 border-white/40'
                 }`}
               >
                 ✨ Solemnidad
@@ -109,7 +109,7 @@ export function AddSolemnityModal({ selectedDate, onClose, onAdd }: AddSolemnity
                 className={`py-4 px-5 rounded-xl text-base font-bold transition-all ${
                   solemnityType === 'feast'
                     ? 'bg-gradient-to-br from-purple-600 to-purple-700 text-white shadow-lg border-2 border-purple-800'
-                    : 'bg-white/60 dark:bg-white/20 text-blue-900 dark:text-blue-100 hover:bg-white/80 dark:hover:bg-white/30 border-2 border-white/40'
+                    : 'bg-white/60 dark:bg-white/20 text-brand-ink-soft hover:bg-white/80 dark:hover:bg-white/30 border-2 border-white/40'
                 }`}
               >
                 🎉 Fiesta
@@ -123,14 +123,14 @@ export function AddSolemnityModal({ selectedDate, onClose, onAdd }: AddSolemnity
               <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center border-2 border-purple-800">
                 <Calendar className="w-6 h-6 text-white" strokeWidth={2.5} />
               </div>
-              <span className="text-xl font-bold text-blue-950 dark:text-white">Nombre de la Celebración</span>
+              <span className="text-xl font-bold text-brand-ink">Nombre de la Celebración</span>
             </label>
             <input
               type="text"
               value={solemnityName}
               onChange={(e) => setSolemnityName(e.target.value)}
               placeholder="Ej: Fiesta del Santo Patrono, Aniversario Parroquial..."
-              className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 dark:focus:border-purple-400 bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white font-bold shadow-lg transition-colors placeholder:text-gray-500 dark:placeholder:text-gray-400"
+              className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 dark:focus:border-purple-400 bg-white/60 dark:bg-white/10 text-brand-ink font-bold shadow-lg transition-colors placeholder:text-gray-500 dark:placeholder:text-gray-400"
             />
             <p className="text-sm text-blue-900 dark:text-blue-200 mt-2 transition-colors">
               Ejemplo: "Nuestra Señora de Guadalupe", "San José Obrero", "Aniversario de la Parroquia"
@@ -142,8 +142,8 @@ export function AddSolemnityModal({ selectedDate, onClose, onAdd }: AddSolemnity
             <div className="flex gap-3">
               <div className="text-2xl">💡</div>
               <div>
-                <h4 className="text-base font-bold text-blue-950 dark:text-white mb-2">Ejemplos comunes</h4>
-                <ul className="text-sm text-blue-900 dark:text-blue-100 space-y-1">
+                <h4 className="text-base font-bold text-brand-ink mb-2">Ejemplos comunes</h4>
+                <ul className="text-sm text-brand-ink-soft space-y-1">
                   <li>• Solemnidades de Santos Patronos de la parroquia</li>
                   <li>• Fiestas de la Virgen María (Guadalupe, Fátima, etc.)</li>
                   <li>• Aniversarios parroquiales</li>
@@ -158,7 +158,7 @@ export function AddSolemnityModal({ selectedDate, onClose, onAdd }: AddSolemnity
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="flex-1 bg-white/50 dark:bg-white/20 text-blue-950 dark:text-white py-3 px-4 rounded-xl font-bold text-lg hover:bg-white/70 dark:hover:bg-white/30 transition-colors border-2 border-white/60 dark:border-white/30"
+              className="flex-1 bg-white/50 dark:bg-white/20 text-brand-ink py-3 px-4 rounded-xl font-bold text-lg hover:bg-white/70 dark:hover:bg-white/30 transition-colors border-2 border-white/60 dark:border-white/30"
             >
               Cancelar
             </button>

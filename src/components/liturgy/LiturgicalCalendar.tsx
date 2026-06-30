@@ -550,7 +550,7 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, publishedCantor
                         ) : (
                           <button
                             onClick={() => handleAddCantoral(event)}
-                            className="w-full p-3 bg-gradient-to-br from-blue-900 to-blue-950 hover:from-blue-800 hover:to-blue-900 text-white rounded-xl flex items-center justify-center gap-2 font-bold text-lg transition-all active:scale-98 shadow-lg border-2 border-blue-800"
+                            className="w-full p-3 bg-gradient-to-br from-brand to-brand-strong hover:from-blue-800 hover:to-blue-900 text-white rounded-xl flex items-center justify-center gap-2 font-bold text-lg transition-all active:scale-98 shadow-lg border-2 border-brand-border"
                           >
                             <BookOpen className="w-6 h-6" strokeWidth={2.5} />
                             Agregar Cantoral

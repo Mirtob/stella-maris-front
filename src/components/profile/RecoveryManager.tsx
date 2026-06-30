@@ -78,7 +78,7 @@ export function RecoveryManager({ onBack }: Props) {
         {/* Header */}
         <button
           onClick={onBack}
-          className="mb-6 flex items-center gap-2 text-xl text-blue-950 dark:text-white active:opacity-70"
+          className="mb-6 flex items-center gap-2 text-xl text-brand-ink active:opacity-70"
           aria-label="Volver al panel de administración"
         >
           <ArrowLeft className="w-7 h-7" strokeWidth={2.5} />
@@ -91,10 +91,10 @@ export function RecoveryManager({ onBack }: Props) {
               <ShieldCheck className="w-9 h-9 text-white" strokeWidth={2.5} />
             </div>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-blue-950 dark:text-white mb-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-brand-ink mb-1">
             Recuperación de cuentas
           </h1>
-          <p className="text-base sm:text-lg text-blue-900 dark:text-blue-100">
+          <p className="text-base sm:text-lg text-brand-ink-soft">
             Buscar perfiles por email principal o email de respaldo
           </p>
         </div>

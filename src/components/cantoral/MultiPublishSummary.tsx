@@ -18,11 +18,11 @@ export function MultiPublishSummary({ cantorals, onViewQR, onClose }: MultiPubli
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose} />
       <div
-        className="relative bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900 dark:to-orange-900 rounded-3xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col border-4 border-blue-800 overflow-hidden"
+        className="relative bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900 dark:to-orange-900 rounded-3xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col border-4 border-brand-border overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex-shrink-0 bg-gradient-to-r from-blue-900 to-blue-950 text-white p-6 border-b-4 border-blue-800">
+        <div className="flex-shrink-0 bg-gradient-to-r from-brand to-brand-strong text-white p-6 border-b-4 border-brand-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center border-2 border-green-400">
@@ -51,7 +51,7 @@ export function MultiPublishSummary({ cantorals, onViewQR, onClose }: MultiPubli
               <div className="flex items-start gap-3">
                 <Church className="w-5 h-5 text-amber-600 flex-shrink-0 mt-1" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-base font-bold text-blue-950 dark:text-white break-words">{c.parishName}</p>
+                  <p className="text-base font-bold text-brand-ink break-words">{c.parishName}</p>
                   <p className="text-sm text-blue-900 dark:text-blue-200">
                     {c.liturgicalDate} · {c.massTime}
                   </p>
@@ -59,7 +59,7 @@ export function MultiPublishSummary({ cantorals, onViewQR, onClose }: MultiPubli
               </div>
               <button
                 onClick={() => onViewQR(c)}
-                className="mt-3 w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-900 to-blue-950 text-white py-3 rounded-xl font-bold active:scale-95 transition-all border-2 border-blue-800"
+                className="mt-3 w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-brand to-brand-strong text-white py-3 rounded-xl font-bold active:scale-95 transition-all border-2 border-brand-border"
               >
                 <QrCode className="w-5 h-5" />
                 Ver QR / PDF
@@ -69,10 +69,10 @@ export function MultiPublishSummary({ cantorals, onViewQR, onClose }: MultiPubli
         </div>
 
         {/* Footer */}
-        <div className="flex-shrink-0 bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-950 dark:to-orange-950 border-t-4 border-blue-800 p-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
+        <div className="flex-shrink-0 bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-950 dark:to-orange-950 border-t-4 border-brand-border p-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
           <button
             onClick={onClose}
-            className="w-full bg-white/60 dark:bg-white/20 text-blue-950 dark:text-white py-3 rounded-xl font-bold border-2 border-white/60 dark:border-white/30 active:scale-95 transition-all"
+            className="w-full bg-white/60 dark:bg-white/20 text-brand-ink py-3 rounded-xl font-bold border-2 border-white/60 dark:border-white/30 active:scale-95 transition-all"
           >
             Listo
           </button>

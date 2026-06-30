@@ -164,7 +164,7 @@ export function Tour({ steps, onClose }: TourProps) {
       <div style={tooltipStyle} className="mx-auto max-w-md">
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border-2 border-amber-400 p-5 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 24px)' }}>
           <div className="flex items-start justify-between gap-3 mb-2">
-            <h3 className="text-lg font-bold text-blue-950 dark:text-white leading-tight">{step.title}</h3>
+            <h3 className="text-lg font-bold text-brand-ink leading-tight">{step.title}</h3>
             <button onClick={onClose} aria-label="Saltar tutorial" className="p-1 -m-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex-shrink-0">
               <X className="w-5 h-5" strokeWidth={2.5} />
             </button>

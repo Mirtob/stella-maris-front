@@ -37,24 +37,24 @@ export function AddGloriaDialog({ suggestion, gloriaSongs, massName, onSelect, o
       <div className="absolute inset-0 bg-black/70 backdrop-blur-md animate-fadeIn" onClick={onSkip} />
 
       <div
-        className="relative bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-900 dark:to-blue-950 rounded-3xl shadow-2xl max-w-md w-full p-3 sm:p-5 border-4 border-blue-800 animate-fadeInUp transition-colors max-h-[90vh] overflow-y-auto"
+        className="relative bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-900 dark:to-blue-950 rounded-3xl shadow-2xl max-w-md w-full p-3 sm:p-5 border-4 border-brand-border animate-fadeInUp transition-colors max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="text-2xl sm:text-3xl">🕊️</div>
-            <h2 className="text-xl sm:text-2xl font-bold text-blue-950 dark:text-white">
+            <h2 className="text-xl sm:text-2xl font-bold text-brand-ink">
               ¿La Misa lleva Gloria?
             </h2>
           </div>
           <button onClick={onSkip} className="p-2 hover:bg-white/30 rounded-lg transition-colors" aria-label="Cerrar diálogo">
-            <X className="w-6 h-6 text-blue-900 dark:text-blue-100" />
+            <X className="w-6 h-6 text-brand-ink-soft" />
           </button>
         </div>
 
-        <p className="text-sm sm:text-base text-blue-900 dark:text-blue-100 mb-4">
-          Elegiste el Kyrie de <strong className="text-blue-950 dark:text-white">"{misa}"</strong>.
+        <p className="text-sm sm:text-base text-brand-ink-soft mb-4">
+          Elegiste el Kyrie de <strong className="text-brand-ink">"{misa}"</strong>.
           Si esta Misa lleva Gloria, elígelo abajo. Si no (p. ej. Adviento o Cuaresma), salta este paso.
         </p>
 
@@ -67,7 +67,7 @@ export function AddGloriaDialog({ suggestion, gloriaSongs, massName, onSelect, o
             <p className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide mb-1">
               Sugerido de esta Misa · tocar para agregar
             </p>
-            <p className="text-base sm:text-lg font-bold text-blue-950 dark:text-white">{suggestion.title}</p>
+            <p className="text-base sm:text-lg font-bold text-brand-ink">{suggestion.title}</p>
             {suggestion.author && (
               <p className="text-sm text-blue-800 dark:text-blue-300 mt-0.5">{suggestion.author}</p>
             )}
@@ -83,7 +83,7 @@ export function AddGloriaDialog({ suggestion, gloriaSongs, massName, onSelect, o
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar Gloria por autor o nombre de la Misa…"
             aria-label="Buscar Gloria por autor o nombre de la Misa"
-            className="w-full pl-10 pr-3 py-2.5 rounded-xl border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 bg-white/80 dark:bg-white/10 text-blue-950 dark:text-white"
+            className="w-full pl-10 pr-3 py-2.5 rounded-xl border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 bg-white/80 dark:bg-white/10 text-brand-ink"
           />
         </div>
 
@@ -102,7 +102,7 @@ export function AddGloriaDialog({ suggestion, gloriaSongs, massName, onSelect, o
                 onClick={() => onSelect(s)}
                 className="w-full text-left bg-white/70 dark:bg-white/10 rounded-xl p-3 border-2 border-blue-200 dark:border-white/15 hover:border-blue-500 active:scale-[0.99] transition-all"
               >
-                <p className="font-bold text-blue-950 dark:text-white">{s.title}</p>
+                <p className="font-bold text-brand-ink">{s.title}</p>
                 <p className="text-xs text-blue-700 dark:text-blue-300">
                   {[s.author, s.massName].filter(Boolean).join(' · ') || 'Sin autor'}
                 </p>
@@ -114,7 +114,7 @@ export function AddGloriaDialog({ suggestion, gloriaSongs, massName, onSelect, o
         {/* Acción: no lleva Gloria */}
         <button
           onClick={onSkip}
-          className="w-full bg-white/50 dark:bg-white/10 border-2 border-blue-300 dark:border-blue-700 text-blue-900 dark:text-blue-100 py-3 px-3 sm:px-4 rounded-xl text-base font-bold hover:bg-white/70 dark:hover:bg-white/20 active:scale-95 transition-all"
+          className="w-full bg-white/50 dark:bg-white/10 border-2 border-blue-300 dark:border-blue-700 text-brand-ink-soft py-3 px-3 sm:px-4 rounded-xl text-base font-bold hover:bg-white/70 dark:hover:bg-white/20 active:scale-95 transition-all"
         >
           No lleva Gloria
         </button>

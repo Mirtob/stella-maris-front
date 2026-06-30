@@ -107,9 +107,9 @@ export function CantoralPDFPreview({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl max-w-4xl w-full h-[90vh] flex flex-col border-4 border-blue-800 transition-colors">
+      <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl max-w-4xl w-full h-[90vh] flex flex-col border-4 border-brand-border transition-colors">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-900 to-blue-950 text-white p-6 rounded-t-3xl border-b-4 border-blue-800 flex-shrink-0">
+        <div className="bg-gradient-to-r from-brand to-brand-strong text-white p-6 rounded-t-3xl border-b-4 border-brand-border flex-shrink-0">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <Music className="w-10 h-10" strokeWidth={2.5} />
@@ -164,7 +164,7 @@ export function CantoralPDFPreview({
         <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 transition-colors">
           {/* Logo de la app */}
           <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-900 to-blue-950 rounded-full flex items-center justify-center border-4 border-blue-800 shadow-lg">
+            <div className="w-20 h-20 bg-gradient-to-br from-brand to-brand-strong rounded-full flex items-center justify-center border-4 border-brand-border shadow-lg">
               <div className="text-white text-4xl font-bold">✝</div>
             </div>
           </div>
@@ -234,7 +234,7 @@ export function CantoralPDFPreview({
           ))}
 
           {/* Info final */}
-          <div className="bg-blue-50 dark:bg-blue-950 rounded-xl p-4 text-center border-2 border-blue-200 dark:border-blue-800 transition-colors">
+          <div className="bg-blue-50 dark:bg-blue-950 rounded-xl p-4 text-center border-2 border-blue-200 dark:border-brand-border transition-colors">
             <p className="text-blue-900 dark:text-blue-200 font-semibold">
               📖 Folleto Digital para Coros Católicos
             </p>
@@ -245,7 +245,7 @@ export function CantoralPDFPreview({
         </div>
 
         {/* Footer - Botones de Acción */}
-        <div className="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 p-6 rounded-b-3xl border-t-4 border-blue-800 flex-shrink-0 space-y-3 transition-colors">
+        <div className="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 p-6 rounded-b-3xl border-t-4 border-brand-border flex-shrink-0 space-y-3 transition-colors">
           {/* Botones principales */}
           <div className="flex gap-3">
             <button

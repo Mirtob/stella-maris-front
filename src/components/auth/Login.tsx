@@ -81,7 +81,7 @@ export function Login({ onGoogleLogin }: LoginProps) {
           </div>
           {/* A2 — h1 explícito para que axe (page-has-heading-one) lo detecte.
              Lo dejamos visualmente como párrafo para no romper el diseño actual. */}
-          <h1 className="text-base sm:text-lg text-blue-900 dark:text-blue-100 font-medium mb-1">
+          <h1 className="text-base sm:text-lg text-brand-ink-soft font-medium mb-1">
             Tu guía para la liturgia musical
           </h1>
           <p className="text-sm text-blue-800 dark:text-blue-200">
@@ -90,7 +90,7 @@ export function Login({ onGoogleLogin }: LoginProps) {
         </header>
 
         {/* Login Card */}
-        <section aria-labelledby="login-heading" className="bg-gradient-to-br from-blue-900 to-blue-950 rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-blue-800 transition-colors">
+        <section aria-labelledby="login-heading" className="bg-gradient-to-br from-brand to-brand-strong rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-brand-border transition-colors">
           <h2 id="login-heading" className="text-base font-bold text-white mb-3 text-center">
             Iniciar sesión
           </h2>
@@ -204,17 +204,17 @@ export function Login({ onGoogleLogin }: LoginProps) {
 
         {/* Features — 3 columnas en móvil */}
         <section aria-label="Funcionalidades destacadas" className="mt-4 grid grid-cols-3 gap-2">
-          <div className="bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl p-2 border border-blue-800 text-center">
+          <div className="bg-gradient-to-br from-brand to-brand-strong rounded-xl p-2 border border-brand-border text-center">
             <div className="text-2xl mb-1">🎵</div>
             <h3 className="text-xs font-bold text-white mb-0.5">Cantos</h3>
             <p className="text-xs text-blue-200 leading-tight">Biblioteca litúrgica</p>
           </div>
-          <div className="bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl p-2 border border-blue-800 text-center">
+          <div className="bg-gradient-to-br from-brand to-brand-strong rounded-xl p-2 border border-brand-border text-center">
             <div className="text-2xl mb-1">📖</div>
             <h3 className="text-xs font-bold text-white mb-0.5">Partituras</h3>
             <p className="text-xs text-blue-200 leading-tight">Ver mientras escuchas</p>
           </div>
-          <div className="bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl p-2 border border-blue-800 text-center">
+          <div className="bg-gradient-to-br from-brand to-brand-strong rounded-xl p-2 border border-brand-border text-center">
             <div className="text-2xl mb-1">⛪</div>
             <h3 className="text-xs font-bold text-white mb-0.5">Parroquia</h3>
             <p className="text-xs text-blue-200 leading-tight">Cantorales publicados</p>

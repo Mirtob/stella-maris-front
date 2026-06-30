@@ -132,7 +132,7 @@ export function PlaylistPlayer({ cantoral, onBack }: PlaylistPlayerProps) {
           <button
             onClick={onBack}
             aria-label="Volver"
-            className="w-10 h-10 rounded-xl bg-white/50 dark:bg-white/10 border-2 border-white/60 dark:border-white/20 flex items-center justify-center text-blue-950 dark:text-white active:scale-95 transition-all"
+            className="w-10 h-10 rounded-xl bg-white/50 dark:bg-white/10 border-2 border-white/60 dark:border-white/20 flex items-center justify-center text-brand-ink active:scale-95 transition-all"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -140,7 +140,7 @@ export function PlaylistPlayer({ cantoral, onBack }: PlaylistPlayerProps) {
             <div className="flex items-center gap-2 text-sm text-blue-900 dark:text-blue-200">
               <Radio className="w-4 h-4" /> Modo radio
             </div>
-            <h1 className="text-lg font-bold text-blue-950 dark:text-white truncate">
+            <h1 className="text-lg font-bold text-brand-ink truncate">
               {cantoral.liturgicalDate} · {cantoral.massTime}
             </h1>
           </div>
@@ -149,7 +149,7 @@ export function PlaylistPlayer({ cantoral, onBack }: PlaylistPlayerProps) {
         {tracks.length === 0 ? (
           <div className="bg-white/40 dark:bg-white/10 rounded-2xl p-6 text-center border-2 border-white/40 dark:border-white/20">
             <MusicIcon className="w-10 h-10 mx-auto mb-2 text-blue-400" />
-            <p className="text-blue-950 dark:text-white font-bold mb-1">Sin cantos reproducibles</p>
+            <p className="text-brand-ink font-bold mb-1">Sin cantos reproducibles</p>
             <p className="text-sm text-blue-900 dark:text-blue-200">
               Este cantoral no tiene cantos con video de YouTube asociado.
             </p>
@@ -167,16 +167,16 @@ export function PlaylistPlayer({ cantoral, onBack }: PlaylistPlayerProps) {
               <div className="p-4 bg-white/40 dark:bg-white/10 backdrop-blur-sm">
                 <div className="mb-3">
                   <div className="text-xs text-blue-700 dark:text-blue-300">{normalizeCategory(current?.category)}</div>
-                  <div className="text-base font-bold text-blue-950 dark:text-white truncate">{current?.title}</div>
+                  <div className="text-base font-bold text-brand-ink truncate">{current?.title}</div>
                 </div>
                 <div className="flex items-center justify-center gap-3">
-                  <button onClick={goPrev} aria-label="Anterior" className="w-12 h-12 rounded-full bg-white/60 dark:bg-white/15 flex items-center justify-center text-blue-950 dark:text-white active:scale-95 transition-all">
+                  <button onClick={goPrev} aria-label="Anterior" className="w-12 h-12 rounded-full bg-white/60 dark:bg-white/15 flex items-center justify-center text-brand-ink active:scale-95 transition-all">
                     <SkipBack className="w-6 h-6" />
                   </button>
-                  <button onClick={togglePlay} aria-label={isPlaying ? 'Pausar' : 'Reproducir'} className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-900 to-blue-950 text-white flex items-center justify-center shadow-lg border-2 border-blue-800 active:scale-95 transition-all">
+                  <button onClick={togglePlay} aria-label={isPlaying ? 'Pausar' : 'Reproducir'} className="w-16 h-16 rounded-full bg-gradient-to-br from-brand to-brand-strong text-white flex items-center justify-center shadow-lg border-2 border-brand-border active:scale-95 transition-all">
                     {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8 ml-0.5" />}
                   </button>
-                  <button onClick={goNext} aria-label="Siguiente" className="w-12 h-12 rounded-full bg-white/60 dark:bg-white/15 flex items-center justify-center text-blue-950 dark:text-white active:scale-95 transition-all">
+                  <button onClick={goNext} aria-label="Siguiente" className="w-12 h-12 rounded-full bg-white/60 dark:bg-white/15 flex items-center justify-center text-brand-ink active:scale-95 transition-all">
                     <SkipForward className="w-6 h-6" />
                   </button>
                   <button
@@ -186,7 +186,7 @@ export function PlaylistPlayer({ cantoral, onBack }: PlaylistPlayerProps) {
                     className={`w-12 h-12 rounded-full flex items-center justify-center active:scale-95 transition-all border-2 ${
                       repeatAll
                         ? 'bg-green-600 text-white border-green-700'
-                        : 'bg-white/60 dark:bg-white/15 text-blue-950 dark:text-white border-transparent'
+                        : 'bg-white/60 dark:bg-white/15 text-brand-ink border-transparent'
                     }`}
                   >
                     <Repeat className="w-5 h-5" />
@@ -207,7 +207,7 @@ export function PlaylistPlayer({ cantoral, onBack }: PlaylistPlayerProps) {
                     className={`w-full rounded-xl p-3 flex items-center gap-3 text-left border-2 active:scale-98 transition-all ${
                       active
                         ? 'bg-blue-900 text-white border-blue-700 shadow-lg'
-                        : 'bg-white/40 dark:bg-white/10 border-white/50 dark:border-white/20 text-blue-950 dark:text-white hover:bg-white/60 dark:hover:bg-white/20'
+                        : 'bg-white/40 dark:bg-white/10 border-white/50 dark:border-white/20 text-brand-ink hover:bg-white/60 dark:hover:bg-white/20'
                     }`}
                   >
                     <div

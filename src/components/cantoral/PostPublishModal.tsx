@@ -37,7 +37,7 @@ export function PostPublishModal({ onContinueInApp, onDownloadPDF }: PostPublish
             {/* Continuar en la App */}
             <button
               onClick={onContinueInApp}
-              className="w-full bg-gradient-to-r from-blue-900 to-blue-950 text-white py-5 px-3 sm:px-4 rounded-2xl font-bold text-lg hover:shadow-xl active:scale-95 transition-all border-2 border-blue-800 group"
+              className="w-full bg-gradient-to-r from-brand to-brand-strong text-white py-5 px-3 sm:px-4 rounded-2xl font-bold text-lg hover:shadow-xl active:scale-95 transition-all border-2 border-brand-border group"
             >
               <div className="flex items-center justify-center gap-3">
                 <Smartphone className="w-6 h-6 group-hover:scale-110 transition-transform" strokeWidth={2.5} />

@@ -131,7 +131,7 @@ export function CantoralQRDialog({
       />
 
       <div
-        className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 border-4 border-blue-800 animate-fadeInUp transition-colors max-h-[90vh] overflow-y-auto"
+        className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 border-4 border-brand-border animate-fadeInUp transition-colors max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button — 44x44 touch target per Apple HIG, with negative margin
@@ -147,7 +147,7 @@ export function CantoralQRDialog({
         {/* Header */}
         <div className="text-center mb-5">
           <div className="text-4xl mb-2">📲</div>
-          <h2 className="text-xl sm:text-2xl font-bold text-blue-950 dark:text-white">
+          <h2 className="text-xl sm:text-2xl font-bold text-brand-ink">
             {shareMode ? 'Compartir cantoral' : '¡Cantoral publicado!'}
           </h2>
           <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
@@ -163,7 +163,7 @@ export function CantoralQRDialog({
         </div>
 
         {/* QR Code */}
-        <div className="bg-white rounded-2xl p-4 mb-5 border-4 border-blue-100 dark:border-blue-800 mx-auto" style={{ maxWidth: '320px' }}>
+        <div className="bg-white rounded-2xl p-4 mb-5 border-4 border-blue-100 dark:border-brand-border mx-auto" style={{ maxWidth: '320px' }}>
           {qrDataUrl ? (
             <img
               src={qrDataUrl}

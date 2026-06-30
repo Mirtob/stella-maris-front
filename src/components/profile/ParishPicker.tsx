@@ -89,8 +89,8 @@ export function ParishPicker({ selected, onChange, alreadyAdded = [] }: ParishPi
         chapelsFor(fullName(p.name)).some(ch => matchesSearch(ch.name, q))
       );
 
-  const selectClass = 'w-full px-3 py-3 sm:px-4 sm:py-4 text-sm sm:text-base rounded-xl border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/70 dark:bg-white/10 text-blue-950 dark:text-white font-bold shadow-lg transition-colors';
-  const optionClass = 'bg-white dark:bg-slate-800 text-blue-950 dark:text-white';
+  const selectClass = 'w-full px-3 py-3 sm:px-4 sm:py-4 text-sm sm:text-base rounded-xl border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/70 dark:bg-white/10 text-brand-ink font-bold shadow-lg transition-colors';
+  const optionClass = 'bg-white dark:bg-slate-800 text-brand-ink';
 
   return (
     <div className="space-y-4">
@@ -137,7 +137,7 @@ export function ParishPicker({ selected, onChange, alreadyAdded = [] }: ParishPi
 
       {selectedDiocese && availableParishes.length > 0 && (
         <div className="mt-5 space-y-3">
-          <p className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100">
+          <p className="text-sm sm:text-base font-semibold text-brand-ink-soft">
             Parroquias disponibles:
           </p>
 
@@ -150,7 +150,7 @@ export function ParishPicker({ selected, onChange, alreadyAdded = [] }: ParishPi
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar parroquia o capilla…"
               aria-label="Buscar parroquia o capilla"
-              className="w-full pl-10 pr-3 py-2.5 text-sm sm:text-base rounded-xl border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/70 dark:bg-white/10 text-blue-950 dark:text-white font-medium"
+              className="w-full pl-10 pr-3 py-2.5 text-sm sm:text-base rounded-xl border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 dark:focus:border-blue-400 bg-white/70 dark:bg-white/10 text-brand-ink font-medium"
             />
           </div>
 
@@ -170,7 +170,7 @@ export function ParishPicker({ selected, onChange, alreadyAdded = [] }: ParishPi
                 <div key={parish.id} className={hasChapels ? 'rounded-lg bg-white/40 dark:bg-white/5 p-2' : ''}>
                   {/* Nombre de la parroquia: cabecera del grupo cuando tiene capillas */}
                   {hasChapels && (
-                    <div className="px-2 pt-1 pb-1 text-sm font-bold text-blue-950 dark:text-white">
+                    <div className="px-2 pt-1 pb-1 text-sm font-bold text-brand-ink">
                       {parish.name}
                     </div>
                   )}
@@ -188,7 +188,7 @@ export function ParishPicker({ selected, onChange, alreadyAdded = [] }: ParishPi
                       onChange={() => toggle(parish.name)}
                       className="w-5 h-5 rounded border-2 border-blue-600 dark:border-blue-400 bg-white dark:bg-white/10 cursor-pointer accent-blue-600 disabled:cursor-not-allowed"
                     />
-                    <span className="text-base sm:text-lg font-medium text-blue-900 dark:text-blue-100">
+                    <span className="text-base sm:text-lg font-medium text-brand-ink-soft">
                       {hasChapels ? 'Sede parroquial' : parish.name}
                       {isAdded && <span className="text-sm text-blue-700 dark:text-blue-300"> (ya agregada)</span>}
                     </span>

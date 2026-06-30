@@ -76,29 +76,29 @@ export function MusicalTheory({ onBack }: MusicalTheoryProps) {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-900 to-blue-950 rounded-full flex items-center justify-center shadow-lg border-4 border-blue-800">
+            <div className="w-20 h-20 bg-gradient-to-br from-brand to-brand-strong rounded-full flex items-center justify-center shadow-lg border-4 border-brand-border">
               <Music2 className="w-12 h-12 text-white" strokeWidth={2.5} />
             </div>
           </div>
-          <h1 className="text-4xl font-bold text-blue-950 dark:text-white mb-2 transition-colors">Teoría Musical</h1>
-          <p className="text-xl text-blue-900 dark:text-blue-100 transition-colors">Fundamentos para el ministerio musical</p>
+          <h1 className="text-4xl font-bold text-brand-ink mb-2 transition-colors">Teoría Musical</h1>
+          <p className="text-xl text-brand-ink-soft transition-colors">Fundamentos para el ministerio musical</p>
         </div>
 
         {/* Progress Card */}
         <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl shadow-xl p-6 border-2 border-white/40 dark:border-white/20 mb-6 transition-colors">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-blue-950 dark:text-white transition-colors">Tu Progreso</h2>
-            <span className="text-2xl font-bold text-blue-900 dark:text-blue-100 transition-colors">0%</span>
+            <h2 className="text-xl font-bold text-brand-ink transition-colors">Tu Progreso</h2>
+            <span className="text-2xl font-bold text-brand-ink-soft transition-colors">0%</span>
           </div>
           <div className="w-full bg-white/40 dark:bg-white/20 rounded-full h-3 transition-colors">
-            <div className="bg-gradient-to-r from-blue-900 to-blue-950 h-3 rounded-full" style={{ width: '0%' }}></div>
+            <div className="bg-gradient-to-r from-brand to-brand-strong h-3 rounded-full" style={{ width: '0%' }}></div>
           </div>
           <p className="text-sm text-blue-900 dark:text-blue-200 mt-2 transition-colors">0 de {lessons.length} lecciones completadas</p>
         </div>
 
         {/* Lessons List */}
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-blue-950 dark:text-white mb-4">Lecciones</h2>
+          <h2 className="text-2xl font-bold text-brand-ink mb-4">Lecciones</h2>
           
           {lessons.map((lesson, index) => (
             <div
@@ -114,7 +114,7 @@ export function MusicalTheory({ onBack }: MusicalTheoryProps) {
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 border-2 ${
                     lesson.completed
                       ? 'bg-green-600 border-green-700'
-                      : 'bg-gradient-to-br from-blue-900 to-blue-950 border-blue-800'
+                      : 'bg-gradient-to-br from-brand to-brand-strong border-brand-border'
                   }`}>
                     {lesson.completed ? (
                       <CheckCircle2 className="w-7 h-7 text-white" strokeWidth={2.5} />
@@ -125,7 +125,7 @@ export function MusicalTheory({ onBack }: MusicalTheoryProps) {
 
                   {/* Lesson Info */}
                   <div className="flex-1">
-                    <h3 className="text-lg font-bold text-blue-950 dark:text-white mb-2 leading-tight">
+                    <h3 className="text-lg font-bold text-brand-ink mb-2 leading-tight">
                       {lesson.title}
                     </h3>
                     
@@ -139,7 +139,7 @@ export function MusicalTheory({ onBack }: MusicalTheoryProps) {
                       {lesson.topics.map((topic, idx) => (
                         <span
                           key={idx}
-                          className="bg-gradient-to-br from-blue-900 to-blue-950 text-white px-2 py-1 rounded-lg text-xs font-semibold border border-blue-800"
+                          className="bg-gradient-to-br from-brand to-brand-strong text-white px-2 py-1 rounded-lg text-xs font-semibold border border-brand-border"
                         >
                           {topic}
                         </span>
@@ -164,8 +164,8 @@ export function MusicalTheory({ onBack }: MusicalTheoryProps) {
           <div className="flex gap-3">
             <div className="text-3xl">🎼</div>
             <div>
-              <h3 className="text-lg font-bold text-blue-950 dark:text-white mb-2">Fundamentos esenciales</h3>
-              <p className="text-base text-blue-900 dark:text-blue-100">
+              <h3 className="text-lg font-bold text-brand-ink mb-2">Fundamentos esenciales</h3>
+              <p className="text-base text-brand-ink-soft">
                 La teoría musical es fundamental para entender y dirigir mejor los cantos litúrgicos. 
                 Cada lección incluye ejercicios prácticos para aplicar lo aprendido.
               </p>

@@ -87,14 +87,14 @@ export function AdminUserAccounts({ onBack }: AdminUserAccountsProps) {
       <div className="pt-6">
         <button
           onClick={onBack}
-          className="mb-6 flex items-center gap-2 bg-gradient-to-br from-blue-900 to-blue-950 text-white px-4 py-3 rounded-2xl border-2 border-blue-800 font-bold active:scale-95 transition-all"
+          className="mb-6 flex items-center gap-2 bg-gradient-to-br from-brand to-brand-strong text-white px-4 py-3 rounded-2xl border-2 border-brand-border font-bold active:scale-95 transition-all"
         >
           <ArrowLeft className="w-6 h-6 flex-shrink-0" strokeWidth={2.5} />
           Volver
         </button>
 
-        <h1 className="text-3xl font-bold text-blue-950 dark:text-white mb-1">Cuentas usuario/clave</h1>
-        <p className="text-base text-blue-900 dark:text-blue-100 mb-6">
+        <h1 className="text-3xl font-bold text-brand-ink mb-1">Cuentas usuario/clave</h1>
+        <p className="text-base text-brand-ink-soft mb-6">
           Crea cuentas para quienes no quieren usar correo. Entrégales el usuario y la clave; ellos
           podrán cambiarla luego en su perfil.
         </p>

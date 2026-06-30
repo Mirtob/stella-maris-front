@@ -66,10 +66,10 @@ export function AdminUploadSong({ onSongUploaded }: AdminUploadSongProps) {
       </div>
 
       {/* Note */}
-      <div className="bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-200 dark:border-blue-800 rounded-2xl p-4 flex gap-3">
+      <div className="bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-200 dark:border-brand-border rounded-2xl p-4 flex gap-3">
         <FileText className="w-5 h-5 text-blue-600 dark:text-blue-300 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1">
+          <p className="text-sm font-semibold text-brand-ink-soft mb-1">
             ¿Por qué este cambio?
           </p>
           <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 leading-relaxed">
@@ -95,7 +95,7 @@ function Step({ number, title, description, action, icon }: StepProps) {
   return (
     <div className="bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 sm:p-5">
       <div className="flex items-start gap-3 sm:gap-4">
-        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-900 to-blue-950 text-white rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-base sm:text-lg shadow-md border-2 border-blue-800">
+        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-brand to-brand-strong text-white rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-base sm:text-lg shadow-md border-2 border-brand-border">
           {number}
         </div>
         <div className="flex-1 min-w-0">

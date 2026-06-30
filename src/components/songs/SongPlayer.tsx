@@ -105,7 +105,7 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
   return (
     <div className="w-full max-w-md md:max-w-2xl mx-auto min-h-screen bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
       {/* Header */}
-      <div className={`bg-gradient-to-r from-blue-900 to-blue-950 text-white p-6 pb-8 border-b-4 border-blue-800`}>
+      <div className={`bg-gradient-to-r from-brand to-brand-strong text-white p-6 pb-8 border-b-4 border-brand-border`}>
         <button
           onClick={onBack}
           className="mb-6 flex items-center gap-2 text-xl active:opacity-70"
@@ -171,7 +171,7 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
             <div className="flex items-center justify-between mb-3">
               <div>
                 <div className="text-sm text-blue-900 dark:text-blue-200 mb-1">Duración</div>
-                <div className="text-2xl font-bold text-blue-950 dark:text-white">{song.duration}</div>
+                <div className="text-2xl font-bold text-brand-ink">{song.duration}</div>
               </div>
             </div>
 
@@ -189,7 +189,7 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
               {song.sheetMusicUrl && userRole !== 'Pueblo fiel' && (
                 <button
                   onClick={() => setShowSheetMusic(!showSheetMusic)}
-                  className={`bg-gradient-to-br from-blue-900 to-blue-950 text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-blue-800`}
+                  className={`bg-gradient-to-br from-brand to-brand-strong text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-brand-border`}
                 >
                   <FileText className="w-5 h-5" />
                   {showSheetMusic ? 'Ocultar' : 'Ver'} Partitura
@@ -280,7 +280,7 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
 
               {/* Info para organistas */}
               {userInstrument === 'Órgano' && song.originalKey && (
-                <div className="bg-blue-900/30 rounded-xl p-4 border border-blue-800/50">
+                <div className="bg-blue-900/30 rounded-xl p-4 border border-brand-border/50">
                   <p className="text-sm">
                     🎹 <strong>Organistas:</strong> Este canto está en <strong>{song.originalKey}</strong>. 
                     Puedes transponer directamente en tu órgano usando el control de transposición del instrumento.
@@ -310,7 +310,7 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
 
             {/* Footer with Tips */}
             <div className="bg-white/40 dark:bg-white/10 backdrop-blur-sm border-t-2 border-white/40 dark:border-white/20 p-4 transition-colors">
-              <div className="flex gap-2 text-blue-900 dark:text-blue-100">
+              <div className="flex gap-2 text-brand-ink-soft">
                 <div className="text-xl">🎼</div>
                 <div className="text-sm">
                   <strong>Nota:</strong> {canTranspose 
@@ -326,7 +326,7 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
         {song.sheetMusicUrl && showSheetMusic && (
           <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl shadow-xl border-2 border-white/40 dark:border-white/20 overflow-hidden mb-6 transition-colors">
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-900 to-blue-950 text-white p-3 sm:p-4 border-b-2 border-blue-800">
+            <div className="bg-gradient-to-r from-brand to-brand-strong text-white p-3 sm:p-4 border-b-2 border-brand-border">
               <div className="flex items-center gap-3 mb-3">
                 <FileText className="w-5 h-5" strokeWidth={2.5} />
                 <h2 className="text-base font-bold">Partitura</h2>
@@ -396,7 +396,7 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
 
             {/* Footer with Tips */}
             <div className="bg-white/40 dark:bg-white/10 backdrop-blur-sm border-t-2 border-white/40 dark:border-white/20 p-4 transition-colors">
-              <div className="flex gap-2 text-blue-900 dark:text-blue-100">
+              <div className="flex gap-2 text-brand-ink-soft">
                 <div className="text-xl">💡</div>
                 <p className="text-base">
                   <strong>Consejo:</strong> Usa los controles de zoom para ajustar el tamaño de la partitura según tu preferencia
@@ -411,8 +411,8 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
           <div className="flex gap-3">
             <div className="text-3xl">🎼</div>
             <div>
-              <h3 className="text-xl font-bold text-blue-950 dark:text-white mb-2">Modo de uso</h3>
-              <ul className="text-base text-blue-900 dark:text-blue-100 space-y-2">
+              <h3 className="text-xl font-bold text-brand-ink mb-2">Modo de uso</h3>
+              <ul className="text-base text-brand-ink-soft space-y-2">
                 <li>• <strong>Reproduce el video</strong> para escuchar el canto</li>
                 {song.lyrics && <li>• <strong>Ver Letra</strong> para seguir la letra{canTranspose && ' y acordes'}</li>}
                 {canTranspose && <li>• <strong>Transposición (↑↓):</strong> Ajusta la tonalidad fácilmente</li>}

@@ -11,12 +11,12 @@ export function CoursesMenu({ onSelectCourse }: CoursesMenuProps) {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-900 to-blue-950 rounded-full flex items-center justify-center shadow-lg border-4 border-blue-800">
+            <div className="w-20 h-20 bg-gradient-to-br from-brand to-brand-strong rounded-full flex items-center justify-center shadow-lg border-4 border-brand-border">
               <GraduationCap className="w-12 h-12 text-white" strokeWidth={2.5} />
             </div>
           </div>
-          <h1 className="text-4xl font-bold text-blue-950 dark:text-white mb-2">Cursos de Formación</h1>
-          <p className="text-xl text-blue-900 dark:text-blue-100">Aprende y profundiza tu fe</p>
+          <h1 className="text-4xl font-bold text-brand-ink mb-2">Cursos de Formación</h1>
+          <p className="text-xl text-brand-ink-soft">Aprende y profundiza tu fe</p>
         </div>
 
         {/* Course Cards */}
@@ -24,7 +24,7 @@ export function CoursesMenu({ onSelectCourse }: CoursesMenuProps) {
           {/* Teoría Musical */}
           <button
             onClick={() => onSelectCourse('theory')}
-            className="w-full bg-gradient-to-br from-blue-900 to-blue-950 rounded-2xl shadow-xl p-6 border-2 border-blue-800 hover:border-blue-600 active:scale-98 transition-all"
+            className="w-full bg-gradient-to-br from-brand to-brand-strong rounded-2xl shadow-xl p-6 border-2 border-brand-border hover:border-blue-600 active:scale-98 transition-all"
           >
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
@@ -43,7 +43,7 @@ export function CoursesMenu({ onSelectCourse }: CoursesMenuProps) {
           {/* Liturgia */}
           <button
             onClick={() => onSelectCourse('liturgy')}
-            className="w-full bg-gradient-to-br from-blue-900 to-blue-950 rounded-2xl shadow-xl p-6 border-2 border-blue-800 hover:border-blue-600 active:scale-98 transition-all"
+            className="w-full bg-gradient-to-br from-brand to-brand-strong rounded-2xl shadow-xl p-6 border-2 border-brand-border hover:border-blue-600 active:scale-98 transition-all"
           >
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
@@ -62,7 +62,7 @@ export function CoursesMenu({ onSelectCourse }: CoursesMenuProps) {
           {/* Instrumentos Musicales */}
           <button
             onClick={() => onSelectCourse('instruments')}
-            className="w-full bg-gradient-to-br from-blue-900 to-blue-950 rounded-2xl shadow-xl p-6 border-2 border-blue-800 hover:border-blue-600 active:scale-98 transition-all"
+            className="w-full bg-gradient-to-br from-brand to-brand-strong rounded-2xl shadow-xl p-6 border-2 border-brand-border hover:border-blue-600 active:scale-98 transition-all"
           >
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
@@ -84,8 +84,8 @@ export function CoursesMenu({ onSelectCourse }: CoursesMenuProps) {
           <div className="flex gap-3">
             <div className="text-3xl">📚</div>
             <div>
-              <h3 className="text-lg font-bold text-blue-950 dark:text-white mb-2">Formación continua</h3>
-              <p className="text-base text-blue-900 dark:text-blue-100">
+              <h3 className="text-lg font-bold text-brand-ink mb-2">Formación continua</h3>
+              <p className="text-base text-brand-ink-soft">
                 Los cursos te ayudarán a mejorar tu servicio litúrgico y profundizar 
                 tu conocimiento de la música sacra católica.
               </p>

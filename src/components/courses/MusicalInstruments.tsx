@@ -93,12 +93,12 @@ export function MusicalInstruments({ onBack }: MusicalInstrumentsProps) {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-900 to-blue-950 rounded-full flex items-center justify-center shadow-lg border-4 border-blue-800">
+            <div className="w-20 h-20 bg-gradient-to-br from-brand to-brand-strong rounded-full flex items-center justify-center shadow-lg border-4 border-brand-border">
               <Guitar className="w-12 h-12 text-white" strokeWidth={2.5} />
             </div>
           </div>
-          <h1 className="text-4xl font-bold text-blue-950 dark:text-white mb-2">Instrumentos Musicales</h1>
-          <p className="text-xl text-blue-900 dark:text-blue-100">Desarrolla tus habilidades musicales</p>
+          <h1 className="text-4xl font-bold text-brand-ink mb-2">Instrumentos Musicales</h1>
+          <p className="text-xl text-brand-ink-soft">Desarrolla tus habilidades musicales</p>
         </div>
 
         {/* Courses */}
@@ -109,7 +109,7 @@ export function MusicalInstruments({ onBack }: MusicalInstrumentsProps) {
               className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border-2 border-white/40 dark:border-white/20 transition-colors"
             >
               {/* Course Header */}
-              <div className={`bg-gradient-to-r from-blue-900 to-blue-950 text-white p-5 border-b-2 border-blue-800`}>
+              <div className={`bg-gradient-to-r from-brand to-brand-strong text-white p-5 border-b-2 border-brand-border`}>
                 <div className="flex items-center gap-3 mb-2">
                   <span className="text-4xl">{course.icon}</span>
                   <h2 className="text-2xl font-bold">{course.title}</h2>
@@ -126,12 +126,12 @@ export function MusicalInstruments({ onBack }: MusicalInstrumentsProps) {
                     onClick={() => handleLessonClick(lesson.videoUrl)}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 bg-gradient-to-br from-blue-900 to-blue-950 rounded-lg flex items-center justify-center flex-shrink-0 border border-blue-800`}>
+                      <div className={`w-10 h-10 bg-gradient-to-br from-brand to-brand-strong rounded-lg flex items-center justify-center flex-shrink-0 border border-brand-border`}>
                         <span className="text-base font-bold text-white">{index + 1}</span>
                       </div>
                       
                       <div className="flex-1">
-                        <h3 className="text-base font-bold text-blue-950 dark:text-white mb-1 leading-tight">
+                        <h3 className="text-base font-bold text-brand-ink mb-1 leading-tight">
                           {lesson.name}
                         </h3>
                         <div className="flex items-center gap-2 text-sm text-blue-900 dark:text-blue-200">
@@ -158,8 +158,8 @@ export function MusicalInstruments({ onBack }: MusicalInstrumentsProps) {
           <div className="flex gap-3">
             <div className="text-3xl">🎯</div>
             <div>
-              <h3 className="text-lg font-bold text-blue-950 dark:text-white mb-2">Consejo de práctica</h3>
-              <p className="text-base text-blue-900 dark:text-blue-100">
+              <h3 className="text-lg font-bold text-brand-ink mb-2">Consejo de práctica</h3>
+              <p className="text-base text-brand-ink-soft">
                 Dedica al menos 20 minutos diarios a practicar. La constancia 
                 es más importante que la duración de cada sesión.
               </p>

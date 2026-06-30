@@ -24,7 +24,7 @@ export function PrivacyPolicy({ onBack }: PrivacyPolicyProps) {
         </button>
 
         <article className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-5 sm:p-8 border-2 border-amber-200 dark:border-amber-700">
-          <h1 className="text-2xl sm:text-3xl font-bold text-blue-950 dark:text-white mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-brand-ink mb-2">
             Política de Privacidad
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">

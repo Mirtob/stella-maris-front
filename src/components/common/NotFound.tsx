@@ -29,11 +29,11 @@ export function NotFound({ reason = 'unknown-route', attemptedPath, onGoHome }: 
         </div>
 
         {/* Título y descripción */}
-        <h1 className="text-2xl sm:text-3xl font-bold text-blue-950 dark:text-white mb-3">
+        <h1 className="text-2xl sm:text-3xl font-bold text-brand-ink mb-3">
           {isInvalidLink ? 'Este link de cantoral no es válido' : 'Página no encontrada'}
         </h1>
 
-        <p className="text-base sm:text-lg text-blue-900 dark:text-blue-100 mb-2 leading-relaxed">
+        <p className="text-base sm:text-lg text-brand-ink-soft mb-2 leading-relaxed">
           {isInvalidLink
             ? 'El código QR o el enlace que abriste no tiene el formato correcto. Puede que esté roto o sea de una versión vieja de la app.'
             : 'La página que buscás no existe o fue movida.'}
@@ -48,7 +48,7 @@ export function NotFound({ reason = 'unknown-route', attemptedPath, onGoHome }: 
         {/* Botón principal */}
         <button
           onClick={onGoHome}
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-900 to-blue-950 text-white py-4 px-8 rounded-2xl text-lg font-bold shadow-2xl active:scale-95 hover:scale-[1.02] transition-all border-2 border-blue-800"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-brand to-brand-strong text-white py-4 px-8 rounded-2xl text-lg font-bold shadow-2xl active:scale-95 hover:scale-[1.02] transition-all border-2 border-brand-border"
         >
           <Home className="w-5 h-5" strokeWidth={2.5} />
           Ir al inicio

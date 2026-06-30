@@ -91,10 +91,10 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
               </div>
             </div>
           </div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-blue-950 dark:text-white mb-4 leading-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-brand-ink mb-4 leading-tight">
             Completa tu perfil
           </h1>
-          <p className="text-base sm:text-xl md:text-2xl text-blue-900 dark:text-blue-100 font-medium">
+          <p className="text-base sm:text-xl md:text-2xl text-brand-ink-soft font-medium">
             ¿Cómo usarás esta aplicación?
           </p>
         </div>
@@ -105,8 +105,8 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
             onClick={() => setSelectedRole('Coro')}
             className={`w-full p-3 sm:p-5 rounded-2xl border-2 transition-all transform hover:scale-[1.02] ${
               selectedRole === 'Coro'
-                ? 'bg-gradient-to-r from-blue-900 to-blue-950 text-white border-blue-800 shadow-2xl scale-[1.02]'
-                : 'bg-white/30 dark:bg-white/10 backdrop-blur-sm text-blue-950 dark:text-white border-white/40 dark:border-white/20 shadow-lg'
+                ? 'bg-gradient-to-r from-brand to-brand-strong text-white border-brand-border shadow-2xl scale-[1.02]'
+                : 'bg-white/30 dark:bg-white/10 backdrop-blur-sm text-brand-ink border-white/40 dark:border-white/20 shadow-lg'
             }`}
           >
             <div className="flex items-center gap-5">
@@ -124,8 +124,8 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
             onClick={() => setSelectedRole('Pueblo fiel')}
             className={`w-full p-3 sm:p-5 rounded-2xl border-2 transition-all transform hover:scale-[1.02] ${
               selectedRole === 'Pueblo fiel'
-                ? 'bg-gradient-to-r from-blue-900 to-blue-950 text-white border-blue-800 shadow-2xl scale-[1.02]'
-                : 'bg-white/30 dark:bg-white/10 backdrop-blur-sm text-blue-950 dark:text-white border-white/40 dark:border-white/20 shadow-lg'
+                ? 'bg-gradient-to-r from-brand to-brand-strong text-white border-brand-border shadow-2xl scale-[1.02]'
+                : 'bg-white/30 dark:bg-white/10 backdrop-blur-sm text-brand-ink border-white/40 dark:border-white/20 shadow-lg'
             }`}
           >
             <div className="flex items-center gap-5">
@@ -144,8 +144,8 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
             onClick={() => setSelectedRole('Admin')}
             className={`w-full p-3 sm:p-5 rounded-2xl border-2 transition-all transform hover:scale-[1.02] ${
               selectedRole === 'Admin'
-                ? 'bg-gradient-to-r from-blue-900 to-blue-950 text-white border-blue-800 shadow-2xl scale-[1.02]'
-                : 'bg-white/30 dark:bg-white/10 backdrop-blur-sm text-blue-950 dark:text-white border-white/40 dark:border-white/20 shadow-lg'
+                ? 'bg-gradient-to-r from-brand to-brand-strong text-white border-brand-border shadow-2xl scale-[1.02]'
+                : 'bg-white/30 dark:bg-white/10 backdrop-blur-sm text-brand-ink border-white/40 dark:border-white/20 shadow-lg'
             }`}
           >
             <div className="flex items-center gap-5">
@@ -165,11 +165,11 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
         {(selectedRole === 'Coro' || selectedRole === 'Pueblo fiel') && (
           <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl shadow-xl p-3 sm:p-4 border-2 border-white/40 dark:border-white/20 mb-4 sm:mb-6 transition-colors">
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-900 to-blue-950 rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-blue-800">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-brand to-brand-strong rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-brand-border">
                 <Church className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={2.5} />
               </div>
               <div className="flex-1">
-                <label className="text-base sm:text-lg font-bold text-blue-950 dark:text-white">
+                <label className="text-base sm:text-lg font-bold text-brand-ink">
                   Selecciona tus parroquias
                 </label>
                 <p className="text-sm sm:text-base text-blue-800 dark:text-blue-200 mt-1">
@@ -186,7 +186,7 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
             <div className="mt-5 bg-white/40 dark:bg-white/10 backdrop-blur-sm border-2 border-white/50 dark:border-white/20 rounded-2xl p-5">
               <div className="flex gap-3">
                 <div className="text-3xl">⛪</div>
-                <p className="text-sm sm:text-base text-blue-900 dark:text-blue-100 leading-relaxed">
+                <p className="text-sm sm:text-base text-brand-ink-soft leading-relaxed">
                   <strong>Importante:</strong> Selecciona las parroquias donde usarás Stella Maris. Podrás elegir la activa cada vez que entres a la app.
                 </p>
               </div>
@@ -198,11 +198,11 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
         {selectedRole === 'Coro' && (
           <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl shadow-xl p-3 sm:p-4 border-2 border-white/40 dark:border-white/20 mb-4 sm:mb-6 transition-colors">
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-900 to-blue-950 rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-blue-800">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-brand to-brand-strong rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-brand-border">
                 <Music className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={2.5} />
               </div>
               <div className="flex-1">
-                <label className="text-base sm:text-lg font-bold text-blue-950 dark:text-white">
+                <label className="text-base sm:text-lg font-bold text-brand-ink">
                   Instrumentos de acompañamiento
                 </label>
                 <p className="text-base sm:text-lg text-blue-800 dark:text-blue-200 mt-1">
@@ -216,8 +216,8 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
                 onClick={() => toggleInstrument('Guitarra')}
                 className={`p-3 sm:p-4 rounded-xl border-2 transition-all transform hover:scale-105 ${
                   selectedInstruments.includes('Guitarra')
-                    ? 'bg-gradient-to-br from-blue-900 to-blue-950 text-white border-blue-800 shadow-2xl scale-105'
-                    : 'bg-white/50 dark:bg-white/10 backdrop-blur-sm text-blue-950 dark:text-white border-white/60 dark:border-white/20 shadow-lg'
+                    ? 'bg-gradient-to-br from-brand to-brand-strong text-white border-brand-border shadow-2xl scale-105'
+                    : 'bg-white/50 dark:bg-white/10 backdrop-blur-sm text-brand-ink border-white/60 dark:border-white/20 shadow-lg'
                 }`}
               >
                 <div className="text-2xl sm:text-3xl mb-3">🎶</div>
@@ -228,8 +228,8 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
                 onClick={() => toggleInstrument('Órgano')}
                 className={`p-3 sm:p-4 rounded-xl border-2 transition-all transform hover:scale-105 ${
                   selectedInstruments.includes('Órgano')
-                    ? 'bg-gradient-to-br from-blue-900 to-blue-950 text-white border-blue-800 shadow-2xl scale-105'
-                    : 'bg-white/50 dark:bg-white/10 backdrop-blur-sm text-blue-950 dark:text-white border-white/60 dark:border-white/20 shadow-lg'
+                    ? 'bg-gradient-to-br from-brand to-brand-strong text-white border-brand-border shadow-2xl scale-105'
+                    : 'bg-white/50 dark:bg-white/10 backdrop-blur-sm text-brand-ink border-white/60 dark:border-white/20 shadow-lg'
                 }`}
               >
                 <div className="text-2xl sm:text-3xl mb-3">🎹</div>
@@ -240,7 +240,7 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
             <div className="bg-white/40 dark:bg-white/10 backdrop-blur-sm border-2 border-white/50 dark:border-white/20 rounded-2xl p-5">
               <div className="flex gap-3">
                 <div className="text-3xl">🎵</div>
-                <p className="text-sm sm:text-base text-blue-900 dark:text-blue-100 leading-relaxed">
+                <p className="text-sm sm:text-base text-brand-ink-soft leading-relaxed">
                   Los cantos se filtrarán preferentemente según el instrumento seleccionado para cada Misa
                 </p>
               </div>
@@ -288,7 +288,7 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
           disabled={!canContinue()}
           className={`w-full py-4 sm:py-5 px-4 rounded-2xl text-lg sm:text-xl font-bold transition-all transform ${
             canContinue()
-              ? 'bg-gradient-to-r from-blue-900 to-blue-950 text-white shadow-2xl hover:shadow-3xl active:scale-95 hover:scale-[1.02] border-2 border-blue-800'
+              ? 'bg-gradient-to-r from-brand to-brand-strong text-white shadow-2xl hover:shadow-3xl active:scale-95 hover:scale-[1.02] border-2 border-brand-border'
               : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
           }`}
         >

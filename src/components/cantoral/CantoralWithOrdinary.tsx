@@ -218,7 +218,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
         <div className="mb-8 flex items-center gap-3 flex-wrap">
           <button
             onClick={onBack}
-            className="flex items-center gap-3 bg-gradient-to-br from-blue-900 to-blue-950 text-white px-3 sm:px-4 py-4 rounded-2xl border-2 border-blue-800 hover:border-blue-600 transition-all shadow-lg text-xl font-bold"
+            className="flex items-center gap-3 bg-gradient-to-br from-brand to-brand-strong text-white px-3 sm:px-4 py-4 rounded-2xl border-2 border-brand-border hover:border-blue-600 transition-all shadow-lg text-xl font-bold"
           >
             <ArrowLeft className="w-7 h-7" strokeWidth={2.5} />
             Volver
@@ -235,7 +235,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
 
           {/* Idioma del ordinario: Español / Latín (todos los perfiles) */}
           <div
-            className="ml-auto inline-flex rounded-2xl border-2 border-blue-800 overflow-hidden shadow-lg"
+            className="ml-auto inline-flex rounded-2xl border-2 border-brand-border overflow-hidden shadow-lg"
             role="group"
             aria-label="Idioma del ordinario"
           >
@@ -257,7 +257,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
         </div>
 
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-900 to-blue-950 text-white rounded-3xl p-8 shadow-2xl mb-4 sm:mb-6 border-4 border-blue-800">
+        <div className="bg-gradient-to-r from-brand to-brand-strong text-white rounded-3xl p-8 shadow-2xl mb-4 sm:mb-6 border-4 border-brand-border">
           <div className="flex items-center gap-4 mb-4">
             <span className="text-2xl sm:text-3xl">⛪</span>
             <div>
@@ -287,10 +287,10 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
           <div className="flex gap-4">
             <div className="text-4xl">👨‍👩‍👧‍👦</div>
             <div>
-              <h3 className="text-2xl sm:text-lg sm:text-2xl font-bold text-blue-950 dark:text-white mb-3">
+              <h3 className="text-2xl sm:text-lg sm:text-2xl font-bold text-brand-ink mb-3">
                 Guía para seguir la Misa
               </h3>
-              <p className="text-lg sm:text-xl text-blue-900 dark:text-blue-100 leading-relaxed mb-4">
+              <p className="text-lg sm:text-xl text-brand-ink-soft leading-relaxed mb-4">
                 Sigue esta guía paso a paso durante la celebración. Los íconos te indican cuándo estar <strong>de pie 🧍</strong>, <strong>sentado 🪑</strong> o <strong>de rodillas 🧎</strong>.
               </p>
               <div className="flex flex-wrap gap-3">
@@ -324,7 +324,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
         </div>
 
         {/* Footer */}
-        <div className="mt-4 sm:mt-6 bg-gradient-to-br from-blue-900 to-blue-950 text-white border-4 border-blue-800 rounded-3xl p-8 text-center transition-colors">
+        <div className="mt-4 sm:mt-6 bg-gradient-to-br from-brand to-brand-strong text-white border-4 border-brand-border rounded-3xl p-8 text-center transition-colors">
           <div className="text-2xl sm:text-3xl mb-4">✝️</div>
           <h3 className="text-lg sm:text-2xl font-bold mb-3">
             ¡Demos gracias a Dios!
@@ -356,9 +356,9 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
 
           {/* Modal */}
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in zoom-in-95 duration-200">
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900 dark:to-orange-900 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border-4 border-blue-800 transition-colors">
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900 dark:to-orange-900 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border-4 border-brand-border transition-colors">
               {/* Header del Modal */}
-              <div className="sticky top-0 bg-gradient-to-r from-blue-900 to-blue-950 text-white p-6 rounded-t-3xl border-b-4 border-blue-800 z-10">
+              <div className="sticky top-0 bg-gradient-to-r from-brand to-brand-strong text-white p-6 rounded-t-3xl border-b-4 border-brand-border z-10">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <Music className="w-10 h-10" strokeWidth={2.5} />
@@ -380,14 +380,14 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
               <div className="p-6 space-y-6">
                 {/* Información del Canto */}
                 <div className="bg-white/30 backdrop-blur-sm rounded-2xl p-3 sm:p-4 border-2 border-white/40 transition-colors">
-                  <h3 className="text-lg sm:text-2xl font-bold text-blue-950 dark:text-white mb-2">
+                  <h3 className="text-lg sm:text-2xl font-bold text-brand-ink mb-2">
                     {selectedSong.title}
                   </h3>
-                  <p className="text-xl text-blue-900 dark:text-blue-100 mb-4">
+                  <p className="text-xl text-brand-ink-soft mb-4">
                     {selectedSong.artist || 'Artista desconocido'}
                   </p>
                   {selectedSong.duration && (
-                    <div className="flex items-center gap-2 text-lg text-blue-900 dark:text-blue-100">
+                    <div className="flex items-center gap-2 text-lg text-brand-ink-soft">
                       <span>⏱️</span>
                       <span>Duración: {selectedSong.duration}</span>
                     </div>
@@ -400,7 +400,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
                     onPlaySong(selectedSong);
                     setSelectedSong(null);
                   }}
-                  className="w-full bg-gradient-to-br from-blue-900 to-blue-950 text-white p-5 rounded-2xl flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-transform shadow-lg border-2 border-blue-800"
+                  className="w-full bg-gradient-to-br from-brand to-brand-strong text-white p-5 rounded-2xl flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-transform shadow-lg border-2 border-brand-border"
                 >
                   <Play className="w-7 h-7 flex-shrink-0" fill="currentColor" strokeWidth={2} />
                   <span className="text-xl font-bold">Reproducir Audio</span>
@@ -411,7 +411,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
                   <div className="bg-white/40 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-4 border-2 border-white/40 dark:border-white/20 transition-colors">
                     <div className="flex items-center gap-2 mb-3">
                       <FileText className="w-6 h-6 text-blue-900 dark:text-blue-200 flex-shrink-0" strokeWidth={2.5} />
-                      <h4 className="text-xl font-bold text-blue-950 dark:text-white">Letra</h4>
+                      <h4 className="text-xl font-bold text-brand-ink">Letra</h4>
                     </div>
                     <div className="bg-white dark:bg-gray-900 rounded-xl p-4 max-h-[40vh] overflow-auto transition-colors">
                       {showChords
@@ -430,7 +430,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
                       <div className="flex items-center justify-between gap-2 mb-3">
                         <div className="flex items-center gap-2 min-w-0">
                           <Music className="w-6 h-6 text-blue-900 dark:text-blue-200 flex-shrink-0" strokeWidth={2.5} />
-                          <h4 className="text-xl font-bold text-blue-950 dark:text-white">Partitura</h4>
+                          <h4 className="text-xl font-bold text-brand-ink">Partitura</h4>
                         </div>
                         <a
                           href={safeUrl(urls.driveViewUrl)}
@@ -458,10 +458,10 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
                   <div className="flex gap-3">
                     <span className="text-3xl">💡</span>
                     <div>
-                      <h4 className="text-xl font-bold text-blue-950 dark:text-white mb-2">
+                      <h4 className="text-xl font-bold text-brand-ink mb-2">
                         Cómo usar
                       </h4>
-                      <p className="text-lg text-blue-900 dark:text-blue-100">
+                      <p className="text-lg text-brand-ink-soft">
                         Toca <strong>"Reproducir Audio"</strong> para escuchar el canto desde YouTube.
                         {selectedSong.lyrics && ' La letra aparece aquí mismo para seguir el canto.'}
                         {!isPuebloFiel && selectedSong.sheetMusicUrl && ' La partitura se muestra embebida (o ábrela en Drive).'}
@@ -473,7 +473,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
                 {/* Botón para Cerrar */}
                 <button
                   onClick={() => setSelectedSong(null)}
-                  className="w-full bg-gradient-to-br from-blue-900 to-blue-950 text-white p-5 rounded-2xl font-bold text-xl hover:border-blue-600 transition-all border-2 border-blue-800"
+                  className="w-full bg-gradient-to-br from-brand to-brand-strong text-white p-5 rounded-2xl font-bold text-xl hover:border-blue-600 transition-all border-2 border-brand-border"
                 >
                   Cerrar y Volver al Ordinario
                 </button>

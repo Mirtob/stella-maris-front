@@ -34,12 +34,12 @@ export function SelectInstrumentModal({ userInstruments, selectedInstrument, onS
         onClick={onClose}
       />
       <div
-        className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm sm:max-w-md border-2 border-blue-800 transition-colors"
+        className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm sm:max-w-md border-2 border-brand-border transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
 
         {/* Header compacto */}
-        <div className="bg-gradient-to-r from-blue-900 to-blue-950 text-white p-3 sm:p-4 rounded-t-2xl flex items-center justify-between">
+        <div className="bg-gradient-to-r from-brand to-brand-strong text-white p-3 sm:p-4 rounded-t-2xl flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
               <Music className="w-4 h-4" strokeWidth={2.5} />
@@ -62,11 +62,11 @@ export function SelectInstrumentModal({ userInstruments, selectedInstrument, onS
               onClick={() => onSelect(instrument)}
               className="w-full bg-amber-50 dark:bg-white/10 hover:bg-amber-100 dark:hover:bg-white/20 border-2 border-amber-200 dark:border-white/20 hover:border-blue-600 rounded-xl p-3 transition-all active:scale-95 flex items-center gap-3"
             >
-              <div className="w-11 h-11 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center flex-shrink-0">
+              <div className="w-11 h-11 sm:w-14 sm:h-14 bg-gradient-to-br from-brand to-brand-strong rounded-xl flex items-center justify-center flex-shrink-0">
                 <span className="text-xl sm:text-2xl">{getInstrumentIcon(instrument)}</span>
               </div>
               <div className="text-left flex-1">
-                <div className="text-base sm:text-lg font-bold text-blue-950 dark:text-white">{instrument}</div>
+                <div className="text-base sm:text-lg font-bold text-brand-ink">{instrument}</div>
                 <div className="text-xs sm:text-sm text-blue-700 dark:text-blue-300">{getInstrumentDescription(instrument)}</div>
               </div>
               <span className="text-blue-600 dark:text-blue-400 text-lg flex-shrink-0">→</span>

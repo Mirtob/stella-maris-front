@@ -12,12 +12,12 @@ export function CantoralPreview({ cantoral, onRemove, onPlaySong }: CantoralPrev
     return (
       <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center border border-white/40 dark:border-white/20 transition-colors">
         <Music className="w-8 h-8 mx-auto mb-2 text-blue-900/50 dark:text-blue-300/50" />
-        <h3 className="text-sm font-bold text-blue-950 dark:text-white mb-1">
+        <h3 className="text-sm font-bold text-brand-ink mb-1">
           Cantoral Vacío
         </h3>
         {/* Q30 — Empty state accionable: indica explícitamente DÓNDE buscar
             ('más abajo') y QUÉ paso sigue ('toca +'). */}
-        <p className="text-xs text-blue-900 dark:text-blue-100">
+        <p className="text-xs text-brand-ink-soft">
           Elige cantos en las categorías de más abajo —
           <br />
           Entrada, Salmo, Aleluya, Comunión, etc.
@@ -85,10 +85,10 @@ export function CantoralPreview({ cantoral, onRemove, onPlaySong }: CantoralPrev
       <div className="flex items-center gap-3 mb-6">
         <Music className="w-8 h-8 text-blue-900 dark:text-blue-300" strokeWidth={2.5} />
         <div>
-          <h3 className="text-2xl font-bold text-blue-950 dark:text-white">
+          <h3 className="text-2xl font-bold text-brand-ink">
             Mi Cantoral
           </h3>
-          <p className="text-sm text-blue-900 dark:text-blue-100">
+          <p className="text-sm text-brand-ink-soft">
             {cantoral.length} {cantoral.length === 1 ? 'canto seleccionado' : 'cantos seleccionados'}
           </p>
         </div>
@@ -99,7 +99,7 @@ export function CantoralPreview({ cantoral, onRemove, onPlaySong }: CantoralPrev
           <div key={category} className="bg-white/50 dark:bg-white/5 rounded-xl p-4 border border-white/60 dark:border-white/10 transition-colors">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-2xl">{categoryIcons[category] || '🎵'}</span>
-              <h4 className="text-lg font-bold text-blue-950 dark:text-white">{category}</h4>
+              <h4 className="text-lg font-bold text-brand-ink">{category}</h4>
               <span className="text-sm text-blue-900 dark:text-blue-200 ml-auto">
                 {groupedSongs[category].length}
               </span>
@@ -122,7 +122,7 @@ export function CantoralPreview({ cantoral, onRemove, onPlaySong }: CantoralPrev
 
                     {/* Song Info */}
                     <div className="flex-1 min-w-0">
-                      <h5 className="font-bold text-blue-950 dark:text-white truncate">
+                      <h5 className="font-bold text-brand-ink truncate">
                         {song.title}
                       </h5>
                       {song.author && (

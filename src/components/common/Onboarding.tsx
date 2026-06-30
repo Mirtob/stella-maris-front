@@ -35,14 +35,14 @@ const SLIDES: Slide[] = [
     description: 'Elegirás tu rol al crear tu perfil. Puedes cambiar de rol cuando quieras desde el menú.',
     visual: (
       <div className="space-y-3 mb-6">
-        <div className="bg-gradient-to-r from-blue-900 to-blue-950 text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg border-2 border-blue-800">
+        <div className="bg-gradient-to-r from-brand to-brand-strong text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg border-2 border-brand-border">
           <Music className="w-7 h-7 flex-shrink-0" strokeWidth={2.5} />
           <div className="text-left flex-1">
             <p className="font-bold text-base">Como Coro</p>
             <p className="text-xs sm:text-sm text-blue-200">Armas y publicas cantorales</p>
           </div>
         </div>
-        <div className="bg-white/50 dark:bg-white/10 border-2 border-blue-300 dark:border-blue-600 text-blue-900 dark:text-blue-100 p-4 rounded-2xl flex items-center gap-3">
+        <div className="bg-white/50 dark:bg-white/10 border-2 border-blue-300 dark:border-blue-600 text-brand-ink-soft p-4 rounded-2xl flex items-center gap-3">
           <BookOpen className="w-7 h-7 flex-shrink-0" strokeWidth={2.5} />
           <div className="text-left flex-1">
             <p className="font-bold text-base">Como Pueblo fiel</p>
@@ -60,14 +60,14 @@ const SLIDES: Slide[] = [
       <div className="grid grid-cols-3 gap-2 sm:gap-3 items-center mb-6 max-w-sm mx-auto">
         <div className="text-center bg-white/50 dark:bg-white/10 rounded-xl p-3 sm:p-4 border-2 border-blue-300 dark:border-blue-600">
           <div className="text-3xl sm:text-4xl mb-1">🎵</div>
-          <p className="text-xs sm:text-sm font-bold text-blue-900 dark:text-blue-100">Coro publica</p>
+          <p className="text-xs sm:text-sm font-bold text-brand-ink-soft">Coro publica</p>
         </div>
         <div className="text-center text-blue-700 dark:text-blue-300">
           <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8 mx-auto" />
         </div>
         <div className="text-center bg-white/50 dark:bg-white/10 rounded-xl p-3 sm:p-4 border-2 border-blue-300 dark:border-blue-600">
           <div className="text-3xl sm:text-4xl mb-1">📱</div>
-          <p className="text-xs sm:text-sm font-bold text-blue-900 dark:text-blue-100">Fieles escanean</p>
+          <p className="text-xs sm:text-sm font-bold text-brand-ink-soft">Fieles escanean</p>
         </div>
       </div>
     ),
@@ -117,16 +117,16 @@ export function Onboarding({ onComplete, onSkip }: OnboardingProps) {
 
           {/* Icono + título */}
           <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-2xl flex items-center justify-center text-white shadow-lg border-2 border-blue-800">
+            <div className="w-12 h-12 bg-gradient-to-br from-brand to-brand-strong rounded-2xl flex items-center justify-center text-white shadow-lg border-2 border-brand-border">
               {slide.icon}
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-blue-950 dark:text-white text-left flex-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-brand-ink text-left flex-1">
               {slide.title}
             </h1>
           </div>
 
           {/* Descripción */}
-          <p className="text-base sm:text-lg text-blue-900 dark:text-blue-100 leading-relaxed">
+          <p className="text-base sm:text-lg text-brand-ink-soft leading-relaxed">
             {slide.description}
           </p>
         </div>
@@ -160,7 +160,7 @@ export function Onboarding({ onComplete, onSkip }: OnboardingProps) {
           {/* Botón Siguiente / Empezar */}
           <button
             onClick={handleNext}
-            className="w-full py-4 sm:py-5 px-4 rounded-2xl bg-gradient-to-r from-blue-900 to-blue-950 text-white text-lg sm:text-xl font-bold shadow-2xl active:scale-95 hover:scale-[1.02] transition-all border-2 border-blue-800 flex items-center justify-center gap-2"
+            className="w-full py-4 sm:py-5 px-4 rounded-2xl bg-gradient-to-r from-brand to-brand-strong text-white text-lg sm:text-xl font-bold shadow-2xl active:scale-95 hover:scale-[1.02] transition-all border-2 border-brand-border flex items-center justify-center gap-2"
           >
             {isLastSlide ? 'Empezar' : 'Siguiente'}
             {!isLastSlide && <ChevronRight className="w-6 h-6" />}

@@ -61,7 +61,7 @@ export function EmptyState({
       </div>
 
       <h3
-        className={`font-bold text-blue-950 dark:text-white mb-2 ${
+        className={`font-bold text-brand-ink mb-2 ${
           compact ? 'text-lg' : 'text-xl sm:text-2xl'
         }`}
       >
@@ -80,7 +80,7 @@ export function EmptyState({
       {actionLabel && onAction && (
         <button
           onClick={onAction}
-          className={`bg-gradient-to-br from-blue-900 to-blue-950 text-white rounded-2xl font-bold shadow-md hover:shadow-lg active:scale-95 transition-all ${
+          className={`bg-gradient-to-br from-brand to-brand-strong text-white rounded-2xl font-bold shadow-md hover:shadow-lg active:scale-95 transition-all ${
             compact ? 'px-5 py-2.5 text-sm' : 'px-7 py-3.5 text-base'
           }`}
         >

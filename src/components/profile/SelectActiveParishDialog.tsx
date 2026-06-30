@@ -86,13 +86,13 @@ export function SelectActiveParishDialog({
       <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
 
       <div
-        className="relative bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-900 dark:to-blue-950 rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 border-4 border-blue-800 transition-colors"
+        className="relative bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-900 dark:to-blue-950 rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 border-4 border-brand-border transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="mb-7 text-center">
           <div className="text-5xl mb-3">✝️</div>
-          <h2 className="text-xl sm:text-2xl font-bold text-blue-950 dark:text-white">
+          <h2 className="text-xl sm:text-2xl font-bold text-brand-ink">
             {!chosenRole ? '¿Cómo participas hoy?' : chosenParish ? '¿A cuál capilla vas?' : '¿A cuál parroquia vas?'}
           </h2>
           {!chosenRole && (
@@ -129,8 +129,8 @@ export function SelectActiveParishDialog({
             {(userRole === 'Coro' || isAdmin) && (
               <button
                 onClick={() => handleRoleSelect('Coro')}
-                className={`w-full bg-gradient-to-br from-blue-900 to-blue-950 text-white p-4 rounded-2xl flex items-center gap-4 hover:opacity-90 active:scale-95 transition-all border-2 shadow-lg ${
-                  lastSessionRole === 'Coro' ? 'border-amber-400 ring-2 ring-amber-300' : 'border-blue-800'
+                className={`w-full bg-gradient-to-br from-brand to-brand-strong text-white p-4 rounded-2xl flex items-center gap-4 hover:opacity-90 active:scale-95 transition-all border-2 shadow-lg ${
+                  lastSessionRole === 'Coro' ? 'border-amber-400 ring-2 ring-amber-300' : 'border-brand-border'
                 }`}
               >
                 <span className="text-3xl flex-shrink-0">🎵</span>
@@ -144,7 +144,7 @@ export function SelectActiveParishDialog({
 
             <button
               onClick={() => handleRoleSelect('Pueblo fiel')}
-              className={`w-full bg-white/60 dark:bg-white/10 border-2 text-blue-900 dark:text-blue-100 p-4 rounded-2xl flex items-center gap-4 hover:bg-white/80 dark:hover:bg-white/20 active:scale-95 transition-all ${
+              className={`w-full bg-white/60 dark:bg-white/10 border-2 text-brand-ink-soft p-4 rounded-2xl flex items-center gap-4 hover:bg-white/80 dark:hover:bg-white/20 active:scale-95 transition-all ${
                 lastSessionRole === 'Pueblo fiel'
                   ? 'border-amber-400 ring-2 ring-amber-300'
                   : 'border-blue-300 dark:border-blue-600'
@@ -161,7 +161,7 @@ export function SelectActiveParishDialog({
             {isAdmin && (
               <button
                 onClick={() => handleRoleSelect('Admin')}
-                className={`w-full bg-white/60 dark:bg-white/10 border-2 text-blue-900 dark:text-blue-100 p-4 rounded-2xl flex items-center gap-4 hover:bg-white/80 dark:hover:bg-white/20 active:scale-95 transition-all ${
+                className={`w-full bg-white/60 dark:bg-white/10 border-2 text-brand-ink-soft p-4 rounded-2xl flex items-center gap-4 hover:bg-white/80 dark:hover:bg-white/20 active:scale-95 transition-all ${
                   lastSessionRole === 'Admin'
                     ? 'border-amber-400 ring-2 ring-amber-300'
                     : 'border-blue-300 dark:border-blue-600'
@@ -208,7 +208,7 @@ export function SelectActiveParishDialog({
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100 flex-1 min-w-0 break-words">{formatActiveParishLabel(parish)}</span>
+                        <span className="text-sm sm:text-base font-semibold text-brand-ink-soft flex-1 min-w-0 break-words">{formatActiveParishLabel(parish)}</span>
                         {isLast && <LastUseBadge />}
                         <span className="text-blue-500 dark:text-blue-400 text-lg">→</span>
                       </div>
@@ -240,7 +240,7 @@ export function SelectActiveParishDialog({
                 className="w-full bg-white/60 dark:bg-white/10 border-2 border-blue-200 dark:border-blue-700 p-4 rounded-2xl text-left hover:bg-white/80 dark:hover:bg-white/20 active:scale-95 transition-all"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100 flex-1 min-w-0 break-words">⛪ Toda la parroquia</span>
+                  <span className="text-sm sm:text-base font-semibold text-brand-ink-soft flex-1 min-w-0 break-words">⛪ Toda la parroquia</span>
                   <span className="text-blue-500 dark:text-blue-400 text-lg">→</span>
                 </div>
               </button>
@@ -251,7 +251,7 @@ export function SelectActiveParishDialog({
                   className="w-full bg-white/60 dark:bg-white/10 border-2 border-blue-200 dark:border-blue-700 p-4 rounded-2xl text-left hover:bg-white/80 dark:hover:bg-white/20 active:scale-95 transition-all"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm sm:text-base font-semibold text-blue-900 dark:text-blue-100 flex-1 min-w-0 break-words">🏠 {chapel.name}</span>
+                    <span className="text-sm sm:text-base font-semibold text-brand-ink-soft flex-1 min-w-0 break-words">🏠 {chapel.name}</span>
                     <span className="text-blue-500 dark:text-blue-400 text-lg">→</span>
                   </div>
                 </button>
