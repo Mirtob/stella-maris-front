@@ -7,6 +7,7 @@ import { ChoirView } from './components/layout/ChoirView';
 import { PublishedCantorals } from './components/cantoral/PublishedCantorals';
 import { Sidebar } from './components/layout/Sidebar';
 import { MenuButton } from './components/layout/MenuButton';
+import { BottomNav } from './components/layout/BottomNav';
 import { Tour } from './components/tour/Tour';
 import { toursByRole, hasSeenTour, markTourSeen, resetTour } from './components/tour/tours';
 import { NotificationBell } from './components/layout/NotificationBell';
@@ -202,7 +203,9 @@ function App() {
         position={typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches ? 'bottom-center' : 'top-center'}
         richColors
         closeButton
-        offset={typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches ? 16 : undefined}
+        // En móvil el toast va abajo; subimos el offset para que no lo tape la barra
+        // de navegación inferior (fija, ~64px + safe-area).
+        offset={typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches ? 84 : undefined}
       />
       <OfflineBanner />
       <ThemeToggle />
@@ -1052,26 +1055,37 @@ function AppContent() {
         onCancel={() => setPendingNavigateView(null)}
       />
 
-      <Suspense fallback={<LoadingScreen />}>
-        {renderView({
-          view,
-          userProfile,
-          effectiveRole,
-          activeParishName,
-          cantoral,
-          publishedCantorals,
-          loadingCantorals,
-          onAddToCantoral: handleAddToCantoral,
-          onRemoveFromCantoral: handleRemoveFromCantoral,
-          onPlaySong: handlePlaySong,
-          onPublishCantoral: handlePublishCantoral,
-          navigate,
-          onDeleteCantoral: handleDeleteCantoral,
-          onEditCantoral: handleEditCantoral,
-          onShareCantoral: handleShareCantoral,
-          onListen: handleListen,
-        })}
-      </Suspense>
+      {/* pb-16 en móvil deja espacio para la barra inferior fija (lg+ no la usa). */}
+      <div className="pb-16 lg:pb-0">
+        <Suspense fallback={<LoadingScreen />}>
+          {renderView({
+            view,
+            userProfile,
+            effectiveRole,
+            activeParishName,
+            cantoral,
+            publishedCantorals,
+            loadingCantorals,
+            onAddToCantoral: handleAddToCantoral,
+            onRemoveFromCantoral: handleRemoveFromCantoral,
+            onPlaySong: handlePlaySong,
+            onPublishCantoral: handlePublishCantoral,
+            navigate,
+            onDeleteCantoral: handleDeleteCantoral,
+            onEditCantoral: handleEditCantoral,
+            onShareCantoral: handleShareCantoral,
+            onListen: handleListen,
+          })}
+        </Suspense>
+      </div>
+
+      {/* Barra de navegación inferior (solo móvil/tablet; en lg+ está el menú lateral). */}
+      <BottomNav
+        currentView={view}
+        onNavigate={navigate}
+        onOpenMore={() => setSidebarOpen(true)}
+        role={effectiveRole}
+      />
 
       <SolemnityAlerts />
 
