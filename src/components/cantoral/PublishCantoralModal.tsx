@@ -723,7 +723,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                   </div>
                   <div>
                     <div className="text-xl font-bold text-blue-950 dark:text-white">Adorno del folleto</div>
-                    <div className="text-sm text-blue-900 dark:text-blue-200">Elegí la guirnalda que decorará los títulos del PDF</div>
+                    <div className="text-sm text-blue-900 dark:text-blue-200">Elige la guirnalda que decorará los títulos del PDF</div>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -757,7 +757,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                   </div>
                   <div>
                     <div className="text-xl font-bold text-blue-950 dark:text-white">Letra del folleto</div>
-                    <div className="text-sm text-blue-900 dark:text-blue-200">Elegí la fuente y el tamaño de la letra del PDF</div>
+                    <div className="text-sm text-blue-900 dark:text-blue-200">Elige la fuente y el tamaño de la letra del PDF</div>
                   </div>
                 </div>
 
@@ -799,7 +799,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                   ))}
                 </div>
                 <p className="text-xs text-blue-800 dark:text-blue-300 mt-2">
-                  Tip: usá "Vista previa del folleto" para ver cómo queda antes de publicar.
+                  Tip: usa "Vista previa del folleto" para ver cómo queda antes de publicar.
                 </p>
               </div>
 

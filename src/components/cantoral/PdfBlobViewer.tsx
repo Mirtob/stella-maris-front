@@ -81,7 +81,7 @@ export function PdfBlobViewer({ blob }: { blob: Blob }) {
       )}
       {error && !loading && (
         <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-gray-600 dark:text-gray-300 text-sm">
-          No se pudo mostrar la vista previa. Probá descargar el folleto.
+          No se pudo mostrar la vista previa. Intenta descargar el folleto.
         </div>
       )}
       <div ref={containerRef} />

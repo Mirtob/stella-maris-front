@@ -83,6 +83,42 @@ function clipWhite(img: HTMLImageElement): GarlandImg | null {
   return { dataUrl: canvas.toDataURL('image/png'), w: sw, h: sh };
 }
 
+/**
+ * Dibuja media guirnalda sencilla (cenefa de laurel fina y poco invasiva) entre el
+ * borde de la hoja (xOuter) y el costado del título (xInner), centrada en midY.
+ * Trazo del mismo color que la letra de los cantos. Se usa en los separadores de
+ * sección: a 1.2 cm de grosor y a todo el ancho la imagen se distorsionaría, así que
+ * en su lugar trazamos esta cenefa vectorial con el título del momento al centro.
+ */
+function drawSideGarland(
+  pdf: any,
+  xOuter: number,
+  xInner: number,
+  midY: number,
+  color: [number, number, number],
+) {
+  const span = xInner - xOuter; // con signo: + si el título está a la derecha
+  if (Math.abs(span) < 6) return; // sin espacio suficiente: no dibujar
+  const dir = Math.sign(span); // hacia dónde queda el título
+  pdf.setDrawColor(color[0], color[1], color[2]);
+  pdf.setFillColor(color[0], color[1], color[2]);
+  pdf.setLineWidth(0.3);
+  // Tallo central
+  pdf.line(xOuter, midY, xInner, midY);
+  // Pares de hojas a lo largo del tallo (motivo de laurel), inclinadas hacia el título
+  const leaves = 4;
+  const lf = 2.2; // largo de cada hoja
+  for (let k = 1; k <= leaves; k++) {
+    const t = k / (leaves + 1);
+    const x = xOuter + span * t;
+    pdf.line(x, midY, x + dir * lf, midY - lf * 0.8);
+    pdf.line(x, midY, x + dir * lf, midY + lf * 0.8);
+  }
+  // Pequeña baya de remate junto al título y en el extremo exterior
+  pdf.circle(xInner, midY, 0.7, 'F');
+  pdf.circle(xOuter, midY, 0.5, 'F');
+}
+
 const CATEGORY_ORDER = [
   'Entrada', 'Rito de Aspersión', 'Kyrie', 'Gloria', 'Salmo', 'Aleluya',
   'Post Evangelio', 'Respuesta a Oración Universal', 'Ofertorio', 'Santo',
@@ -350,46 +386,47 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     (a, b) => CATEGORY_ORDER.indexOf(a) - CATEGORY_ORDER.indexOf(b)
   );
 
-  sortedCategories.forEach((category) => {
-    // Cabecera de categoría: guirnalda eucarística (tintada al color litúrgico) con el
-    // título del momento de la Misa centrado en el óvalo blanco del banner.
+  // Espacio simétrico (arriba y abajo) de cada guirnalda, para que quede SIEMPRE
+  // centrada entre el canto anterior y el siguiente que separa.
+  const bandGap = adv(8);
+
+  sortedCategories.forEach((category, catIdx) => {
+    // Cabecera de categoría: la guirnalda con el título del momento, centrada entre
+    // los dos cantos que separa (mismo espacio arriba y abajo).
     const label = cleanText(category).toUpperCase();
 
-    if (garland) {
-      const aW = pageW; // guirnalda a sangre: ocupa el ancho COMPLETO de la hoja (borde a borde)
-      const aH = aW * (garland.h / garland.w); // alto natural (sin distorsión)
-      needPage(aH + 6);
-      // Reusar la misma imagen (alias) para no inflar el PDF en cada sección.
-      pdf.addImage(garland.dataUrl, 'PNG', 0, y, aW, aH, 'garland', 'FAST');
-      // Caja blanca central que "corta" la guirnalda al medio y deja el título en blanco.
-      // Su ancho se ajusta al título; el tipo arranca grande y se achica si no entra.
-      pdf.setFont('helvetica', 'bold');
-      let fs = 19;
-      pdf.setFontSize(fs);
-      const maxBoxW = aW * 0.62;
-      while (pdf.getTextWidth(label) + 16 > maxBoxW && fs > 9) { fs -= 0.5; pdf.setFontSize(fs); }
-      const boxW = Math.min(maxBoxW, Math.max(pdf.getTextWidth(label) + 16, aW * 0.30));
-      pdf.setFillColor(255, 255, 255);
-      pdf.rect(pageW / 2 - boxW / 2, y, boxW, aH, 'F');
-      pdf.setTextColor(...colors.primary);
-      pdf.text(label, pageW / 2, y + aH * 0.52, { align: 'center', baseline: 'middle' });
-      y += aH + 4;
-    } else {
-      // Respaldo si la imagen no carga: título centrado con líneas a los lados.
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(14);
-      pdf.setTextColor(...colors.primary);
-      const labelW = pdf.getTextWidth(label);
-      const gap = 4;
-      needPage(16);
-      const midY = y + 6;
-      pdf.setDrawColor(...colors.primary);
-      pdf.setLineWidth(0.5);
-      pdf.line(margin + 6, midY, pageW / 2 - labelW / 2 - gap, midY);
-      pdf.line(pageW / 2 + labelW / 2 + gap, midY, pageW - margin - 6, midY);
-      pdf.text(label, pageW / 2, midY + 1.8, { align: 'center' });
-      y = midY + 8;
-    }
+    // Gap superior (la primera categoría no lo lleva: va arriba de todo).
+    if (catIdx > 0) y += bandGap;
+
+    // Guirnalda de sección: cenefa vectorial sencilla (laurel fino y poco invasivo,
+    // del mismo color que la letra) con el título del momento centrado, ocupando el
+    // resto del ancho de la hoja. La banda mide 1.2 cm de grosor.
+    const bandH = adv(12); // 1.2 cm de grosor de la banda
+    needPage(bandH + adv(4));
+    const midY = y + bandH / 2;
+
+    // Título del momento, centrado (se achica si no cabe, dejando aire a los lados).
+    pdf.setFont('helvetica', 'bold');
+    let fs = 13;
+    pdf.setFontSize(fs);
+    const maxTitleW = contentW - adv(44);
+    while (pdf.getTextWidth(label) > maxTitleW && fs > 8) { fs -= 0.5; pdf.setFontSize(fs); }
+    pdf.setTextColor(...colors.primary);
+    pdf.text(label, pageW / 2, midY, { align: 'center', baseline: 'middle' });
+
+    // Cenefa a cada lado del título, del color de la letra de los cantos.
+    const labelW = pdf.getTextWidth(label);
+    const innerGap = adv(5);
+    const leftInner = pageW / 2 - labelW / 2 - innerGap;
+    const rightInner = pageW / 2 + labelW / 2 + innerGap;
+    const garlandColor: [number, number, number] = [40, 40, 40];
+    drawSideGarland(pdf, margin + 4, leftInner, midY, garlandColor);
+    drawSideGarland(pdf, pageW - margin - 4, rightInner, midY, garlandColor);
+
+    y = midY + bandH / 2;
+
+    // Gap inferior (igual al superior) → la guirnalda queda centrada entre ambos cantos.
+    y += bandGap;
 
     byCategory[category].forEach((song, idx) => {
       needPage(adv(20));
@@ -473,8 +510,8 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
         y += adv(6);
       }
     });
-
-    y += adv(6); // espacio entre categorías
+    // Sin gap extra aquí: el espacio entre la última letra y la siguiente guirnalda
+    // lo da el `bandGap` superior de la próxima categoría (simétrico con el inferior).
   });
 
   // ─── QR al canal de YouTube (esquina inferior derecha de la última hoja) ───
