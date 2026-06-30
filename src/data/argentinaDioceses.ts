@@ -1,11 +1,20 @@
 import { Diocese } from './chileDioceses';
 
-// Estructura eclesiástica de Argentina (Conferencia Episcopal Argentina).
+// Estructura eclesiástica de Argentina (Conferencia Episcopal Argentina / AICA).
 // 'region' = PROVINCIA ECLESIÁSTICA (agrupa la arquidiócesis metropolitana y sus
-// diócesis sufragáneas en el <optgroup> del ParishPicker).
+// diócesis sufragáneas + prelaturas territoriales en el <optgroup> del ParishPicker).
 //
-// Generado a partir del JSON oficial. 49 diócesis, 99 parroquias.
+// Cobertura: las 14 provincias eclesiásticas con sus 14 arquidiócesis metropolitanas,
+// las diócesis sufragáneas y las 4 prelaturas territoriales (Deán Funes, Esquel,
+// Cafayate, Humahuaca). Incluye la nueva provincia de Mercedes-Luján (metropolitana
+// desde 2019). Cada jurisdicción trae su catedral verificada en fuentes oficiales;
+// las parroquias listadas son la catedral + parroquias principales (Mercedes-Luján
+// se carga completa como referencia). Fuentes: episcopado.org, AICA, GCatholic,
+// Wikipedia (anexos de parroquias por diócesis).
 export const argentinaDioceses: Diocese[] = [
+  // ──────────────────────────────────────────────
+  // PROVINCIA ECLESIÁSTICA DE BUENOS AIRES
+  // ──────────────────────────────────────────────
   {
     id: 'ar-buenos-aires',
     name: 'Arquidiócesis de Buenos Aires',
@@ -59,6 +68,50 @@ export const argentinaDioceses: Diocese[] = [
     ],
   },
   {
+    id: 'ar-gregorio-de-laferrere',
+    name: 'Diócesis de Gregorio de Laferrère',
+    region: 'Provincia Eclesiástica de Buenos Aires',
+    parishes: [
+      { id: 'ar-gregorio-de-laferrere-catedral-cristo-rey', name: 'Catedral Cristo Rey' },
+    ],
+  },
+  {
+    id: 'ar-lomas-de-zamora',
+    name: 'Diócesis de Lomas de Zamora',
+    region: 'Provincia Eclesiástica de Buenos Aires',
+    parishes: [
+      { id: 'ar-lomas-de-zamora-catedral-nuestra-senora-de-la-paz', name: 'Catedral Nuestra Señora de la Paz' },
+    ],
+  },
+  {
+    id: 'ar-moron',
+    name: 'Diócesis de Morón',
+    region: 'Provincia Eclesiástica de Buenos Aires',
+    parishes: [
+      { id: 'ar-moron-catedral-inmaculada-concepcion-del-buen-viaje', name: 'Catedral Basílica Inmaculada Concepción del Buen Viaje' },
+    ],
+  },
+  {
+    id: 'ar-san-justo',
+    name: 'Diócesis de San Justo',
+    region: 'Provincia Eclesiástica de Buenos Aires',
+    parishes: [
+      { id: 'ar-san-justo-catedral-santos-justo-y-pastor', name: 'Catedral Santos Justo y Pastor' },
+    ],
+  },
+  {
+    id: 'ar-san-miguel',
+    name: 'Diócesis de San Miguel',
+    region: 'Provincia Eclesiástica de Buenos Aires',
+    parishes: [
+      { id: 'ar-san-miguel-catedral-san-miguel-arcangel', name: 'Catedral San Miguel Arcángel' },
+    ],
+  },
+
+  // ──────────────────────────────────────────────
+  // PROVINCIA ECLESIÁSTICA DE LA PLATA
+  // ──────────────────────────────────────────────
+  {
     id: 'ar-la-plata',
     name: 'Arquidiócesis de La Plata',
     region: 'Provincia Eclesiástica de La Plata',
@@ -97,6 +150,98 @@ export const argentinaDioceses: Diocese[] = [
       { id: 'ar-chascomus-san-jose-de-flores', name: 'San José de Flores' },
     ],
   },
+
+  // ──────────────────────────────────────────────
+  // PROVINCIA ECLESIÁSTICA DE MERCEDES-LUJÁN
+  // (metropolitana desde 2019; lista de parroquias completa)
+  // ──────────────────────────────────────────────
+  {
+    id: 'ar-mercedes-lujan',
+    name: 'Arquidiócesis de Mercedes-Luján',
+    region: 'Provincia Eclesiástica de Mercedes-Luján',
+    parishes: [
+      { id: 'ar-mercedes-lujan-catedral-basilica-nuestra-senora-de-las-mercedes', name: 'Catedral Metropolitana Basílica Nuestra Señora de las Mercedes', city: 'Mercedes' },
+      { id: 'ar-mercedes-lujan-basilica-santuario-nuestra-senora-de-lujan', name: 'Basílica Santuario Nuestra Señora de Luján', city: 'Luján' },
+      { id: 'ar-mercedes-lujan-nuestra-senora-del-pilar-agustin-roca', name: 'Nuestra Señora del Pilar', city: 'Agustín Roca' },
+      { id: 'ar-mercedes-lujan-inmaculada-concepcion-alberdi', name: 'Inmaculada Concepción', city: 'Alberdi' },
+      { id: 'ar-mercedes-lujan-nuestra-senora-del-rosario-alberti', name: 'Nuestra Señora del Rosario', city: 'Alberti' },
+      { id: 'ar-mercedes-lujan-nuestra-senora-del-rosario-alem', name: 'Nuestra Señora del Rosario', city: 'Alem' },
+      { id: 'ar-mercedes-lujan-sagrada-familia-carboni', name: 'Sagrada Familia', city: 'Carboni' },
+      { id: 'ar-mercedes-lujan-nuestra-senora-del-carmen-de-areco', name: 'Nuestra Señora del Carmen de Areco', city: 'Carmen de Areco' },
+      { id: 'ar-mercedes-lujan-nuestra-senora-de-la-asuncion-chacabuco', name: 'Nuestra Señora de la Asunción', city: 'Chacabuco' },
+      { id: 'ar-mercedes-lujan-santos-arcangeles-chacabuco', name: 'Santos Arcángeles Miguel, Gabriel y Rafael', city: 'Chacabuco' },
+      { id: 'ar-mercedes-lujan-san-isidro-labrador-chacabuco', name: 'San Isidro Labrador', city: 'Chacabuco' },
+      { id: 'ar-mercedes-lujan-cristo-obrero-chivilcoy', name: 'Cristo Obrero', city: 'Chivilcoy' },
+      { id: 'ar-mercedes-lujan-nuestra-senora-del-carmen-chivilcoy', name: 'Nuestra Señora del Carmen', city: 'Chivilcoy' },
+      { id: 'ar-mercedes-lujan-san-cayetano-chivilcoy', name: 'San Cayetano', city: 'Chivilcoy' },
+      { id: 'ar-mercedes-lujan-santisima-eucaristia-chivilcoy', name: 'Santísima Eucaristía', city: 'Chivilcoy' },
+      { id: 'ar-mercedes-lujan-san-pedro-apostol-chivilcoy', name: 'San Pedro Apóstol', city: 'Chivilcoy' },
+      { id: 'ar-mercedes-lujan-san-vicente-palotti-empalme-lobos', name: 'San Vicente Palotti', city: 'Empalme Lobos' },
+      { id: 'ar-mercedes-lujan-san-cipriano-general-las-heras', name: 'San Cipriano', city: 'General Las Heras' },
+      { id: 'ar-mercedes-lujan-medalla-milagrosa-general-rodriguez', name: 'Nuestra Señora de la Medalla Milagrosa', city: 'General Rodríguez' },
+      { id: 'ar-mercedes-lujan-nuestra-senora-de-la-salud-general-rodriguez', name: 'Nuestra Señora de la Salud', city: 'General Rodríguez' },
+      { id: 'ar-mercedes-lujan-nuestra-senora-del-carmen-general-rodriguez', name: 'Nuestra Señora del Carmen', city: 'General Rodríguez' },
+      { id: 'ar-mercedes-lujan-san-luis-gonzaga-jauregui', name: 'San Luis Gonzaga', city: 'Jáuregui' },
+      { id: 'ar-mercedes-lujan-cristo-redentor-junin', name: 'Cristo Redentor', city: 'Junín' },
+      { id: 'ar-mercedes-lujan-nuestra-senora-del-carmen-junin', name: 'Nuestra Señora del Carmen', city: 'Junín' },
+      { id: 'ar-mercedes-lujan-sagrado-corazon-de-jesus-junin', name: 'Sagrado Corazón de Jesús', city: 'Junín' },
+      { id: 'ar-mercedes-lujan-san-francisco-de-asis-junin', name: 'San Francisco de Asís', city: 'Junín' },
+      { id: 'ar-mercedes-lujan-san-jose-junin', name: 'San José', city: 'Junín' },
+      { id: 'ar-mercedes-lujan-san-ignacio-de-loyola-junin', name: 'San Ignacio de Loyola', city: 'Junín' },
+      { id: 'ar-mercedes-lujan-inmaculada-concepcion-las-malvinas', name: 'Inmaculada Concepción', city: 'Las Malvinas' },
+      { id: 'ar-mercedes-lujan-nuestra-senora-del-carmen-lobos', name: 'Nuestra Señora del Carmen', city: 'Lobos' },
+      { id: 'ar-mercedes-lujan-sagrada-familia-lujan', name: 'Sagrada Familia', city: 'Luján' },
+      { id: 'ar-mercedes-lujan-sagrado-corazon-de-jesus-lujan', name: 'Sagrado Corazón de Jesús', city: 'Luján' },
+      { id: 'ar-mercedes-lujan-san-cayetano-lujan', name: 'San Cayetano', city: 'Luján' },
+      { id: 'ar-mercedes-lujan-san-demetrio-y-san-bernardo-lujan', name: 'San Demetrio y San Bernardo', city: 'Luján' },
+      { id: 'ar-mercedes-lujan-santa-elena-lujan', name: 'Santa Elena', city: 'Luján' },
+      { id: 'ar-mercedes-lujan-san-marcos-evangelista-marcos-paz', name: 'San Marcos Evangelista', city: 'Marcos Paz' },
+      { id: 'ar-mercedes-lujan-nuestra-senora-de-lujan-marcos-paz', name: 'Nuestra Señora de Luján', city: 'Marcos Paz' },
+      { id: 'ar-mercedes-lujan-san-jose-obrero-mercedes', name: 'San José Obrero', city: 'Mercedes' },
+      { id: 'ar-mercedes-lujan-san-luis-gonzaga-mercedes', name: 'San Luis Gonzaga', city: 'Mercedes' },
+      { id: 'ar-mercedes-lujan-san-patricio-mercedes', name: 'San Patricio', city: 'Mercedes' },
+      { id: 'ar-mercedes-lujan-san-vicente-de-paul-mercedes', name: 'San Vicente de Paúl', city: 'Mercedes' },
+      { id: 'ar-mercedes-lujan-cristo-rey-mercedes', name: 'Cristo Rey', city: 'Mercedes' },
+      { id: 'ar-mercedes-lujan-san-jose-moquehua', name: 'San José', city: 'Moquehuá' },
+      { id: 'ar-mercedes-lujan-san-lorenzo-martir-navarro', name: 'San Lorenzo Mártir', city: 'Navarro' },
+      { id: 'ar-mercedes-lujan-san-jose-ohiggins', name: 'San José', city: "O'Higgins" },
+      { id: 'ar-mercedes-lujan-san-roque-open-door', name: 'San Roque', city: 'Open Door' },
+      { id: 'ar-mercedes-lujan-inmaculada-concepcion-rawson', name: 'Inmaculada Concepción', city: 'Rawson' },
+      { id: 'ar-mercedes-lujan-san-andres-apostol-san-andres-de-giles', name: 'San Andrés Apóstol', city: 'San Andrés de Giles' },
+      { id: 'ar-mercedes-lujan-nuestra-senora-del-rosario-suipacha', name: 'Nuestra Señora del Rosario', city: 'Suipacha' },
+      { id: 'ar-mercedes-lujan-san-jose-torres', name: 'San José', city: 'Torres' },
+      { id: 'ar-mercedes-lujan-sagrado-corazon-de-jesus-vedia', name: 'Sagrado Corazón de Jesús', city: 'Vedia' },
+    ],
+  },
+  {
+    id: 'ar-merlo-moreno',
+    name: 'Diócesis de Merlo-Moreno',
+    region: 'Provincia Eclesiástica de Mercedes-Luján',
+    parishes: [
+      { id: 'ar-merlo-moreno-catedral-nuestra-senora-del-rosario', name: 'Catedral Nuestra Señora del Rosario', city: 'Moreno' },
+    ],
+  },
+  {
+    id: 'ar-nueve-de-julio',
+    name: 'Diócesis de Nueve de Julio',
+    region: 'Provincia Eclesiástica de Mercedes-Luján',
+    parishes: [
+      { id: 'ar-nueve-de-julio-catedral-santo-domingo-de-guzman', name: 'Catedral Santo Domingo de Guzmán', city: 'Nueve de Julio' },
+    ],
+  },
+  {
+    id: 'ar-zarate-campana',
+    name: 'Diócesis de Zárate-Campana',
+    region: 'Provincia Eclesiástica de Mercedes-Luján',
+    parishes: [
+      { id: 'ar-zarate-campana-catedral-santa-florentina', name: 'Catedral Santa Florentina', city: 'Campana' },
+      { id: 'ar-zarate-campana-cocatedral-natividad-del-senor', name: 'Co-Catedral Natividad de Nuestro Señor Jesucristo', city: 'Belén de Escobar' },
+    ],
+  },
+
+  // ──────────────────────────────────────────────
+  // PROVINCIA ECLESIÁSTICA DE CÓRDOBA
+  // ──────────────────────────────────────────────
   {
     id: 'ar-cordoba',
     name: 'Arquidiócesis de Córdoba',
@@ -143,6 +288,18 @@ export const argentinaDioceses: Diocese[] = [
     ],
   },
   {
+    id: 'ar-dean-funes',
+    name: 'Prelatura Territorial de Deán Funes',
+    region: 'Provincia Eclesiástica de Córdoba',
+    parishes: [
+      { id: 'ar-dean-funes-catedral-nuestra-senora-del-carmen', name: 'Catedral Nuestra Señora del Carmen', city: 'Deán Funes' },
+    ],
+  },
+
+  // ──────────────────────────────────────────────
+  // PROVINCIA ECLESIÁSTICA DE MENDOZA
+  // ──────────────────────────────────────────────
+  {
     id: 'ar-mendoza',
     name: 'Arquidiócesis de Mendoza',
     region: 'Provincia Eclesiástica de Mendoza',
@@ -163,24 +320,48 @@ export const argentinaDioceses: Diocese[] = [
     ],
   },
   {
-    id: 'ar-san-luis',
-    name: 'Diócesis de San Luis',
+    id: 'ar-neuquen',
+    name: 'Diócesis de Neuquén',
     region: 'Provincia Eclesiástica de Mendoza',
     parishes: [
-      { id: 'ar-san-luis-catedral-inmaculada-concepcion', name: 'Catedral Inmaculada Concepción' },
-      { id: 'ar-san-luis-nuestra-senora-del-carmen', name: 'Nuestra Señora del Carmen' },
+      { id: 'ar-neuquen-catedral-maria-auxiliadora', name: 'Catedral María Auxiliadora' },
     ],
   },
+
+  // ──────────────────────────────────────────────
+  // PROVINCIA ECLESIÁSTICA DE SAN JUAN DE CUYO
+  // ──────────────────────────────────────────────
   {
     id: 'ar-san-juan-de-cuyo',
     name: 'Arquidiócesis de San Juan de Cuyo',
-    region: 'Provincia Eclesiástica de San Juan',
+    region: 'Provincia Eclesiástica de San Juan de Cuyo',
     parishes: [
       { id: 'ar-san-juan-de-cuyo-catedral-de-san-juan-bautista', name: 'Catedral de San Juan Bautista' },
       { id: 'ar-san-juan-de-cuyo-nuestra-senora-de-la-merced', name: 'Nuestra Señora de la Merced' },
       { id: 'ar-san-juan-de-cuyo-inmaculada-concepcion', name: 'Inmaculada Concepción' },
     ],
   },
+  {
+    id: 'ar-san-luis',
+    name: 'Diócesis de San Luis',
+    region: 'Provincia Eclesiástica de San Juan de Cuyo',
+    parishes: [
+      { id: 'ar-san-luis-catedral-inmaculada-concepcion', name: 'Catedral Inmaculada Concepción' },
+      { id: 'ar-san-luis-nuestra-senora-del-carmen', name: 'Nuestra Señora del Carmen' },
+    ],
+  },
+  {
+    id: 'ar-la-rioja',
+    name: 'Diócesis de La Rioja',
+    region: 'Provincia Eclesiástica de San Juan de Cuyo',
+    parishes: [
+      { id: 'ar-la-rioja-catedral-basilica-san-nicolas-de-bari', name: 'Catedral Basílica San Nicolás de Bari', city: 'La Rioja' },
+    ],
+  },
+
+  // ──────────────────────────────────────────────
+  // PROVINCIA ECLESIÁSTICA DE ROSARIO
+  // ──────────────────────────────────────────────
   {
     id: 'ar-rosario',
     name: 'Arquidiócesis de Rosario',
@@ -208,6 +389,10 @@ export const argentinaDioceses: Diocese[] = [
       { id: 'ar-venado-tuerto-catedral-inmaculada-concepcion', name: 'Catedral Inmaculada Concepción' },
     ],
   },
+
+  // ──────────────────────────────────────────────
+  // PROVINCIA ECLESIÁSTICA DE SANTA FE
+  // ──────────────────────────────────────────────
   {
     id: 'ar-santa-fe-de-la-vera-cruz',
     name: 'Arquidiócesis de Santa Fe de la Vera Cruz',
@@ -234,6 +419,39 @@ export const argentinaDioceses: Diocese[] = [
       { id: 'ar-reconquista-catedral-inmaculada-concepcion', name: 'Catedral Inmaculada Concepción' },
     ],
   },
+
+  // ──────────────────────────────────────────────
+  // PROVINCIA ECLESIÁSTICA DE PARANÁ
+  // ──────────────────────────────────────────────
+  {
+    id: 'ar-parana',
+    name: 'Arquidiócesis de Paraná',
+    region: 'Provincia Eclesiástica de Paraná',
+    parishes: [
+      { id: 'ar-parana-catedral-metropolitana-nuestra-senora-del-rosario', name: 'Catedral Metropolitana Nuestra Señora del Rosario' },
+      { id: 'ar-parana-san-miguel-arcangel', name: 'San Miguel Arcángel' },
+    ],
+  },
+  {
+    id: 'ar-concordia',
+    name: 'Diócesis de Concordia',
+    region: 'Provincia Eclesiástica de Paraná',
+    parishes: [
+      { id: 'ar-concordia-catedral-san-antonio-de-padua', name: 'Catedral San Antonio de Padua' },
+    ],
+  },
+  {
+    id: 'ar-gualeguaychu',
+    name: 'Diócesis de Gualeguaychú',
+    region: 'Provincia Eclesiástica de Paraná',
+    parishes: [
+      { id: 'ar-gualeguaychu-catedral-san-jose', name: 'Catedral San José' },
+    ],
+  },
+
+  // ──────────────────────────────────────────────
+  // PROVINCIA ECLESIÁSTICA DE SALTA
+  // ──────────────────────────────────────────────
   {
     id: 'ar-salta',
     name: 'Arquidiócesis de Salta',
@@ -271,6 +489,26 @@ export const argentinaDioceses: Diocese[] = [
     ],
   },
   {
+    id: 'ar-cafayate',
+    name: 'Prelatura Territorial de Cafayate',
+    region: 'Provincia Eclesiástica de Salta',
+    parishes: [
+      { id: 'ar-cafayate-catedral-nuestra-senora-del-rosario', name: 'Catedral Nuestra Señora del Rosario', city: 'Cafayate' },
+    ],
+  },
+  {
+    id: 'ar-humahuaca',
+    name: 'Prelatura Territorial de Humahuaca',
+    region: 'Provincia Eclesiástica de Salta',
+    parishes: [
+      { id: 'ar-humahuaca-catedral-nuestra-senora-de-la-candelaria', name: 'Catedral Nuestra Señora de la Candelaria', city: 'Humahuaca' },
+    ],
+  },
+
+  // ──────────────────────────────────────────────
+  // PROVINCIA ECLESIÁSTICA DE TUCUMÁN
+  // ──────────────────────────────────────────────
+  {
     id: 'ar-tucuman',
     name: 'Arquidiócesis de Tucumán',
     region: 'Provincia Eclesiástica de Tucumán',
@@ -278,6 +516,16 @@ export const argentinaDioceses: Diocese[] = [
       { id: 'ar-tucuman-catedral-de-nuestra-senora-de-la-encarnacion', name: 'Catedral de Nuestra Señora de la Encarnación' },
       { id: 'ar-tucuman-basilica-de-nuestra-senora-de-la-merced', name: 'Basílica de Nuestra Señora de la Merced' },
       { id: 'ar-tucuman-san-gerardo', name: 'San Gerardo' },
+    ],
+  },
+  {
+    id: 'ar-santiago-del-estero',
+    name: 'Arquidiócesis de Santiago del Estero',
+    region: 'Provincia Eclesiástica de Tucumán',
+    parishes: [
+      { id: 'ar-santiago-del-estero-catedral-basilica-de-nuestra-senora-del-carmen', name: 'Catedral Basílica de Nuestra Señora del Carmen' },
+      { id: 'ar-santiago-del-estero-san-francisco-solano', name: 'San Francisco Solano' },
+      { id: 'ar-santiago-del-estero-santo-domingo', name: 'Santo Domingo' },
     ],
   },
   {
@@ -289,23 +537,17 @@ export const argentinaDioceses: Diocese[] = [
     ],
   },
   {
-    id: 'ar-santiago-del-estero',
-    name: 'Arquidiócesis de Santiago del Estero',
-    region: 'Provincia Eclesiástica de Santiago del Estero',
-    parishes: [
-      { id: 'ar-santiago-del-estero-catedral-basilica-de-nuestra-senora-del-carmen', name: 'Catedral Basílica de Nuestra Señora del Carmen' },
-      { id: 'ar-santiago-del-estero-san-francisco-solano', name: 'San Francisco Solano' },
-      { id: 'ar-santiago-del-estero-santo-domingo', name: 'Santo Domingo' },
-    ],
-  },
-  {
     id: 'ar-anatuya',
     name: 'Diócesis de Añatuya',
-    region: 'Provincia Eclesiástica de Santiago del Estero',
+    region: 'Provincia Eclesiástica de Tucumán',
     parishes: [
       { id: 'ar-anatuya-catedral-nuestra-senora-del-valle', name: 'Catedral Nuestra Señora del Valle' },
     ],
   },
+
+  // ──────────────────────────────────────────────
+  // PROVINCIA ECLESIÁSTICA DE CORRIENTES
+  // ──────────────────────────────────────────────
   {
     id: 'ar-corrientes',
     name: 'Arquidiócesis de Corrientes',
@@ -349,6 +591,18 @@ export const argentinaDioceses: Diocese[] = [
     ],
   },
   {
+    id: 'ar-obera',
+    name: 'Diócesis de Oberá',
+    region: 'Provincia Eclesiástica de Corrientes',
+    parishes: [
+      { id: 'ar-obera-catedral-san-antonio-de-padua', name: 'Catedral San Antonio de Padua', city: 'Oberá' },
+    ],
+  },
+
+  // ──────────────────────────────────────────────
+  // PROVINCIA ECLESIÁSTICA DE RESISTENCIA
+  // ──────────────────────────────────────────────
+  {
     id: 'ar-resistencia',
     name: 'Arquidiócesis de Resistencia',
     region: 'Provincia Eclesiástica de Resistencia',
@@ -373,31 +627,10 @@ export const argentinaDioceses: Diocese[] = [
       { id: 'ar-san-roque-de-presidencia-roque-saenz-pena-catedral-san-roque', name: 'Catedral San Roque' },
     ],
   },
-  {
-    id: 'ar-parana',
-    name: 'Arquidiócesis de Paraná',
-    region: 'Provincia Eclesiástica de Paraná',
-    parishes: [
-      { id: 'ar-parana-catedral-metropolitana-nuestra-senora-del-rosario', name: 'Catedral Metropolitana Nuestra Señora del Rosario' },
-      { id: 'ar-parana-san-miguel-arcangel', name: 'San Miguel Arcángel' },
-    ],
-  },
-  {
-    id: 'ar-concordia',
-    name: 'Diócesis de Concordia',
-    region: 'Provincia Eclesiástica de Paraná',
-    parishes: [
-      { id: 'ar-concordia-catedral-san-antonio-de-padua', name: 'Catedral San Antonio de Padua' },
-    ],
-  },
-  {
-    id: 'ar-gualeguaychu',
-    name: 'Diócesis de Gualeguaychú',
-    region: 'Provincia Eclesiástica de Paraná',
-    parishes: [
-      { id: 'ar-gualeguaychu-catedral-san-jose', name: 'Catedral San José' },
-    ],
-  },
+
+  // ──────────────────────────────────────────────
+  // PROVINCIA ECLESIÁSTICA DE BAHÍA BLANCA
+  // ──────────────────────────────────────────────
   {
     id: 'ar-bahia-blanca',
     name: 'Arquidiócesis de Bahía Blanca',
@@ -409,19 +642,11 @@ export const argentinaDioceses: Diocese[] = [
     ],
   },
   {
-    id: 'ar-rio-gallegos',
-    name: 'Diócesis de Río Gallegos',
+    id: 'ar-alto-valle-del-rio-negro',
+    name: 'Diócesis de Alto Valle del Río Negro',
     region: 'Provincia Eclesiástica de Bahía Blanca',
     parishes: [
-      { id: 'ar-rio-gallegos-catedral-nuestra-senora-de-lujan', name: 'Catedral Nuestra Señora de Luján' },
-    ],
-  },
-  {
-    id: 'ar-neuquen',
-    name: 'Diócesis de Neuquén',
-    region: 'Provincia Eclesiástica de Bahía Blanca',
-    parishes: [
-      { id: 'ar-neuquen-catedral-maria-auxiliadora', name: 'Catedral María Auxiliadora' },
+      { id: 'ar-alto-valle-del-rio-negro-catedral-nuestra-senora-del-carmen', name: 'Catedral Nuestra Señora del Carmen', city: 'General Roca' },
     ],
   },
   {
@@ -441,11 +666,43 @@ export const argentinaDioceses: Diocese[] = [
     ],
   },
   {
+    id: 'ar-rio-gallegos',
+    name: 'Diócesis de Río Gallegos',
+    region: 'Provincia Eclesiástica de Bahía Blanca',
+    parishes: [
+      { id: 'ar-rio-gallegos-catedral-nuestra-senora-de-lujan', name: 'Catedral Nuestra Señora de Luján' },
+    ],
+  },
+  {
     id: 'ar-comodoro-rivadavia',
     name: 'Diócesis de Comodoro Rivadavia',
     region: 'Provincia Eclesiástica de Bahía Blanca',
     parishes: [
       { id: 'ar-comodoro-rivadavia-catedral-san-juan-bosco', name: 'Catedral San Juan Bosco' },
+    ],
+  },
+  {
+    id: 'ar-rawson',
+    name: 'Diócesis de Rawson',
+    region: 'Provincia Eclesiástica de Bahía Blanca',
+    parishes: [
+      { id: 'ar-rawson-catedral-maria-auxiliadora', name: 'Catedral María Auxiliadora', city: 'Trelew' },
+    ],
+  },
+  {
+    id: 'ar-santa-rosa',
+    name: 'Diócesis de Santa Rosa',
+    region: 'Provincia Eclesiástica de Bahía Blanca',
+    parishes: [
+      { id: 'ar-santa-rosa-catedral-santa-rosa-de-lima', name: 'Catedral Santa Rosa de Lima', city: 'Santa Rosa' },
+    ],
+  },
+  {
+    id: 'ar-esquel',
+    name: 'Prelatura Territorial de Esquel',
+    region: 'Provincia Eclesiástica de Bahía Blanca',
+    parishes: [
+      { id: 'ar-esquel-catedral-sagrado-corazon-de-jesus', name: 'Catedral del Sagrado Corazón de Jesús', city: 'Esquel' },
     ],
   },
 ];

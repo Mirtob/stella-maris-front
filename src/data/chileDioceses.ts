@@ -150,6 +150,30 @@ export const chileDioceses: Diocese[] = [
     ]
   },
 
+  {
+    id: 'illapel',
+    name: 'Prelatura Territorial de Illapel',
+    region: 'Coquimbo',
+    parishes: [
+      // Comuna de Illapel
+      { id: 'illapel-catedral', name: 'Catedral San Rafael Arcángel', city: 'Illapel' },
+      { id: 'illapel-fatima', name: 'Parroquia Nuestra Señora de Fátima', city: 'Illapel' },
+      { id: 'illapel-huintil', name: 'Parroquia Jesucristo Crucificado de Huintil', city: 'Illapel' },
+      // Comuna de Salamanca
+      { id: 'illapel-salamanca-rosario', name: 'Parroquia Nuestra Señora del Rosario de Salamanca', city: 'Salamanca' },
+      { id: 'illapel-eltambo', name: 'Parroquia Santo Tomás de Choapa de El Tambo', city: 'Salamanca' },
+      { id: 'illapel-chillepin', name: 'Parroquia San José de Chillepín', city: 'Salamanca' },
+      // Comuna de Los Vilos
+      { id: 'illapel-losvilos-carmen', name: 'Parroquia Nuestra Señora del Carmen de Los Vilos', city: 'Los Vilos' },
+      { id: 'illapel-palocolorado', name: 'Parroquia Nuestra Señora del Carmen de Palo Colorado', city: 'Quilimarí' },
+      { id: 'illapel-caimanes', name: 'Parroquia San Antonio de Padua de Caimanes', city: 'Caimanes' },
+      { id: 'illapel-guanguali', name: 'Parroquia Cristo Rey de Guangualí', city: 'Guangualí' },
+      // Comuna de Canela
+      { id: 'illapel-canela', name: 'Parroquia Nuestra Señora del Tránsito de Canela', city: 'Canela' },
+      { id: 'illapel-mincha', name: 'Parroquia Nuestra Señora de la Candelaria de Mincha', city: 'Mincha' },
+    ]
+  },
+
   // REGIÓN DE VALPARAÍSO
   {
     id: 'valparaiso',

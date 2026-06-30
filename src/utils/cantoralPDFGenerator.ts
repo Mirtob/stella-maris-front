@@ -252,7 +252,8 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   const archTinted = archImg
     ? tintWreath(archImg, colors.primary,
         { sx: 0, sy: 0, sw: archImg.naturalWidth, sh: archImg.naturalHeight }, false,
-        { x0: 0.32, y0: 0.36, x1: 0.68, y1: 0.70 })
+        // Banda central vaciada más ancha → más espacio para el título del momento.
+        { x0: 0.12, y0: 0.30, x1: 0.88, y1: 0.66 })
     : null;
 
   // Header en cada página
@@ -394,19 +395,21 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     const label = cleanText(category).toUpperCase();
 
     if (archTinted) {
-      const aW = 128;
-      const aH = aW * (archTinted.h / archTinted.w);
+      const aW = pageW; // guirnalda a sangre: ocupa el ancho COMPLETO de la hoja (borde a borde)
+      // Banner un 25% más angosto (más fino verticalmente) → deja más espacio para la letra.
+      const aH = aW * (archTinted.h / archTinted.w) * 0.75;
       needPage(aH + 6);
       // Reusar la misma imagen (alias) para no inflar el PDF en cada sección.
-      pdf.addImage(archTinted.dataUrl, 'PNG', pageW / 2 - aW / 2, y, aW, aH, 'arco-seccion', 'FAST');
-      // Título adaptativo para que entre en la banda central del banner.
+      pdf.addImage(archTinted.dataUrl, 'PNG', 0, y, aW, aH, 'arco-seccion', 'FAST');
+      // Título adaptativo: arranca grande y se achica solo si no entra en la banda
+      // central (dimensionada para el título más largo, "CORDERO DE DIOS").
       pdf.setFont('helvetica', 'bold');
-      let fs = 15;
+      let fs = 30;
       pdf.setFontSize(fs);
-      const maxTitleW = aW * 0.32;
-      while (pdf.getTextWidth(label) > maxTitleW && fs > 9) { fs -= 0.5; pdf.setFontSize(fs); }
+      const maxTitleW = aW * 0.68;
+      while (pdf.getTextWidth(label) > maxTitleW && fs > 12) { fs -= 0.5; pdf.setFontSize(fs); }
       pdf.setTextColor(...colors.primary);
-      pdf.text(label, pageW / 2, y + aH * 0.59, { align: 'center' });
+      pdf.text(label, pageW / 2, y + aH * 0.58, { align: 'center' });
       y += aH + 2;
     } else {
       // Respaldo si la imagen no carga: título centrado con líneas a los lados.
