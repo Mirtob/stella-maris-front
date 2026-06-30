@@ -39,6 +39,28 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* ──────────────────────────────────────────────────────────────────────
+   * TOKENS DE MARCA (Stella Maris) — fuente única de los colores de la app.
+   * Mapeados 1:1 a la paleta actual para que el diseño NO cambie; lo que cambia
+   * es que el color vive en UN solo lugar (y el dark mode lo resuelven los tokens).
+   *
+   *   brand*  = azul de marca (relleno de botones, estados activos, cabeceras)
+   *   ink*    = TEXTO sobre fondo claro; se invierte solo en modo oscuro
+   *             (reemplaza el patrón `text-blue-950 dark:text-white`)
+   *   gold*   = acento ámbar
+   * ────────────────────────────────────────────────────────────────────── */
+  --brand: #1e3a8a;             /* blue-900  */
+  --brand-strong: #172554;      /* blue-950  */
+  --brand-foreground: #ffffff;  /* texto sobre relleno de marca */
+  --brand-soft: #dbeafe;        /* blue-100  (superficies suaves de marca) */
+  --brand-ink: #172554;         /* texto principal (blue-950) */
+  --brand-ink-soft: #1e3a8a;    /* texto secundario (blue-900) */
+
+  --gold: #f59e0b;              /* amber-500 */
+  --gold-strong: #d97706;       /* amber-600 */
+  --gold-foreground: #ffffff;   /* texto sobre relleno dorado */
+  --gold-soft: #fef3c7;         /* amber-100 (superficies suaves de acento) */
 }
 
 .dark {
@@ -76,6 +98,21 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
+
+  /* TOKENS DE MARCA — versión oscura. El relleno de marca se mantiene azul (igual
+   * que hoy, donde los botones conservan el gradiente azul en dark). Lo que cambia es
+   * el TEXTO (ink): pasa a claro, reproduciendo los `dark:text-white / blue-100`. */
+  --brand: #1e3a8a;             /* relleno de marca: mismo azul */
+  --brand-strong: #172554;
+  --brand-foreground: #ffffff;
+  --brand-soft: #1e3a8a;        /* superficie suave de marca en oscuro */
+  --brand-ink: #ffffff;         /* texto principal → blanco (= dark:text-white) */
+  --brand-ink-soft: #dbeafe;    /* texto secundario → blue-100 (= dark:text-blue-100) */
+
+  --gold: #f59e0b;
+  --gold-strong: #d97706;
+  --gold-foreground: #ffffff;
+  --gold-soft: #78350f;         /* amber-900 (superficie suave de acento en oscuro) */
 }
 
 @theme inline {
@@ -117,6 +154,19 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Tokens de marca expuestos como utilidades: bg-brand, text-brand-ink,
+   * border-brand, bg-gold-soft, text-gold, etc. (claro/oscuro automático). */
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-ink-soft: var(--brand-ink-soft);
+  --color-gold: var(--gold);
+  --color-gold-strong: var(--gold-strong);
+  --color-gold-foreground: var(--gold-foreground);
+  --color-gold-soft: var(--gold-soft);
 }
 
 @layer base {
