@@ -12,6 +12,7 @@ import { validateCantoral, LiturgicalWarning } from '../../utils/liturgicalValid
 import { AddSolemnityModal } from '../liturgy/AddSolemnityModal';
 import { CantoralPDFPreview } from './CantoralPDFPreview';
 import { PostPublishModal } from './PostPublishModal';
+import { PdfBlobViewer } from './PdfBlobViewer';
 import { GARLANDS, DEFAULT_GARLAND_ID } from '../../data/garlands';
 import { toast } from 'sonner';
 
@@ -108,6 +109,9 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
   // Guirnalda elegida para adornar el folleto PDF (común a todos los destinos).
   const [garland, setGarland] = useState<string>(DEFAULT_GARLAND_ID);
   // Vista previa del folleto (PDF real con la guirnalda) antes de publicar.
+  // `previewBlob` se renderiza en canvas con PDF.js; `previewUrl` es solo para el
+  // botón de descarga (el CSP no permite blob: en <iframe>).
+  const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [generatingPreview, setGeneratingPreview] = useState(false);
   const [showAddSolemnityModal, setShowAddSolemnityModal] = useState(false);
@@ -289,7 +293,8 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
     if (generatingPreview || cantoral.length === 0) return;
     setGeneratingPreview(true);
     try {
-      const { url } = await generateCantoralPDF({ cantoral: buildPreviewCantoral(), download: false });
+      const { blob, url } = await generateCantoralPDF({ cantoral: buildPreviewCantoral(), download: false });
+      setPreviewBlob(blob);
       setPreviewUrl(prev => { if (prev) URL.revokeObjectURL(prev); return url; });
     } catch (e: any) {
       toast.error('No se pudo generar la vista previa', { description: e?.message });
@@ -299,6 +304,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
   };
 
   const closePreview = () => {
+    setPreviewBlob(null);
     setPreviewUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
   };
 
@@ -851,8 +857,8 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
         />
       )}
 
-      {/* Visor de vista previa del folleto (PDF real con la guirnalda) */}
-      {previewUrl && (
+      {/* Visor de vista previa del folleto (PDF real con la guirnalda), en canvas */}
+      {previewBlob && (
         <div className="fixed inset-0 z-[60] flex flex-col bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="flex-shrink-0 bg-gradient-to-r from-blue-900 to-blue-950 text-white p-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
@@ -860,14 +866,15 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
               <h3 className="text-base sm:text-lg font-bold truncate">Vista previa del folleto</h3>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <a
-                href={previewUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 px-3 py-2 rounded-lg text-sm font-bold transition-colors"
-              >
-                <ExternalLink className="w-4 h-4" /> Abrir
-              </a>
+              {previewUrl && (
+                <a
+                  href={previewUrl}
+                  download="Cantoral-vista-previa.pdf"
+                  className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 px-3 py-2 rounded-lg text-sm font-bold transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" /> Descargar
+                </a>
+              )}
               <button
                 onClick={closePreview}
                 className="p-2 hover:bg-white/20 rounded-lg transition-colors"
@@ -877,7 +884,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
               </button>
             </div>
           </div>
-          <iframe src={previewUrl} title="Vista previa del folleto" className="flex-1 w-full bg-white" />
+          <PdfBlobViewer blob={previewBlob} />
           <div
             className="flex-shrink-0 bg-white dark:bg-slate-900 border-t-4 border-blue-800 p-3 flex gap-3"
             style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
