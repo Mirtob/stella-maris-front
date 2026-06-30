@@ -160,14 +160,20 @@ export const generateChoirCantoralPDF = async (
   // Agrupar cantos por categoría
   const categoryOrder = [
     'Entrada',
+    'Rito de Aspersión',
     'Kyrie',
     'Gloria',
     'Salmo',
     'Aleluya',
     'Aclamación al Evangelio',
     'Post Evangelio',
+    'Respuesta a Oración Universal',
     'Ofertorio',
     'Santo',
+    'Aclamación Consagración',
+    'Amén (Doxología)',
+    'Padre Nuestro',
+    'Tuyo es el Reino',
     'Cordero de Dios',
     'Comunión',
     'Salida'

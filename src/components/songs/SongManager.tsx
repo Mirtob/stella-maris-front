@@ -10,13 +10,19 @@ import { ConfirmDialog } from '../common/ConfirmDialog';
 
 const MOMENT_OPTIONS: { value: MassMoment; label: string }[] = [
   { value: 'entrada', label: 'Entrada' },
+  { value: 'rito_aspersion', label: 'Rito de Aspersión' },
   { value: 'kyrie', label: 'Kyrie' },
   { value: 'gloria', label: 'Gloria' },
   { value: 'salmo', label: 'Salmo' },
   { value: 'aleluya', label: 'Aleluya' },
+  { value: 'post_evangelio', label: 'Post Evangelio' },
+  { value: 'respuesta_oracion_universal', label: 'Respuesta a Oración Universal' },
   { value: 'ofertorio', label: 'Ofertorio' },
   { value: 'santo', label: 'Santo' },
+  { value: 'aclamacion_consagracion', label: 'Aclamación Consagración' },
+  { value: 'amen_doxologia', label: 'Amén (Doxología)' },
   { value: 'padre_nuestro', label: 'Padre Nuestro' },
+  { value: 'tuyo_es_el_reino', label: 'Tuyo es el Reino' },
   { value: 'cordero', label: 'Cordero de Dios' },
   { value: 'comunion', label: 'Comunión' },
   { value: 'final', label: 'Final / Salida' },
@@ -48,6 +54,12 @@ export function SongManager() {
   // Se pueden marcar varias por canto.
   const SEASON_TAGS: string[] = [
     ...Object.values(LITURGICAL_SEASON_LABELS),
+    // Solemnidades y días litúrgicos específicos
+    'Miércoles de Ceniza', 'Jueves Santo', 'Viernes Santo', 'Sábado Santo',
+    'Vigilia Pascual', 'Domingo de Resurrección', 'Ascensión del Señor',
+    'Espíritu Santo', 'Cristo Rey', 'Asunción de la Virgen',
+    'Inmaculada Concepción', 'Misa Crismal', 'Ordenaciones',
+    // Temáticas
     'Sagrado Corazón', 'Virgen María', 'Santos', 'Gregoriano',
   ];
   // Versión / instrumento del canto. Vacío = sirve para todas las versiones
@@ -137,13 +149,19 @@ export function SongManager() {
   const categories = [
     'Todos',
     'Entrada',
+    'Rito de Aspersión',
     'Kyrie',
     'Gloria',
     'Salmo',
     'Aleluya',
+    'Post Evangelio',
+    'Respuesta a Oración Universal',
     'Ofertorio',
     'Santo',
+    'Aclamación Consagración',
+    'Amén (Doxología)',
     'Padre Nuestro',
+    'Tuyo es el Reino',
     'Cordero de Dios',
     'Comunión',
     'Salida',

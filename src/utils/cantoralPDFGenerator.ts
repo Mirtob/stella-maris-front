@@ -110,8 +110,10 @@ function tintWreath(
 }
 
 const CATEGORY_ORDER = [
-  'Entrada', 'Kyrie', 'Gloria', 'Salmo', 'Aleluya', 'Post Evangelio',
-  'Ofertorio', 'Santo', 'Padre Nuestro', 'Cordero de Dios', 'Comunión', 'Salida',
+  'Entrada', 'Rito de Aspersión', 'Kyrie', 'Gloria', 'Salmo', 'Aleluya',
+  'Post Evangelio', 'Respuesta a Oración Universal', 'Ofertorio', 'Santo',
+  'Aclamación Consagración', 'Amén (Doxología)', 'Padre Nuestro',
+  'Tuyo es el Reino', 'Cordero de Dios', 'Comunión', 'Salida',
 ];
 
 // ──────────────────────────────────────────────

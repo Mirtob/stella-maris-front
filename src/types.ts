@@ -5,13 +5,19 @@
  */
 export type MassMoment =
   | 'entrada'
+  | 'rito_aspersion'
   | 'kyrie'
   | 'gloria'
   | 'salmo'
   | 'aleluya'
+  | 'post_evangelio'
+  | 'respuesta_oracion_universal'
   | 'ofertorio'
   | 'santo'
+  | 'aclamacion_consagracion'
+  | 'amen_doxologia'
   | 'padre_nuestro'
+  | 'tuyo_es_el_reino'
   | 'cordero'
   | 'comunion'
   | 'final'
@@ -35,19 +41,25 @@ export type LiturgicalSeason =
 
 /** Human-readable labels for display in filters and forms */
 export const MASS_MOMENT_LABELS: Record<MassMoment, string> = {
-  entrada:       'Entrada',
-  kyrie:         'Kyrie / Acto Penitencial',
-  gloria:        'Gloria',
-  salmo:         'Salmo Responsorial',
-  aleluya:       'Aleluya / Aclamación',
-  ofertorio:     'Ofertorio',
-  santo:         'Santo',
-  padre_nuestro: 'Padre Nuestro',
-  cordero:       'Cordero de Dios',
-  comunion:      'Comunión',
-  final:         'Final / Salida',
-  exposicion:    'Exposición y Adoración',
-  'no-liturgico':'No litúrgico',
+  entrada:                       'Entrada',
+  rito_aspersion:                'Rito de Aspersión',
+  kyrie:                         'Kyrie / Acto Penitencial',
+  gloria:                        'Gloria',
+  salmo:                         'Salmo Responsorial',
+  aleluya:                       'Aleluya / Aclamación',
+  post_evangelio:                'Post Evangelio',
+  respuesta_oracion_universal:   'Respuesta a Oración Universal',
+  ofertorio:                     'Ofertorio',
+  santo:                         'Santo',
+  aclamacion_consagracion:       'Aclamación Consagración',
+  amen_doxologia:                'Amén (Doxología)',
+  padre_nuestro:                 'Padre Nuestro',
+  tuyo_es_el_reino:              'Tuyo es el Reino',
+  cordero:                       'Cordero de Dios',
+  comunion:                      'Comunión',
+  final:                         'Final / Salida',
+  exposicion:                    'Exposición y Adoración',
+  'no-liturgico':                'No litúrgico',
 };
 
 export const LITURGICAL_SEASON_LABELS: Record<LiturgicalSeason, string> = {
