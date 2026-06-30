@@ -244,6 +244,9 @@ function AppContent() {
   // F2 — Vista pendiente cuando el coro intenta abandonar un draft de cantoral.
   // null = no hay confirmación abierta; string = mostrar diálogo y, si confirma, navegar a esa vista.
   const [pendingNavigateView, setPendingNavigateView] = useState<ViewState | null>(null);
+  // Ids de cantorales cuyo PDF del coro se está generando/subiendo en segundo plano
+  // (tras publicar). Permite mostrar "generando PDF…" en el diálogo del QR.
+  const [pdfGeneratingIds, setPdfGeneratingIds] = useState<Set<string>>(new Set());
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -643,9 +646,47 @@ function AppContent() {
   };
 
   // Publica uno o varios cantorales (uno por parroquia/horario), con los mismos cantos.
+  /**
+   * Genera el PDF del coro (Full Score con acordes + partituras embebidas) y lo sube a
+   * Storage EN SEGUNDO PLANO, para que la publicación se sienta inmediata. Es el paso
+   * lento (baja cada partitura de Drive y la incrusta), así que lo desacoplamos del
+   * publish: el cantoral ya quedó publicado y es visible/QR-able aunque esto tarde o
+   * falle. Al terminar, refleja el pdfUrl en memoria (lista + QR + resumen multi).
+   */
+  const generateAndUploadCantoralPDF = async (c: PublishedCantoral, notifyOnFail: boolean) => {
+    setPdfGeneratingIds(prev => new Set(prev).add(c.id));
+    try {
+      const { blob } = await generateChoirCantoralPDF(
+        c.songs,
+        c.parishName,
+        c.date,
+        massTypeBadge(c) ? `${c.liturgicalDate} (${massTypeBadge(c)})` : c.liturgicalDate,
+        c.massTime,
+        userProfile?.instruments ?? [],
+        'Full Score',
+        { download: false, embedScores: true }
+      );
+      const up = await uploadCantoralPDF(c.id, blob);
+      if (up.ok && up.publicUrl) {
+        const url = up.publicUrl;
+        await updateCantoralPdfUrl(c.id, url);
+        setPublishedCantorals(prev => prev.map(x => (x.id === c.id ? { ...x, pdfUrl: url } : x)));
+        setQrCantoral(prev => (prev && prev.id === c.id ? { ...prev, pdfUrl: url } : prev));
+        setPublishedBatch(prev => (prev ? prev.map(x => (x.id === c.id ? { ...x, pdfUrl: url } : x)) : prev));
+      } else if (notifyOnFail) {
+        toast.warning('Cantoral publicado, pero no pudimos generar el PDF compartible.', { description: up.error });
+      }
+    } catch (err: any) {
+      if (notifyOnFail) {
+        toast.warning('Cantoral publicado, pero falló la generación del PDF.', { description: err?.message });
+      }
+    } finally {
+      setPdfGeneratingIds(prev => { const n = new Set(prev); n.delete(c.id); return n; });
+    }
+  };
+
   const handlePublishCantoral = async (newCantorals: PublishedCantoral[]) => {
     if (newCantorals.length === 0) return;
-    const single = newCantorals.length === 1;
 
     // Q16 — Validar sesión una sola vez antes de tocar la red. Si el token de Supabase
     // ya expiró y el auto-refresh falló, el insert respondería 401 críptico ("JWT
@@ -672,20 +713,12 @@ function AppContent() {
         setPublishedCantorals(await listCantorals(activeParish));
         return;
       }
-      // Regenerar el PDF del coro y refrescar.
-      try {
-        const { blob } = await generateChoirCantoralPDF(
-          updated.songs, updated.parishName, updated.date,
-          massTypeBadge(updated) ? `${updated.liturgicalDate} (${massTypeBadge(updated)})` : updated.liturgicalDate,
-          updated.massTime, userProfile?.instruments ?? [], 'Full Score', { download: false, embedScores: true }
-        );
-        const up = await uploadCantoralPDF(updated.id, blob);
-        if (up.ok && up.publicUrl) await updateCantoralPdfUrl(updated.id, up.publicUrl);
-      } catch { /* best-effort */ }
       setCantoral([]);
+      toast.success('Cantoral actualizado');
       const activeParish = userProfile?.activeParishName || userProfile?.parishName;
       setPublishedCantorals(await listCantorals(activeParish));
-      toast.success('Cantoral actualizado');
+      // Regenerar el PDF del coro EN SEGUNDO PLANO (no bloquea la edición).
+      void generateAndUploadCantoralPDF(updated, false);
       return;
     }
 
@@ -714,43 +747,10 @@ function AppContent() {
         continue;
       }
 
-      // Generar PDF (sin descargar) y subir a Storage. Best-effort: si falla, el
-      // cantoral ya quedó publicado. Solo avisamos cuando es una única parroquia
-      // (evita spam de toasts en publicación múltiple).
-      let pdfUrl: string | undefined;
-      try {
-        // PDF liviano para el QR/Storage (sin partituras embebidas, publicación rápida).
-        const { blob } = await generateChoirCantoralPDF(
-          newCantoral.songs,
-          newCantoral.parishName,
-          newCantoral.date,
-          massTypeBadge(newCantoral) ? `${newCantoral.liturgicalDate} (${massTypeBadge(newCantoral)})` : newCantoral.liturgicalDate,
-          newCantoral.massTime,
-          userProfile?.instruments ?? [],
-          'Full Score',
-          // PDF del coro = letra con acordes + las partituras de todos los cantos
-          // (en orden de la Misa), en el mismo archivo. El folleto del Pueblo fiel
-          // (solo letra) se genera aparte con generateCantoralPDF.
-          { download: false, embedScores: true }
-        );
-        const uploadResult = await uploadCantoralPDF(newCantoral.id, blob);
-        if (uploadResult.ok && uploadResult.publicUrl) {
-          pdfUrl = uploadResult.publicUrl;
-          await updateCantoralPdfUrl(newCantoral.id, pdfUrl);
-        } else if (single) {
-          toast.warning('Cantoral publicado, pero no pudimos generar el PDF compartible.', {
-            description: uploadResult.error,
-          });
-        }
-      } catch (err: any) {
-        if (single) {
-          toast.warning('Cantoral publicado, pero falló la generación del PDF.', {
-            description: err?.message,
-          });
-        }
-      }
-
-      succeeded.push({ ...newCantoral, pdfUrl });
+      // El cantoral YA quedó publicado con el insert. El PDF del coro (paso lento:
+      // baja e incrusta las partituras de Drive) se genera/sube DESPUÉS, en segundo
+      // plano, para que la publicación se sienta inmediata.
+      succeeded.push(newCantoral);
     }
 
     // Reportar fallos (si los hubo).
@@ -782,6 +782,13 @@ function AppContent() {
     } else {
       setPublishedBatch(succeeded);
     }
+
+    // PDF compartible del coro EN SEGUNDO PLANO: la publicación ya terminó (insert OK) y
+    // el cantoral es visible/QR-able. El PDF de Storage se rellena en unos segundos y el
+    // botón de descarga aparece solo en el diálogo del QR cuando está listo.
+    void Promise.allSettled(
+      succeeded.map(c => generateAndUploadCantoralPDF(c, succeeded.length === 1))
+    );
 
     const fresh = await listCantorals(userProfile?.activeParishName || userProfile?.parishName);
     setPublishedCantorals(fresh);
@@ -1001,6 +1008,7 @@ function AppContent() {
         cantoralLabel={qrCantoral ? `${qrCantoral.liturgicalDate}${massTypeBadge(qrCantoral) ? ` (${massTypeBadge(qrCantoral)})` : ''} · ${qrCantoral.massTime}` : undefined}
         parishName={qrCantoral?.parishName}
         pdfUrl={qrCantoral?.pdfUrl}
+        pdfPending={!!qrCantoral && pdfGeneratingIds.has(qrCantoral.id)}
         shareMode={qrShareMode}
         onClose={() => { setQrCantoral(null); setQrShareMode(false); }}
       />

@@ -11,6 +11,8 @@ interface CantoralQRDialogProps {
   cantoralLabel?: string;  // e.g. "Domingo 5 de Pascua · 10:00 AM"
   parishName?: string;
   pdfUrl?: string;          // URL pública del PDF del cantoral (Supabase Storage)
+  /** true mientras el PDF del coro se genera/sube en segundo plano (aún sin pdfUrl). */
+  pdfPending?: boolean;
   /** true = abierto desde "Compartir" (no recién publicado): cambia el encabezado. */
   shareMode?: boolean;
   onClose: () => void;
@@ -27,6 +29,7 @@ export function CantoralQRDialog({
   cantoralLabel,
   parishName,
   pdfUrl,
+  pdfPending = false,
   shareMode = false,
   onClose,
 }: CantoralQRDialogProps) {
@@ -191,7 +194,7 @@ export function CantoralQRDialog({
             El coro lo necesita para tener el folleto en el teléfono offline durante
             la Misa, sin depender de Supabase. Es DISTINTO del PDF que descarga la
             comunidad desde el QR (ese es el folleto de letras del Pueblo fiel). */}
-        {pdfUrl && (
+        {pdfUrl ? (
           <button
             onClick={() => {
               const opened = safeWindowOpen(pdfUrl);
@@ -202,7 +205,14 @@ export function CantoralQRDialog({
             <FileDown className="w-5 h-5" />
             Descargar PDF del coro (acordes + partituras)
           </button>
-        )}
+        ) : pdfPending ? (
+          // El PDF del coro (con partituras) se genera/sube en segundo plano tras
+          // publicar. Avisamos que viene en camino; el botón aparece al terminar.
+          <div className="w-full mb-3 py-3 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold flex items-center justify-center gap-2 border-2 border-slate-200 dark:border-slate-700">
+            <div className="w-4 h-4 border-2 border-slate-400 border-t-emerald-600 rounded-full animate-spin" />
+            Generando PDF del coro (acordes + partituras)…
+          </div>
+        ) : null}
 
         {/* Acciones secundarias */}
         <div className="grid grid-cols-3 gap-2">
