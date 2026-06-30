@@ -5,6 +5,7 @@ import { getCurrentLiturgicalSeason } from './liturgicalSeason';
 import { getChannelUrl } from '../services/youtube';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
 import { getGarland } from '../data/garlands';
+import { getPdfFont, getPdfScale } from '../data/pdfStyle';
 
 interface PDFGeneratorOptions {
   cantoral: PublishedCantoral;
@@ -203,6 +204,19 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   const colors = getColorsForDate(cantoral.date);
 
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+
+  // Fuente y tamaño editables por el usuario (elegidos al publicar). El tamaño es un
+  // factor de escala aplicado a TODO el PDF: fuentes y espaciados. Por defecto la letra
+  // va más grande ("Grande"). Interceptamos setFontSize/setFont de esta instancia para
+  // escalar y forzar la familia elegida sin tener que tocar cada llamada del documento.
+  const fontFamily = getPdfFont(cantoral.pdfFont).jsFont;
+  const scale = getPdfScale(cantoral.pdfSize);
+  const adv = (n: number) => n * scale; // escala los avances verticales (interlineado)
+  const _setFontSize = pdf.setFontSize.bind(pdf);
+  (pdf as any).setFontSize = (size: number) => _setFontSize(size * scale);
+  const _setFont = pdf.setFont.bind(pdf);
+  (pdf as any).setFont = (_family: string, style?: string) => _setFont(fontFamily, style);
+
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
   const margin = 18;
@@ -309,14 +323,14 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     { t: cantoral.choirName ? `Coro: ${cleanText(cantoral.choirName)}` : '', s: 11, b: false, c: [80, 80, 80], h: 8 },
   ] as CoverLine[]).filter(l => l.t.trim() !== '');
 
-  const totalH = coverLines.reduce((s, l) => s + l.h, 0);
+  const totalH = coverLines.reduce((s, l) => s + adv(l.h), 0);
   let cy = coverTop + Math.max(0, (coverBottom - coverTop - totalH) / 2);
   for (const line of coverLines) {
     pdf.setFont('helvetica', line.b ? 'bold' : 'normal');
     pdf.setFontSize(line.s);
     pdf.setTextColor(...line.c);
-    pdf.text(line.t, pageW / 2, cy + line.h * 0.72, { align: 'center' });
-    cy += line.h;
+    pdf.text(line.t, pageW / 2, cy + adv(line.h) * 0.72, { align: 'center' });
+    cy += adv(line.h);
   }
 
   // ─── CANTOS POR CATEGORÍA ───
@@ -378,19 +392,19 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     }
 
     byCategory[category].forEach((song, idx) => {
-      needPage(20);
+      needPage(adv(20));
 
       // Título del canto
       const titleLines = pdf.splitTextToSize(cleanText(song.title), contentW) as string[];
       titleLines.forEach((line) => {
-        needPage(6);
+        needPage(adv(6));
         // Reaplicar estilo DESPUÉS de needPage: si saltó de página, addPageHeader
         // dejó el color en gris y el texto saldría descolorido.
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(12);
         pdf.setTextColor(...colors.primary);
         pdf.text(line, margin, y);
-        y += 6;
+        y += adv(6);
       });
 
       // Autor (si existe)
@@ -399,10 +413,10 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
         pdf.setFontSize(9);
         pdf.setTextColor(130, 130, 130);
         pdf.text(`${cleanText(song.author)}`, margin, y);
-        y += 5;
+        y += adv(5);
       }
 
-      y += 2;
+      y += adv(2);
 
       // Letra limpia
       const lyrics = cleanLyrics(song.lyrics || '');
@@ -412,7 +426,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
           const line = rawLine.replace(/\s+$/, ''); // trim trailing spaces
 
           if (line === '') {
-            y += 3; // espacio entre estrofas
+            y += adv(3); // espacio entre estrofas
             continue;
           }
 
@@ -420,25 +434,25 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
           const isSection = /^(Coro|Estrofa\s*\d*|Puente|Final|Refrán|Recitativo)\s*:?\s*$/i.test(line.trim());
 
           if (isSection) {
-            needPage(6);
+            needPage(adv(6));
             // Estilo SIEMPRE tras needPage para mantener color parejo al cambiar de hoja.
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(10.5);
             pdf.setTextColor(80, 80, 80);
             pdf.text(line.trim(), margin, y);
-            y += 6;
+            y += adv(6);
           } else {
             // Texto normal — wrap si la línea es muy larga
             const wrapped = pdf.splitTextToSize(line, contentW) as string[];
             for (const wl of wrapped) {
-              needPage(5.5);
+              needPage(adv(5.5));
               // Reaplicar el color/fuente de la letra tras cada posible salto de
               // página (evita que la segunda hoja salga más gris).
               pdf.setFont('helvetica', 'normal');
               pdf.setFontSize(10.5);
               pdf.setTextColor(40, 40, 40);
               pdf.text(wl, margin, y);
-              y += 5.5;
+              y += adv(5.5);
             }
           }
         }
@@ -447,20 +461,20 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
         pdf.setFontSize(9);
         pdf.setTextColor(160, 160, 160);
         pdf.text('(Letra no disponible)', margin, y);
-        y += 6;
+        y += adv(6);
       }
 
       // Separador entre cantos de la misma categoría (línea fina en color litúrgico)
       if (idx < byCategory[category].length - 1) {
-        y += 4;
+        y += adv(4);
         pdf.setDrawColor(...colors.primary);
         pdf.setLineWidth(0.2);
         pdf.line(pageW / 2 - 24, y, pageW / 2 + 24, y);
-        y += 6;
+        y += adv(6);
       }
     });
 
-    y += 6; // espacio entre categorías
+    y += adv(6); // espacio entre categorías
   });
 
   // ─── QR al canal de YouTube (esquina inferior derecha de la última hoja) ───

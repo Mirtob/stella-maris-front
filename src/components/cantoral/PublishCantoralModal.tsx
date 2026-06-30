@@ -14,6 +14,7 @@ import { CantoralPDFPreview } from './CantoralPDFPreview';
 import { PostPublishModal } from './PostPublishModal';
 import { PdfBlobViewer } from './PdfBlobViewer';
 import { GARLANDS, DEFAULT_GARLAND_ID } from '../../data/garlands';
+import { PDF_FONTS, PDF_SIZES, DEFAULT_PDF_FONT, DEFAULT_PDF_SIZE } from '../../data/pdfStyle';
 import { toast } from 'sonner';
 
 /** Destino de publicación: una parroquia con su propia fecha/celebración/horario. */
@@ -29,6 +30,10 @@ export interface PublishTarget {
   vigil: boolean;
   /** Id de la guirnalda elegida para adornar el folleto PDF. */
   garland: string;
+  /** Id de la fuente del folleto PDF. */
+  pdfFont: string;
+  /** Id del tamaño/escala de letra del folleto PDF. */
+  pdfSize: string;
 }
 
 interface PublishCantoralModalProps {
@@ -108,6 +113,9 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
   // ── Estado compartido ─────────────────────────────────────────────────────
   // Guirnalda elegida para adornar el folleto PDF (común a todos los destinos).
   const [garland, setGarland] = useState<string>(DEFAULT_GARLAND_ID);
+  // Fuente y tamaño de letra del folleto PDF (editables por el usuario).
+  const [pdfFont, setPdfFont] = useState<string>(DEFAULT_PDF_FONT);
+  const [pdfSize, setPdfSize] = useState<string>(DEFAULT_PDF_SIZE);
   // Vista previa del folleto (PDF real con la guirnalda) antes de publicar.
   // `previewBlob` se renderiza en canvas con PDF.js; `previewUrl` es solo para el
   // botón de descarga (el CSP no permite blob: en <iframe>).
@@ -228,6 +236,8 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
           massType: s.massType,
           vigil: s.massType === 'visperas_i',
           garland,
+          pdfFont,
+          pdfSize,
         };
       });
     }
@@ -239,6 +249,8 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
       massType,
       vigil: massType === 'visperas_i',
       garland,
+      pdfFont,
+      pdfSize,
     }];
   };
 
@@ -286,6 +298,8 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
       status: 'published',
       createdAt: new Date().toISOString(),
       garland,
+      pdfFont,
+      pdfSize,
     };
   };
 
@@ -733,6 +747,60 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Letra del folleto — fuente y tamaño editables */}
+              <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-950 rounded-xl flex items-center justify-center border-2 border-blue-800 flex-shrink-0">
+                    <span className="text-xl">🔤</span>
+                  </div>
+                  <div>
+                    <div className="text-xl font-bold text-blue-950 dark:text-white">Letra del folleto</div>
+                    <div className="text-sm text-blue-900 dark:text-blue-200">Elegí la fuente y el tamaño de la letra del PDF</div>
+                  </div>
+                </div>
+
+                <div className="text-sm font-bold text-blue-950 dark:text-white mb-1.5">Fuente</div>
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  {PDF_FONTS.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setPdfFont(f.id)}
+                      aria-pressed={pdfFont === f.id}
+                      className={`px-2 py-2 rounded-lg text-xs font-bold border-2 transition-all active:scale-95 leading-tight ${
+                        pdfFont === f.id
+                          ? 'bg-gradient-to-br from-blue-700 to-blue-900 text-white border-blue-800'
+                          : 'bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white border-blue-200 dark:border-white/20'
+                      }`}
+                    >
+                      {f.name}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="text-sm font-bold text-blue-950 dark:text-white mb-1.5">Tamaño de letra</div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {PDF_SIZES.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setPdfSize(s.id)}
+                      aria-pressed={pdfSize === s.id}
+                      className={`px-2 py-2 rounded-lg text-xs font-bold border-2 transition-all active:scale-95 ${
+                        pdfSize === s.id
+                          ? 'bg-gradient-to-br from-blue-700 to-blue-900 text-white border-blue-800'
+                          : 'bg-white/60 dark:bg-white/10 text-blue-950 dark:text-white border-blue-200 dark:border-white/20'
+                      }`}
+                    >
+                      {s.name}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-blue-800 dark:text-blue-300 mt-2">
+                  Tip: usá "Vista previa del folleto" para ver cómo queda antes de publicar.
+                </p>
               </div>
 
               {/* Folleto PDF Info */}

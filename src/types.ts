@@ -157,4 +157,6 @@ export interface PublishedCantoral {
   isSuggestion?: boolean; // Si es una sugerencia del sistema
   pdfUrl?: string; // URL pública del PDF generado en Supabase Storage
   garland?: string; // Id de la guirnalda elegida para adornar el folleto PDF (ver data/garlands)
+  pdfFont?: string; // Id de la fuente del folleto PDF (ver data/pdfStyle)
+  pdfSize?: string; // Id del tamaño/escala del folleto PDF (ver data/pdfStyle)
 }

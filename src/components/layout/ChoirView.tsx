@@ -157,6 +157,8 @@ export function ChoirView({
       songs: cantoral,
       status: 'published',
       garland: t.garland,
+      pdfFont: t.pdfFont,
+      pdfSize: t.pdfSize,
     }));
 
     // Delegate to App.handlePublishCantoral which:

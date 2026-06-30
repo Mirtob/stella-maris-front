@@ -22,6 +22,8 @@ export function rowToCantoral(row: any): PublishedCantoral {
     createdAt: row.created_at,
     pdfUrl: row.pdf_url ?? undefined,
     garland: row.garland ?? undefined,
+    pdfFont: row.pdf_font ?? undefined,
+    pdfSize: row.pdf_size ?? undefined,
   };
 }
 
@@ -46,6 +48,8 @@ function cantoralToRow(c: PublishedCantoral): any {
     created_at: c.createdAt,
     pdf_url: c.pdfUrl ?? null,
     garland: c.garland ?? null,
+    pdf_font: c.pdfFont ?? null,
+    pdf_size: c.pdfSize ?? null,
   };
 }
 
