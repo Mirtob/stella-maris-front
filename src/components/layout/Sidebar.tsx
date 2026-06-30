@@ -104,13 +104,13 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
         <button
           onClick={onClose}
           aria-label="Cerrar menú"
-          className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all active:scale-95 border-2 border-blue-900/20"
+          className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all active:scale-95 border-2 border-brand/20"
         >
-          <X className="w-6 h-6 text-blue-950" strokeWidth={2.5} />
+          <X className="w-6 h-6 text-brand-strong" strokeWidth={2.5} />
         </button>
 
         {/* Header con identificación - NO SE DESPLAZA */}
-        <div className="bg-gradient-to-br from-blue-900 to-blue-950 p-6 border-b-4 border-blue-800 shadow-xl flex-shrink-0">
+        <div className="bg-gradient-to-br from-brand to-brand-strong p-6 border-b-4 border-brand-border shadow-xl flex-shrink-0">
           <div className="mb-6">
             <div className="flex flex-col items-center gap-4">
               {/* Logo Stella Maris - Imagen original - GRANDE */}
@@ -125,9 +125,9 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
           </div>
 
           {/* User Info */}
-          <div className="bg-white/10 rounded-xl p-3 border border-amber-500/30 backdrop-blur-sm text-white">
+          <div className="bg-white/10 rounded-xl p-3 border border-gold/30 backdrop-blur-sm text-white">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-full flex items-center justify-center border-2 border-amber-400/50 shadow-lg">
+              <div className="w-10 h-10 bg-gradient-to-br from-gold to-gold-strong rounded-full flex items-center justify-center border-2 border-amber-400/50 shadow-lg">
                 <User className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1">
@@ -222,8 +222,8 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
                 onClick={() => handleNavigate(item.id)}
                 className={`w-full p-4 rounded-xl flex items-center gap-3 transition-all transform hover:scale-[1.02] ${
                     isActive
-                      ? 'bg-gradient-to-r from-blue-900 to-blue-950 text-white shadow-lg border-2 border-blue-800 scale-[1.02]'
-                      : 'bg-white/40 text-blue-950 hover:bg-white/60 border-2 border-white/50 hover:border-blue-300'
+                      ? 'bg-gradient-to-r from-brand to-brand-strong text-white shadow-lg border-2 border-brand-border scale-[1.02]'
+                      : 'bg-white/40 text-brand-strong hover:bg-white/60 border-2 border-white/50 hover:border-blue-300'
                 }`}
                 style={{
                   animationDelay: `${index * 0.05}s`,
@@ -231,7 +231,7 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
                   opacity: 0
                 }}
               >
-                <Icon className={`w-6 h-6 flex-shrink-0 ${isActive ? 'text-white' : 'text-blue-900'}`} strokeWidth={2.5} />
+                <Icon className={`w-6 h-6 flex-shrink-0 ${isActive ? 'text-white' : 'text-brand'}`} strokeWidth={2.5} />
                 <span className="text-lg font-bold text-left leading-tight break-words min-w-0 flex-1">{item.label}</span>
 
                 {/* Active indicator */}
@@ -248,14 +248,14 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
           {/* Gradiente superior sutil para indicar que hay más contenido arriba */}
           <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-transparent via-amber-100/50 to-amber-100 pointer-events-none -translate-y-full"></div>
           
-          <div className="p-4 border-t-2 border-blue-900/20 bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center gap-4 shadow-2xl">
+          <div className="p-4 border-t-2 border-brand/20 bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center gap-4 shadow-2xl">
             {/* Botón Ver tutorial */}
             {onReplayTour && (
               <IconButton
                 label="Ver tutorial"
                 side="top"
                 onClick={() => { onReplayTour(); onClose(); }}
-                className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-900 to-blue-950 text-white rounded-xl flex items-center justify-center hover:from-blue-800 hover:to-blue-900 active:scale-95 transition-all border-2 border-blue-800 shadow-lg hover:shadow-xl"
+                className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-brand to-brand-strong text-white rounded-xl flex items-center justify-center hover:from-blue-800 hover:to-blue-900 active:scale-95 transition-all border-2 border-brand-border shadow-lg hover:shadow-xl"
               >
                 <GraduationCap className="w-6 h-6" strokeWidth={2.5} />
               </IconButton>
@@ -266,7 +266,7 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
               label="Configuración"
               side="top"
               onClick={handleSettings}
-              className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-900 to-blue-950 text-white rounded-xl flex items-center justify-center hover:from-blue-800 hover:to-blue-900 active:scale-95 transition-all border-2 border-blue-800 shadow-lg hover:shadow-xl"
+              className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-brand to-brand-strong text-white rounded-xl flex items-center justify-center hover:from-blue-800 hover:to-blue-900 active:scale-95 transition-all border-2 border-brand-border shadow-lg hover:shadow-xl"
             >
               <Settings className="w-6 h-6" strokeWidth={2.5} />
             </IconButton>
@@ -276,7 +276,7 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
               label="Cambiar perfil"
               side="top"
               onClick={onLogout}
-              className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-red-700 to-red-900 text-white rounded-xl flex items-center justify-center hover:from-red-600 hover:to-red-800 active:scale-95 transition-all border-2 border-red-800 shadow-lg hover:shadow-xl"
+              className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-danger to-danger-strong text-white rounded-xl flex items-center justify-center hover:from-red-600 hover:to-red-800 active:scale-95 transition-all border-2 border-danger-strong shadow-lg hover:shadow-xl"
             >
               <LogOut className="w-6 h-6" strokeWidth={2.5} />
             </IconButton>

@@ -20,10 +20,10 @@ export function Home() {
         </div>
       </div>
 
-      <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-950 dark:text-white mb-3 animate-home-rise" style={{ animationDelay: '0.05s' }}>
+      <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-brand-ink mb-3 animate-home-rise" style={{ animationDelay: '0.05s' }}>
         Stella Maris
       </h1>
-      <p className="text-base sm:text-lg md:text-2xl text-blue-900 dark:text-blue-100 font-medium mb-2 animate-home-rise" style={{ animationDelay: '0.12s' }}>
+      <p className="text-base sm:text-lg md:text-2xl text-brand-ink-soft font-medium mb-2 animate-home-rise" style={{ animationDelay: '0.12s' }}>
         Arma el cantoral para tu parroquia
       </p>
       <p className="text-sm sm:text-base md:text-lg text-blue-800 dark:text-blue-200 max-w-2xl mx-auto animate-home-rise" style={{ animationDelay: '0.18s' }}>

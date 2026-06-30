@@ -36,7 +36,7 @@ export function Header({ onMenuClick, showMenuButton = true }: HeaderProps) {
             />
           </div>
           
-          <h1 className="text-2xl sm:text-lg sm:text-2xl font-bold text-blue-950 dark:text-white">
+          <h1 className="text-2xl sm:text-lg sm:text-2xl font-bold text-brand-ink">
             Stella Maris
           </h1>
         </div>
