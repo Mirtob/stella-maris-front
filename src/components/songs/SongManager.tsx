@@ -60,7 +60,7 @@ export function SongManager() {
     'Espíritu Santo', 'Cristo Rey', 'Asunción de la Virgen',
     'Inmaculada Concepción', 'Misa Crismal', 'Ordenaciones',
     // Temáticas
-    'Sagrado Corazón', 'Virgen María', 'Santos', 'Gregoriano',
+    'Sagrado Corazón', 'Virgen María', 'Santos', 'Gregoriano', 'Secuencias',
   ];
   // Versión / instrumento del canto. Vacío = sirve para todas las versiones
   // (en BD se guarda como {coro,guitarra,organo}); marcar una = es esa versión.
