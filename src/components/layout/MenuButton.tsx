@@ -9,11 +9,13 @@ export function MenuButton({ onClick }: MenuButtonProps) {
   const liturgicalColor = getCurrentLiturgicalColor();
   const gradient = getLiturgicalGradient(liturgicalColor);
   
+  // Oculto en móvil/tablet (hidden lg:flex): ahí la navegación va por la barra inferior
+  // (BottomNav, botón "Más"). Solo aparece en lg+, donde no se muestra la barra inferior.
   return (
     <button
       onClick={onClick}
       data-tour="app-menu"
-      className={`fixed top-4 left-4 z-30 w-11 h-11 sm:w-13 sm:h-13 md:w-14 md:h-14 bg-gradient-to-br ${gradient} text-white rounded-2xl shadow-xl flex items-center justify-center active:scale-95 transition-all hover:shadow-2xl hover:scale-105 border-2 border-white/20 group`}
+      className={`hidden lg:flex fixed top-4 left-4 z-30 w-11 h-11 sm:w-13 sm:h-13 md:w-14 md:h-14 bg-gradient-to-br ${gradient} text-white rounded-2xl shadow-xl items-center justify-center active:scale-95 transition-all hover:shadow-2xl hover:scale-105 border-2 border-white/20 group`}
       aria-label="Abrir menú de navegación"
     >
       {/* Efecto de pulso en hover */}

@@ -48,6 +48,9 @@ export function BottomNav({ currentView, onNavigate, onOpenMore, role }: BottomN
     <button
       key={key}
       onClick={onClick}
+      // El botón "Más" abre el menú lateral; el tour del menú lo apunta en móvil
+      // (en desktop apunta al botón flotante, que comparte el mismo data-tour).
+      data-tour={key === 'more' ? 'app-menu' : undefined}
       aria-label={label}
       aria-current={active ? 'page' : undefined}
       className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 h-16 transition-colors ${

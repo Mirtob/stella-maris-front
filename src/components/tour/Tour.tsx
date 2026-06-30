@@ -19,6 +19,19 @@ interface TourProps {
 const PAD = 8;
 
 /**
+ * Devuelve el elemento `[data-tour="target"]` VISIBLE. Puede haber duplicados
+ * responsive del mismo target (p. ej. el menú: botón flotante en desktop y botón
+ * "Más" de la barra inferior en móvil); se elige el que realmente se ve. Un elemento
+ * con `display:none` no tiene client rects, así que se descarta (y el paso se trata
+ * como ausente → respeta skipIfMissing / fallback centrado).
+ */
+function findTourEl(target?: string): HTMLElement | null {
+  if (!target) return null;
+  const els = Array.from(document.querySelectorAll<HTMLElement>(`[data-tour="${target}"]`));
+  return els.find((el) => el.getClientRects().length > 0) ?? null;
+}
+
+/**
  * Motor de tour guiado: resalta elementos reales por `[data-tour="..."]` con un
  * spotlight + tooltip. Robusto: salta pasos cuyo elemento no exista (skipIfMissing).
  */
@@ -32,7 +45,7 @@ export function Tour({ steps, onClose }: TourProps) {
     while (idx >= 0 && idx < steps.length) {
       const s = steps[idx];
       if (!s.target) return idx;
-      const el = document.querySelector(`[data-tour="${s.target}"]`);
+      const el = findTourEl(s.target);
       if (el) return idx;
       if (!s.skipIfMissing) return idx; // se muestra centrado como respaldo
       idx += dir;
@@ -53,7 +66,7 @@ export function Tour({ steps, onClose }: TourProps) {
   // scroll/resize para reposicionar sin "pelear" con el scroll del usuario.
   const measure = useCallback(() => {
     if (!step?.target) { setRect(null); return; }
-    const el = document.querySelector(`[data-tour="${step.target}"]`) as HTMLElement | null;
+    const el = findTourEl(step.target);
     if (!el) { setRect(null); return; }
     setRect(el.getBoundingClientRect());
   }, [step]);
@@ -63,7 +76,7 @@ export function Tour({ steps, onClose }: TourProps) {
   // el tooltip con los controles quede visible.
   useEffect(() => {
     if (!step?.target) { setRect(null); return; }
-    const el = document.querySelector(`[data-tour="${step.target}"]`) as HTMLElement | null;
+    const el = findTourEl(step.target);
     if (!el) { setRect(null); return; }
     const vhNow = window.innerHeight;
     const tall = el.getBoundingClientRect().height > vhNow * 0.7;
