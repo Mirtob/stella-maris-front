@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BookOpen, Calendar, Church, Play, Music as MusicIcon, Clock, BookText, ChevronDown, ChevronUp, Download, Filter, Search, Headphones, Edit2, Trash2, QrCode, Archive, SearchX } from 'lucide-react';
 import { EmptyState } from '../common/EmptyState';
+import { ParishQRDialog } from './ParishQRDialog';
 import { PublishedCantoral, Song } from '../../types';
 import { getCategoryColors } from '../../utils/colors';
 import { CantoralWithOrdinary } from './CantoralWithOrdinary';
@@ -36,6 +37,8 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
   const [viewingOrdinary, setViewingOrdinary] = useState<string | null>(null);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  // QR permanente de la parroquia (para imprimir y pegar en la iglesia).
+  const [showParishQR, setShowParishQR] = useState(false);
   // Coro y Admin pueden gestionar (editar/eliminar); el Pueblo fiel solo ve.
   const canManage = userRole !== 'Pueblo fiel';
   const pendingDeleteCantoral = pendingDeleteId ? cantorals.find(c => c.id === pendingDeleteId) : null;
@@ -419,7 +422,25 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
             <h1 className="text-xl font-bold text-brand-ink mb-1">
               {userRole === 'Pueblo fiel' ? 'Misas Programadas' : 'Cantorales Publicados'}
             </h1>
+            {/* QR permanente disponible desde ya (aunque aún no haya cantorales). */}
+            {canManage && userParishName && !loading && (
+              <button
+                onClick={() => setShowParishQR(true)}
+                className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-br from-brand to-brand-strong text-white text-sm font-bold shadow-lg active:scale-95 border-2 border-brand-border"
+              >
+                <QrCode className="w-4 h-4" strokeWidth={2.5} />
+                QR permanente de la parroquia
+              </button>
+            )}
           </div>
+
+          {canManage && userParishName && (
+            <ParishQRDialog
+              open={showParishQR}
+              parish={userParishName}
+              onClose={() => setShowParishQR(false)}
+            />
+          )}
 
           {loading ? (
             <div className="space-y-3" aria-live="polite" aria-busy="true">
@@ -490,7 +511,27 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
               ? 'Elige el horario de tu Misa'
               : `${vigentes.length} vigente${vigentes.length === 1 ? '' : 's'} · ${archivo.length} en archivo`}
           </p>
+
+          {/* QR PERMANENTE de la parroquia (Coro/Admin): un solo QR estable para
+              imprimir y pegar en la iglesia; siempre lleva al cantoral vigente. */}
+          {canManage && userParishName && (
+            <button
+              onClick={() => setShowParishQR(true)}
+              className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-br from-brand to-brand-strong text-white text-sm font-bold shadow-lg active:scale-95 border-2 border-brand-border"
+            >
+              <QrCode className="w-4 h-4" strokeWidth={2.5} />
+              QR permanente de la parroquia
+            </button>
+          )}
         </div>
+
+        {canManage && userParishName && (
+          <ParishQRDialog
+            open={showParishQR}
+            parish={userParishName}
+            onClose={() => setShowParishQR(false)}
+          />
+        )}
 
         {/* Info Card para Pueblo Fiel */}
         {userRole === 'Pueblo fiel' && (

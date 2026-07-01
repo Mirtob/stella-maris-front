@@ -33,6 +33,8 @@ import { RoleGuard } from './components/profile/RoleGuard';
 import { CantoralQRDialog } from './components/cantoral/CantoralQRDialog';
 import { MultiPublishSummary } from './components/cantoral/MultiPublishSummary';
 import { CantoralDeepLink } from './components/cantoral/CantoralDeepLink';
+import { ParishCantoralLink } from './components/cantoral/ParishCantoralLink';
+import { parseParishFromPath } from './utils/parishLink';
 import { OfflineBanner } from './components/layout/OfflineBanner';
 import { TermsOfService } from './components/legal/TermsOfService';
 import { PrivacyPolicy } from './components/legal/PrivacyPolicy';
@@ -126,6 +128,10 @@ function classifyPath(): { kind: 'ok' } | { kind: 'invalid-link' | 'unknown-rout
     const id = getCantoralIdFromPath();
     return id ? { kind: 'ok' } : { kind: 'invalid-link' };
   }
+  // Enlace permanente de parroquia (/i/{parroquia})
+  if (path.startsWith('/i/')) {
+    return parseParishFromPath(path) ? { kind: 'ok' } : { kind: 'invalid-link' };
+  }
   return { kind: 'unknown-route' };
 }
 
@@ -184,6 +190,7 @@ type AppRoute =
   | { screen: 'playlist'; cantoral: PublishedCantoral; returnView: ViewState }
   | { screen: 'settings'; returnView: ViewState }
   | { screen: 'cantoral-link'; cantoralId: string }
+  | { screen: 'parish-link'; parish: string }
   | { screen: 'terms'; returnTo: AppRoute }
   | { screen: 'privacy'; returnTo: AppRoute }
   | { screen: 'not-found'; reason: 'invalid-link' | 'unknown-route'; attemptedPath: string }
@@ -366,12 +373,27 @@ function AppContent() {
 
     // Detect /c/:id deep link from QR scan
     const deepLinkCantoralId = getCantoralIdFromPath();
+    // Detect /i/{parroquia} — enlace permanente de parroquia (QR pegado en la iglesia)
+    const deepLinkParish = parseParishFromPath(window.location.pathname);
 
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     async function initializeAuth() {
       const storedSession = await getStoredSession();
       const storedProfile = getStoredUserProfile();
+
+      // Enlace permanente de parroquia: resuelve al cantoral vigente (vista Pueblo fiel),
+      // sin exigir login. Si hay perfil guardado lo seteamos para "Abrir en la app".
+      if (deepLinkParish) {
+        localStorage.removeItem(PENDING_CANTORAL_KEY);
+        if (storedSession && storedProfile) {
+          setUserProfile(storedProfile);
+          upsertCurrentUserProfile(storedProfile).catch(() => undefined);
+          setSentryUserContext(storedProfile.role, storedProfile.id);
+        }
+        setRoute({ screen: 'parish-link', parish: deepLinkParish });
+        return;
+      }
 
       // Deep link de QR: mostrar SIEMPRE el cantoral (vista Pueblo fiel), sin exigir
       // login (lectura anónima de cantorales publicados). Si hay perfil guardado lo
@@ -922,6 +944,22 @@ function AppContent() {
           setRoute({ screen: 'app', view: 'cantorals' });
         }}
         onCancel={() => {
+          window.history.replaceState({}, '', '/');
+          setRoute({ screen: 'app', view: 'main' });
+        }}
+      />
+    );
+  }
+
+  if (route.screen === 'parish-link') {
+    return (
+      <ParishCantoralLink
+        parish={route.parish}
+        onOpenInApp={() => {
+          window.history.replaceState({}, '', '/');
+          setRoute({ screen: 'app', view: 'cantorals' });
+        }}
+        onExit={() => {
           window.history.replaceState({}, '', '/');
           setRoute({ screen: 'app', view: 'main' });
         }}
