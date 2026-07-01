@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, ZoomIn, ZoomOut, ChevronUp, ChevronDown, RotateCcw, Play, Pause, Maximize2, Minimize2, Music, List } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, ChevronUp, ChevronDown, RotateCcw, Play, Pause, Maximize2, Minimize2, Music, List, Printer, Loader } from 'lucide-react';
+import { toast } from 'sonner';
 import { Song, UserRole, InstrumentType } from '../../types';
 import { transposeContent, getTransposedKey, formatTransposition, getChordNotation, setChordNotation, type ChordNotation } from '../../utils/chordTranspose';
 import { LyricsWithChords } from '../songs/LyricsWithChords';
@@ -9,6 +10,7 @@ import { Tour } from '../tour/Tour';
 import { atrilTips, hasSeenTip, markTipSeen } from '../tour/tours';
 import { isOrdinary, sortByMassOrder } from '../../utils/ordinary';
 import { getDrivePdfProxyUrl } from '../../utils/driveProxy';
+import { generateAtrilBooklet } from '../../utils/atrilBookletPDF';
 import { PdfPages } from './PdfPages';
 
 interface AtrilModeProps {
@@ -43,6 +45,7 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
   const changeNotation = (n: ChordNotation) => { setNotation(n); setChordNotation(n); };
   const [showTip, setShowTip] = useState(() => !hasSeenTip('atril'));
   const [activeIndex, setActiveIndex] = useState(0);
+  const [printing, setPrinting] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<(HTMLElement | null)[]>([]);
@@ -144,6 +147,31 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
     } catch { /* iOS u otros sin soporte → no-op */ }
   };
 
+  // Imprimir: genera un CUADERNILLO (carta horizontal, formato libro) según el
+  // instrumento y lo abre para imprimir. Si el popup se bloquea, lo descarga.
+  const handlePrint = async () => {
+    if (printing) return;
+    setPrinting(true);
+    toast.info('Preparando el cuadernillo para imprimir…');
+    try {
+      const { url } = await generateAtrilBooklet({ songs: orderedSongs, instrument: userInstrument });
+      const w = window.open(url, '_blank');
+      if (!w) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'cantoral-cuadernillo.pdf';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      }
+      toast.success('Cuadernillo listo', {
+        description: 'Imprime a doble faz y dobla al medio. Si al doblar las páginas no calzan, cambia el volteo a "borde corto".',
+      });
+    } catch (err: any) {
+      toast.error('No se pudo generar el cuadernillo', { description: err?.message });
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   const btn = 'flex items-center justify-center rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 transition-all border border-white/20 text-white';
   const activeSong = orderedSongs[activeIndex];
 
@@ -178,6 +206,11 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
             {notation === 'latin' ? 'Do·Re' : 'C·D'}
           </button>
         )}
+
+        {/* Imprimir cuadernillo (carta horizontal, formato libro) */}
+        <button onClick={handlePrint} disabled={printing} className={`${btn} w-11 h-11 flex-shrink-0 disabled:opacity-60`} aria-label="Imprimir cuadernillo" title="Imprimir cuadernillo (formato libro)">
+          {printing ? <Loader className="w-6 h-6 animate-spin" /> : <Printer className="w-6 h-6" strokeWidth={2.5} />}
+        </button>
 
         {/* Modo concentración */}
         <button data-tour="atril-concentracion" onClick={toggleFocus} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label={focus ? 'Salir de pantalla completa' : 'Pantalla completa'}>
