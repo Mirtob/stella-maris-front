@@ -1,27 +1,15 @@
-import { liturgicalCalendar2026 } from '../data/liturgicalCalendar';
 import { getLiturgicalInfoForDate } from './liturgicalCalendar';
 import { getCurrentLiturgicalSeason } from './liturgicalSeason';
-import { parseYmdLocal } from './dateLocal';
+import { parseYmdLocal, getTodayLocal } from './dateLocal';
 
-// Función para obtener el color litúrgico actual
+/**
+ * Color litúrgico de HOY (por fecha, vía romcal). Antes se tomaba el color del ÚLTIMO
+ * evento del array del calendario, que se quedaba "pegado" varios días (p. ej. una
+ * solemnidad entre semana teñía toda la semana, en vez del verde del Tiempo Ordinario).
+ * Ahora refleja el color del día actual y cambia día a día automáticamente.
+ */
 export function getCurrentLiturgicalColor(): string {
-  const today = new Date();
-  
-  const sortedEvents = [...liturgicalCalendar2026].sort((a, b) => 
-    new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
-  
-  let currentEvent = sortedEvents[0];
-  for (const event of sortedEvents) {
-    const eventDate = new Date(event.date);
-    if (eventDate <= today) {
-      currentEvent = event;
-    } else {
-      break;
-    }
-  }
-  
-  return currentEvent?.color || 'Verde';
+  return getLiturgicalColorStyle(getTodayLocal()).label;
 }
 
 // Mapear colores litúrgicos a colores de cruz (para iconos)
@@ -32,8 +20,10 @@ export function getLiturgicalCrossColor(color: string): string {
     'Verde': 'text-green-600',
     'Morado': 'text-purple-600',
     'Rosa': 'text-pink-500',
+    'Dorado': 'text-yellow-500',
+    'Negro': 'text-gray-800',
   };
-  return colors[color] || 'text-purple-600';
+  return colors[color] || 'text-green-600';
 }
 
 // Mapear colores litúrgicos a gradientes de Tailwind
@@ -44,8 +34,10 @@ export function getLiturgicalGradient(color: string): string {
     'Verde': 'from-green-600 to-green-700',
     'Morado': 'from-purple-600 to-purple-700',
     'Rosa': 'from-pink-500 to-pink-600',
+    'Dorado': 'from-yellow-400 to-amber-500',
+    'Negro': 'from-gray-700 to-gray-900',
   };
-  return gradients[color] || 'from-purple-600 to-purple-700';
+  return gradients[color] || 'from-green-600 to-green-700';
 }
 
 // Mapear colores litúrgicos a clases completas de Tailwind para cards
