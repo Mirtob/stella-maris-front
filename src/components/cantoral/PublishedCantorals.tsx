@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BookOpen, Calendar, Church, Play, Music as MusicIcon, Clock, BookText, ChevronDown, ChevronUp, Download, Filter, Search, Headphones, Edit2, Trash2, QrCode, Archive, SearchX } from 'lucide-react';
 import { EmptyState } from '../common/EmptyState';
 import { ParishQRDialog } from './ParishQRDialog';
+import { AtrilMode } from '../atril/AtrilMode';
 import { PublishedCantoral, Song } from '../../types';
 import { getCategoryColors } from '../../utils/colors';
 import { CantoralWithOrdinary } from './CantoralWithOrdinary';
@@ -39,6 +40,8 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   // QR permanente de la parroquia (para imprimir y pegar en la iglesia).
   const [showParishQR, setShowParishQR] = useState(false);
+  // Cantoral abierto en Modo Atril (solo Coro) — leer el repertorio durante la Misa.
+  const [atrilCantoral, setAtrilCantoral] = useState<PublishedCantoral | null>(null);
   // Coro y Admin pueden gestionar (editar/eliminar); el Pueblo fiel solo ve.
   const canManage = userRole !== 'Pueblo fiel';
   const pendingDeleteCantoral = pendingDeleteId ? cantorals.find(c => c.id === pendingDeleteId) : null;
@@ -225,6 +228,18 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
               >
                 <Headphones className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
                 Escuchar cantos
+              </button>
+            )}
+
+            {/* Modo Atril — solo Coro: leer el repertorio de esta Misa como un solo
+                documento (partituras si es Órgano, letra con acordes si es Guitarra). */}
+            {userRole === 'Coro' && (
+              <button
+                onClick={() => setAtrilCantoral(cantoral)}
+                className="bg-gradient-to-br from-slate-700 to-slate-900 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-slate-600 col-span-2"
+              >
+                <MusicIcon className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
+                Modo Atril
               </button>
             )}
             <button
@@ -495,6 +510,15 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
 
   return (
     <div className="w-full max-w-md md:max-w-2xl mx-auto min-h-screen p-3 sm:p-4 md:p-6 pb-24 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
+      {/* Modo Atril de un cantoral publicado (solo Coro). Overlay a pantalla completa. */}
+      {atrilCantoral && userRole === 'Coro' && (
+        <AtrilMode
+          songs={atrilCantoral.songs}
+          userRole="Coro"
+          userInstrument={userInstrument}
+          onClose={() => setAtrilCantoral(null)}
+        />
+      )}
       <div className="pt-16">
         {/* Header */}
         <div className="text-center mb-3">

@@ -139,7 +139,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const buffer = await driveRes.arrayBuffer();
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline');
-    res.setHeader('Cache-Control', 'public, max-age=3600');
+    // Una partitura (id de Drive fijo) es prácticamente inmutable, así que la cacheamos
+    // agresivamente en el EDGE de Vercel (s-maxage) además del navegador (max-age):
+    //  - max-age=3600            → el navegador la reusa 1 h sin pedir nada.
+    //  - s-maxage=86400          → el CDN de Vercel la sirve 24 h sin tocar la función
+    //                              ni Google Drive (clave el día de Misa: muchos escanean
+    //                              el mismo QR y ven la misma partitura a la vez).
+    //  - stale-while-revalidate  → la sigue sirviendo al instante mientras revalida.
+    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800');
     res.status(200).send(Buffer.from(buffer));
   } catch (err: any) {
     console.error('pdf proxy error:', err?.message);
