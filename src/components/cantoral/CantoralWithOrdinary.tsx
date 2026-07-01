@@ -455,13 +455,13 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
 
                 {/* Instrucciones */}
                 <div className="bg-white/30 backdrop-blur-sm rounded-2xl p-3 sm:p-4 border-2 border-white/40 transition-colors">
-                  <div className="flex gap-3">
-                    <span className="text-3xl">💡</span>
-                    <div>
-                      <h4 className="text-xl font-bold text-brand-ink mb-2">
+                  <div className="flex gap-3 items-start">
+                    <span className="text-2xl flex-shrink-0 leading-none mt-0.5">💡</span>
+                    <div className="min-w-0">
+                      <h4 className="text-base sm:text-lg font-bold text-brand-ink mb-1">
                         Cómo usar
                       </h4>
-                      <p className="text-lg text-brand-ink-soft">
+                      <p className="text-sm sm:text-base text-brand-ink-soft leading-relaxed">
                         Toca <strong>"Reproducir Audio"</strong> para escuchar el canto desde YouTube.
                         {selectedSong.lyrics && ' La letra aparece aquí mismo para seguir el canto.'}
                         {!isPuebloFiel && selectedSong.sheetMusicUrl && ' La partitura se muestra embebida (o ábrela en Drive).'}

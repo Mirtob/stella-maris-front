@@ -560,11 +560,11 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
         {/* Info Card para Pueblo Fiel */}
         {userRole === 'Pueblo fiel' && (
           <div className="bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-950 dark:to-blue-900 rounded-xl p-3 mb-3 border border-blue-300 dark:border-blue-700 transition-colors">
-            <div className="flex gap-3">
-              <div className="text-xl">📅</div>
-              <div>
+            <div className="flex gap-3 items-start">
+              <div className="text-xl flex-shrink-0 leading-none mt-0.5">📅</div>
+              <div className="min-w-0">
                 <h3 className="text-sm font-bold text-blue-950 dark:text-blue-100 mb-1">Encuentra tu Misa</h3>
-                <p className="text-xs text-blue-900 dark:text-blue-200">
+                <p className="text-sm text-blue-900 dark:text-blue-200 leading-relaxed">
                   Verás las misas disponibles hasta el día de cada celebración. Consulta horarios y cantos de cada una.
                 </p>
               </div>

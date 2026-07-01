@@ -702,11 +702,11 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
 
               {/* Preview */}
               <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-6 border-2 border-white/40 dark:border-white/20 transition-colors">
-                <div className="flex gap-3">
-                  <div className="text-2xl">ℹ️</div>
-                  <div>
+                <div className="flex gap-3 items-start">
+                  <div className="text-2xl flex-shrink-0 leading-none mt-0.5">ℹ️</div>
+                  <div className="min-w-0">
                     <h4 className="text-base font-bold text-brand-ink mb-1">Vista previa</h4>
-                    <p className="text-sm text-brand-ink-soft">
+                    <p className="text-sm text-brand-ink-soft leading-relaxed">
                       {isMulti
                         ? `Se publicará el mismo cantoral en ${selectedParishes.size} parroquia${selectedParishes.size === 1 ? '' : 's'}, con la fecha y horario de cada misa.`
                         : 'Este cantoral estará disponible para que los fieles de tu parroquia puedan seguir la liturgia con los cantos seleccionados.'}
@@ -805,16 +805,15 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
 
               {/* Folleto PDF Info */}
               <div className="bg-gradient-to-br from-green-100 to-green-50 dark:from-green-950 dark:to-green-900 rounded-2xl p-5 border-2 border-green-300 dark:border-green-700 shadow-lg transition-colors">
-                <div className="flex gap-3">
-                  <div className="text-3xl">📖</div>
-                  <div>
-                    <h4 className="text-xl font-bold text-green-950 dark:text-green-100 mb-2">
-                      Folleto Digital para el Coro
+                <div className="flex gap-3 items-start">
+                  <div className="text-2xl flex-shrink-0 leading-none mt-0.5">📖</div>
+                  <div className="min-w-0">
+                    <h4 className="text-base sm:text-lg font-bold text-green-950 dark:text-green-100 mb-1">
+                      Folleto digital para el coro
                     </h4>
-                    <p className="text-base text-green-900 dark:text-green-200 leading-relaxed">
-                      Al publicar tu cantoral, podrás descargar un PDF con el esquema completo de cantos organizado por categorías litúrgicas.
-                      Perfecto para compartir con los miembros del coro que prefieren tener el cantoral descargado
-                      sin necesidad de entrar a la aplicación durante la Misa.
+                    <p className="text-sm sm:text-base text-green-900 dark:text-green-200 leading-relaxed">
+                      Al publicar podrás descargar un PDF con todos los cantos ordenados por momento de la Misa,
+                      ideal para el coro que prefiere el folleto descargado sin abrir la app durante la celebración.
                     </p>
                   </div>
                 </div>

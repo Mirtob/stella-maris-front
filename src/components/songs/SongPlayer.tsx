@@ -310,10 +310,10 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
 
             {/* Footer with Tips */}
             <div className="bg-white/40 dark:bg-white/10 backdrop-blur-sm border-t-2 border-white/40 dark:border-white/20 p-4 transition-colors">
-              <div className="flex gap-2 text-brand-ink-soft">
-                <div className="text-xl">🎼</div>
-                <div className="text-sm">
-                  <strong>Nota:</strong> {canTranspose 
+              <div className="flex gap-2.5 items-start text-brand-ink-soft">
+                <div className="text-xl flex-shrink-0 leading-none mt-0.5">🎼</div>
+                <div className="text-sm min-w-0 leading-relaxed">
+                  <strong>Nota:</strong> {canTranspose
                     ? 'Los acordes se transponen automáticamente. Puedes ajustar la tonalidad a tu preferencia.'
                     : 'Sigue la letra mientras escuchas el audio de fondo.'}
                 </div>
@@ -396,10 +396,10 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
 
             {/* Footer with Tips */}
             <div className="bg-white/40 dark:bg-white/10 backdrop-blur-sm border-t-2 border-white/40 dark:border-white/20 p-4 transition-colors">
-              <div className="flex gap-2 text-brand-ink-soft">
-                <div className="text-xl">💡</div>
-                <p className="text-base">
-                  <strong>Consejo:</strong> Usa los controles de zoom para ajustar el tamaño de la partitura según tu preferencia
+              <div className="flex gap-2.5 items-start text-brand-ink-soft">
+                <div className="text-xl flex-shrink-0 leading-none mt-0.5">💡</div>
+                <p className="text-sm sm:text-base min-w-0 leading-relaxed">
+                  <strong>Consejo:</strong> Usa los controles de zoom para ajustar el tamaño de la partitura según tu preferencia.
                 </p>
               </div>
             </div>
