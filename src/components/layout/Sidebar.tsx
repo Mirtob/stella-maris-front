@@ -95,7 +95,7 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
 
       {/* Sidebar — above the overlay */}
       <div
-        className={`fixed top-0 left-0 h-full w-[85vw] max-w-xs sm:max-w-sm bg-white shadow-2xl z-[70] transform transition-transform duration-300 flex flex-col ${
+        className={`fixed top-0 left-0 h-full w-[85vw] max-w-xs sm:max-w-sm bg-white dark:bg-slate-900 shadow-2xl z-[70] transform transition-transform duration-300 flex flex-col ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         aria-hidden={!isOpen}
@@ -144,7 +144,10 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
 
             {effectiveRole === 'Coro' && userProfile.instrument && (
               <div className="mt-3 pt-2 border-t border-white/20 flex items-center gap-2 text-sm">
-                <Music className="w-4 h-4 flex-shrink-0 opacity-90" />
+                <span className="text-xl">
+                  {userProfile.instrument === 'Guitarra' && '🎶'}
+                  {userProfile.instrument === 'Órgano' && '🎹'}
+                </span>
                 <span className="font-medium">{userProfile.instrument}</span>
               </div>
             )}
@@ -159,7 +162,7 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
                       aria-expanded={parishMenuOpen}
                       className="w-full flex items-center gap-2 text-sm text-left rounded-lg px-1 py-1 hover:bg-white/10 transition-colors"
                     >
-                      <Church className="w-4 h-4 flex-shrink-0 opacity-90" />
+                      <span className="text-base">⛪</span>
                       {/* Q20 — title nativo muestra el nombre completo al hover/long-press. */}
                       <span className="font-medium truncate flex-1" title={activeParish}>{activeParish}</span>
                       <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${parishMenuOpen ? 'rotate-180' : ''}`} />
@@ -197,7 +200,7 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
                   </>
                 ) : (
                   <div className="flex items-center gap-2 text-sm">
-                    <Church className="w-4 h-4 flex-shrink-0 opacity-90" />
+                    <span className="text-base">⛪</span>
                     {/* Q20 — title nativo muestra el nombre completo al hover/long-press. */}
                     <span className="font-medium truncate" title={activeParish}>{activeParish}</span>
                   </div>
@@ -207,59 +210,102 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
           </div>
         </div>
 
-        {/* Menu Items — lista plana con scroll. Fondo blanco y colores fijos (la barra
-            no cambia con el tema): activo = azul claro + barra lateral; inactivo = gris. */}
-        <nav className="flex-1 py-2 overflow-y-auto bg-white">
-          {visibleMenuItems.map((item) => {
+        {/* Menu Items - ÁREA CON SCROLL - SE DESPLAZA */}
+        <div className="flex-1 p-4 pb-8 space-y-2 overflow-y-auto bg-gradient-to-br from-amber-100 to-orange-100 dark:from-slate-800 dark:to-slate-900">
+          {visibleMenuItems.map((item, index) => {
             const Icon = item.icon;
             const isActive = currentView === item.id;
+            
             return (
               <button
                 key={item.id}
                 onClick={() => handleNavigate(item.id)}
-                aria-current={isActive ? 'page' : undefined}
-                className={`relative w-full pl-5 pr-4 py-3.5 flex items-center gap-3.5 text-left transition-colors ${
-                  isActive ? 'bg-blue-50 text-brand-strong' : 'text-slate-700 hover:bg-slate-50'
+                className={`w-full p-4 rounded-xl flex items-center gap-3 transition-all transform hover:scale-[1.02] ${
+                    isActive
+                      ? 'bg-gradient-to-r from-brand to-brand-strong text-white shadow-lg border-2 border-brand-border scale-[1.02]'
+                      : 'bg-white/40 dark:bg-white/10 text-brand-strong dark:text-blue-50 hover:bg-white/60 dark:hover:bg-white/20 border-2 border-white/50 dark:border-white/15 hover:border-blue-300'
                 }`}
+                style={{
+                  animationDelay: `${index * 0.05}s`,
+                  animation: 'slideIn 0.3s ease-out forwards',
+                  opacity: 0
+                }}
               >
-                {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-brand" aria-hidden />}
-                <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-brand' : 'text-slate-400'}`} strokeWidth={2.2} />
-                <span className={`text-[15px] leading-snug min-w-0 flex-1 ${isActive ? 'font-bold' : 'font-semibold'}`}>{item.label}</span>
+                <Icon className={`w-6 h-6 flex-shrink-0 ${isActive ? 'text-white' : 'text-brand dark:text-blue-300'}`} strokeWidth={2.5} />
+                <span className="text-lg font-bold text-left leading-tight break-words min-w-0 flex-1">{item.label}</span>
+
+                {/* Active indicator */}
+                {isActive && (
+                  <div className="ml-auto flex-shrink-0 w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+                )}
               </button>
             );
           })}
-        </nav>
+        </div>
 
-        {/* Footer — barra limpia con acciones (44px de área táctil). */}
-        <div className="flex-shrink-0 p-3 border-t border-slate-200 bg-white flex items-center justify-center gap-3">
-          {onReplayTour && (
+        {/* Footer - FIJO EN LA PARTE INFERIOR - NO SE DESPLAZA */}
+        <div className="relative flex-shrink-0">
+          {/* Gradiente superior sutil para indicar que hay más contenido arriba */}
+          <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-transparent via-amber-100/50 to-amber-100 dark:via-slate-800/50 dark:to-slate-800 pointer-events-none -translate-y-full"></div>
+
+          <div className="p-4 border-t-2 border-brand/20 dark:border-white/10 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center gap-4 shadow-2xl">
+            {/* Botón Ver tutorial */}
+            {onReplayTour && (
+              <IconButton
+                label="Ver tutorial"
+                side="top"
+                onClick={() => { onReplayTour(); onClose(); }}
+                className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-brand to-brand-strong text-white rounded-xl flex items-center justify-center hover:from-blue-800 hover:to-blue-900 active:scale-95 transition-all border-2 border-brand-border shadow-lg hover:shadow-xl"
+              >
+                <GraduationCap className="w-6 h-6" strokeWidth={2.5} />
+              </IconButton>
+            )}
+
+            {/* Botón Configuración */}
             <IconButton
-              label="Ver tutorial"
+              label="Configuración"
               side="top"
-              onClick={() => { onReplayTour(); onClose(); }}
-              className="w-11 h-11 bg-slate-100 hover:bg-slate-200 text-brand-strong rounded-xl flex items-center justify-center active:scale-95 transition-colors"
+              onClick={handleSettings}
+              className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-brand to-brand-strong text-white rounded-xl flex items-center justify-center hover:from-blue-800 hover:to-blue-900 active:scale-95 transition-all border-2 border-brand-border shadow-lg hover:shadow-xl"
             >
-              <GraduationCap className="w-5 h-5" strokeWidth={2.4} />
+              <Settings className="w-6 h-6" strokeWidth={2.5} />
             </IconButton>
-          )}
-          <IconButton
-            label="Configuración"
-            side="top"
-            onClick={handleSettings}
-            className="w-11 h-11 bg-slate-100 hover:bg-slate-200 text-brand-strong rounded-xl flex items-center justify-center active:scale-95 transition-colors"
-          >
-            <Settings className="w-5 h-5" strokeWidth={2.4} />
-          </IconButton>
-          <IconButton
-            label="Cambiar perfil"
-            side="top"
-            onClick={onLogout}
-            className="w-11 h-11 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl flex items-center justify-center active:scale-95 transition-colors"
-          >
-            <LogOut className="w-5 h-5" strokeWidth={2.4} />
-          </IconButton>
+
+            {/* Botón Cerrar Sesión / Cambiar perfil */}
+            <IconButton
+              label="Cambiar perfil"
+              side="top"
+              onClick={onLogout}
+              className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-danger to-danger-strong text-white rounded-xl flex items-center justify-center hover:from-red-600 hover:to-red-800 active:scale-95 transition-all border-2 border-danger-strong shadow-lg hover:shadow-xl"
+            >
+              <LogOut className="w-6 h-6" strokeWidth={2.5} />
+            </IconButton>
+          </div>
         </div>
       </div>
+      
+      {/* CSS para animaciones personalizadas */}
+      <style>{`
+        @keyframes pulse-glow {
+          0%, 100% {
+            filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8));
+          }
+          50% {
+            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 1)) drop-shadow(0 0 12px rgba(147, 197, 253, 0.8));
+          }
+        }
+        
+        @keyframes slideIn {
+          0% {
+            transform: translateX(-10px);
+            opacity: 0;
+          }
+          100% {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </>
   );
 }
