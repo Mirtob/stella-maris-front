@@ -6,6 +6,9 @@ import { updateRecoveryEmail } from '../../services/userProfiles';
 import { changePassword, isUsernameAccount } from '../../services/supabaseClient';
 import { resetAllTutorials } from '../tour/tours';
 import { ParishPicker } from './ParishPicker';
+import { deleteMyAccount } from '../../services/account';
+import { signOutOnly } from '../../services/googleAuth';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 
 interface ProfileSettingsProps {
   userProfile: UserProfile;
@@ -36,6 +39,29 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
+
+  // Borrado de cuenta self-service (requisito Google Play / App Store).
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    setConfirmDelete(false);
+    setDeletingAccount(true);
+    const r = await deleteMyAccount();
+    if (!r.ok) {
+      setDeletingAccount(false);
+      toast.error('No se pudo eliminar la cuenta', { description: r.error });
+      return;
+    }
+    // La cuenta ya no existe en el servidor: limpiar la sesión local y volver al login.
+    try {
+      localStorage.removeItem('stella_maris_user_profile');
+      sessionStorage.removeItem('stella_maris_user_profile');
+    } catch { /* modo privado iOS */ }
+    await signOutOnly();
+    toast.success('Tu cuenta fue eliminada');
+    window.location.href = '/';
+  };
 
   const handleChangePassword = async () => {
     if (newPassword.length < 6) {
@@ -594,7 +620,42 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
             </div>
           </div>
         </div>
+
+        {/* Zona de peligro — Eliminar cuenta (requisito de Google Play / App Store) */}
+        <div className="mt-6 bg-white rounded-2xl shadow-lg p-6 border-2 border-red-200">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-red-800 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Trash2 className="w-6 h-6 text-white" strokeWidth={2.5} />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800">Eliminar cuenta</h2>
+          </div>
+          <p className="text-base text-gray-700 mb-4">
+            Elimina permanentemente tu cuenta y tus datos personales (perfil, parroquias, instrumento).
+            Esta acción no se puede deshacer. Los cantorales publicados para la comunidad se conservan.
+          </p>
+          <button
+            onClick={() => setConfirmDelete(true)}
+            disabled={deletingAccount}
+            className="w-full bg-gradient-to-br from-red-600 to-red-800 text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow font-bold disabled:opacity-60"
+          >
+            {deletingAccount
+              ? <Loader className="w-5 h-5 animate-spin" />
+              : <Trash2 className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />}
+            {deletingAccount ? 'Eliminando…' : 'Eliminar mi cuenta'}
+          </button>
+        </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="¿Eliminar tu cuenta?"
+        message="Esta acción es permanente: se borrarán tu perfil y tus datos personales, y se cerrará tu sesión. No se puede deshacer."
+        confirmLabel="Sí, eliminar mi cuenta"
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={handleDeleteAccount}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </div>
   );
 }
