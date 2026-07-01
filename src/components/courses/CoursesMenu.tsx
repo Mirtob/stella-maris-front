@@ -30,13 +30,12 @@ export function CoursesMenu({ onSelectCourse }: CoursesMenuProps) {
               <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
                 <Music2 className="w-9 h-9 text-white" strokeWidth={2.5} />
               </div>
-              <div className="text-left flex-1">
+              <div className="text-left flex-1 min-w-0">
                 <h2 className="text-2xl font-bold text-white mb-1">Teoría Musical</h2>
                 <p className="text-base text-blue-100">
                   Fundamentos de música: notas, escalas, ritmo y armonía
                 </p>
               </div>
-              <div className="text-3xl">🎵</div>
             </div>
           </button>
 
@@ -49,13 +48,12 @@ export function CoursesMenu({ onSelectCourse }: CoursesMenuProps) {
               <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
                 <Cross className="w-9 h-9 text-white" strokeWidth={2.5} />
               </div>
-              <div className="text-left flex-1">
+              <div className="text-left flex-1 min-w-0">
                 <h2 className="text-2xl font-bold text-white mb-1">Liturgia</h2>
                 <p className="text-base text-blue-100">
                   Estructura de la Misa y tiempos litúrgicos
                 </p>
               </div>
-              <div className="text-3xl">⛪</div>
             </div>
           </button>
 
@@ -68,25 +66,24 @@ export function CoursesMenu({ onSelectCourse }: CoursesMenuProps) {
               <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
                 <Guitar className="w-9 h-9 text-white" strokeWidth={2.5} />
               </div>
-              <div className="text-left flex-1">
+              <div className="text-left flex-1 min-w-0">
                 <h2 className="text-2xl font-bold text-white mb-1">Instrumentos Musicales</h2>
                 <p className="text-base text-blue-100">
                   Aprende guitarra, órgano y dirección coral
                 </p>
               </div>
-              <div className="text-3xl">🎶</div>
             </div>
           </button>
         </div>
 
         {/* Info Card */}
         <div className="mt-8 bg-white/20 backdrop-blur-sm border-2 border-white/30 rounded-xl p-6 transition-colors">
-          <div className="flex gap-3">
-            <div className="text-3xl">📚</div>
-            <div>
-              <h3 className="text-lg font-bold text-brand-ink mb-2">Formación continua</h3>
-              <p className="text-base text-brand-ink-soft">
-                Los cursos te ayudarán a mejorar tu servicio litúrgico y profundizar 
+          <div className="flex gap-3 items-start">
+            <div className="text-2xl flex-shrink-0 leading-none mt-0.5">📚</div>
+            <div className="min-w-0">
+              <h3 className="text-base sm:text-lg font-bold text-brand-ink mb-1">Formación continua</h3>
+              <p className="text-sm sm:text-base text-brand-ink-soft leading-relaxed">
+                Los cursos te ayudarán a mejorar tu servicio litúrgico y profundizar
                 tu conocimiento de la música sacra católica.
               </p>
             </div>
