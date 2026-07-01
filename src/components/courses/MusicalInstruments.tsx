@@ -110,9 +110,9 @@ export function MusicalInstruments({ onBack }: MusicalInstrumentsProps) {
             >
               {/* Course Header */}
               <div className={`bg-gradient-to-r from-brand to-brand-strong text-white p-5 border-b-2 border-brand-border`}>
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-4xl">{course.icon}</span>
-                  <h2 className="text-2xl font-bold">{course.title}</h2>
+                <div className="flex items-center gap-3 mb-2 min-w-0">
+                  <span className="text-4xl flex-shrink-0">{course.icon}</span>
+                  <h2 className="text-2xl font-bold min-w-0 leading-tight">{course.title}</h2>
                 </div>
                 <p className="text-base opacity-90">{course.lessons.length} lecciones disponibles</p>
               </div>
@@ -155,12 +155,12 @@ export function MusicalInstruments({ onBack }: MusicalInstrumentsProps) {
 
         {/* Practice Tips */}
         <div className="mt-8 bg-white/30 dark:bg-white/10 backdrop-blur-sm border-2 border-white/40 dark:border-white/20 rounded-xl p-6 transition-colors">
-          <div className="flex gap-3">
-            <div className="text-3xl">🎯</div>
-            <div>
-              <h3 className="text-lg font-bold text-brand-ink mb-2">Consejo de práctica</h3>
-              <p className="text-base text-brand-ink-soft">
-                Dedica al menos 20 minutos diarios a practicar. La constancia 
+          <div className="flex gap-3 items-start">
+            <div className="text-2xl flex-shrink-0 leading-none mt-0.5">🎯</div>
+            <div className="min-w-0">
+              <h3 className="text-base sm:text-lg font-bold text-brand-ink mb-1">Consejo de práctica</h3>
+              <p className="text-sm sm:text-base text-brand-ink-soft leading-relaxed">
+                Dedica al menos 20 minutos diarios a practicar. La constancia
                 es más importante que la duración de cada sesión.
               </p>
             </div>

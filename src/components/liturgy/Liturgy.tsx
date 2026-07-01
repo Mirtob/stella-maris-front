@@ -169,12 +169,12 @@ export function Liturgy({ onBack }: LiturgyProps) {
 
         {/* Vatican II Quote */}
         <div className="mt-8 bg-white/30 dark:bg-white/10 backdrop-blur-sm border-2 border-white/40 dark:border-white/20 rounded-xl p-6 transition-colors">
-          <div className="flex gap-3">
-            <div className="text-3xl">📖</div>
-            <div>
-              <h3 className="text-lg font-bold text-brand-ink mb-2">Sacrosanctum Concilium</h3>
-              <p className="text-base text-brand-ink-soft italic">
-                "La música sacra será tanto más santa cuanto más íntimamente esté unida 
+          <div className="flex gap-3 items-start">
+            <div className="text-2xl flex-shrink-0 leading-none mt-0.5">📖</div>
+            <div className="min-w-0">
+              <h3 className="text-base sm:text-lg font-bold text-brand-ink mb-1">Sacrosanctum Concilium</h3>
+              <p className="text-sm sm:text-base text-brand-ink-soft italic leading-relaxed">
+                "La música sacra será tanto más santa cuanto más íntimamente esté unida
                 a la acción litúrgica"
               </p>
               <p className="text-sm text-blue-800 dark:text-blue-200 mt-2">— Concilio Vaticano II, SC 112</p>

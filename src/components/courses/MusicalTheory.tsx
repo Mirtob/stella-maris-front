@@ -161,12 +161,12 @@ export function MusicalTheory({ onBack }: MusicalTheoryProps) {
 
         {/* Practice Tips */}
         <div className="mt-8 bg-white/30 dark:bg-white/10 backdrop-blur-sm border-2 border-white/40 dark:border-white/20 rounded-xl p-6 transition-colors">
-          <div className="flex gap-3">
-            <div className="text-3xl">🎼</div>
-            <div>
-              <h3 className="text-lg font-bold text-brand-ink mb-2">Fundamentos esenciales</h3>
-              <p className="text-base text-brand-ink-soft">
-                La teoría musical es fundamental para entender y dirigir mejor los cantos litúrgicos. 
+          <div className="flex gap-3 items-start">
+            <div className="text-2xl flex-shrink-0 leading-none mt-0.5">🎼</div>
+            <div className="min-w-0">
+              <h3 className="text-base sm:text-lg font-bold text-brand-ink mb-1">Fundamentos esenciales</h3>
+              <p className="text-sm sm:text-base text-brand-ink-soft leading-relaxed">
+                La teoría musical es fundamental para entender y dirigir mejor los cantos litúrgicos.
                 Cada lección incluye ejercicios prácticos para aplicar lo aprendido.
               </p>
             </div>
