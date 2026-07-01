@@ -9,16 +9,7 @@ import { Tour } from '../tour/Tour';
 import { atrilTips, hasSeenTip, markTipSeen } from '../tour/tours';
 import { isOrdinary, sortByMassOrder } from '../../utils/ordinary';
 import { getDrivePdfProxyUrl } from '../../utils/driveProxy';
-import { PDFViewer } from '../common/PDFViewer';
-
-/** "3:45" → 225 (segundos). undefined si no se puede parsear. */
-function durationToSeconds(d?: string): number | undefined {
-  if (!d) return undefined;
-  const parts = d.split(':').map(Number);
-  if (parts.length === 2 && parts.every(n => Number.isFinite(n))) return parts[0] * 60 + parts[1];
-  if (parts.length === 3 && parts.every(n => Number.isFinite(n))) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  return undefined;
-}
+import { PdfPages } from './PdfPages';
 
 interface AtrilModeProps {
   songs: Song[];
@@ -27,67 +18,69 @@ interface AtrilModeProps {
   onClose: () => void;
 }
 
+type ContentMode = 'score' | 'chords' | 'lyrics';
+
 /**
- * Modo Atril (Fases A + B): repertorio en una barra lateral, lectura a pantalla
- * con modo concentración, zoom, transpositor y desplazamiento automático.
+ * Modo Atril — DOCUMENTO CONTINUO. Todos los cantos de la Misa en orden, apilados como
+ * un solo archivo: el instrumentista baja de Entrada → Kyrie → Gloria → … sin salir de
+ * pantalla completa ni cambiar de archivo. El contenido depende del instrumento:
+ *  - Órgano → partituras (páginas de cada PDF); si un canto no tiene, cae a acordes.
+ *  - Guitarra (u otro del coro) → letra con acordes encima.
+ *  - Pueblo fiel → solo letra (partitura en las partes fijas del ordinario).
+ * La transposición es POR CANTO; la notación (latino/americano) y el zoom son globales.
  * La pantalla se mantiene encendida (useWakeLock).
  */
 export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilModeProps) {
   useWakeLock(true);
 
-  const [index, setIndex] = useState(0);
-  const [transposition, setTransposition] = useState(0);
+  const [transpositions, setTranspositions] = useState<Record<number, number>>({});
   const [fontScale, setFontScale] = useState(1.3);
+  const [pdfZoom, setPdfZoom] = useState(1);
   const [focus, setFocus] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(3); // 1..10
-  // Notación de los acordes: latino (Do, Re…) o americano (C, D…). Elección del usuario.
   const [notation, setNotation] = useState<ChordNotation>(() => getChordNotation());
   const changeNotation = (n: ChordNotation) => { setNotation(n); setChordNotation(n); };
-  // Tip contextual la 1ª vez que se abre el atril (F4).
   const [showTip, setShowTip] = useState(() => !hasSeenTip('atril'));
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sectionRefs = useRef<(HTMLElement | null)[]>([]);
   const rafRef = useRef<number | undefined>(undefined);
   const accRef = useRef(0);
 
   const isPuebloFiel = userRole === 'Pueblo fiel';
-  // El coro ve los acordes encima de la letra con cualquier instrumento (Guitarra u Órgano).
-  const showChords = !isPuebloFiel;
+  const isOrgano = userInstrument === 'Órgano';
+  // Hay acordes (y por tanto notación/transposición) para cualquier instrumento del coro.
+  const hasChords = !isPuebloFiel;
 
   // Repertorio en orden de la Misa (Entrada → Kyrie → … → Salida).
   const orderedSongs = sortByMassOrder(songs);
-  const song: Song | undefined = orderedSongs[index];
 
-  // Cuándo mostrar la partitura en vez de la letra:
-  //  - Coro: TODOS los cantos que tengan partitura (la letra con acordes queda de
-  //    respaldo para los que no la tienen).
-  //  - Pueblo fiel: solo las partes fijas del ordinario.
-  const scoreEligible = !isPuebloFiel || isOrdinary(song);
-  const scoreProxy = scoreEligible ? getDrivePdfProxyUrl(song?.sheetMusicUrl) : null;
-  const showScore = !!scoreProxy;
-  const canTranspose = !showScore && showChords && !!song?.lyrics;
-  // Convierte la notación (latino/americano) y aplica la transposición SOLO a los
-  // acordes entre corchetes. La letra queda intacta.
-  const displayedLyrics = song?.lyrics
-    ? transposeContent(song.lyrics, transposition, notation)
-    : '';
-  const displayedKey = song?.originalKey
-    ? getTransposedKey(song.originalKey, transposition, notation)
-    : undefined;
+  /** Qué mostrar de cada canto según rol + instrumento. */
+  const modeFor = (s: Song): ContentMode => {
+    if (isPuebloFiel) return isOrdinary(s) && s.sheetMusicUrl ? 'score' : 'lyrics';
+    if (isOrgano) return s.sheetMusicUrl ? 'score' : 'chords';
+    return 'chords'; // Guitarra u otro instrumento del coro
+  };
 
-  // Al cambiar de canto: resetear scroll, transposición y autoscroll.
-  useEffect(() => {
-    setTransposition(0);
-    setPlaying(false);
-    accRef.current = 0;
-    if (scrollRef.current) scrollRef.current.scrollTop = 0;
-  }, [index]);
+  const setTransposition = (i: number, v: number) =>
+    setTranspositions(prev => ({ ...prev, [i]: ((v % 12) + 12) % 12 }));
+
+  const instrumentLabel = isPuebloFiel ? 'Letra' : isOrgano ? 'Órgano · Partituras' : 'Guitarra · Acordes';
+
+  const zoomIn = () => {
+    setFontScale(s => Math.min(3, +(s + 0.15).toFixed(2)));
+    setPdfZoom(z => Math.min(3, +(z + 0.2).toFixed(2)));
+  };
+  const zoomOut = () => {
+    setFontScale(s => Math.max(0.8, +(s - 0.15).toFixed(2)));
+    setPdfZoom(z => Math.max(0.5, +(z - 0.2).toFixed(2)));
+  };
 
   // ESC: salir del modo concentración o cerrar el atril.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // Mientras el tip está abierto, ESC lo gestiona el propio Tour (no salir del atril).
       if (showTip) return;
       if (e.key === 'Escape') { if (focus) setFocus(false); else onClose(); }
     };
@@ -95,7 +88,27 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
     return () => window.removeEventListener('keydown', onKey);
   }, [focus, onClose, showTip]);
 
-  // Motor de autoscroll (Fase B).
+  // Sección activa (para resaltar el repertorio y mostrar el título en la barra).
+  useEffect(() => {
+    const root = scrollRef.current;
+    if (!root) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const idx = Number((entry.target as HTMLElement).dataset.idx);
+            if (Number.isFinite(idx)) setActiveIndex(idx);
+          }
+        }
+      },
+      // Banda fina cerca del borde superior: la sección que la cruza es la "activa".
+      { root, rootMargin: '-8% 0px -88% 0px', threshold: 0 }
+    );
+    sectionRefs.current.forEach((el) => el && observer.observe(el));
+    return () => observer.disconnect();
+  }, [orderedSongs.length]);
+
+  // Motor de autoscroll — desplaza el documento completo (letra y/o partituras).
   useEffect(() => {
     if (!playing) return;
     let last = performance.now();
@@ -103,8 +116,7 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
       const dt = now - last; last = now;
       const el = scrollRef.current;
       if (el) {
-        // px/seg = speed * 12  (speed 1..10 → 12..120 px/s)
-        accRef.current += (speed * 12 * dt) / 1000;
+        accRef.current += (speed * 12 * dt) / 1000; // speed 1..10 → 12..120 px/s
         if (accRef.current >= 1) {
           const add = Math.floor(accRef.current);
           el.scrollTop += add;
@@ -118,6 +130,11 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [playing, speed]);
 
+  const jumpTo = (i: number) => {
+    setActiveIndex(i);
+    sectionRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   const toggleFocus = () => {
     const next = !focus;
     setFocus(next);
@@ -128,6 +145,7 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
   };
 
   const btn = 'flex items-center justify-center rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 transition-all border border-white/20 text-white';
+  const activeSong = orderedSongs[activeIndex];
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-slate-900 text-white">
@@ -140,21 +158,17 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
 
         {!focus && (
           <div className="min-w-0 flex-1">
-            <div className="font-bold truncate leading-tight">{song?.title ?? 'Atril'}</div>
-            {displayedKey && <div className="text-xs text-amber-300">Tono: {displayedKey}</div>}
+            <div className="font-bold truncate leading-tight">{activeSong?.title ?? 'Atril'}</div>
+            <div className="text-xs text-amber-300/90 truncate">{instrumentLabel}</div>
           </div>
         )}
 
-        {/* Zoom de fuente — solo para la letra (la partitura tiene su propio zoom) */}
-        {!showScore && (
-          <>
-            <button onClick={() => setFontScale(s => Math.max(0.8, +(s - 0.15).toFixed(2)))} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label="Reducir letra"><ZoomOut className="w-6 h-6" strokeWidth={2.5} /></button>
-            <button data-tour="atril-zoom" onClick={() => setFontScale(s => Math.min(3, +(s + 0.15).toFixed(2)))} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label="Agrandar letra"><ZoomIn className="w-6 h-6" strokeWidth={2.5} /></button>
-          </>
-        )}
+        {/* Zoom global (letra y partitura) */}
+        <button onClick={zoomOut} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label="Reducir"><ZoomOut className="w-6 h-6" strokeWidth={2.5} /></button>
+        <button data-tour="atril-zoom" onClick={zoomIn} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label="Agrandar"><ZoomIn className="w-6 h-6" strokeWidth={2.5} /></button>
 
-        {/* Cifrado de acordes: latino (Do, Re…) ↔ americano (C, D…) */}
-        {canTranspose && (
+        {/* Cifrado de acordes global: latino (Do, Re…) ↔ americano (C, D…) */}
+        {hasChords && (
           <button
             onClick={() => changeNotation(notation === 'latin' ? 'american' : 'latin')}
             className={`${btn} px-2 h-11 flex-shrink-0 text-xs font-bold`}
@@ -165,18 +179,6 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
           </button>
         )}
 
-        {/* Transpositor (solo con acordes) */}
-        {canTranspose && (
-          <>
-            <button onClick={() => setTransposition(t => (t - 1 + 12) % 12)} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label="Bajar medio tono"><ChevronDown className="w-6 h-6" strokeWidth={2.5} /></button>
-            <span data-tour="atril-transpositor" className="text-sm font-bold w-12 text-center text-amber-300 flex-shrink-0">{formatTransposition(transposition)}</span>
-            <button onClick={() => setTransposition(t => (t + 1) % 12)} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label="Subir medio tono"><ChevronUp className="w-6 h-6" strokeWidth={2.5} /></button>
-            {transposition !== 0 && (
-              <button onClick={() => setTransposition(0)} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label="Tono original"><RotateCcw className="w-5 h-5" strokeWidth={2.5} /></button>
-            )}
-          </>
-        )}
-
         {/* Modo concentración */}
         <button data-tour="atril-concentracion" onClick={toggleFocus} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label={focus ? 'Salir de pantalla completa' : 'Pantalla completa'}>
           {focus ? <Minimize2 className="w-6 h-6" strokeWidth={2.5} /> : <Maximize2 className="w-6 h-6" strokeWidth={2.5} />}
@@ -184,15 +186,15 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
       </div>
 
       <div className="flex flex-1 min-h-0">
-        {/* Sidebar de repertorio (oculta en modo concentración) */}
+        {/* Sidebar de repertorio (salta a la sección; oculta en concentración) */}
         {!focus && (
           <aside data-tour="atril-repertorio" className="w-44 sm:w-56 flex-shrink-0 bg-slate-950/60 border-r border-white/10 overflow-y-auto">
             <div className="px-3 py-2 text-xs font-bold text-white/50 flex items-center gap-1.5"><List className="w-4 h-4" /> Repertorio</div>
             {orderedSongs.map((s, i) => (
               <button
                 key={s.id || i}
-                onClick={() => setIndex(i)}
-                className={`w-full text-left px-3 py-3 border-b border-white/5 transition-colors ${i === index ? 'bg-amber-500/20 border-l-4 border-l-amber-400' : 'hover:bg-white/5'}`}
+                onClick={() => jumpTo(i)}
+                className={`w-full text-left px-3 py-3 border-b border-white/5 transition-colors ${i === activeIndex ? 'bg-amber-500/20 border-l-4 border-l-amber-400' : 'hover:bg-white/5'}`}
               >
                 <div className="text-xs text-amber-300/80">{s.category}</div>
                 <div className="text-sm font-bold leading-tight break-words">{s.title}</div>
@@ -201,29 +203,70 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
           </aside>
         )}
 
-        {/* Panel de lectura */}
-        <main ref={scrollRef} className="flex-1 overflow-y-auto bg-slate-900" onPointerDown={() => { if (!showScore && playing) setPlaying(false); }}>
-          {!song ? (
-            <div className="h-full flex items-center justify-center text-white/50">Selecciona un canto</div>
-          ) : showScore ? (
-            // Partitura del ordinario (Kyrie/Gloria/Santo/Cordero/Padre Nuestro).
-            <div className="p-2 sm:p-4">
-              <PDFViewer
-                proxyUrl={scoreProxy!}
-                driveViewUrl={song.sheetMusicUrl!}
-                title={song.title}
-                durationSeconds={durationToSeconds(song.duration)}
-              />
-            </div>
-          ) : !displayedLyrics ? (
-            <div className="h-full flex flex-col items-center justify-center text-white/50 gap-3 p-6 text-center">
-              <Music className="w-12 h-12" />
-              <p>{isOrdinary(song) ? 'Esta parte aún no tiene partitura ni letra en el catálogo.' : 'Este canto aún no tiene letra cargada en el catálogo.'}</p>
-            </div>
+        {/* Documento continuo: TODOS los cantos apilados */}
+        <main
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto bg-slate-900 pb-40"
+          onPointerDown={() => { if (playing) setPlaying(false); }}
+        >
+          {orderedSongs.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-white/50">No hay cantos en el cantoral</div>
           ) : (
-            <div className="p-4 sm:p-8 pb-40" style={{ zoom: fontScale } as any}>
-              {showChords ? <LyricsWithChords lyrics={displayedLyrics} /> : <LyricsOnly lyrics={displayedLyrics} />}
-            </div>
+            orderedSongs.map((s, i) => {
+              const mode = modeFor(s);
+              const proxy = mode === 'score' ? getDrivePdfProxyUrl(s.sheetMusicUrl) : null;
+              const showScore = mode === 'score' && !!proxy;
+              // Respaldo si se pedía partitura pero no hay proxy válido.
+              const fallbackChords = mode === 'score' && !proxy && hasChords;
+              const showChordsHere = mode === 'chords' || fallbackChords;
+              const t = transpositions[i] ?? 0;
+              const lyrics = s.lyrics ? transposeContent(s.lyrics, t, notation) : '';
+              const key = showChordsHere && s.originalKey ? getTransposedKey(s.originalKey, t, notation) : undefined;
+
+              return (
+                <section
+                  key={s.id || i}
+                  data-idx={i}
+                  ref={(el) => { sectionRefs.current[i] = el; }}
+                  className="scroll-mt-0 border-b-4 border-slate-800"
+                >
+                  {/* Cabecera de la sección: momento + título (+ tono/transpositor si hay acordes) */}
+                  <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-2 bg-slate-950/95 backdrop-blur border-b border-white/10">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] font-bold text-amber-300/80 uppercase tracking-wide truncate">{s.category}</div>
+                      <div className="font-bold leading-tight truncate">{s.title}</div>
+                    </div>
+                    {showChordsHere && s.lyrics && (
+                      <div className="flex items-center gap-1 flex-shrink-0" {...(i === activeIndex ? { 'data-tour': 'atril-transpositor' } : {})}>
+                        {key && <span className="text-xs text-amber-300 mr-1 hidden sm:inline">Tono: {key}</span>}
+                        <button onClick={() => setTransposition(i, t - 1)} className={`${btn} w-9 h-9`} aria-label="Bajar medio tono"><ChevronDown className="w-5 h-5" strokeWidth={2.5} /></button>
+                        <span className="text-xs font-bold w-9 text-center text-amber-300">{formatTransposition(t)}</span>
+                        <button onClick={() => setTransposition(i, t + 1)} className={`${btn} w-9 h-9`} aria-label="Subir medio tono"><ChevronUp className="w-5 h-5" strokeWidth={2.5} /></button>
+                        {t !== 0 && (
+                          <button onClick={() => setTransposition(i, 0)} className={`${btn} w-9 h-9`} aria-label="Tono original"><RotateCcw className="w-4 h-4" strokeWidth={2.5} /></button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contenido de la sección */}
+                  <div className="px-3 sm:px-6 py-4">
+                    {showScore ? (
+                      <PdfPages proxyUrl={proxy!} driveViewUrl={s.sheetMusicUrl!} title={s.title} zoom={pdfZoom} />
+                    ) : lyrics ? (
+                      <div style={{ zoom: fontScale } as any}>
+                        {showChordsHere ? <LyricsWithChords lyrics={lyrics} /> : <LyricsOnly lyrics={lyrics} />}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-white/40 gap-2 py-10 text-center">
+                        <Music className="w-10 h-10" />
+                        <p className="text-sm">{isOrdinary(s) ? 'Esta parte aún no tiene partitura ni letra en el catálogo.' : 'Este canto aún no tiene letra cargada en el catálogo.'}</p>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              );
+            })
           )}
         </main>
 
@@ -233,23 +276,20 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
         )}
       </div>
 
-      {/* Barra de autoscroll de la LETRA (Fase B). La partitura usa el autoscroll
-          propio del visor de PDF, así que aquí se oculta. */}
-      {!showScore && (
-        <div data-tour="atril-autoscroll" className="flex items-center gap-3 px-4 py-3 bg-slate-950 border-t border-white/10 flex-shrink-0" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
-          <button onClick={() => setPlaying(p => !p)} className={`${btn} w-12 h-12 flex-shrink-0`} aria-label={playing ? 'Pausar desplazamiento' : 'Iniciar desplazamiento'}>
-            {playing ? <Pause className="w-6 h-6" fill="currentColor" /> : <Play className="w-6 h-6" fill="currentColor" />}
-          </button>
-          <span className="text-xs text-white/60 flex-shrink-0">Velocidad</span>
-          <input
-            type="range" min={1} max={10} step={1} value={speed}
-            onChange={(e) => setSpeed(Number(e.target.value))}
-            className="flex-1 accent-amber-400 h-2"
-            aria-label="Velocidad de desplazamiento"
-          />
-          <span className="text-sm font-bold w-6 text-center text-amber-300 flex-shrink-0">{speed}</span>
-        </div>
-      )}
+      {/* Barra de autoscroll global (letra y partituras) */}
+      <div data-tour="atril-autoscroll" className="flex items-center gap-3 px-4 py-3 bg-slate-950 border-t border-white/10 flex-shrink-0" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
+        <button onClick={() => setPlaying(p => !p)} className={`${btn} w-12 h-12 flex-shrink-0`} aria-label={playing ? 'Pausar desplazamiento' : 'Iniciar desplazamiento'}>
+          {playing ? <Pause className="w-6 h-6" fill="currentColor" /> : <Play className="w-6 h-6" fill="currentColor" />}
+        </button>
+        <span className="text-xs text-white/60 flex-shrink-0">Velocidad</span>
+        <input
+          type="range" min={1} max={10} step={1} value={speed}
+          onChange={(e) => setSpeed(Number(e.target.value))}
+          className="flex-1 accent-amber-400 h-2"
+          aria-label="Velocidad de desplazamiento"
+        />
+        <span className="text-sm font-bold w-6 text-center text-amber-300 flex-shrink-0">{speed}</span>
+      </div>
 
       {/* Tip contextual (F4): se muestra la 1ª vez que se abre el atril */}
       {showTip && (
