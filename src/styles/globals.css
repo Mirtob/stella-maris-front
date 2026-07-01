@@ -1,6 +1,11 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  /* Declara el esquema para que los controles NATIVOS (select, option, inputs de
+   * fecha, scrollbars, autofill) rendericen según el tema de la APP, no el del SO.
+   * Sin esto, con la app en claro y el SO en oscuro, los desplegables salían con
+   * fondo oscuro del SO y texto oscuro nuestro → letras casi invisibles. */
+  color-scheme: light;
   --font-size: 18px; /* Increased for better readability */
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
@@ -69,6 +74,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.145 0 0);
