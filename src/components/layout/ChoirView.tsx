@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Send, AlertCircle } from 'lucide-react';
+import { Send, AlertCircle, Music } from 'lucide-react';
 import { toast } from 'sonner';
 import { Home } from './Home';
 import { CategorySearch } from '../songs/CategorySearch';
@@ -186,7 +186,8 @@ export function ChoirView({
             data-tour="coro-atril"
             className="w-full mt-4 bg-gradient-to-br from-slate-800 to-slate-950 text-white py-3 px-4 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg border-2 border-slate-700 font-bold"
           >
-            🎼 <span>Modo Atril</span>
+            <Music className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
+            <span>Modo Atril</span>
           </button>
         )}
 
@@ -375,7 +376,7 @@ export function ChoirView({
               className="w-full bg-gradient-to-br from-brand to-brand-strong text-white py-4 px-3 sm:px-4 rounded-2xl shadow-2xl active:scale-98 transition-all flex items-center justify-center gap-3 border-2 border-brand-border"
             >
               <Send className="w-6 h-6 flex-shrink-0" />
-              <span className="text-base sm:text-lg font-bold min-w-0 leading-tight">
+              <span className="text-base sm:text-lg font-bold min-w-0 leading-tight text-center break-words">
                 Publicar Cantoral · {cantoral.length} {cantoral.length === 1 ? 'canto' : 'cantos'}
               </span>
             </button>
