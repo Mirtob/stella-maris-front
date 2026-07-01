@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/react';
 import App from "./App";
 import "./index.css";
 import { initSentry } from "./services/sentry";
+import { CACHE_NAME as OFFLINE_CACHE } from "./services/offlineCache";
 
 // Inicializar Sentry ANTES de renderizar la app.
 // Si VITE_SENTRY_DSN no está configurada, queda inactivo silenciosamente.
@@ -17,10 +18,12 @@ async function cleanupAndRender() {
       const registrations = await navigator.serviceWorker.getRegistrations();
       await Promise.all(registrations.map(r => r.unregister()));
 
-      // 2. Borrar todos los cachés del navegador
+      // 2. Borrar cachés viejos del app-shell (deploys obsoletos de SW antiguos),
+      //    pero CONSERVAR el caché de datos offline (cantorales/partituras) para que
+      //    la app siga usable sin conexión durante la Misa.
       if ('caches' in window) {
         const keys = await caches.keys();
-        await Promise.all(keys.map(k => caches.delete(k)));
+        await Promise.all(keys.filter(k => k !== OFFLINE_CACHE).map(k => caches.delete(k)));
       }
 
       // 3. Si había SWs activos, recargar para obtener código limpio

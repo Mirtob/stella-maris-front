@@ -9,7 +9,7 @@
 
 import { PublishedCantoral } from '../types';
 
-const CACHE_NAME = 'stella-offline-v1';
+export const CACHE_NAME = 'stella-offline-v1';
 const LS_KEY = 'offline_cantorals';
 
 /** Deriva la URL del proxy de PDF a partir de una URL de Drive. */

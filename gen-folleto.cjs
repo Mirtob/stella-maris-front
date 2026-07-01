@@ -152,7 +152,7 @@ const GRAY = [110, 110, 110];
   const tips = [
     'Antes de empezar: ten la app abierta y un cantoral de ejemplo publicado y vigente.',
     'Proyecta el QR EN GRANDE durante el bloque de instalación para que instalen en el momento.',
-    'Muestra que funciona sin internet: ábrela en modo avión.',
+    'Offline: ábrela CON internet y revisa un cantoral; recién ahí activa el modo avión para mostrar que sigue funcionando.',
     'Ten listo 1 canto con partitura y 1 con letra para lucir el Modo Atril.',
     'Deja folletos impresos en las bancas y el QR permanente pegado a la entrada.',
   ];
