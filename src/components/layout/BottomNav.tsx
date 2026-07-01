@@ -1,5 +1,6 @@
 import { Church, Book, Calendar, Music, GraduationCap, ShieldCheck, MoreHorizontal, type LucideIcon } from 'lucide-react';
 import { UserRole } from '../../types';
+import { getCurrentLiturgicalColor, getLiturgicalCrossColor } from '../../utils/liturgicalColors';
 
 interface BottomNavProps {
   currentView: string;
@@ -44,7 +45,12 @@ export function BottomNav({ currentView, onNavigate, onOpenMore, role }: BottomN
   // resaltamos "Más" para que el usuario sepa que llegó por ahí.
   const isPrimary = tabs.some((t) => t.id === currentView);
 
-  const renderTab = (key: string, label: string, Icon: LucideIcon, active: boolean, onClick: () => void) => (
+  // Color litúrgico del día (por fecha) para teñir el botón "Más" —ícono, rótulo e
+  // indicador—, igual que el hamburguesa de desktop. `bg-current` hace que el indicador
+  // tome el color de texto vigente del tab (litúrgico en "Más", azul en el resto).
+  const litTint = getLiturgicalCrossColor(getCurrentLiturgicalColor());
+
+  const renderTab = (key: string, label: string, Icon: LucideIcon, active: boolean, onClick: () => void, tint?: string) => (
     <button
       key={key}
       onClick={onClick}
@@ -54,13 +60,13 @@ export function BottomNav({ currentView, onNavigate, onOpenMore, role }: BottomN
       aria-label={label}
       aria-current={active ? 'page' : undefined}
       className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 h-16 transition-colors ${
-        active ? 'text-blue-900 dark:text-blue-200' : 'text-blue-500/70 dark:text-blue-300/50'
+        tint ? tint : active ? 'text-blue-900 dark:text-blue-200' : 'text-blue-500/70 dark:text-blue-300/50'
       }`}
     >
-      {/* Indicador superior del tab activo (sutil). */}
+      {/* Indicador superior del tab activo (toma el color del tab vía currentColor). */}
       <span
         className={`absolute top-0 h-0.5 w-8 rounded-full transition-colors ${
-          active ? 'bg-blue-900 dark:bg-blue-300' : 'bg-transparent'
+          active ? 'bg-current' : 'bg-transparent'
         }`}
         aria-hidden
       />
@@ -79,7 +85,7 @@ export function BottomNav({ currentView, onNavigate, onOpenMore, role }: BottomN
     >
       <div className="flex items-stretch max-w-2xl mx-auto">
         {tabs.map((t) => renderTab(t.id, t.label, t.icon, currentView === t.id, () => onNavigate(t.id)))}
-        {renderTab('more', 'Más', MoreHorizontal, !isPrimary, onOpenMore)}
+        {renderTab('more', 'Más', MoreHorizontal, !isPrimary, onOpenMore, litTint)}
       </div>
     </nav>
   );
