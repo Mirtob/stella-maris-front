@@ -66,13 +66,12 @@ export function AdminDashboard() {
               <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
                 <Users className="w-9 h-9 text-white" strokeWidth={2.5} />
               </div>
-              <div className="text-left flex-1">
+              <div className="text-left flex-1 min-w-0">
                 <h2 className="text-2xl font-bold text-white mb-1">Gestión de Usuarios</h2>
                 <p className="text-base text-blue-100">
                   Administra perfiles, roles y permisos
                 </p>
               </div>
-              <div className="text-3xl">👥</div>
             </div>
           </button>
 
@@ -85,13 +84,12 @@ export function AdminDashboard() {
               <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
                 <Church className="w-9 h-9 text-white" strokeWidth={2.5} />
               </div>
-              <div className="text-left flex-1">
+              <div className="text-left flex-1 min-w-0">
                 <h2 className="text-2xl font-bold text-white mb-1">Gestión de Parroquias</h2>
                 <p className="text-base text-blue-100">
                   Administra parroquias y comunidades
                 </p>
               </div>
-              <div className="text-3xl">⛪</div>
             </div>
           </button>
 
@@ -105,13 +103,12 @@ export function AdminDashboard() {
               <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
                 <Music className="w-9 h-9 text-white" strokeWidth={2.5} />
               </div>
-              <div className="text-left flex-1">
+              <div className="text-left flex-1 min-w-0">
                 <h2 className="text-2xl font-bold text-white mb-1">Gestión de Cantos</h2>
                 <p className="text-base text-blue-100">
                   Administra biblioteca musical
                 </p>
               </div>
-              <div className="text-3xl">🎵</div>
             </div>
           </button>
 
@@ -125,13 +122,12 @@ export function AdminDashboard() {
               <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
                 <Youtube className="w-9 h-9 text-white" strokeWidth={2} />
               </div>
-              <div className="text-left flex-1">
+              <div className="text-left flex-1 min-w-0">
                 <h2 className="text-2xl font-bold text-white mb-1">Sincronizar YouTube</h2>
                 <p className="text-base text-red-100">
                   Importar canciones nuevas del canal
                 </p>
               </div>
-              <div className="text-3xl">▶️</div>
             </div>
           </button>
 
@@ -144,13 +140,12 @@ export function AdminDashboard() {
               <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
                 <LifeBuoy className="w-9 h-9 text-white" strokeWidth={2.5} />
               </div>
-              <div className="text-left flex-1">
+              <div className="text-left flex-1 min-w-0">
                 <h2 className="text-2xl font-bold text-white mb-1">Recuperación de Cuentas</h2>
                 <p className="text-base text-green-100">
                   Buscar perfiles por email principal o respaldo
                 </p>
               </div>
-              <div className="text-3xl">🛟</div>
             </div>
           </button>
 
@@ -164,13 +159,12 @@ export function AdminDashboard() {
               <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
                 <KeyRound className="w-9 h-9 text-white" strokeWidth={2.5} />
               </div>
-              <div className="text-left flex-1">
+              <div className="text-left flex-1 min-w-0">
                 <h2 className="text-2xl font-bold text-white mb-1">Cuentas usuario/clave</h2>
                 <p className="text-base text-blue-100">
                   Crear cuentas sin correo y restablecer claves
                 </p>
               </div>
-              <div className="text-3xl">🔑</div>
             </div>
           </button>
 
@@ -183,13 +177,12 @@ export function AdminDashboard() {
               <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
                 <Database className="w-9 h-9 text-white" strokeWidth={2} />
               </div>
-              <div className="text-left flex-1">
+              <div className="text-left flex-1 min-w-0">
                 <h2 className="text-2xl font-bold text-white mb-1">Migrar Catálogo</h2>
                 <p className="text-base text-emerald-100">
                   Importar canciones locales a Supabase
                 </p>
               </div>
-              <div className="text-3xl">🗄️</div>
             </div>
           </button>
         </div>
@@ -202,10 +195,10 @@ export function AdminDashboard() {
                 <Lock className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={2.5} />
               </div>
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <h3 className="text-xl font-bold text-red-900 dark:text-red-100 mb-3 flex items-center gap-2">
-                <AlertTriangle className="w-6 h-6" strokeWidth={2.5} />
-                Seguridad del Canal de YouTube
+                <AlertTriangle className="w-6 h-6 flex-shrink-0" strokeWidth={2.5} />
+                <span className="min-w-0">Seguridad del Canal de YouTube</span>
               </h3>
               <div className="space-y-3 text-base text-red-800 dark:text-red-200">
                 <p className="leading-relaxed">
