@@ -116,7 +116,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
                 <Music className="w-6 h-6 sm:w-8 sm:h-8" strokeWidth={2.5} />
               </button>
               <div className="flex-1 min-w-0">
-                <h4 className="text-base sm:text-2xl font-bold text-gray-800 dark:text-white truncate">
+                <h4 className="text-base sm:text-2xl font-bold text-gray-800 dark:text-white leading-tight line-clamp-2">
                   {song.title}
                 </h4>
                 <p className="text-sm sm:text-xl text-gray-600 dark:text-gray-400 truncate">
@@ -152,7 +152,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
             </div>
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <span className="text-2xl sm:text-4xl flex-shrink-0">{section.icon}</span>
-              <h3 className="text-base sm:text-2xl font-bold truncate">
+              <h3 className="text-base sm:text-2xl font-bold leading-tight line-clamp-2">
                 {section.title}
               </h3>
             </div>

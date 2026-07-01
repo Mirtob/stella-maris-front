@@ -377,10 +377,10 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
                                           <Play className="w-6 h-6" fill="currentColor" strokeWidth={2} />
                                         </button>
                                         <div className="flex-1 min-w-0">
-                                          <h5 className="text-xl font-bold text-gray-800 dark:text-white truncate">
+                                          <h5 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white leading-tight line-clamp-2">
                                             {song.title}
                                           </h5>
-                                          <p className="text-base text-gray-600 dark:text-gray-400">
+                                          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 truncate">
                                             {song.artist || 'Artista desconocido'}
                                           </p>
                                         </div>
