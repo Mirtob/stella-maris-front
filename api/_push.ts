@@ -1,10 +1,23 @@
-// Helper compartido de envío de Web Push (usado por push-subscribe, notify-cantoral y
-// el cron de celebraciones). El prefijo "_" hace que Vercel NO lo trate como ruta.
-import webpush from 'web-push';
+// Helper compartido de envío de Web Push (usado por notify-cantoral y el cron de
+// celebraciones). El prefijo "_" hace que Vercel NO lo trate como ruta.
+//
+// `web-push` se carga de forma LAZY (dynamic import) para no ejecutar su carga a nivel
+// de módulo: así, si algo falla, se captura en el try/catch del handler (500 legible)
+// en vez de un FUNCTION_INVOCATION_FAILED al inicializar la función.
+let _webpush: any = null;
+async function webpushLib(): Promise<any> {
+  if (_webpush) return _webpush;
+  const mod: any = await import('web-push');
+  _webpush = mod?.default ?? mod;
+  return _webpush;
+}
 
 const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || '').trim();
 const SERVICE = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
-const VAPID_PUBLIC = (process.env.VITE_VAPID_PUBLIC_KEY || process.env.VAPID_PUBLIC_KEY || '').trim();
+// La clave PÚBLICA no es secreta: fallback embebido para que baste con setear la
+// PRIVADA en Vercel (debe corresponder a este par).
+const DEFAULT_VAPID_PUBLIC = 'BD6iyTq35EL0rH1goWKY4FEjvAjpUpxO-XSY9qFFaKHh9qBOeUeMSiKhFuUO8ZwZHOsUwM5T3F4NmvJSzv1ViSg';
+const VAPID_PUBLIC = (process.env.VITE_VAPID_PUBLIC_KEY || process.env.VAPID_PUBLIC_KEY || DEFAULT_VAPID_PUBLIC).trim();
 const VAPID_PRIVATE = (process.env.VAPID_PRIVATE_KEY || '').trim();
 const VAPID_SUBJECT = (process.env.VAPID_SUBJECT || 'mailto:gustavus.tobar@gmail.com').trim();
 
@@ -55,6 +68,7 @@ export async function deleteSubByEndpoint(endpoint: string): Promise<void> {
  */
 export async function sendToSubs(subs: PushSub[], payload: PushPayload): Promise<{ sent: number; failed: number }> {
   if (!pushConfigured() || subs.length === 0) return { sent: 0, failed: 0 };
+  const webpush = await webpushLib();
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
   const body = JSON.stringify(payload);
   let sent = 0;

@@ -1,12 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { querySubs, sendToSubs, containsParish, containsTopic, pushConfigured } from '../_push';
-import { liturgicalCalendar2026 } from '../../src/data/liturgicalCalendar';
 
-// Cron DIARIO: avisa de las celebraciones que caen en N días.
-//  - Personalizadas (custom_liturgical_dates): globales → a todos; de parroquia → a esa.
-//  - Solemnidades importantes del calendario 2026 (importance 'high') → a todos.
-// Se dispara por Vercel Cron (ver vercel.json). Idempotente por día: cada corrida solo
-// matchea las fechas que caen exactamente a `lead` días.
+// Cron DIARIO: avisa de las celebraciones PERSONALIZADAS (custom_liturgical_dates) que
+// caen en N días: globales → a todos; de parroquia → a esa parroquia. Se dispara por
+// Vercel Cron (ver vercel.json). Idempotente por día: cada corrida solo matchea las
+// fechas que caen exactamente a `lead` días.
 
 const LEAD_DAYS = [7, 1];
 
@@ -66,23 +64,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           tag: `celeb-${target}-${c.name}`,
         });
         totalSent += sent;
-      }
-
-      // 2) Solemnidades importantes del calendario oficial (a todos).
-      const solemn = liturgicalCalendar2026.filter(
-        (e) => e.date === target && e.importance === 'high',
-      );
-      if (solemn.length) {
-        const subs = await querySubs(containsTopic('celebrations'));
-        for (const e of solemn) {
-          const { sent } = await sendToSubs(subs, {
-            title: 'Solemnidad próxima ✝️',
-            body: `${e.name} — ${leadLabel(lead)}`,
-            url: '/',
-            tag: `celeb-${target}-${e.name}`,
-          });
-          totalSent += sent;
-        }
       }
     }
     return res.status(200).json({ ok: true, date: today, sent: totalSent });
