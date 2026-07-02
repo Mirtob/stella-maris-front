@@ -3,7 +3,7 @@ import { Bell, BellOff, Loader, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   pushSupported, notificationPermission, isPushEnabled,
-  enablePush, disablePush, isIos, isStandalone,
+  enablePush, disablePush, sendTestPush, isIos, isStandalone,
 } from '../../services/push';
 
 interface Props {
@@ -30,6 +30,27 @@ export function PushNotificationsCard({ parishes, role }: Props) {
     if (supported) isPushEnabled().then(setEnabled);
   }, [supported]);
 
+  const [testing, setTesting] = useState(false);
+
+  const handleTest = async () => {
+    if (testing) return;
+    setTesting(true);
+    try {
+      const r = await sendTestPush();
+      if (r.ok) {
+        toast.success('Notificación de prueba enviada', {
+          description: 'Debería aparecer en tu teléfono en unos segundos.',
+        });
+      } else if (r.reason === 'no-subscription') {
+        toast.error('No hay suscripción en este dispositivo', { description: 'Vuelve a activar las notificaciones.' });
+      } else {
+        toast.error('No se pudo enviar la prueba', { description: 'Revisa el permiso de notificaciones y reintenta.' });
+      }
+    } finally {
+      setTesting(false);
+    }
+  };
+
   const toggle = async () => {
     if (busy) return;
     setBusy(true);
@@ -44,7 +65,7 @@ export function PushNotificationsCard({ parishes, role }: Props) {
         if (r.ok) {
           setEnabled(true);
           toast.success('¡Notificaciones activadas!', {
-            description: 'Recibirás avisos de celebraciones y nuevos cantorales.',
+            description: 'Te enviamos una de prueba para confirmar.',
           });
         } else if (r.reason === 'denied') {
           toast.error('Permiso bloqueado', {
@@ -100,6 +121,17 @@ export function PushNotificationsCard({ parishes, role }: Props) {
         >
           {busy ? <Loader className="w-5 h-5 animate-spin" /> : enabled ? <BellOff className="w-5 h-5" strokeWidth={2.5} /> : <Bell className="w-5 h-5" strokeWidth={2.5} />}
           {busy ? 'Un momento…' : enabled ? 'Desactivar notificaciones' : 'Activar notificaciones'}
+        </button>
+      )}
+
+      {enabled && supported && !iosNeedsInstall && (
+        <button
+          onClick={handleTest}
+          disabled={testing}
+          className="w-full mt-2 py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all font-bold text-amber-700 bg-amber-50 border-2 border-amber-200 disabled:opacity-60"
+        >
+          {testing ? <Loader className="w-5 h-5 animate-spin" /> : <Bell className="w-5 h-5" strokeWidth={2.5} />}
+          {testing ? 'Enviando…' : 'Enviar notificación de prueba'}
         </button>
       )}
 

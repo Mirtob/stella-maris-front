@@ -130,7 +130,36 @@ export async function enablePush(parishes: string[], role?: string): Promise<{ o
     return { ok: false, reason: err || 'server' };
   }
   try { localStorage.setItem(LOCAL_FLAG, '1'); } catch { /* modo privado */ }
+  // Aviso de bienvenida inmediato: confirma al usuario que la entrega funciona.
+  void sendTestPush(sub.endpoint);
   return { ok: true };
+}
+
+/**
+ * Envía una notificación de PRUEBA a este dispositivo para verificar la entrega.
+ * Devuelve cuántas se enviaron (sent>0 = el push service la aceptó).
+ */
+export async function sendTestPush(endpoint?: string): Promise<{ ok: boolean; sent: number; reason?: string }> {
+  if (!pushSupported()) return { ok: false, sent: 0, reason: 'unsupported' };
+  let ep = endpoint;
+  if (!ep) {
+    const reg = await getRegistration();
+    const sub = reg ? await reg.pushManager.getSubscription() : null;
+    if (!sub) return { ok: false, sent: 0, reason: 'no-subscription' };
+    ep = sub.endpoint;
+  }
+  try {
+    const token = await accessToken();
+    const r = await fetch('/api/push-test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ endpoint: ep }),
+    });
+    const data = await r.json().catch(() => ({} as any));
+    return { ok: r.ok && (data.sent ?? 0) > 0, sent: data.sent ?? 0 };
+  } catch {
+    return { ok: false, sent: 0, reason: 'network' };
+  }
 }
 
 /** Cancela la suscripción en el dispositivo y en el servidor. */
