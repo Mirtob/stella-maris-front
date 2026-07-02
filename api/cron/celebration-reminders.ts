@@ -685,6 +685,12 @@ async function sendToSubs(subs: { endpoint: string; p256dh: string; auth: string
   return sent;
 }
 
+/** Une una lista para el cuerpo del push, con tope (máx 3 + "y N más"). */
+function digestBody(items: string[], max = 3): string {
+  if (items.length <= max) return items.join(' · ');
+  return `${items.slice(0, max).join(' · ')} y ${items.length - max} más`;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const CRON_SECRET = (process.env.CRON_SECRET || '').trim();
   const isVercelCron = !!req.headers['x-vercel-cron'];
@@ -700,22 +706,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let coroSent = 0;
 
   try {
-    // ── 1) Recordatorio general (7 y 1 día) de celebraciones personalizadas ──
+    // ── 1) DIGEST de celebraciones próximas (7 y 1 día) → topic 'celebrations' ──
+    // Reunimos TODAS las celebraciones personalizadas de las ventanas y mandamos UN
+    // solo aviso por suscriptor con la lista (evita saturar en semanas con varias).
+    const celebItems: { name: string; scope: string; lead: number }[] = [];
     for (const lead of [7, 1]) {
       const target = addDays(today, lead);
       for (const c of await customCelebrationsOn(target)) {
-        const filter = c.scope === 'global' ? topicCeleb : `${topicCeleb}&parishes=cs.${encParish(c.scope)}`;
-        const subs = await querySubs(filter);
-        generalSent += await sendToSubs(subs, {
-          title: 'Celebración próxima ✝️',
-          body: `${c.name} — ${leadLabel(lead)}`,
+        celebItems.push({ name: c.name, scope: c.scope, lead });
+      }
+    }
+    if (celebItems.length > 0) {
+      const cs = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?${topicCeleb}&select=endpoint,p256dh,auth,parishes`, { headers: svcHeaders });
+      const celebSubs: { endpoint: string; p256dh: string; auth: string; parishes: string[] }[] = cs.ok ? await cs.json() : [];
+      for (const sub of celebSubs) {
+        const seen = new Set<string>();
+        const mine = celebItems
+          .filter((it) => it.scope === 'global' || (sub.parishes || []).includes(it.scope))
+          .filter((it) => (seen.has(it.name) ? false : (seen.add(it.name), true)));
+        if (mine.length === 0) continue;
+        generalSent += await sendToSubs([{ endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth }], {
+          title: mine.length === 1 ? 'Celebración próxima ✝️' : 'Celebraciones próximas ✝️',
+          body: digestBody(mine.map((it) => `${it.name} (${leadLabel(it.lead)})`)),
           url: '/',
-          tag: `celeb-${target}-${c.name}`,
+          tag: 'celeb-reminder', // estable → un solo aviso, no se apilan entre corridas
         });
       }
     }
 
-    // ── 2) Recordatorio al CORO (3 días): publica el cantoral si no lo has hecho ──
+    // ── 2) DIGEST al CORO (3 días): publica los cantorales PENDIENTES de esa fecha ──
+    // Un único aviso por coro que lista las parroquias/celebraciones sin cantoral.
     const target3 = addDays(today, 3);
     const vigil = addDays(today, 2); // víspera (I Vísperas se publica el día anterior)
     const base3 = baseCelebrationsOn(target3);           // domingos + solemnidades (globales)
@@ -725,22 +745,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const coroSubs: { endpoint: string; p256dh: string; auth: string; parishes: string[] }[] = cr.ok ? await cr.json() : [];
 
     for (const sub of coroSubs) {
-      for (const parish of (sub.parishes || [])) {
-        const relevant = [
+      const parishes = Array.from(new Set(sub.parishes || []));
+      const pending: string[] = [];
+      for (const parish of parishes) {
+        const rel = [
           ...base3,
           ...custom3.filter((c) => c.scope === 'global' || c.scope === parish).map((c) => c.name),
         ];
-        if (relevant.length === 0) continue;
+        if (rel.length === 0) continue;
         if (await parishHasCantoral(parish, [target3, vigil])) continue; // ya publicaron
-        coroSent += await sendToSubs([{ endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth }], {
-          title: 'Publica el cantoral 🎼',
-          body: `${relevant[0]} es ${leadLabel(3)}. Publica los cantos para tu coro y tu comunidad.`,
-          url: '/', // el Coro llega a su pantalla principal (constructor del cantoral)
-          // Tag ESTABLE por parroquia → en semanas con varias celebraciones el aviso
-          // diario reemplaza al anterior en la bandeja (no se apilan).
-          tag: `coropub-${parish}`,
-        });
+        pending.push(parishes.length > 1 ? `${parish}: ${rel[0]}` : rel[0]);
       }
+      if (pending.length === 0) continue;
+      coroSent += await sendToSubs([{ endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth }], {
+        title: 'Publica el cantoral 🎼',
+        body: `${digestBody(pending)} — en 3 días`,
+        url: '/', // el Coro llega a su pantalla principal (constructor del cantoral)
+        tag: 'coropub', // estable → un solo aviso de "publica" por coro, no se apilan
+      });
     }
 
     return res.status(200).json({ ok: true, date: today, generalSent, coroSent });
