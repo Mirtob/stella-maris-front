@@ -27,7 +27,8 @@ const MOMENT_OPTIONS: { value: MassMoment; label: string }[] = [
   { value: 'comunion', label: 'Comunión' },
   { value: 'final', label: 'Final / Salida' },
   { value: 'exposicion', label: 'Exposición' },
-  { value: 'no-liturgico', label: 'No litúrgico' },
+  // 'no-liturgico' NO es un chip: lo determina el toggle "Tipo de canto" (abajo), para
+  // que el momento y `is_liturgical` nunca queden contradictorios.
 ];
 
 /**
@@ -100,6 +101,18 @@ export function SongManager() {
       }
       return { ...prev, moments: [...prev.moments, m] };
     });
+
+  // Deriva mass_moment/extra_moments a guardar según el toggle "Tipo de canto":
+  //  - Litúrgico    → la 1ª parte elegida es la principal; el resto, adicionales.
+  //  - No litúrgico → mass_moment='no-liturgico' y sin partes adicionales.
+  // Así `is_liturgical` y `mass_moment` SIEMPRE concuerdan (antes podían contradecirse:
+  // un canto quedaba con moment='no-liturgico' aunque is_liturgical=true, y seguía
+  // mostrándose como "No litúrgico" sin poder corregirlo).
+  const momentPayload = (form: SongForm): { massMoment: MassMoment; extraMoments: MassMoment[] } => {
+    if (!form.isLiturgical) return { massMoment: 'no-liturgico', extraMoments: [] };
+    const real = form.moments.filter(m => m !== 'no-liturgico');
+    return { massMoment: (real[0] ?? 'entrada'), extraMoments: real.slice(1) };
+  };
   const [f, setF] = useState<SongForm>(emptyForm);
   // Alta manual de un canto (p. ej. de un canal ajeno: pones tú la metadata).
   const [showAdd, setShowAdd] = useState(false);
@@ -195,14 +208,19 @@ export function SongManager() {
 
   const openEditSong = (song: Song) => {
     setEditSong(song);
+    // Un canto es "No litúrgico" si lo dice el flag O si su momento es 'no-liturgico'
+    // (p. ej. sincronizado sin momento → default de la columna). Los chips de partes
+    // solo muestran momentos reales; 'no-liturgico' lo maneja el toggle.
+    const nonLit = song.isLiturgical === false || song.massMoment === 'no-liturgico';
+    const realMoments = [
+      (song.massMoment as MassMoment) || 'entrada',
+      ...((song.extraMoments ?? []) as MassMoment[]),
+    ].filter((m, i, arr) => m !== 'no-liturgico' && arr.indexOf(m) === i);
     setF({
       title: song.title || '',
       author: song.author || '',
       artist: song.artist || '',
-      moments: [
-        (song.massMoment as MassMoment) || 'entrada',
-        ...((song.extraMoments ?? []) as MassMoment[]),
-      ].filter((m, i, arr) => arr.indexOf(m) === i),
+      moments: realMoments.length ? realMoments : (['entrada'] as MassMoment[]),
       youtubeId: song.youtubeId || '',
       driveFileId: song.driveFileId || '',
       duration: song.duration || '',
@@ -211,7 +229,7 @@ export function SongManager() {
       lyrics: song.lyrics || '',
       seasons: (song.liturgicalSeasons as unknown as string[]) || [],
       instruments: songVersionChips(song.instruments),
-      isLiturgical: song.isLiturgical ?? true,
+      isLiturgical: !nonLit,
       nonLiturgicalCategory: song.nonLiturgicalCategory || '',
     });
   };
@@ -220,12 +238,13 @@ export function SongManager() {
     if (!editSong) return;
     if (!f.title.trim()) { toast.error('El título es obligatorio'); return; }
     setSavingSong(true);
+    const mp = momentPayload(f);
     const r = await updateSong(editSong.id, {
       title: f.title.trim(),
       author: f.author.trim() || undefined,
       artist: f.artist.trim() || undefined,
-      massMoment: f.moments[0],
-      extraMoments: f.moments.slice(1),
+      massMoment: mp.massMoment,
+      extraMoments: mp.extraMoments,
       // Vacío = no tocar la versión guardada; con chips = fijar esa versión.
       instruments: f.instruments.length ? f.instruments : undefined,
       youtubeId: f.youtubeId.trim() || undefined,
@@ -285,10 +304,11 @@ export function SongManager() {
       toast.error('El ID de YouTube no es válido'); return;
     }
     setAddingSong(true);
+    const mpAdd = momentPayload(na);
     const r = await addSong({
       title: na.title.trim(),
-      massMoment: na.moments[0],
-      extraMoments: na.moments.slice(1),
+      massMoment: mpAdd.massMoment,
+      extraMoments: mpAdd.extraMoments,
       // Vacío = sirve para todas las versiones (default {coro,guitarra,organo}).
       instruments: na.instruments.length ? na.instruments : undefined,
       youtubeId: na.youtubeId.trim() || undefined,
@@ -609,6 +629,7 @@ export function SongManager() {
                 />
               </div>
 
+              {f.isLiturgical && (
               <div>
                 <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">
                   Parte(s) de la Misa <span className="text-gray-400">(elige una o varias; la 1ª es la principal)</span>
@@ -635,6 +656,7 @@ export function SongManager() {
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">★ principal. Un canto puede servir para varias partes (p. ej. Ofertorio y Comunión).</p>
               </div>
+              )}
 
               {/* Versión / instrumento (sin marcar = todas las versiones) */}
               <div>
@@ -818,6 +840,7 @@ export function SongManager() {
                 />
               </div>
 
+              {na.isLiturgical && (
               <div>
                 <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">
                   Parte(s) de la Misa <span className="text-gray-400">(elige una o varias; la 1ª es la principal)</span>
@@ -844,6 +867,7 @@ export function SongManager() {
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">★ principal. Un canto puede servir para varias partes (p. ej. Ofertorio y Comunión).</p>
               </div>
+              )}
 
               {/* Versión / instrumento (sin marcar = todas las versiones) */}
               <div>
