@@ -65,6 +65,8 @@ import { getSupabaseClient } from './services/supabaseClient';
 import { uploadCantoralPDF } from './services/cantoralPDF';
 import { cacheCantoralsForOffline, getOfflineCantorals } from './services/offlineCache';
 import { listChapels } from './services/chapels';
+import { listCustomLiturgicalDates, toLiturgicalDate } from './services/liturgicalDates';
+import { setPersistedCustomDates } from './utils/liturgicalCalendar';
 import { getTodayLocal, addDaysLocal, isWithinInclusive } from './utils/dateLocal';
 import { massTypeBadge } from './utils/massType';
 import { generateCantoralPDF } from './utils/cantoralPDFGenerator';
@@ -343,6 +345,25 @@ function AppContent() {
       .finally(() => setLoadingCantorals(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route.screen, userProfile, isVerifiedAdmin]);
+
+  // Cargar las CELEBRACIONES personalizadas (persistidas) visibles para el usuario:
+  // las globales (del Admin, para todos) + las de sus parroquias/capillas. Se guardan
+  // en un caché del calendario para que aparezcan en TODA la app (publicar, calendario,
+  // sugerencias). Ver services/liturgicalDates + utils/liturgicalCalendar.
+  useEffect(() => {
+    if (route.screen !== 'app' || !userProfile) return;
+    let cancelled = false;
+    const parishes = Array.from(new Set([
+      ...(userProfile.parishes ?? []),
+      userProfile.parishName,
+      userProfile.activeParishName,
+    ].filter((x): x is string => !!x)));
+    listCustomLiturgicalDates(parishes).then((rows) => {
+      if (cancelled) return;
+      setPersistedCustomDates(rows.map(toLiturgicalDate));
+    });
+    return () => { cancelled = true; };
+  }, [route.screen, userProfile]);
 
   // Cargar el catálogo de capillas una vez que hay sesión (para el selector de parroquia).
   useEffect(() => {
@@ -1103,6 +1124,7 @@ function AppContent() {
             view,
             userProfile,
             effectiveRole,
+            isVerifiedAdmin,
             activeParishName,
             cantoral,
             publishedCantorals,
@@ -1149,6 +1171,7 @@ interface ViewProps {
   view: ViewState;
   userProfile: UserProfile;
   effectiveRole: UserRole;
+  isVerifiedAdmin: boolean;
   activeParishName: string;
   cantoral: Song[];
   publishedCantorals: PublishedCantoral[];
@@ -1174,6 +1197,7 @@ function renderView(p: ViewProps): JSX.Element | null {
             userInstruments={p.userProfile.instruments}
             parishName={p.activeParishName}
             parishes={p.userProfile.parishes}
+            isAdmin={p.isVerifiedAdmin}
             cantoral={p.cantoral}
             onAddToCantoral={p.onAddToCantoral}
             onRemoveFromCantoral={p.onRemoveFromCantoral}

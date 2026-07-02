@@ -10,6 +10,8 @@ import { getLiturgicalDateForDate, getDateForLiturgicalName, isSunday, getLiturg
 import { LiturgicalColorBadge } from '../liturgy/LiturgicalColorBadge';
 import { validateCantoral, LiturgicalWarning } from '../../utils/liturgicalValidation';
 import { AddSolemnityModal } from '../liturgy/AddSolemnityModal';
+import { addCustomLiturgicalDate, toLiturgicalDate, GLOBAL_SCOPE } from '../../services/liturgicalDates';
+import { setPersistedCustomDates, getPersistedCustomDates } from '../../utils/liturgicalCalendar';
 import { CantoralPDFPreview } from './CantoralPDFPreview';
 import { PostPublishModal } from './PostPublishModal';
 import { PdfBlobViewer } from './PdfBlobViewer';
@@ -42,6 +44,8 @@ interface PublishCantoralModalProps {
   parishName: string;
   /** Conjunto completo de parroquias del coro. Si tiene >1, se habilita el modo multi-parroquia. */
   parishes?: string[];
+  /** Admin verificado: sus celebraciones agregadas son globales (para todos los usuarios). */
+  isAdmin?: boolean;
   onClose: () => void;
   onPublish: (targets: PublishTarget[]) => Promise<void> | void;
   userInstruments?: InstrumentType[];
@@ -77,7 +81,7 @@ function normalizeMassTime(raw: string): string {
   return `${String(displayH).padStart(2, '0')}:${min} ${period}`;
 }
 
-export function PublishCantoralModal({ cantoral, parishName, parishes = [], onClose, onPublish, userInstruments = [] }: PublishCantoralModalProps) {
+export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAdmin = false, onClose, onPublish, userInstruments = [] }: PublishCantoralModalProps) {
   // Lista efectiva de parroquias (con fallback a la activa). >1 ⇒ modo multi-parroquia.
   const allParishes = parishes.length > 0 ? parishes : (parishName ? [parishName] : []);
   const isMulti = allParishes.length > 1;
@@ -886,14 +890,29 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
       {showAddSolemnityModal && (
         <AddSolemnityModal
           selectedDate={selectedDate}
+          isAdmin={isAdmin}
+          parishes={allParishes}
           onClose={() => setShowAddSolemnityModal(false)}
-          onAdd={(name, date) => {
+          onAdd={async (name, date, scope, type) => {
+            // Uso inmediato en esta sesión (aunque el guardado tarde/falle).
             setCustomDates([...customDates, { name, date }]);
             setLiturgicalDate(name);
             setShowAddSolemnityModal(false);
-            toast.success('Celebración agregada', {
-              description: 'Ahora puedes publicar tu cantoral con esta celebración'
-            });
+            // Persistir: Admin → global (todos); Coro → su parroquia/capilla.
+            const r = await addCustomLiturgicalDate({ name, date, type, scope });
+            if (r.ok && r.row) {
+              // Reflejar en el caché del calendario → aparece en toda la app.
+              setPersistedCustomDates([...getPersistedCustomDates(), toLiturgicalDate(r.row)]);
+              toast.success('Celebración agregada', {
+                description: scope === GLOBAL_SCOPE
+                  ? 'Guardada para todos los usuarios.'
+                  : `Guardada para ${scope}.`,
+              });
+            } else {
+              toast.warning('Celebración agregada solo en esta sesión', {
+                description: r.error || 'No se pudo guardar en el servidor.',
+              });
+            }
           }}
         />
       )}

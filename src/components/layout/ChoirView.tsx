@@ -19,6 +19,7 @@ interface ChoirViewProps {
   userInstruments?: InstrumentType[]; // Array de todos los instrumentos que el usuario puede usar
   parishName: string;
   parishes?: string[]; // Conjunto completo de parroquias del coro (para publicar a varias)
+  isAdmin?: boolean;   // Admin verificado (aunque actúe como Coro): sus celebraciones son globales
   cantoral: Song[];
   onAddToCantoral: (song: Song) => void;
   onRemoveFromCantoral: (songId: string) => void;
@@ -31,6 +32,7 @@ export function ChoirView({
   userInstruments,
   parishName,
   parishes,
+  isAdmin,
   cantoral,
   onAddToCantoral,
   onRemoveFromCantoral,
@@ -390,6 +392,7 @@ export function ChoirView({
           cantoral={cantoral}
           parishName={parishName}
           parishes={parishes}
+          isAdmin={isAdmin}
           onClose={() => setShowPublishModal(false)}
           onPublish={handlePublish}
           userInstruments={userInstruments}

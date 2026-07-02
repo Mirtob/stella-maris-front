@@ -155,9 +155,19 @@ export function getLiturgicalInfoForDate(date: string): LiturgicalInfo | null {
   return byDate.get(date) ?? null;
 }
 
+// Celebraciones personalizadas PERSISTIDAS (Supabase), cargadas al iniciar sesión.
+// Se fusionan en todos los helpers para que aparezcan en TODA la app (calendario,
+// publicar, sugerencias). Las del Administrador son globales; las del coro, de su
+// parroquia. Ver services/liturgicalDates + App (carga y filtra el caché por scope).
+let _persistedCustom: LiturgicalDate[] = [];
+export function setPersistedCustomDates(list: LiturgicalDate[]): void { _persistedCustom = list; }
+export function getPersistedCustomDates(): LiturgicalDate[] { return _persistedCustom; }
+/** Fusiona las persistidas (caché) con las que pase el llamador (sesión). */
+const mergeCustom = (cd?: LiturgicalDate[]): LiturgicalDate[] => [..._persistedCustom, ...(cd || [])];
+
 /** Nombre de la celebración de una fecha; '' si no se encuentra (permite agregar custom). */
 export function getLiturgicalDateForDate(date: string, customDates?: LiturgicalDate[]): string {
-  const custom = customDates?.find((d) => d.date === date);
+  const custom = mergeCustom(customDates).find((d) => d.date === date);
   if (custom) return custom.name;
 
   const hit = byDate.get(date);
@@ -173,7 +183,7 @@ export function getLiturgicalDateForDate(date: string, customDates?: LiturgicalD
 
 /** Fecha 'YYYY-MM-DD' de una celebración por nombre, dentro (o cerca) de un año. */
 export function getDateForLiturgicalName(name: string, year: number, customDates?: LiturgicalDate[]): string | null {
-  const custom = customDates?.find((d) => d.name === name);
+  const custom = mergeCustom(customDates).find((d) => d.name === name);
   if (custom) return custom.date;
 
   const sameYear = GEN.find((e) => e.name === name && e.date.startsWith(`${year}-`));
@@ -197,7 +207,7 @@ export function getAllLiturgicalDates(year: number, customDates?: LiturgicalDate
   const base = inGeneratedRange(year)
     ? GEN.filter((e) => e.date.startsWith(`${year}-`)).map(genToLitDate)
     : calculateLiturgicalYear(year);
-  return [...base, ...(customDates || [])].sort((a, b) => a.date.localeCompare(b.date));
+  return [...base, ...mergeCustom(customDates)].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /** Nombres de celebraciones de un año para el selector (orden cronológico, sin duplicados). */

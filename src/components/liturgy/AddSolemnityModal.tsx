@@ -1,24 +1,32 @@
 import { useState } from 'react';
-import { X, Plus, Calendar, Sparkles } from 'lucide-react';
-import { toast } from 'sonner';
+import { X, Plus, Calendar, Sparkles, Church } from 'lucide-react';
 import { formatYmdForDisplay } from '../../utils/dateLocal';
+import { GLOBAL_SCOPE } from '../../services/liturgicalDates';
 
 interface AddSolemnityModalProps {
   selectedDate: string;
+  /** Admin verificado: puede crear celebraciones GLOBALES (para todos los usuarios). */
+  isAdmin?: boolean;
+  /** Parroquias/capillas del perfil (para que el coro elija a cuál publica la celebración). */
+  parishes?: string[];
   onClose: () => void;
-  onAdd: (name: string, date: string) => void;
+  onAdd: (name: string, date: string, scope: string, type: 'solemnity' | 'feast') => void;
 }
 
-export function AddSolemnityModal({ selectedDate, onClose, onAdd }: AddSolemnityModalProps) {
+export function AddSolemnityModal({ selectedDate, isAdmin = false, parishes = [], onClose, onAdd }: AddSolemnityModalProps) {
   const [solemnityName, setSolemnityName] = useState('');
   const [solemnityType, setSolemnityType] = useState<'solemnity' | 'feast'>('solemnity');
+  // Alcance de la celebración:
+  //  - Admin  → 'global' (todos los usuarios), o una parroquia concreta si lo prefiere.
+  //  - Coro   → una de sus parroquias/capillas (obligatorio elegir si tiene varias).
+  const [scope, setScope] = useState<string>(() => {
+    if (isAdmin) return GLOBAL_SCOPE;
+    return parishes.length === 1 ? parishes[0] : '';
+  });
 
   const handleSave = () => {
-    if (solemnityName.trim()) {
-      onAdd(solemnityName.trim(), selectedDate);
-      toast.success('Celebración agregada', {
-        description: `${solemnityName} ha sido agregada al calendario litúrgico`
-      });
+    if (solemnityName.trim() && scope) {
+      onAdd(solemnityName.trim(), selectedDate, scope, solemnityType);
       onClose();
     }
   };
@@ -26,7 +34,7 @@ export function AddSolemnityModal({ selectedDate, onClose, onAdd }: AddSolemnity
   const formatDate = (dateStr: string) =>
     formatYmdForDisplay(dateStr, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-  const canSave = solemnityName.trim().length > 0;
+  const canSave = solemnityName.trim().length > 0 && scope.length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -135,6 +143,54 @@ export function AddSolemnityModal({ selectedDate, onClose, onAdd }: AddSolemnity
             <p className="text-sm text-blue-900 dark:text-blue-200 mt-2 transition-colors">
               Ejemplo: "Nuestra Señora de Guadalupe", "San José Obrero", "Aniversario de la Parroquia"
             </p>
+          </div>
+
+          {/* Alcance: ¿para quién es esta celebración? */}
+          <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
+            <label className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center border-2 border-purple-800">
+                <Church className="w-6 h-6 text-white" strokeWidth={2.5} />
+              </div>
+              <span className="text-xl font-bold text-brand-ink">¿Para quién?</span>
+            </label>
+
+            {isAdmin ? (
+              <>
+                <select
+                  value={scope}
+                  onChange={(e) => setScope(e.target.value)}
+                  className="w-full px-4 py-3 text-base rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 bg-white/70 dark:bg-white/10 text-brand-ink font-bold"
+                >
+                  <option value={GLOBAL_SCOPE}>Todos los usuarios (global)</option>
+                  {parishes.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+                <p className="text-sm text-purple-900 dark:text-purple-200 mt-2">
+                  Como Administrador, «Todos los usuarios» agrega la celebración al calendario de <strong>toda la app</strong>.
+                </p>
+              </>
+            ) : parishes.length > 1 ? (
+              <>
+                <select
+                  value={scope}
+                  onChange={(e) => setScope(e.target.value)}
+                  className="w-full px-4 py-3 text-base rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 bg-white/70 dark:bg-white/10 text-brand-ink font-bold"
+                >
+                  <option value="">Elige la parroquia/capilla…</option>
+                  {parishes.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+                <p className="text-sm text-blue-900 dark:text-blue-200 mt-2">
+                  La celebración quedará disponible para la parroquia/capilla que elijas.
+                </p>
+              </>
+            ) : (
+              <p className="text-base text-blue-900 dark:text-blue-200 font-medium">
+                Se agregará para <strong>{scope || 'tu parroquia'}</strong>.
+              </p>
+            )}
           </div>
 
           {/* Examples */}
