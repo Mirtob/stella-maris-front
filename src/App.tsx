@@ -67,6 +67,7 @@ import { cacheCantoralsForOffline, getOfflineCantorals } from './services/offlin
 import { listChapels } from './services/chapels';
 import { listCustomLiturgicalDates, toLiturgicalDate } from './services/liturgicalDates';
 import { setPersistedCustomDates } from './utils/liturgicalCalendar';
+import { syncPushParishes } from './services/push';
 import { getTodayLocal, addDaysLocal, isWithinInclusive } from './utils/dateLocal';
 import { massTypeBadge } from './utils/massType';
 import { generateCantoralPDF } from './utils/cantoralPDFGenerator';
@@ -363,6 +364,18 @@ function AppContent() {
       setPersistedCustomDates(rows.map(toLiturgicalDate));
     });
     return () => { cancelled = true; };
+  }, [route.screen, userProfile]);
+
+  // Si el dispositivo ya está suscrito a notificaciones, mantener al día las parroquias
+  // del suscriptor (para los avisos de "nuevo cantoral") cuando cambia el perfil.
+  useEffect(() => {
+    if (route.screen !== 'app' || !userProfile) return;
+    const parishes = Array.from(new Set([
+      ...(userProfile.parishes ?? []),
+      userProfile.parishName,
+      userProfile.activeParishName,
+    ].filter((x): x is string => !!x)));
+    void syncPushParishes(parishes);
   }, [route.screen, userProfile]);
 
   // Cargar el catálogo de capillas una vez que hay sesión (para el selector de parroquia).
@@ -828,8 +841,29 @@ function AppContent() {
       succeeded.map(c => generateAndUploadCantoralPDF(c, succeeded.length === 1))
     );
 
+    // Aviso push "nuevo cantoral" a los suscriptores de cada parroquia (segundo plano).
+    void notifyNewCantorals(succeeded);
+
     const fresh = await listCantorals(userProfile?.activeParishName || userProfile?.parishName);
     setPublishedCantorals(fresh);
+  };
+
+  /** Dispara el aviso push de "nuevo cantoral" para cada cantoral recién publicado. */
+  const notifyNewCantorals = async (cs: PublishedCantoral[]) => {
+    try {
+      const { data } = await getSupabaseClient().auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return;
+      await Promise.allSettled(cs.map(c =>
+        fetch('/api/notify-cantoral', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ cantoralId: c.id }),
+        })
+      ));
+    } catch {
+      /* aviso best-effort: no afecta la publicación */
+    }
   };
 
   // "Cambiar perfil" — keeps Google session, shows the role/parish selector

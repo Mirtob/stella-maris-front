@@ -14,9 +14,16 @@ initSentry();
 async function cleanupAndRender() {
   if ('serviceWorker' in navigator) {
     try {
-      // 1. Desregistrar todos los service workers
+      // 1. Desregistrar los service workers LEGACY (app-shell), pero CONSERVAR el
+      //    push-sw.js (solo-push, sin caché): desregistrarlo mataría la suscripción
+      //    de notificaciones del usuario. Es la única excepción a "sin SW".
       const registrations = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(registrations.map(r => r.unregister()));
+      const isPushSW = (r: ServiceWorkerRegistration) => {
+        const url = (r.active || r.waiting || r.installing)?.scriptURL || '';
+        return url.endsWith('/push-sw.js');
+      };
+      const legacy = registrations.filter(r => !isPushSW(r));
+      await Promise.all(legacy.map(r => r.unregister()));
 
       // 2. Borrar cachés viejos del app-shell (deploys obsoletos de SW antiguos),
       //    pero CONSERVAR el caché de datos offline (cantorales/partituras) para que
@@ -26,8 +33,8 @@ async function cleanupAndRender() {
         await Promise.all(keys.filter(k => k !== OFFLINE_CACHE).map(k => caches.delete(k)));
       }
 
-      // 3. Si había SWs activos, recargar para obtener código limpio
-      if (registrations.length > 0) {
+      // 3. Si había SWs legacy activos, recargar para obtener código limpio
+      if (legacy.length > 0) {
         window.location.reload();
         return;
       }

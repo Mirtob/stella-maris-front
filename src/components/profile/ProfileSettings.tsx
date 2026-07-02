@@ -6,6 +6,7 @@ import { updateRecoveryEmail } from '../../services/userProfiles';
 import { changePassword, isUsernameAccount } from '../../services/supabaseClient';
 import { resetAllTutorials } from '../tour/tours';
 import { ParishPicker } from './ParishPicker';
+import { PushNotificationsCard } from './PushNotificationsCard';
 import { deleteMyAccount } from '../../services/account';
 import { signOutOnly } from '../../services/googleAuth';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -570,6 +571,9 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
             </div>
           </div>
         )}
+
+        {/* Notificaciones push (celebraciones + nuevo cantoral) */}
+        <PushNotificationsCard parishes={canManageParishes ? parishes : (activeParish ? [activeParish] : [])} />
 
         {/* Tutoriales — volver a verlos (F4) */}
         <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-indigo-200 mb-6">
