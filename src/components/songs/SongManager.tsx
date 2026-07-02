@@ -127,7 +127,9 @@ export function SongManager() {
   const [ytUrl, setYtUrl] = useState('');
   const [fetchingYt, setFetchingYt] = useState(false);
   // Partituras disponibles en la carpeta de Drive (para elegir sin buscar el ID a mano).
-  const [sheets, setSheets] = useState<{ id: string; name: string }[]>([]);
+  // `path` = carpeta relativa (p. ej. "Entrada" o "Entrada/Vienen con Alegría"), para
+  // agrupar el selector por momento de la Misa y por canto (subcarpeta polifónica).
+  const [sheets, setSheets] = useState<{ id: string; name: string; path?: string }[]>([]);
   const [loadingSheets, setLoadingSheets] = useState(false);
 
   // Cargar la lista de partituras de Drive al abrir el editor o el alta (una vez).
@@ -138,11 +140,48 @@ export function SongManager() {
       .then(r => (r.ok ? r.json() : { files: [] }))
       .then(d => setSheets((d.files || [])
         .filter((x: any) => (x.mimeType || '').includes('pdf'))
-        .map((x: any) => ({ id: x.id, name: x.name }))
-        .sort((a: any, b: any) => a.name.localeCompare(b.name))))
+        .map((x: any) => ({ id: x.id, name: x.name, path: x.path as string | undefined }))))
       .catch(() => { /* sin red: queda el campo manual */ })
       .finally(() => setLoadingSheets(false));
   }, [editSong, showAdd, sheets.length, loadingSheets]);
+
+  // Opciones del selector de partitura AGRUPADAS por momento (1.er nivel de carpeta) y,
+  // dentro, por canto (subcarpeta polifónica). Se prioriza arriba la carpeta del momento
+  // del canto que se está editando, para encontrar su partitura más rápido.
+  const sheetOptions = (currentMoment?: MassMoment) => {
+    const momentLabels = MOMENT_OPTIONS.map(o => o.label);
+    const currentLabel = MOMENT_OPTIONS.find(o => o.value === currentMoment)?.label;
+    const NO_FOLDER = '(Sin carpeta)';
+
+    const groups = new Map<string, { id: string; label: string }[]>();
+    for (const s of sheets) {
+      const segs = (s.path || '').split('/').map(x => x.trim()).filter(Boolean);
+      const moment = segs[0] || NO_FOLDER;
+      const sub = segs.slice(1).join(' / ');
+      const clean = s.name.replace(/\.pdf$/i, '');
+      const label = sub ? `${sub} — ${clean}` : clean;
+      if (!groups.has(moment)) groups.set(moment, []);
+      groups.get(moment)!.push({ id: s.id, label });
+    }
+
+    const rank = (moment: string) => {
+      if (currentLabel && moment === currentLabel) return -1;      // el del canto, primero
+      const i = momentLabels.indexOf(moment);
+      if (i !== -1) return i;                                       // orden de la Misa
+      if (moment === NO_FOLDER) return 9999;                       // sueltas, al final
+      return 5000;                                                 // otras carpetas, alfabético
+    };
+
+    return Array.from(groups.entries())
+      .sort((a, b) => (rank(a[0]) - rank(b[0])) || a[0].localeCompare(b[0]))
+      .map(([moment, items]) => (
+        <optgroup key={moment} label={moment}>
+          {items.sort((x, y) => x.label.localeCompare(y.label)).map(it => (
+            <option key={it.id} value={it.id}>{it.label}</option>
+          ))}
+        </optgroup>
+      ));
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -616,7 +655,7 @@ export function SongManager() {
                   {f.driveFileId && !sheets.some(s => s.id === f.driveFileId) && (
                     <option value={f.driveFileId}>Partitura actual ({f.driveFileId.slice(0, 8)}…)</option>
                   )}
-                  {sheets.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  {sheetOptions(f.moments[0])}
                 </select>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   Elige el archivo de la carpeta de partituras. Si no aparece, súbelo a Drive y vuelve a abrir este editor.
@@ -830,7 +869,7 @@ export function SongManager() {
                   className="w-full px-4 py-2.5 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium"
                 >
                   <option value="">{loadingSheets ? 'Cargando partituras…' : '— Sin partitura —'}</option>
-                  {sheets.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  {sheetOptions(na.moments[0])}
                 </select>
                 <input
                   value={na.driveFileId}
