@@ -16,7 +16,7 @@ function getDriveProxyUrl(sheetMusicUrl: string): { proxyUrl: string; driveViewU
   };
 }
 import { getCategoryColors, getCategoryHeaderGradient } from '../../utils/colors';
-import { transposeContent, getTransposedKey, formatTransposition, getChordNotation, setChordNotation, type ChordNotation } from '../../utils/chordTranspose';
+import { transposeContent, getTransposedKey, keyPrefersFlats, formatTransposition, getChordNotation, setChordNotation, type ChordNotation } from '../../utils/chordTranspose';
 import { LyricsWithChords } from './LyricsWithChords';
 import { LyricsOnly } from './LyricsOnly';
 
@@ -49,9 +49,11 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
                        (userInstrument === 'Guitarra' || userInstrument === 'Órgano') && 
                        song.lyrics;
 
-  // Transponer la letra si hay transposición activa
+  // Transponer la letra si hay transposición activa. La ortografía (bemoles/sostenidos)
+  // sigue la armadura de la tonalidad destino.
+  const activeTransposition = canTranspose ? transposition : 0;
   const displayedLyrics = song.lyrics
-    ? transposeContent(song.lyrics, canTranspose ? transposition : 0, notation)
+    ? transposeContent(song.lyrics, activeTransposition, notation, keyPrefersFlats(song.originalKey || '', activeTransposition))
     : song.lyrics;
 
   // Calcular tonalidad transpuesta

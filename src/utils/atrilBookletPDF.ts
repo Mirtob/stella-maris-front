@@ -2,7 +2,7 @@ import { jsPDF } from 'jspdf';
 import { Song, InstrumentType, UserRole } from '../types';
 import { getDrivePdfProxyUrl } from './driveProxy';
 import { sortByMassOrder, isOrdinary } from './ordinary';
-import { transposeContent, getChordNotation, getTransposedKey, type ChordNotation } from './chordTranspose';
+import { transposeContent, getChordNotation, getTransposedKey, keyPrefersFlats, type ChordNotation } from './chordTranspose';
 import { getOfflinePdf } from '../services/offlineCache';
 
 // =============================================================================
@@ -123,7 +123,9 @@ function buildLyricsBuffer(
     y += 1.5;
 
     const raw = song.lyrics || '';
-    const lyrics = opts.withChords ? transposeContent(raw, 0, opts.notation) : stripChords(raw);
+    const lyrics = opts.withChords
+      ? transposeContent(raw, 0, opts.notation, keyPrefersFlats(song.originalKey || '', 0))
+      : stripChords(raw);
     if (!lyrics.trim()) {
       doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(120, 120, 120);
       need(5); doc.text('(Sin letra en el catálogo)', M, y); y += 5;
@@ -384,7 +386,8 @@ export async function generateAtrilPrintable(opts: AtrilPrintOptions): Promise<{
         }
       }
     } else if (showChordsHere) {
-      const lyrics = s.lyrics ? transposeContent(s.lyrics, t, notation) : '';
+      const preferFlats = keyPrefersFlats(s.originalKey || '', t);
+      const lyrics = s.lyrics ? transposeContent(s.lyrics, t, notation, preferFlats) : '';
       if (lyrics.trim()) drawChordLyrics(lyrics);
       else { doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(150, 150, 150); need(6); doc.text('(Sin letra en el catálogo)', M, y); y += 6; }
     } else {

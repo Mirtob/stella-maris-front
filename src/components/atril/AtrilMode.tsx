@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { X, ZoomIn, ZoomOut, ChevronUp, ChevronDown, RotateCcw, Play, Pause, Maximize2, Minimize2, Music, List, Printer, Loader } from 'lucide-react';
 import { toast } from 'sonner';
 import { Song, UserRole, InstrumentType } from '../../types';
-import { transposeContent, getTransposedKey, formatTransposition, getChordNotation, setChordNotation, type ChordNotation } from '../../utils/chordTranspose';
+import { transposeContent, getTransposedKey, keyPrefersFlats, formatTransposition, getChordNotation, setChordNotation, type ChordNotation } from '../../utils/chordTranspose';
 import { LyricsWithChords } from '../songs/LyricsWithChords';
 import { LyricsOnly } from '../songs/LyricsOnly';
 import { useWakeLock } from '../../hooks/useWakeLock';
@@ -261,7 +261,8 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
               const fallbackChords = mode === 'score' && !proxy && hasChords;
               const showChordsHere = mode === 'chords' || fallbackChords;
               const t = transpositions[i] ?? 0;
-              const lyrics = s.lyrics ? transposeContent(s.lyrics, t, notation) : '';
+              const preferFlats = keyPrefersFlats(s.originalKey || '', t);
+              const lyrics = s.lyrics ? transposeContent(s.lyrics, t, notation, preferFlats) : '';
               const key = showChordsHere && s.originalKey ? getTransposedKey(s.originalKey, t, notation) : undefined;
 
               return (

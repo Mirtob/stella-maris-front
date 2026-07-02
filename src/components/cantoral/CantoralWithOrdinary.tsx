@@ -7,7 +7,7 @@ import { getOrdinaryForCantoral } from '../../data/massOrdinaryVariants';
 import { PDFViewer } from '../common/PDFViewer';
 import { LyricsOnly } from '../songs/LyricsOnly';
 import { LyricsWithChords } from '../songs/LyricsWithChords';
-import { transposeContent, getChordNotation } from '../../utils/chordTranspose';
+import { transposeContent, getChordNotation, keyPrefersFlats } from '../../utils/chordTranspose';
 import { AtrilMode } from '../atril/AtrilMode';
 
 // Extrae el Drive file ID de una URL de Drive y arma la URL del proxy (PDF embebido).
@@ -415,7 +415,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
                     </div>
                     <div className="bg-white dark:bg-gray-900 rounded-xl p-4 max-h-[40vh] overflow-auto transition-colors">
                       {showChords
-                        ? <LyricsWithChords lyrics={transposeContent(selectedSong.lyrics, 0, getChordNotation())} />
+                        ? <LyricsWithChords lyrics={transposeContent(selectedSong.lyrics, 0, getChordNotation(), keyPrefersFlats(selectedSong.originalKey || '', 0))} />
                         : <LyricsOnly lyrics={selectedSong.lyrics} />}
                     </div>
                   </div>

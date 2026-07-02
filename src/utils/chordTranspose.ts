@@ -10,9 +10,19 @@
 
 export type ChordNotation = 'latin' | 'american';
 
-// Escala cromática (12 semitonos) en ambas notaciones, usando sostenidos.
+// Escala cromática (12 semitonos) en ambas notaciones. Dos ortografías de las notas
+// alteradas: con SOSTENIDOS (por defecto) y con BEMOLES (para tonalidades de bemoles).
 const AMERICAN = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const LATIN = ['Do', 'Do#', 'Re', 'Re#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'];
+const AMERICAN_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+const LATIN_FLAT = ['Do', 'Reb', 'Re', 'Mib', 'Mi', 'Fa', 'Solb', 'Sol', 'Lab', 'La', 'Sib', 'Si'];
+
+// Tónicas (índice cromático) cuyas ARMADURAS llevan bemoles, por modo.
+//   Mayores de bemoles: Reb(1), Mib(3), Fa(5), Lab(8), Sib(10).
+//   Menores de bemoles: Dom(0), Rem(2), Mibm(3), Fam(5), Solm(7), Sibm(10).
+// (Fa#/Si mayor y sus relativas se dejan en sostenidos, que es lo usual en guitarra.)
+const FLAT_MAJOR_TONICS = new Set([1, 3, 5, 8, 10]);
+const FLAT_MINOR_TONICS = new Set([0, 2, 3, 5, 7, 10]);
 
 // Nombre de nota base → índice cromático (sin alteración).
 const BASE_INDEX: Record<string, number> = {
@@ -46,13 +56,31 @@ function parseBase(token: string): ParsedBase | null {
   return null;
 }
 
-function formatNote(index: number, notation: ChordNotation): string {
+function formatNote(index: number, notation: ChordNotation, preferFlats = false): string {
   const i = ((index % 12) + 12) % 12;
-  return notation === 'american' ? AMERICAN[i] : LATIN[i];
+  if (notation === 'american') return (preferFlats ? AMERICAN_FLAT : AMERICAN)[i];
+  return (preferFlats ? LATIN_FLAT : LATIN)[i];
+}
+
+/** ¿La tónica es una tonalidad menor? (rest tras la nota: "m", "min", "menor"). */
+function isMinorKey(rest: string): boolean {
+  return /^\s*(m(?!aj)|min|menor)/i.test(rest);
+}
+
+/**
+ * Decide si los acordes deben escribirse con BEMOLES: según la ARMADURA de la
+ * tonalidad DESTINO (la original transpuesta `semitones`). En Sib, Mib, Fa… (y sus
+ * relativas menores) → bemoles; en Sol, Re, La… → sostenidos.
+ */
+export function keyPrefersFlats(originalKey: string, semitones = 0): boolean {
+  const parsed = parseBase((originalKey || '').trim());
+  if (!parsed) return false;
+  const idx = (((parsed.index + semitones) % 12) + 12) % 12;
+  return isMinorKey(parsed.rest) ? FLAT_MINOR_TONICS.has(idx) : FLAT_MAJOR_TONICS.has(idx);
 }
 
 /** Transforma un token de acorde (incluye bajo "/X"): transpone y cambia de notación. */
-function transformChord(token: string, semitones: number, notation: ChordNotation): string {
+function transformChord(token: string, semitones: number, notation: ChordNotation, preferFlats = false): string {
   return token
     .split('/')
     .map((part) => {
@@ -60,23 +88,25 @@ function transformChord(token: string, semitones: number, notation: ChordNotatio
       const parsed = parseBase(trimmed);
       if (!parsed) return part; // no es un acorde reconocible → dejar igual
       const newIndex = parsed.index + semitones;
-      return formatNote(newIndex, notation) + parsed.rest;
+      return formatNote(newIndex, notation, preferFlats) + parsed.rest;
     })
     .join('/');
 }
 
 /**
  * Transpone y/o reescribe en la notación elegida TODOS los acordes [..] del contenido.
- * No toca la letra (solo lo que está entre corchetes).
+ * No toca la letra (solo lo que está entre corchetes). `preferFlats` fuerza la
+ * ortografía con bemoles (usar `keyPrefersFlats(originalKey, semitones)` en el llamador).
  */
-export function transposeContent(content: string, semitones: number, notation: ChordNotation = 'latin'): string {
-  return content.replace(/\[([^\]]+)\]/g, (_m, chord) => `[${transformChord(chord, semitones, notation)}]`);
+export function transposeContent(content: string, semitones: number, notation: ChordNotation = 'latin', preferFlats = false): string {
+  return content.replace(/\[([^\]]+)\]/g, (_m, chord) => `[${transformChord(chord, semitones, notation, preferFlats)}]`);
 }
 
-/** Tonalidad transpuesta (la clave NO va entre corchetes). */
+/** Tonalidad transpuesta (la clave NO va entre corchetes). Escribe la tónica con la
+ *  ortografía (bemoles/sostenidos) propia de la tonalidad destino. */
 export function getTransposedKey(originalKey: string, semitones: number, notation: ChordNotation = 'latin'): string {
   if (!originalKey) return originalKey;
-  return transformChord(originalKey, semitones, notation);
+  return transformChord(originalKey, semitones, notation, keyPrefersFlats(originalKey, semitones));
 }
 
 /** Texto descriptivo de la transposición. */
