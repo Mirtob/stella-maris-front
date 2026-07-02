@@ -33,8 +33,11 @@ function clean(t: string): string {
     .replace(/[^\x00-\xFF]/g, '');
 }
 
-// ── pdfjs: renderiza cada página de un PDF (URL) a imagen (dataURL) ──
-async function renderPdfToImages(url: string, targetWpx = 1000): Promise<string[]> {
+// ── pdfjs: renderiza cada página de un PDF a imagen (dataURL) ──
+// Acepta bytes (`data`, para PDFs GENERADOS en memoria — fiable) o una `url` (para las
+// partituras del proxy). Nunca se usa una blob: URL con getDocument({url}) porque
+// pdfjs no siempre la resuelve → antes salía el PDF en blanco.
+async function renderPdfToImages(src: { url?: string; data?: ArrayBuffer }, targetWpx = 1000): Promise<string[]> {
   let pdfjsLib: any;
   try {
     pdfjsLib = await import('pdfjs-dist');
@@ -42,15 +45,25 @@ async function renderPdfToImages(url: string, targetWpx = 1000): Promise<string[
   } catch {
     return [];
   }
-  const load = async (u: string) => (await pdfjsLib.getDocument({ url: u }).promise);
+  const openDoc = async () => {
+    if (src.data) {
+      // Copiar los bytes: pdfjs "transfiere" el buffer y lo deja detached (no reutilizable).
+      return await pdfjsLib.getDocument({ data: src.data.slice(0) }).promise;
+    }
+    return await pdfjsLib.getDocument({ url: src.url! }).promise;
+  };
   let doc: any;
   try {
-    doc = await load(url);
+    doc = await openDoc();
   } catch {
-    // Fallback offline (partitura cacheada).
-    const off = await getOfflinePdf(url).catch(() => null);
+    // Fallback offline solo para partituras (url). El blob cacheado → bytes.
+    if (!src.url) return [];
+    const off = await getOfflinePdf(src.url).catch(() => null);
     if (!off) return [];
-    try { doc = await load(off); } catch { return []; }
+    try {
+      const buf = await (await fetch(off)).arrayBuffer();
+      doc = await pdfjsLib.getDocument({ data: buf }).promise;
+    } catch { return []; }
   }
   const images: string[] = [];
   for (let n = 1; n <= doc.numPages; n++) {
@@ -89,10 +102,11 @@ function stripChords(lyrics: string): string {
 }
 
 // ── Genera un PDF media-carta con la LETRA de los cantos (con o sin acordes) ──
-function buildLyricsBlob(
+//    Devuelve BYTES (ArrayBuffer) para rasterizar de forma fiable con pdfjs.
+function buildLyricsBuffer(
   songs: Song[],
   opts: { withChords: boolean; notation: ReturnType<typeof getChordNotation> }
-): Blob {
+): ArrayBuffer {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [HALF_W, HALF_H] });
   const M = 10;
   let y = M;
@@ -144,7 +158,7 @@ function buildLyricsBlob(
     }
   });
 
-  return doc.output('blob');
+  return doc.output('arraybuffer');
 }
 
 // ── Orden de imposición de cuadernillo (n múltiplo de 4). Cada par = [izq, der]
@@ -160,6 +174,9 @@ function bookletPairs(n: number): [number, number][] {
 
 // ── Coloca las imágenes 2-por-hoja (carta horizontal) en orden de cuadernillo ──
 function imposeBooklet(images: string[]): Blob {
+  if (images.length === 0) {
+    throw new Error('No se pudo generar el contenido (sin letras ni partituras legibles).');
+  }
   // Padear a múltiplo de 4 con páginas en blanco.
   const n = Math.max(4, Math.ceil(images.length / 4) * 4);
   const pad = 4; // margen dentro de cada media-hoja (mm)
@@ -198,8 +215,7 @@ async function pagesFor(songs: Song[], instrument: InstrumentType | undefined, w
 
   if (!isOrgano) {
     // Un solo PDF de letra (con o sin acordes) → imágenes.
-    const url = URL.createObjectURL(buildLyricsBlob(ordered, { withChords, notation }));
-    try { return await renderPdfToImages(url); } finally { URL.revokeObjectURL(url); }
+    return await renderPdfToImages({ data: buildLyricsBuffer(ordered, { withChords, notation }) });
   }
 
   // Órgano: partitura por canto; si un canto no tiene, cae a su letra con acordes.
@@ -207,10 +223,9 @@ async function pagesFor(songs: Song[], instrument: InstrumentType | undefined, w
   for (const song of ordered) {
     const proxy = song.sheetMusicUrl ? getDrivePdfProxyUrl(song.sheetMusicUrl) : null;
     if (proxy) {
-      images.push(...(await renderPdfToImages(proxy)));
+      images.push(...(await renderPdfToImages({ url: proxy })));
     } else {
-      const url = URL.createObjectURL(buildLyricsBlob([song], { withChords: true, notation }));
-      try { images.push(...(await renderPdfToImages(url))); } finally { URL.revokeObjectURL(url); }
+      images.push(...(await renderPdfToImages({ data: buildLyricsBuffer([song], { withChords: true, notation }) })));
     }
   }
   return images;
@@ -243,11 +258,10 @@ export async function generateChoirBooklet(songs: Song[]): Promise<{ blob: Blob;
   const images: string[] = [];
   for (const song of ordered) {
     // 1) Letra con acordes del canto.
-    const lurl = URL.createObjectURL(buildLyricsBlob([song], { withChords: true, notation }));
-    try { images.push(...(await renderPdfToImages(lurl))); } finally { URL.revokeObjectURL(lurl); }
+    images.push(...(await renderPdfToImages({ data: buildLyricsBuffer([song], { withChords: true, notation }) })));
     // 2) Partitura del canto (si tiene), justo después.
     const proxy = song.sheetMusicUrl ? getDrivePdfProxyUrl(song.sheetMusicUrl) : null;
-    if (proxy) images.push(...(await renderPdfToImages(proxy)));
+    if (proxy) images.push(...(await renderPdfToImages({ url: proxy })));
   }
   const blob = imposeBooklet(images);
   return { blob, url: URL.createObjectURL(blob) };
