@@ -67,7 +67,7 @@ import { cacheCantoralsForOffline, getOfflineCantorals } from './services/offlin
 import { listChapels } from './services/chapels';
 import { getTodayLocal, addDaysLocal, isWithinInclusive } from './utils/dateLocal';
 import { massTypeBadge } from './utils/massType';
-import { generateChoirBooklet } from './utils/atrilBookletPDF';
+import { generateCantoralPDF } from './utils/cantoralPDFGenerator';
 import { isCurrentUserAdmin } from './services/admin';
 import { upsertCurrentUserProfile, getCurrentUserProfile } from './services/userProfiles';
 import { setSentryUserContext, clearSentryUserContext } from './services/sentry';
@@ -669,18 +669,20 @@ function AppContent() {
 
   // Publica uno o varios cantorales (uno por parroquia/horario), con los mismos cantos.
   /**
-   * Genera el PDF del coro (Full Score con acordes + partituras embebidas) y lo sube a
-   * Storage EN SEGUNDO PLANO, para que la publicación se sienta inmediata. Es el paso
-   * lento (baja cada partitura de Drive y la incrusta), así que lo desacoplamos del
-   * publish: el cantoral ya quedó publicado y es visible/QR-able aunque esto tarde o
-   * falle. Al terminar, refleja el pdfUrl en memoria (lista + QR + resumen multi).
+   * Genera el folleto del Pueblo fiel (decorado: portada + guirnalda + cabeceras de
+   * sección + colores litúrgicos + QR) EN FORMATO CUADERNILLO y lo sube a Storage EN
+   * SEGUNDO PLANO, para que la publicación se sienta inmediata. Es el mismo PDF que se
+   * comparte por QR y se descarga. Se desacopla del publish: el cantoral ya quedó
+   * publicado y es visible/QR-able aunque esto tarde o falle. Al terminar, refleja el
+   * pdfUrl en memoria (lista + QR + resumen multi).
    */
   const generateAndUploadCantoralPDF = async (c: PublishedCantoral, notifyOnFail: boolean) => {
     setPdfGeneratingIds(prev => new Set(prev).add(c.id));
     try {
-      // PDF del coro en formato LIBRO (cuadernillo): letra con acordes + partitura
-      // por canto, carta horizontal. Es el que se sube a Storage y descarga por QR.
-      const { blob } = await generateChoirBooklet(c.songs);
+      // Folleto del Pueblo fiel en formato LIBRO (cuadernillo, carta horizontal): el
+      // mismo diseño decorado de la vista previa, impuesto 2-por-cara para imprimir y
+      // doblar. Es el que se sube a Storage y se descarga por QR.
+      const { blob } = await generateCantoralPDF({ cantoral: c, download: false, booklet: true });
       const up = await uploadCantoralPDF(c.id, blob);
       if (up.ok && up.publicUrl) {
         const url = up.publicUrl;

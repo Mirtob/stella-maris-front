@@ -3,7 +3,7 @@ import { Download, ArrowLeft, FileX, Share, Plus, Smartphone, LogIn } from 'luci
 import { toast } from 'sonner';
 import { PublishedCantoral, Song } from '../../types';
 import { getCantoralById } from '../../services/cantorals';
-import { generateCantoralBooklet } from '../../utils/atrilBookletPDF';
+import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
 import { LyricsOnly } from '../songs/LyricsOnly';
 import {
   getDeferredInstallPrompt,
@@ -98,7 +98,7 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
     if (!cantoral || generatingPdf) return;
     setGeneratingPdf(true);
     try {
-      const { url } = await generateCantoralBooklet(cantoral.songs);
+      const { url } = await generateCantoralPDF({ cantoral, download: false, booklet: true });
       const w = window.open(url, '_blank');
       if (!w) {
         const a = document.createElement('a');

@@ -190,10 +190,11 @@ export function CantoralQRDialog({
           </p>
         </div>
 
-        {/* Descargar PDF del coro (Full Score con acordes) — botón prominente.
-            El coro lo necesita para tener el folleto en el teléfono offline durante
-            la Misa, sin depender de Supabase. Es DISTINTO del PDF que descarga la
-            comunidad desde el QR (ese es el folleto de letras del Pueblo fiel). */}
+        {/* Descargar el folleto del cantoral (cuadernillo decorado, listo para imprimir)
+            — botón prominente. Es EL MISMO PDF que se comparte por el QR: el folleto de
+            letras del Pueblo fiel, con portada/guirnalda/separadores, impuesto como
+            cuadernillo carta. (El coro tiene su Full Score con acordes+partituras en el
+            Historial de cantorales.) */}
         {pdfUrl ? (
           <button
             onClick={() => {
@@ -203,14 +204,14 @@ export function CantoralQRDialog({
             className="w-full mb-3 py-3 px-4 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-700 text-white font-bold flex items-center justify-center gap-2 active:scale-95 hover:opacity-95 transition-all border-2 border-emerald-700 shadow-lg"
           >
             <FileDown className="w-5 h-5" />
-            Descargar PDF del coro (acordes + partituras)
+            Descargar folleto (cuadernillo para imprimir)
           </button>
         ) : pdfPending ? (
-          // El PDF del coro (con partituras) se genera/sube en segundo plano tras
-          // publicar. Avisamos que viene en camino; el botón aparece al terminar.
+          // El folleto (cuadernillo) se genera/sube en segundo plano tras publicar.
+          // Avisamos que viene en camino; el botón aparece al terminar.
           <div className="w-full mb-3 py-3 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold flex items-center justify-center gap-2 border-2 border-slate-200 dark:border-slate-700">
             <div className="w-4 h-4 border-2 border-slate-400 border-t-emerald-600 rounded-full animate-spin" />
-            Generando PDF del coro (acordes + partituras)…
+            Generando el folleto para imprimir…
           </div>
         ) : null}
 

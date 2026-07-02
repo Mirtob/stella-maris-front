@@ -6,11 +6,32 @@ import { getChannelUrl } from '../services/youtube';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
 import { getGarland } from '../data/garlands';
 import { getPdfFont, getPdfScale } from '../data/pdfStyle';
+import { renderPdfToImages, imposeBooklet } from './atrilBookletPDF';
 
 interface PDFGeneratorOptions {
   cantoral: PublishedCantoral;
   /** Si es false, no descarga el archivo: solo devuelve el blob (para previsualizar). */
   download?: boolean;
+  /**
+   * Si es true, el mismo folleto decorado (portada + guirnaldas + cabeceras de sección
+   * + colores litúrgicos + QR) se entrega IMPUESTO como cuadernillo: cada página carta
+   * se rasteriza y se coloca 2-por-cara en carta HORIZONTAL, en orden de imposición.
+   * Se imprime a doble faz (voltear por el borde largo) y se dobla al medio → librito.
+   */
+  booklet?: boolean;
+}
+
+/** Descarga un blob con el nombre dado (para el cuadernillo, que no es el `pdf` de jsPDF). */
+function saveBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  // El object URL se libera tras dar tiempo al navegador a iniciar la descarga.
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
 interface GarlandImg { dataUrl: string; w: number; h: number }
@@ -257,7 +278,7 @@ function cleanLyrics(lyrics: string): string {
 // ──────────────────────────────────────────────
 
 export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise<{ blob: Blob; url: string }> {
-  const { cantoral, download = true } = options;
+  const { cantoral, download = true, booklet = false } = options;
   const colors = getColorsForDate(cantoral.date);
 
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
@@ -655,8 +676,20 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
 
   // El folleto del Pueblo fiel es SOLO la letra (sin acordes ni partituras).
 
-  // Descargar (o solo devolver el blob para previsualización, sin descargar).
   const safeFileName = cleanText(cantoral.liturgicalDate).replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
+
+  // ─── Cuadernillo: mismo folleto decorado, impuesto 2-por-cara en carta horizontal ───
+  // Se rasteriza cada página carta (con toda su decoración) y se coloca en orden de
+  // cuadernillo, para imprimir a doble faz y doblar al medio. Es EL MISMO diseño de la
+  // vista previa, solo que reordenado como librito.
+  if (booklet) {
+    const images = await renderPdfToImages({ data: pdf.output('arraybuffer') }, 1400);
+    const bookletBlob = imposeBooklet(images);
+    if (download) saveBlob(bookletBlob, `Cantoral_${safeFileName}_cuadernillo.pdf`);
+    return { blob: bookletBlob, url: URL.createObjectURL(bookletBlob) };
+  }
+
+  // Descargar (o solo devolver el blob para previsualización, sin descargar).
   if (download) pdf.save(`Cantoral_${safeFileName}.pdf`);
   const blob = pdf.output('blob');
   return { blob, url: URL.createObjectURL(blob) };

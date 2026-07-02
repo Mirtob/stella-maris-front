@@ -37,7 +37,7 @@ function clean(t: string): string {
 // Acepta bytes (`data`, para PDFs GENERADOS en memoria — fiable) o una `url` (para las
 // partituras del proxy). Nunca se usa una blob: URL con getDocument({url}) porque
 // pdfjs no siempre la resuelve → antes salía el PDF en blanco.
-async function renderPdfToImages(src: { url?: string; data?: ArrayBuffer }, targetWpx = 1000): Promise<string[]> {
+export async function renderPdfToImages(src: { url?: string; data?: ArrayBuffer }, targetWpx = 1000): Promise<string[]> {
   let pdfjsLib: any;
   try {
     pdfjsLib = await import('pdfjs-dist');
@@ -173,7 +173,7 @@ function bookletPairs(n: number): [number, number][] {
 }
 
 // ── Coloca las imágenes 2-por-hoja (carta horizontal) en orden de cuadernillo ──
-function imposeBooklet(images: string[]): Blob {
+export function imposeBooklet(images: string[]): Blob {
   if (images.length === 0) {
     throw new Error('No se pudo generar el contenido (sin letras ni partituras legibles).');
   }

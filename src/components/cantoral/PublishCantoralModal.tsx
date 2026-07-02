@@ -905,6 +905,9 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], onCl
           celebration={liturgicalDate}
           massTime={massTime}
           userInstruments={userInstruments}
+          garland={garland}
+          pdfFont={pdfFont}
+          pdfSize={pdfSize}
           onClose={() => {
             setShowDownloadPDFModal(false);
             onClose(); // Cerrar también el modal de publicación

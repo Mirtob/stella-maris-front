@@ -1,7 +1,10 @@
 import { X, Download, Music } from 'lucide-react';
-import { Song, InstrumentType } from '../../types';
+import { Song, InstrumentType, PublishedCantoral } from '../../types';
 import { useState } from 'react';
-import { generateChoirBooklet } from '../../utils/atrilBookletPDF';
+import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
+import { DEFAULT_GARLAND_ID } from '../../data/garlands';
+import { DEFAULT_PDF_FONT, DEFAULT_PDF_SIZE } from '../../data/pdfStyle';
+import { getTodayLocal } from '../../utils/dateLocal';
 import { toast } from 'sonner';
 
 interface CantoralPDFPreviewProps {
@@ -11,6 +14,10 @@ interface CantoralPDFPreviewProps {
   celebration?: string;
   massTime?: string;
   userInstruments?: InstrumentType[];
+  /** Estilo del folleto elegido al publicar (para que el cuadernillo salga igual que la vista previa). */
+  garland?: string;
+  pdfFont?: string;
+  pdfSize?: string;
   onClose: () => void;
 }
 
@@ -21,6 +28,9 @@ export function CantoralPDFPreview({
   celebration,
   massTime,
   userInstruments = [],
+  garland = DEFAULT_GARLAND_ID,
+  pdfFont = DEFAULT_PDF_FONT,
+  pdfSize = DEFAULT_PDF_SIZE,
   onClose
 }: CantoralPDFPreviewProps) {
   const [downloading, setDownloading] = useState(false);
@@ -75,23 +85,36 @@ export function CantoralPDFPreview({
     'Salida': '⛪',
   };
 
-  // El folleto del Coro = letra con acordes + las partituras de todos los cantos
-  // (en orden de la Misa), en el mismo archivo. Descarga cada partitura vía el
-  // proxy, por eso puede tardar unos segundos.
+  // Folleto del Pueblo fiel en formato LIBRO (cuadernillo): el mismo diseño decorado de
+  // la vista previa (portada + guirnalda + cabeceras de sección + colores + QR),
+  // impuesto 2-por-cara en carta horizontal para imprimir y doblar.
   const handleDownloadPDF = async () => {
     if (downloading) return;
     setDownloading(true);
     try {
-      // PDF del coro en formato LIBRO (cuadernillo): letra con acordes + partitura
-      // por canto, carta horizontal.
-      const { url } = await generateChoirBooklet(cantoral);
+      const previewCantoral: PublishedCantoral = {
+        id: 'preview',
+        choirId: '',
+        choirName: 'Mi Coro',
+        parishName,
+        date: date || getTodayLocal(),
+        liturgicalDate: celebration || '',
+        massTime: massTime || '',
+        songs: cantoral,
+        status: 'published',
+        createdAt: new Date().toISOString(),
+        garland,
+        pdfFont,
+        pdfSize,
+      };
+      const { url } = await generateCantoralPDF({ cantoral: previewCantoral, download: false, booklet: true });
       const w = window.open(url, '_blank');
       if (!w) {
         const a = document.createElement('a');
-        a.href = url; a.download = 'cantoral-coro-cuadernillo.pdf';
+        a.href = url; a.download = 'cantoral-cuadernillo.pdf';
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
       }
-      toast.success('Cuadernillo del coro listo', {
+      toast.success('Cuadernillo listo', {
         description: 'Imprime a doble faz y dobla al medio. Si no calzan, cambia el volteo a "borde corto".'
       });
     } catch (error) {

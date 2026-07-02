@@ -6,7 +6,7 @@ import { AtrilMode } from '../atril/AtrilMode';
 import { PublishedCantoral, Song } from '../../types';
 import { getCategoryColors } from '../../utils/colors';
 import { CantoralWithOrdinary } from './CantoralWithOrdinary';
-import { generateCantoralBooklet } from '../../utils/atrilBookletPDF';
+import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { addDaysLocal, getWeekRangeLocal, isWithinInclusive, parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
 import { massTypeBadge, cantoralYaPaso } from '../../utils/massType';
@@ -261,7 +261,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
               onClick={async () => {
                 toast.info('Preparando el cuadernillo…');
                 try {
-                  const { url } = await generateCantoralBooklet(cantoral.songs);
+                  const { url } = await generateCantoralPDF({ cantoral, download: false, booklet: true });
                   const w = window.open(url, '_blank');
                   if (!w) {
                     const a = document.createElement('a');
