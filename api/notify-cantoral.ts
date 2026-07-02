@@ -1,7 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// Envía "Nuevo cantoral publicado" a los suscriptores de la parroquia del cantoral.
-// Se llama en segundo plano tras publicar. Requiere sesión (evita spam anónimo).
+// Envía "Nuevo cantoral publicado" a los suscriptores de la parroquia. Acepta VARIOS
+// cantorales (cantoralIds) de una misma sesión de publicación y manda UN SOLO aviso por
+// parroquia (evita saturar cuando se publican varios días de una vez, p. ej. Semana
+// Santa). Tag ESTABLE por parroquia → el aviso nuevo reemplaza al anterior en la
+// bandeja (no se apilan). Se llama en segundo plano tras publicar; requiere sesión.
 // AUTOCONTENIDO a propósito: no importa helpers de api/_push (Vercel puede no incluir
 // archivos con prefijo "_" en el bundle → FUNCTION_INVOCATION_FAILED). web-push se
 // carga con dynamic import (lazy).
@@ -63,39 +66,59 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!token || !(await isAuthenticated(token))) return res.status(401).json({ error: 'No autenticado' });
 
   const body = typeof req.body === 'string' ? safeParse(req.body) : (req.body || {});
-  const cantoralId = String(body.cantoralId || '');
-  if (!cantoralId) return res.status(400).json({ error: 'Falta cantoralId' });
+  // Acepta cantoralIds (varios, misma sesión) o cantoralId (uno, retrocompat).
+  const ids: string[] = (Array.isArray(body.cantoralIds) ? body.cantoralIds : [body.cantoralId])
+    .map((x: any) => String(x || '').replace(/[(),"]/g, '').trim())
+    .filter(Boolean);
+  if (ids.length === 0) return res.status(400).json({ error: 'Falta cantoralId(s)' });
 
   try {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/published_cantorals?id=eq.${encodeURIComponent(cantoralId)}&select=id,parish_name,liturgical_date,mass_time,status`,
+      `${SUPABASE_URL}/rest/v1/published_cantorals?id=in.(${encodeURIComponent(ids.join(','))})&select=id,parish_name,liturgical_date,mass_time,date,status`,
       { headers: svcHeaders },
     );
-    if (!r.ok) return res.status(400).json({ error: 'No se pudo leer el cantoral' });
+    if (!r.ok) return res.status(400).json({ error: 'No se pudo leer los cantorales' });
     const rows = await r.json();
-    const c = Array.isArray(rows) ? rows[0] : null;
-    if (!c || c.status !== 'published') return res.status(404).json({ error: 'Cantoral no publicado' });
+    const published = (Array.isArray(rows) ? rows : []).filter((c: any) => c.status === 'published' && c.parish_name);
+    if (published.length === 0) return res.status(200).json({ ok: true, sent: 0 });
 
-    const parish = String(c.parish_name || '');
-    if (!parish) return res.status(200).json({ ok: true, sent: 0 });
+    // Agrupar por parroquia → UN aviso por parroquia.
+    const byParish = new Map<string, any[]>();
+    for (const c of published) {
+      const p = String(c.parish_name);
+      if (!byParish.has(p)) byParish.set(p, []);
+      byParish.get(p)!.push(c);
+    }
 
-    const topicF = `topics=cs.${encodeURIComponent('{cantorals}')}`;
-    const parishF = `parishes=cs.${encodeURIComponent(`{"${parish.replace(/"/g, '\\"')}"}`)}`;
-    const sr = await fetch(
-      `${SUPABASE_URL}/rest/v1/push_subscriptions?select=endpoint,p256dh,auth&${topicF}&${parishF}`,
-      { headers: svcHeaders },
-    );
-    const subs = sr.ok ? await sr.json() : [];
-    const detail = [c.liturgical_date, c.mass_time].filter(Boolean).join(' · ');
-    const result = await sendToSubs(subs, {
-      title: 'Nuevo cantoral publicado 🎵',
-      body: detail ? `${detail} — ${parish}` : parish,
-      // ?r=1 → la app abre PRIMERO el modo radio (genera vistas en el canal) y luego
-      // el cantoral según el perfil.
-      url: `/c/${c.id}?r=1`,
-      tag: `cantoral-${c.id}`,
-    });
-    return res.status(200).json({ ok: true, ...result });
+    let totalSent = 0;
+    for (const [parish, items] of byParish) {
+      // Más próximo primero (para el modo radio y el resumen).
+      items.sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+      const nearest = items[0];
+
+      const topicF = `topics=cs.${encodeURIComponent('{cantorals}')}`;
+      const parishF = `parishes=cs.${encodeURIComponent(`{"${parish.replace(/"/g, '\\"')}"}`)}`;
+      const sr = await fetch(
+        `${SUPABASE_URL}/rest/v1/push_subscriptions?select=endpoint,p256dh,auth&${topicF}&${parishF}`,
+        { headers: svcHeaders },
+      );
+      const subs = sr.ok ? await sr.json() : [];
+
+      const detail = [nearest.liturgical_date, nearest.mass_time].filter(Boolean).join(' · ');
+      const payload = items.length === 1
+        ? { title: 'Nuevo cantoral publicado 🎵', body: detail ? `${detail} — ${parish}` : parish }
+        : { title: `${items.length} cantorales nuevos 🎵`, body: `${parish} · empieza por ${nearest.liturgical_date || 'el más próximo'}` };
+
+      const result = await sendToSubs(subs, {
+        ...payload,
+        // ?r=1 → la app abre PRIMERO el modo radio (genera vistas) y luego el cantoral.
+        url: `/c/${nearest.id}?r=1`,
+        // Tag ESTABLE por parroquia: el aviso nuevo reemplaza al anterior (no se apilan).
+        tag: `cantoral-${parish}`,
+      });
+      totalSent += result.sent;
+    }
+    return res.status(200).json({ ok: true, sent: totalSent, parishes: byParish.size });
   } catch (e: any) {
     return res.status(500).json({ error: e?.message || 'Error del servidor' });
   }

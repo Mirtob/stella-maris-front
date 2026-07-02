@@ -849,19 +849,19 @@ function AppContent() {
     setPublishedCantorals(fresh);
   };
 
-  /** Dispara el aviso push de "nuevo cantoral" para cada cantoral recién publicado. */
+  /** Dispara el aviso push de "nuevo cantoral" para los recién publicados. Manda TODOS
+   *  los ids en una sola llamada → el backend agrupa por parroquia y envía UN aviso por
+   *  parroquia (evita saturar al publicar varios de una vez, p. ej. Semana Santa). */
   const notifyNewCantorals = async (cs: PublishedCantoral[]) => {
     try {
       const { data } = await getSupabaseClient().auth.getSession();
       const token = data.session?.access_token;
       if (!token) return;
-      await Promise.allSettled(cs.map(c =>
-        fetch('/api/notify-cantoral', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ cantoralId: c.id }),
-        })
-      ));
+      await fetch('/api/notify-cantoral', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ cantoralIds: cs.map(c => c.id) }),
+      });
     } catch {
       /* aviso best-effort: no afecta la publicación */
     }

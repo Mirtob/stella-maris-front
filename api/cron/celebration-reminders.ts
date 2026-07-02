@@ -736,7 +736,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           title: 'Publica el cantoral 🎼',
           body: `${relevant[0]} es ${leadLabel(3)}. Publica los cantos para tu coro y tu comunidad.`,
           url: '/', // el Coro llega a su pantalla principal (constructor del cantoral)
-          tag: `coropub-${target3}-${parish}`,
+          // Tag ESTABLE por parroquia → en semanas con varias celebraciones el aviso
+          // diario reemplaza al anterior en la bandeja (no se apilan).
+          tag: `coropub-${parish}`,
         });
       }
     }
