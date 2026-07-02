@@ -1317,6 +1317,12 @@ function renderView(p: ViewProps): JSX.Element | null {
       return (
         <LiturgicalCalendar
           userRole={p.effectiveRole}
+          isAdmin={p.isVerifiedAdmin}
+          parishes={Array.from(new Set([
+            ...(p.userProfile.parishes ?? []),
+            p.userProfile.parishName,
+            p.userProfile.activeParishName,
+          ].filter((x): x is string => !!x)))}
           publishedCantorals={p.publishedCantorals}
           onViewCantoral={() => p.navigate('cantorals')}
           onCreateCantoral={(liturgicalDate, date) => {

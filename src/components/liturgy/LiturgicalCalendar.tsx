@@ -1,8 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, Church, ChevronDown, ChevronUp, Bell, Plus, BookOpen, X } from 'lucide-react';
 import { liturgicalCalendar2026, LiturgicalEvent } from '../../data/liturgicalCalendar';
 import { getLiturgicalCardClasses, getLiturgicalSolidColor } from '../../utils/liturgicalColors';
 import { parseYmdLocal, formatYmdForDisplay, addDaysLocal } from '../../utils/dateLocal';
+import {
+  listCustomLiturgicalDates,
+  addCustomLiturgicalDate,
+  toLiturgicalDate,
+  GLOBAL_SCOPE,
+  type CustomLiturgicalDate,
+} from '../../services/liturgicalDates';
+import { setPersistedCustomDates, getPersistedCustomDates } from '../../utils/liturgicalCalendar';
+import { toast } from 'sonner';
+
+/** Convierte una celebración persistida (BD) en un evento del calendario visual. */
+const persistedToEvent = (c: CustomLiturgicalDate): LiturgicalEvent => ({
+  id: c.id ?? `persist_${c.date}_${c.name}`,
+  name: c.name,
+  date: c.date,
+  type: c.type === 'feast' ? 'Fiesta' : 'Solemnidad',
+  color: 'Blanco',
+  season: 'Tiempo Ordinario',
+  importance: 'medium',
+});
 
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -13,19 +33,26 @@ interface LiturgicalCalendarProps {
   onCreateCantoral?: (liturgicalDate: string, date: string) => void;
   /** Rol efectivo: el Pueblo fiel ve "Ver cantoral" en vez de "Agregar Cantoral". */
   userRole?: 'Coro' | 'Pueblo fiel' | 'Admin';
+  /** Admin verificado: sus celebraciones son globales (para todos los usuarios). */
+  isAdmin?: boolean;
+  /** Parroquias/capillas del perfil (alcance de las celebraciones del coro). */
+  parishes?: string[];
   /** Cantorales publicados (para saber si hay uno en esa fecha/celebración). */
   publishedCantorals?: { date: string; liturgicalDate: string }[];
   /** Ir a ver el/los cantoral(es) publicados (Pueblo fiel). */
   onViewCantoral?: (liturgicalDate: string, date: string) => void;
 }
 
-export function LiturgicalCalendar({ onCreateCantoral, userRole, publishedCantorals = [], onViewCantoral }: LiturgicalCalendarProps = {}) {
+export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false, parishes = [], publishedCantorals = [], onViewCantoral }: LiturgicalCalendarProps = {}) {
   const [expandedMonth, setExpandedMonth] = useState<number | null>(null);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [showAlertDialog, setShowAlertDialog] = useState(false);
   const [pendingEvent, setPendingEvent] = useState<LiturgicalEvent | null>(null);
   const [customEvents, setCustomEvents] = useState<LiturgicalEvent[]>([]);
-  
+  // Celebraciones PERSISTIDAS (BD): globales (de cualquier admin) + de las parroquias
+  // del usuario. Se cargan al abrir el calendario para que aparezcan a TODOS los perfiles.
+  const [persistedEvents, setPersistedEvents] = useState<LiturgicalEvent[]>([]);
+
   // Form state for new event
   const [newEventName, setNewEventName] = useState('');
   const [newEventDay, setNewEventDay] = useState('');
@@ -33,12 +60,29 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, publishedCantor
   const [newEventType, setNewEventType] = useState<'Solemnidad' | 'Fiesta'>('Fiesta');
   const [newEventColor, setNewEventColor] = useState<'Blanco' | 'Rojo' | 'Verde' | 'Morado' | 'Rosa'>('Blanco');
   const [newEventDescription, setNewEventDescription] = useState('');
-  
+  // Alcance: Admin → 'global' (todos); Coro → una de sus parroquias/capillas.
+  const [newEventScope, setNewEventScope] = useState<string>(
+    isAdmin ? GLOBAL_SCOPE : (parishes.length === 1 ? parishes[0] : '')
+  );
+
   // Alert configuration
   const [alertDaysBefore, setAlertDaysBefore] = useState<number>(7);
 
-  // Combinar eventos del calendario oficial con eventos personalizados
-  const allEvents = [...liturgicalCalendar2026, ...customEvents];
+  const parishesKey = parishes.join('|');
+  useEffect(() => {
+    let cancelled = false;
+    listCustomLiturgicalDates(parishes).then((rows) => {
+      if (cancelled) return;
+      setPersistedEvents(rows.map(persistedToEvent));
+      // Mantener también el caché del calendario (usado por el selector al publicar).
+      setPersistedCustomDates(rows.map(toLiturgicalDate));
+    });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parishesKey]);
+
+  // Combinar el calendario oficial + persistidas (BD) + agregadas en esta sesión.
+  const allEvents = [...liturgicalCalendar2026, ...persistedEvents, ...customEvents];
 
   // Agrupar eventos por mes y ORDENAR cronológicamente dentro de cada mes.
   // parseYmdLocal evita el corrimiento de día/mes de `new Date('YYYY-MM-DD')`,
@@ -69,11 +113,16 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, publishedCantor
       alert('Por favor completa todos los campos requeridos');
       return;
     }
+    if (!newEventScope) {
+      alert('Elige para quién es la celebración (parroquia/capilla).');
+      return;
+    }
 
     const newEvent: LiturgicalEvent = {
       id: `custom_${Date.now()}`,
       name: newEventName,
-      date: `2026-${newEventMonth}-${newEventDay}`,
+      // Día con dos dígitos para una fecha válida ('2026-01-05', no '2026-01-5').
+      date: `2026-${newEventMonth}-${String(newEventDay).padStart(2, '0')}`,
       type: newEventType,
       color: newEventColor,
       season: 'Tiempo Ordinario', // Por defecto
@@ -87,7 +136,7 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, publishedCantor
     setShowAlertDialog(true);
   };
 
-  const handleConfirmAlert = (enableAlert: boolean) => {
+  const handleConfirmAlert = async (enableAlert: boolean) => {
     if (!pendingEvent) return;
 
     const finalEvent: LiturgicalEvent = {
@@ -96,8 +145,10 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, publishedCantor
       alertDaysBefore: enableAlert ? alertDaysBefore : undefined,
     };
 
+    // Mostrarla de inmediato en esta sesión (con el color/estilo elegidos).
     setCustomEvents([...customEvents, finalEvent]);
-    
+    const scope = newEventScope;
+
     // Reset form
     setNewEventName('');
     setNewEventDay('');
@@ -105,15 +156,33 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, publishedCantor
     setNewEventType('Fiesta');
     setNewEventColor('Blanco');
     setNewEventDescription('');
+    setNewEventScope(isAdmin ? GLOBAL_SCOPE : (parishes.length === 1 ? parishes[0] : ''));
     setAlertDaysBefore(7);
     setPendingEvent(null);
     setShowAlertDialog(false);
-    
-    const alertMessage = enableAlert 
-      ? `Fiesta agregada exitosamente al calendario.\n\n✅ Alerta configurada: Recibirás una notificación ${alertDaysBefore} ${alertDaysBefore === 1 ? 'día' : 'días'} antes.`
-      : 'Fiesta agregada exitosamente al calendario sin alertas.';
-    
-    alert(alertMessage);
+
+    // PERSISTIR: Admin → global (todos); Coro → su parroquia/capilla. Así aparece en
+    // TODOS los perfiles (no solo en esta sesión). El caché del calendario se refresca
+    // para que el selector al publicar también la vea sin recargar.
+    const r = await addCustomLiturgicalDate({
+      name: finalEvent.name,
+      date: finalEvent.date,
+      type: finalEvent.type === 'Fiesta' ? 'feast' : 'solemnity',
+      scope,
+    });
+    if (r.ok && r.row) {
+      setPersistedCustomDates([...getPersistedCustomDates(), toLiturgicalDate(r.row)]);
+      toast.success('Celebración agregada', {
+        description: (scope === GLOBAL_SCOPE
+          ? 'Visible para todos los usuarios.'
+          : `Guardada para ${scope}.`)
+          + (enableAlert ? ` Alerta ${alertDaysBefore} ${alertDaysBefore === 1 ? 'día' : 'días'} antes.` : ''),
+      });
+    } else {
+      toast.warning('Se agregó solo en esta sesión', {
+        description: r.error || 'No se pudo guardar en el servidor.',
+      });
+    }
   };
 
   const isPuebloFiel = userRole === 'Pueblo fiel';
@@ -304,6 +373,39 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, publishedCantor
                     className="w-full p-4 border-2 border-gray-300 dark:border-gray-700 dark:bg-gray-700 dark:text-white rounded-xl text-lg focus:outline-none focus:border-purple-500 dark:focus:border-purple-400"
                     rows={3}
                   />
+                </div>
+
+                {/* ¿Para quién? — Admin: global; Coro: su parroquia/capilla. */}
+                <div>
+                  <label className="block text-lg font-bold text-gray-700 dark:text-gray-300 mb-2">¿Para quién? *</label>
+                  {isAdmin ? (
+                    <>
+                      <select
+                        value={newEventScope}
+                        onChange={(e) => setNewEventScope(e.target.value)}
+                        className="w-full p-4 border-2 border-gray-300 dark:border-gray-700 dark:bg-gray-700 dark:text-white rounded-xl text-lg focus:outline-none focus:border-purple-500 dark:focus:border-purple-400"
+                      >
+                        <option value={GLOBAL_SCOPE}>Todos los usuarios (global)</option>
+                        {parishes.map((p) => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                        Como Administrador, «Todos los usuarios» la agrega al calendario de toda la app.
+                      </p>
+                    </>
+                  ) : parishes.length > 1 ? (
+                    <select
+                      value={newEventScope}
+                      onChange={(e) => setNewEventScope(e.target.value)}
+                      className="w-full p-4 border-2 border-gray-300 dark:border-gray-700 dark:bg-gray-700 dark:text-white rounded-xl text-lg focus:outline-none focus:border-purple-500 dark:focus:border-purple-400"
+                    >
+                      <option value="">Elige la parroquia/capilla…</option>
+                      {parishes.map((p) => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  ) : (
+                    <p className="text-base text-gray-700 dark:text-gray-300 font-medium">
+                      Se agregará para <strong>{newEventScope || 'tu parroquia'}</strong>.
+                    </p>
+                  )}
                 </div>
               </div>
               
