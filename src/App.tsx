@@ -7,6 +7,7 @@ import { ChoirView } from './components/layout/ChoirView';
 import { PublishedCantorals } from './components/cantoral/PublishedCantorals';
 import { Sidebar } from './components/layout/Sidebar';
 import { MenuButton } from './components/layout/MenuButton';
+import { PushBanner } from './components/common/PushBanner';
 import { BottomNav } from './components/layout/BottomNav';
 import { Tour } from './components/tour/Tour';
 import { toursByRole, hasSeenTour, markTourSeen, resetTour } from './components/tour/tours';
@@ -1150,6 +1151,18 @@ function AppContent() {
         }}
         onCancel={() => setPendingNavigateView(null)}
       />
+
+      {/* Banner proactivo: invita a activar notificaciones (solo en la pantalla principal). */}
+      {view === 'main' && (
+        <PushBanner
+          parishes={Array.from(new Set([
+            ...(userProfile.parishes ?? []),
+            userProfile.parishName,
+            userProfile.activeParishName,
+          ].filter((x): x is string => !!x)))}
+          role={effectiveRole}
+        />
+      )}
 
       {/* pb-16 en móvil deja espacio para la barra inferior fija (lg+ no la usa). */}
       <div className="pb-16 lg:pb-0">
