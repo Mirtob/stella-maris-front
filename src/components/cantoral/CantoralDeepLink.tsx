@@ -3,7 +3,7 @@ import { Download, ArrowLeft, FileX, Share, Plus, Smartphone, LogIn } from 'luci
 import { toast } from 'sonner';
 import { PublishedCantoral, Song } from '../../types';
 import { getCantoralById } from '../../services/cantorals';
-import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
+import { generateCantoralBooklet } from '../../utils/atrilBookletPDF';
 import { LyricsOnly } from '../songs/LyricsOnly';
 import {
   getDeferredInstallPrompt,
@@ -92,12 +92,22 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
     return () => { cancelled = true; };
   }, [cantoralId]);
 
-  // PDF para la comunidad: SOLO letras (mismo generador que el Pueblo fiel in-app).
+  // PDF para la comunidad: cuadernillo imprimible (carta horizontal, formato libro),
+  // solo letras. Se abre para imprimir (o se descarga si el popup se bloquea).
   const handleDownloadPDF = async () => {
     if (!cantoral || generatingPdf) return;
     setGeneratingPdf(true);
     try {
-      await generateCantoralPDF({ cantoral });
+      const { url } = await generateCantoralBooklet(cantoral.songs);
+      const w = window.open(url, '_blank');
+      if (!w) {
+        const a = document.createElement('a');
+        a.href = url; a.download = 'cantoral-cuadernillo.pdf';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      }
+      toast.success('Cuadernillo listo', {
+        description: 'Imprime a doble faz y dobla al medio.',
+      });
     } catch (err: any) {
       toast.error('No se pudo generar el PDF', { description: err?.message });
     } finally {

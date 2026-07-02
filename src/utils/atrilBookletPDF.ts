@@ -71,8 +71,28 @@ async function renderPdfToImages(url: string, targetWpx = 1000): Promise<string[
   return images;
 }
 
-// ── Genera un PDF media-carta con la LETRA + ACORDES de los cantos dados ──
-function buildLyricsChordsBlob(songs: Song[], notation: ReturnType<typeof getChordNotation>): Blob {
+/** Quita los acordes entre corchetes y las líneas que son SOLO acordes. */
+function stripChords(lyrics: string): string {
+  return lyrics
+    .split('\n')
+    .map((line) => line.replace(/\[[^\]]*\]/g, ''))
+    // Descartar líneas que quedaron con puros acordes sueltos (Sol Re Lam…)
+    .filter((line) => {
+      const t = line.trim();
+      if (!t) return true; // conservar líneas en blanco (separan estrofas)
+      const tokens = t.split(/\s+/);
+      const chordLike = /^[A-G]([#b])?(m|maj|min|dim|aug|sus|add)?[0-9]*(\/[A-G][#b]?)?$/i;
+      const latinLike = /^(Do|Re|Mi|Fa|Sol|La|Si)/i;
+      return !tokens.every((tok) => chordLike.test(tok) || latinLike.test(tok));
+    })
+    .join('\n');
+}
+
+// ── Genera un PDF media-carta con la LETRA de los cantos (con o sin acordes) ──
+function buildLyricsBlob(
+  songs: Song[],
+  opts: { withChords: boolean; notation: ReturnType<typeof getChordNotation> }
+): Blob {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [HALF_W, HALF_H] });
   const M = 10;
   let y = M;
@@ -88,18 +108,19 @@ function buildLyricsChordsBlob(songs: Song[], notation: ReturnType<typeof getCho
     titleLines.forEach((ln) => { need(5.5); doc.text(ln, M, y); y += 5.5; });
     y += 1.5;
 
-    const lyrics = song.lyrics ? transposeContent(song.lyrics, 0, notation) : '';
-    if (!lyrics) {
+    const raw = song.lyrics || '';
+    const lyrics = opts.withChords ? transposeContent(raw, 0, opts.notation) : stripChords(raw);
+    if (!lyrics.trim()) {
       doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(120, 120, 120);
       need(5); doc.text('(Sin letra en el catálogo)', M, y); y += 5;
       return;
     }
 
-    for (const raw of lyrics.split('\n')) {
-      const line = clean(raw.replace(/\s+$/, ''));
+    for (const rawLine of lyrics.split('\n')) {
+      const line = clean(rawLine.replace(/\s+$/, ''));
       if (line === '') { y += 2.4; continue; }
-      const hasChords = /\[[^\]]+\]/.test(line);
-      if (hasChords) {
+
+      if (opts.withChords && /\[[^\]]+\]/.test(line)) {
         need(8);
         // Acordes encima (monospace para que el offset calce con la letra)
         const chords: { chord: string; position: number }[] = [];
@@ -115,9 +136,10 @@ function buildLyricsChordsBlob(songs: Song[], notation: ReturnType<typeof getCho
         doc.setFont('courier', 'normal'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
         doc.text(line.replace(/\[[^\]]+\]/g, ''), M, y); y += 4.6;
       } else {
-        need(5);
-        doc.setFont('courier', 'normal'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
-        doc.text(line, M, y); y += 4.6;
+        // Letra sola: helvetica, con wrap por si la línea es larga en media carta.
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+        const wrapped = doc.splitTextToSize(line, HALF_W - 2 * M) as string[];
+        wrapped.forEach((wl) => { need(5); doc.text(wl, M, y); y += 5; });
       }
     }
   });
@@ -167,26 +189,27 @@ function imposeBooklet(images: string[]): Blob {
   return doc.output('blob');
 }
 
-/** Ordena los cantos como en la Misa y arma la lista de imágenes de página lógica. */
-async function pagesFor(songs: Song[], instrument?: InstrumentType): Promise<string[]> {
+/** Ordena los cantos como en la Misa y arma la lista de imágenes de página lógica.
+ *  `withChords`: true = letra con acordes (coro); false = solo letra (folleto). */
+async function pagesFor(songs: Song[], instrument: InstrumentType | undefined, withChords: boolean): Promise<string[]> {
   const ordered = sortByMassOrder(songs);
   const notation = getChordNotation();
   const isOrgano = instrument === 'Órgano';
 
   if (!isOrgano) {
-    // Guitarra (u otro): un solo PDF de letra+acordes → imágenes.
-    const url = URL.createObjectURL(buildLyricsChordsBlob(ordered, notation));
+    // Un solo PDF de letra (con o sin acordes) → imágenes.
+    const url = URL.createObjectURL(buildLyricsBlob(ordered, { withChords, notation }));
     try { return await renderPdfToImages(url); } finally { URL.revokeObjectURL(url); }
   }
 
-  // Órgano: partitura por canto; si un canto no tiene, cae a su letra+acordes.
+  // Órgano: partitura por canto; si un canto no tiene, cae a su letra con acordes.
   const images: string[] = [];
   for (const song of ordered) {
     const proxy = song.sheetMusicUrl ? getDrivePdfProxyUrl(song.sheetMusicUrl) : null;
     if (proxy) {
       images.push(...(await renderPdfToImages(proxy)));
     } else {
-      const url = URL.createObjectURL(buildLyricsChordsBlob([song], notation));
+      const url = URL.createObjectURL(buildLyricsBlob([song], { withChords: true, notation }));
       try { images.push(...(await renderPdfToImages(url))); } finally { URL.revokeObjectURL(url); }
     }
   }
@@ -198,9 +221,16 @@ export interface BookletOptions {
   instrument?: InstrumentType;
 }
 
-/** Genera el cuadernillo imprimible (carta horizontal, formato libro). */
+/** Cuadernillo del Modo Atril (según instrumento: acordes o partituras). */
 export async function generateAtrilBooklet(opts: BookletOptions): Promise<{ blob: Blob; url: string }> {
-  const images = await pagesFor(opts.songs, opts.instrument);
+  const images = await pagesFor(opts.songs, opts.instrument, /* withChords */ true);
+  const blob = imposeBooklet(images);
+  return { blob, url: URL.createObjectURL(blob) };
+}
+
+/** Cuadernillo del CANTORAL (folleto del Pueblo fiel): solo letra, formato libro. */
+export async function generateCantoralBooklet(songs: Song[]): Promise<{ blob: Blob; url: string }> {
+  const images = await pagesFor(songs, undefined, /* withChords */ false);
   const blob = imposeBooklet(images);
   return { blob, url: URL.createObjectURL(blob) };
 }

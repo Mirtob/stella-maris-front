@@ -6,7 +6,7 @@ import { AtrilMode } from '../atril/AtrilMode';
 import { PublishedCantoral, Song } from '../../types';
 import { getCategoryColors } from '../../utils/colors';
 import { CantoralWithOrdinary } from './CantoralWithOrdinary';
-import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
+import { generateCantoralBooklet } from '../../utils/atrilBookletPDF';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { addDaysLocal, getWeekRangeLocal, isWithinInclusive, parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
 import { massTypeBadge, cantoralYaPaso } from '../../utils/massType';
@@ -258,16 +258,27 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
               {isExpandedCantoral ? 'Ocultar' : 'Ver'} Cantos
             </button>
             <button
-              onClick={() => {
-                generateCantoralPDF({ cantoral });
-                toast.success('Generando PDF...', {
-                  description: 'Tu cantoral se descargará en unos momentos'
-                });
+              onClick={async () => {
+                toast.info('Preparando el cuadernillo…');
+                try {
+                  const { url } = await generateCantoralBooklet(cantoral.songs);
+                  const w = window.open(url, '_blank');
+                  if (!w) {
+                    const a = document.createElement('a');
+                    a.href = url; a.download = 'cantoral-cuadernillo.pdf';
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                  }
+                  toast.success('Cuadernillo listo', {
+                    description: 'Imprime a doble faz y dobla al medio. Si no calzan, cambia el volteo a "borde corto".',
+                  });
+                } catch {
+                  toast.error('No se pudo generar el cuadernillo');
+                }
               }}
               className="bg-gradient-to-br from-purple-600 to-purple-700 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-purple-800 col-span-2"
             >
               <Download className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
-              Descargar Cantoral PDF
+              Descargar cantoral (libro)
             </button>
           </div>
 
