@@ -1,7 +1,7 @@
 import { X, Download, Music } from 'lucide-react';
 import { Song, InstrumentType } from '../../types';
 import { useState } from 'react';
-import { generateChoirCantoralPDF } from '../../utils/choirCantoralPDFGenerator';
+import { generateChoirBooklet } from '../../utils/atrilBookletPDF';
 import { toast } from 'sonner';
 
 interface CantoralPDFPreviewProps {
@@ -82,18 +82,17 @@ export function CantoralPDFPreview({
     if (downloading) return;
     setDownloading(true);
     try {
-      await generateChoirCantoralPDF(
-        cantoral,
-        parishName,
-        date,
-        celebration,
-        massTime,
-        userInstruments,
-        'Full Score',
-        { download: true, embedScores: true }
-      );
-      toast.success('PDF Generado', {
-        description: 'El folleto con letras, acordes y partituras se ha descargado'
+      // PDF del coro en formato LIBRO (cuadernillo): letra con acordes + partitura
+      // por canto, carta horizontal.
+      const { url } = await generateChoirBooklet(cantoral);
+      const w = window.open(url, '_blank');
+      if (!w) {
+        const a = document.createElement('a');
+        a.href = url; a.download = 'cantoral-coro-cuadernillo.pdf';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      }
+      toast.success('Cuadernillo del coro listo', {
+        description: 'Imprime a doble faz y dobla al medio. Si no calzan, cambia el volteo a "borde corto".'
       });
     } catch (error) {
       console.error('Error al generar PDF:', error);

@@ -67,7 +67,7 @@ import { cacheCantoralsForOffline, getOfflineCantorals } from './services/offlin
 import { listChapels } from './services/chapels';
 import { getTodayLocal, addDaysLocal, isWithinInclusive } from './utils/dateLocal';
 import { massTypeBadge } from './utils/massType';
-import { generateChoirCantoralPDF } from './utils/choirCantoralPDFGenerator';
+import { generateChoirBooklet } from './utils/atrilBookletPDF';
 import { isCurrentUserAdmin } from './services/admin';
 import { upsertCurrentUserProfile, getCurrentUserProfile } from './services/userProfiles';
 import { setSentryUserContext, clearSentryUserContext } from './services/sentry';
@@ -678,16 +678,9 @@ function AppContent() {
   const generateAndUploadCantoralPDF = async (c: PublishedCantoral, notifyOnFail: boolean) => {
     setPdfGeneratingIds(prev => new Set(prev).add(c.id));
     try {
-      const { blob } = await generateChoirCantoralPDF(
-        c.songs,
-        c.parishName,
-        c.date,
-        massTypeBadge(c) ? `${c.liturgicalDate} (${massTypeBadge(c)})` : c.liturgicalDate,
-        c.massTime,
-        userProfile?.instruments ?? [],
-        'Full Score',
-        { download: false, embedScores: true }
-      );
+      // PDF del coro en formato LIBRO (cuadernillo): letra con acordes + partitura
+      // por canto, carta horizontal. Es el que se sube a Storage y descarga por QR.
+      const { blob } = await generateChoirBooklet(c.songs);
       const up = await uploadCantoralPDF(c.id, blob);
       if (up.ok && up.publicUrl) {
         const url = up.publicUrl;

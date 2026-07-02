@@ -234,3 +234,21 @@ export async function generateCantoralBooklet(songs: Song[]): Promise<{ blob: Bl
   const blob = imposeBooklet(images);
   return { blob, url: URL.createObjectURL(blob) };
 }
+
+/** Cuadernillo del CORO (Full Score): por cada canto, su letra con acordes seguida de
+ *  su partitura (si tiene), en orden de Misa y en formato libro. */
+export async function generateChoirBooklet(songs: Song[]): Promise<{ blob: Blob; url: string }> {
+  const ordered = sortByMassOrder(songs);
+  const notation = getChordNotation();
+  const images: string[] = [];
+  for (const song of ordered) {
+    // 1) Letra con acordes del canto.
+    const lurl = URL.createObjectURL(buildLyricsBlob([song], { withChords: true, notation }));
+    try { images.push(...(await renderPdfToImages(lurl))); } finally { URL.revokeObjectURL(lurl); }
+    // 2) Partitura del canto (si tiene), justo después.
+    const proxy = song.sheetMusicUrl ? getDrivePdfProxyUrl(song.sheetMusicUrl) : null;
+    if (proxy) images.push(...(await renderPdfToImages(proxy)));
+  }
+  const blob = imposeBooklet(images);
+  return { blob, url: URL.createObjectURL(blob) };
+}

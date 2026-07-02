@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { History, Calendar, Church, ChevronDown, ChevronUp, Play, Clock, Trash2, Filter, Download } from 'lucide-react';
 import { PublishedCantoral, Song } from '../../types';
-import { generateChoirCantoralPDF } from '../../utils/choirCantoralPDFGenerator';
+import { generateChoirBooklet } from '../../utils/atrilBookletPDF';
 import { parseParishChapel, splitActiveParish } from '../../utils/parish';
 import { parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
 import { massTypeBadge } from '../../utils/massType';
@@ -29,19 +29,17 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
     if (downloadingId) return;
     setDownloadingId(cantoral.id);
     try {
-      await generateChoirCantoralPDF(
-        cantoral.songs,
-        cantoral.parishName,
-        cantoral.date,
-        cantoral.liturgicalDate,
-        cantoral.massTime,
-        [],
-        'Full Score',
-        // PDF del coro = letra con acordes + partituras de todos los cantos.
-        { download: true, embedScores: true }
-      );
-      toast.success('PDF Descargado', {
-        description: 'El cantoral con letras, acordes y partituras se ha descargado'
+      // PDF del coro en formato LIBRO (cuadernillo): letra con acordes + partitura
+      // por canto, carta horizontal. Se abre para imprimir (o descarga si el popup falla).
+      const { url } = await generateChoirBooklet(cantoral.songs);
+      const w = window.open(url, '_blank');
+      if (!w) {
+        const a = document.createElement('a');
+        a.href = url; a.download = 'cantoral-coro-cuadernillo.pdf';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      }
+      toast.success('Cuadernillo del coro listo', {
+        description: 'Imprime a doble faz y dobla al medio. Si no calzan, cambia el volteo a "borde corto".'
       });
     } catch (error) {
       console.error('Error al generar PDF:', error);
