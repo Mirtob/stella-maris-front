@@ -102,7 +102,7 @@ function subToRow(sub: PushSubscription): { endpoint: string; p256dh: string; au
  * Pide permiso, suscribe con PushManager y guarda la suscripción con las parroquias
  * indicadas. Devuelve la razón si no se pudo ('unsupported' | 'denied' | 'default').
  */
-export async function enablePush(parishes: string[]): Promise<{ ok: boolean; reason?: string }> {
+export async function enablePush(parishes: string[], role?: string): Promise<{ ok: boolean; reason?: string }> {
   if (!pushSupported()) return { ok: false, reason: 'unsupported' };
   const perm = await Notification.requestPermission();
   if (perm !== 'granted') return { ok: false, reason: perm };
@@ -123,6 +123,7 @@ export async function enablePush(parishes: string[]): Promise<{ ok: boolean; rea
     subscription: subToRow(sub),
     parishes,
     topics: TOPICS,
+    role,
   });
   if (!res.ok) {
     const err = await res.text().catch(() => '');
@@ -150,7 +151,7 @@ export async function disablePush(): Promise<void> {
  * Si el dispositivo ya estaba suscrito, actualiza sus parroquias en el servidor (p. ej.
  * al iniciar sesión o cambiar de parroquia). No pide permiso ni suscribe de nuevo.
  */
-export async function syncPushParishes(parishes: string[]): Promise<void> {
+export async function syncPushParishes(parishes: string[], role?: string): Promise<void> {
   if (!pushSupported()) return;
   try {
     if (localStorage.getItem(LOCAL_FLAG) !== '1') return;
@@ -161,7 +162,7 @@ export async function syncPushParishes(parishes: string[]): Promise<void> {
     const reg = await getRegistration();
     const sub = reg ? await reg.pushManager.getSubscription() : null;
     if (!sub) return;
-    await callSubscribeApi({ action: 'subscribe', subscription: subToRow(sub), parishes, topics: TOPICS });
+    await callSubscribeApi({ action: 'subscribe', subscription: subToRow(sub), parishes, topics: TOPICS, role });
   } catch {
     /* silencioso: es una sincronización de fondo */
   }

@@ -90,7 +90,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const result = await sendToSubs(subs, {
       title: 'Nuevo cantoral publicado 🎵',
       body: detail ? `${detail} — ${parish}` : parish,
-      url: `/c/${c.id}`,
+      // ?r=1 → la app abre PRIMERO el modo radio (genera vistas en el canal) y luego
+      // el cantoral según el perfil.
+      url: `/c/${c.id}?r=1`,
       tag: `cantoral-${c.id}`,
     });
     return res.status(200).json({ ok: true, ...result });

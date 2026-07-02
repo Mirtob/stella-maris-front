@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { PublishedCantoral, Song } from '../../types';
 import { getCantoralById } from '../../services/cantorals';
 import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
+import { PlaylistPlayer } from '../songs/PlaylistPlayer';
 import { LyricsOnly } from '../songs/LyricsOnly';
 import {
   getDeferredInstallPrompt,
@@ -60,6 +61,11 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  // Notificación con ?r=1 → abrir PRIMERO el modo radio (genera vistas en el canal) y,
+  // al cerrarlo, mostrar el cantoral. Ver api/notify-cantoral.
+  const [showRadio, setShowRadio] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get('r') === '1'; } catch { return false; }
+  });
 
   // Sugerencia de instalación
   const [installAvailable, setInstallAvailable] = useState(!!getDeferredInstallPrompt());
@@ -127,6 +133,16 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
 
   const groups = cantoral ? groupByCategory(cantoral.songs ?? []) : [];
   const hasSongs = (cantoral?.songs?.length ?? 0) > 0;
+
+  // Radio primero (notificación ?r=1): reproduce los videos del cantoral para generar
+  // vistas en el canal; al volver, se muestra el cantoral. Solo si hay videos.
+  if (cantoral && showRadio && (cantoral.songs ?? []).some((s) => s.youtubeId)) {
+    return (
+      <div className="fixed inset-0 z-50 bg-white dark:bg-slate-900">
+        <PlaylistPlayer cantoral={cantoral} onBack={() => setShowRadio(false)} />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-2xl mx-auto min-h-screen p-4 sm:p-6 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">

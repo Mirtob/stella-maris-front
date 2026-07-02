@@ -375,7 +375,7 @@ function AppContent() {
       userProfile.parishName,
       userProfile.activeParishName,
     ].filter((x): x is string => !!x)));
-    void syncPushParishes(parishes);
+    void syncPushParishes(parishes, userProfile.activeRole || userProfile.role);
   }, [route.screen, userProfile]);
 
   // Cargar el catálogo de capillas una vez que hay sesión (para el selector de parroquia).

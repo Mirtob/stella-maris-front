@@ -9,6 +9,8 @@ import {
 interface Props {
   /** Parroquias/capillas para las que recibir avisos de "nuevo cantoral". */
   parishes: string[];
+  /** Rol efectivo (el Coro recibe además el recordatorio de "publica el cantoral"). */
+  role?: string;
 }
 
 /**
@@ -16,7 +18,7 @@ interface Props {
  * (celebraciones próximas + nuevo cantoral de tu parroquia). En iOS avisa que hay que
  * instalar la PWA en la pantalla de inicio.
  */
-export function PushNotificationsCard({ parishes }: Props) {
+export function PushNotificationsCard({ parishes, role }: Props) {
   const supported = pushSupported();
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -37,7 +39,7 @@ export function PushNotificationsCard({ parishes }: Props) {
         setEnabled(false);
         toast.success('Notificaciones desactivadas en este dispositivo');
       } else {
-        const r = await enablePush(parishes);
+        const r = await enablePush(parishes, role);
         setPerm(notificationPermission());
         if (r.ok) {
           setEnabled(true);

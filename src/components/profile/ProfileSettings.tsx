@@ -573,7 +573,7 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
         )}
 
         {/* Notificaciones push (celebraciones + nuevo cantoral) */}
-        <PushNotificationsCard parishes={canManageParishes ? parishes : (activeParish ? [activeParish] : [])} />
+        <PushNotificationsCard parishes={canManageParishes ? parishes : (activeParish ? [activeParish] : [])} role={effectiveRole} />
 
         {/* Tutoriales — volver a verlos (F4) */}
         <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-indigo-200 mb-6">

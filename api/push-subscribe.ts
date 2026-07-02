@@ -62,6 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const topics: string[] = Array.isArray(body.topics) && body.topics.length
         ? body.topics
         : ['celebrations', 'cantorals'];
+      const role: string | null = typeof body.role === 'string' && body.role ? body.role : null;
 
       // user_id si viene token (opcional).
       const authHeader = (req.headers.authorization as string) || '';
@@ -75,7 +76,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         body: JSON.stringify({
           endpoint, p256dh, auth,
           user_id: userId,
-          parishes, topics,
+          parishes, topics, role,
           updated_at: new Date().toISOString(),
         }),
       });
