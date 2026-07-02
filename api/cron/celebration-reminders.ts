@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import CAL from '../liturgical-calendar.json';
+import { BASE_CELEBRATIONS } from '../baseCelebrations';
 
 // Cron DIARIO. Dos tipos de aviso:
 //  1) Recordatorio general de celebraciones PERSONALIZADAS (7 y 1 día antes) → a todos
@@ -9,9 +9,9 @@ import CAL from '../liturgical-calendar.json';
 //     solo a suscriptores con role='Coro', por parroquia, y SOLO si esa parroquia aún
 //     no tiene un cantoral publicado para esa fecha.
 //
-// AUTOCONTENIDO (sin imports de api/_*). El calendario base va como JSON dentro de api/
-// (copia de src/data/liturgicalCalendar.generated.json) para que Vercel lo bundlee.
-// web-push se carga con dynamic import.
+// AUTOCONTENIDO (sin imports de api/_*). El calendario base va como MÓDULO .ts
+// (api/baseCelebrations.ts) — NO como .json: el import de JSON en ESM de Vercel exige
+// import assertions y crashea al cargar. web-push se carga con dynamic import.
 
 const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || '').trim();
 const SERVICE = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
@@ -21,8 +21,6 @@ const VAPID_PRIVATE = (process.env.VAPID_PRIVATE_KEY || '').trim();
 const VAPID_SUBJECT = (process.env.VAPID_SUBJECT || 'mailto:gustavus.tobar@gmail.com').trim();
 
 const svcHeaders = { apikey: SERVICE, Authorization: `Bearer ${SERVICE}` };
-
-interface CalEntry { date: string; name: string; type: string }
 
 function todayInSantiago(): string {
   const fmt = new Intl.DateTimeFormat('en-CA', {
@@ -41,9 +39,7 @@ const encParish = (p: string) => encodeURIComponent(`{"${p.replace(/"/g, '\\"')}
 
 /** Celebraciones "por defecto" en una fecha: domingos + solemnidades (a todas las parroquias). */
 function baseCelebrationsOn(date: string): string[] {
-  return (CAL as CalEntry[])
-    .filter((e) => e.date === date && (e.type === 'SOLEMNITY' || e.type === 'SUNDAY'))
-    .map((e) => e.name);
+  return BASE_CELEBRATIONS.filter((e) => e.date === date).map((e) => e.name);
 }
 
 async function customCelebrationsOn(date: string): Promise<{ name: string; scope: string }[]> {
