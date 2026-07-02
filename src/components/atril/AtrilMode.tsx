@@ -10,7 +10,7 @@ import { Tour } from '../tour/Tour';
 import { atrilTips, hasSeenTip, markTipSeen } from '../tour/tours';
 import { isOrdinary, sortByMassOrder } from '../../utils/ordinary';
 import { getDrivePdfProxyUrl } from '../../utils/driveProxy';
-import { generateAtrilBooklet } from '../../utils/atrilBookletPDF';
+import { generateAtrilPrintable } from '../../utils/atrilBookletPDF';
 import { PdfPages } from './PdfPages';
 
 interface AtrilModeProps {
@@ -147,26 +147,34 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
     } catch { /* iOS u otros sin soporte → no-op */ }
   };
 
-  // Imprimir: genera un CUADERNILLO (carta horizontal, formato libro) según el
-  // instrumento y lo abre para imprimir. Si el popup se bloquea, lo descarga.
+  // Imprimir: genera un PDF VERTICAL (carta) tal cual se ve el atril — documento
+  // continuo con cada canto apilado (partitura / letra con acordes / solo letra según
+  // instrumento y rol), respetando las transposiciones y la notación actuales. Lo abre
+  // para imprimir; si el popup se bloquea, lo descarga.
   const handlePrint = async () => {
     if (printing) return;
     setPrinting(true);
-    toast.info('Preparando el cuadernillo para imprimir…');
+    toast.info('Preparando el PDF para imprimir…');
     try {
-      const { url } = await generateAtrilBooklet({ songs: orderedSongs, instrument: userInstrument });
+      const { url } = await generateAtrilPrintable({
+        songs: orderedSongs,
+        instrument: userInstrument,
+        role: userRole,
+        transpositions,
+        notation,
+      });
       const w = window.open(url, '_blank');
       if (!w) {
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'cantoral-cuadernillo.pdf';
+        a.download = 'cantoral-atril.pdf';
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
       }
-      toast.success('Cuadernillo listo', {
-        description: 'Imprime a doble faz y dobla al medio. Si al doblar las páginas no calzan, cambia el volteo a "borde corto".',
+      toast.success('PDF listo para imprimir', {
+        description: 'Sale en vertical (carta), tal cual se ve en el atril.',
       });
     } catch (err: any) {
-      toast.error('No se pudo generar el cuadernillo', { description: err?.message });
+      toast.error('No se pudo generar el PDF', { description: err?.message });
     } finally {
       setPrinting(false);
     }
@@ -207,8 +215,8 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
           </button>
         )}
 
-        {/* Imprimir cuadernillo (carta horizontal, formato libro) */}
-        <button onClick={handlePrint} disabled={printing} className={`${btn} w-11 h-11 flex-shrink-0 disabled:opacity-60`} aria-label="Imprimir cuadernillo" title="Imprimir cuadernillo (formato libro)">
+        {/* Imprimir el atril (PDF vertical, tal cual se ve) */}
+        <button onClick={handlePrint} disabled={printing} className={`${btn} w-11 h-11 flex-shrink-0 disabled:opacity-60`} aria-label="Imprimir" title="Imprimir (PDF vertical, tal cual se ve)">
           {printing ? <Loader className="w-6 h-6 animate-spin" /> : <Printer className="w-6 h-6" strokeWidth={2.5} />}
         </button>
 

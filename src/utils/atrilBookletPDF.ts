@@ -1,8 +1,8 @@
 import { jsPDF } from 'jspdf';
-import { Song, InstrumentType } from '../types';
+import { Song, InstrumentType, UserRole } from '../types';
 import { getDrivePdfProxyUrl } from './driveProxy';
-import { sortByMassOrder } from './ordinary';
-import { transposeContent, getChordNotation } from './chordTranspose';
+import { sortByMassOrder, isOrdinary } from './ordinary';
+import { transposeContent, getChordNotation, getTransposedKey, type ChordNotation } from './chordTranspose';
 import { getOfflinePdf } from '../services/offlineCache';
 
 // =============================================================================
@@ -247,6 +247,159 @@ export async function generateAtrilBooklet(opts: BookletOptions): Promise<{ blob
 export async function generateCantoralBooklet(songs: Song[]): Promise<{ blob: Blob; url: string }> {
   const images = await pagesFor(songs, undefined, /* withChords */ false);
   const blob = imposeBooklet(images);
+  return { blob, url: URL.createObjectURL(blob) };
+}
+
+// =============================================================================
+// PDF imprimible del Modo Atril — VERTICAL (carta), NO cuadernillo.
+// Documento continuo, tal cual se ve en pantalla: cada canto apilado con su
+// cabecera (momento + título + tono) y su contenido según instrumento/rol:
+//   - Órgano → partitura del canto (páginas del PDF de Drive).
+//   - Coro (guitarra/otro) → letra con acordes encima.
+//   - Pueblo fiel → solo letra.
+// Respeta las transposiciones por canto y la notación (latino/americano) actuales.
+// =============================================================================
+
+export interface AtrilPrintOptions {
+  songs: Song[];
+  instrument?: InstrumentType;
+  role?: UserRole;
+  /** Transposición por canto, index-alineada con el orden de Misa (como en el atril). */
+  transpositions?: Record<number, number>;
+  notation?: ChordNotation;
+}
+
+export async function generateAtrilPrintable(opts: AtrilPrintOptions): Promise<{ blob: Blob; url: string }> {
+  const { instrument, role } = opts;
+  const notation = opts.notation ?? getChordNotation();
+  const transpositions = opts.transpositions ?? {};
+  const ordered = sortByMassOrder(opts.songs);
+
+  const isPuebloFiel = role === 'Pueblo fiel';
+  const isOrgano = instrument === 'Órgano';
+  const hasChords = !isPuebloFiel;
+
+  // Mismo criterio que AtrilMode.modeFor.
+  const modeFor = (s: Song): 'score' | 'chords' | 'lyrics' => {
+    if (isPuebloFiel) return isOrdinary(s) && s.sheetMusicUrl ? 'score' : 'lyrics';
+    if (isOrgano) return s.sheetMusicUrl ? 'score' : 'chords';
+    return 'chords';
+  };
+
+  // Carta vertical.
+  const PW = 215.9, PH = 279.4, M = 15;
+  const CW = PW - 2 * M;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+  let y = M;
+  let firstDrawn = false;
+  const need = (h: number) => { if (y + h > PH - M) { doc.addPage(); y = M; } };
+  const chordRegex = /\[([^\]]+)\]/g;
+
+  // Letra con acordes encima (courier para que el offset del acorde calce con la letra).
+  const drawChordLyrics = (text: string) => {
+    for (const rawLine of text.split('\n')) {
+      const line = clean(rawLine.replace(/\s+$/, ''));
+      if (line === '') { y += 3; continue; }
+      if (/\[[^\]]+\]/.test(line)) {
+        need(9.5);
+        const chords: { chord: string; position: number }[] = [];
+        chordRegex.lastIndex = 0;
+        let m; while ((m = chordRegex.exec(line)) !== null) chords.push({ chord: m[1], position: m.index });
+        doc.setFont('courier', 'bold'); doc.setFontSize(11); doc.setTextColor(180, 83, 9);
+        chords.forEach(({ chord, position }) => {
+          const before = line.substring(0, position).replace(/\[[^\]]+\]/g, '');
+          const xo = doc.getTextWidth(before);
+          doc.text(clean(chord), M + xo, y);
+        });
+        y += 4;
+        doc.setFont('courier', 'normal'); doc.setFontSize(11); doc.setTextColor(20, 20, 20);
+        doc.text(line.replace(/\[[^\]]+\]/g, ''), M, y); y += 5.5;
+      } else {
+        doc.setFont('courier', 'normal'); doc.setFontSize(11); doc.setTextColor(20, 20, 20);
+        const wrapped = doc.splitTextToSize(line, CW) as string[];
+        wrapped.forEach((wl) => { need(6); doc.text(wl, M, y); y += 5.5; });
+      }
+    }
+  };
+
+  // Solo letra (Pueblo fiel).
+  const drawPlainLyrics = (text: string) => {
+    for (const rawLine of text.split('\n')) {
+      const line = clean(rawLine.replace(/\s+$/, ''));
+      if (line === '') { y += 3; continue; }
+      const wrapped = doc.splitTextToSize(line, CW) as string[];
+      wrapped.forEach((wl) => {
+        need(6.5);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(12); doc.setTextColor(20, 20, 20);
+        doc.text(wl, M, y); y += 6;
+      });
+    }
+  };
+
+  for (let i = 0; i < ordered.length; i++) {
+    const s = ordered[i];
+    const mode = modeFor(s);
+    const t = ((((transpositions[i] ?? 0) % 12) + 12) % 12);
+
+    // Separación entre cantos (reserva el comienzo de la cabecera para no dejarla huérfana).
+    if (firstDrawn) { y += 6; need(26); }
+    firstDrawn = true;
+
+    // Cabecera: momento + título (+ tono si aplica).
+    need(16);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(180, 83, 9);
+    doc.text(clean(s.category || '').toUpperCase(), M, y); y += 5;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(15, 23, 42);
+    const titleLines = doc.splitTextToSize(clean(s.title), CW) as string[];
+    titleLines.forEach((ln) => { need(7); doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(15, 23, 42); doc.text(ln, M, y); y += 7; });
+
+    const proxy = mode === 'score' ? getDrivePdfProxyUrl(s.sheetMusicUrl) : null;
+    const showChordsHere = mode === 'chords' || (mode === 'score' && !proxy && hasChords);
+
+    if (showChordsHere && s.originalKey) {
+      const key = getTransposedKey(s.originalKey, t, notation);
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(120, 120, 120);
+      need(6); doc.text(`Tono: ${clean(key)}`, M, y); y += 6;
+    } else {
+      y += 2;
+    }
+
+    // Contenido.
+    if (mode === 'score' && proxy) {
+      const imgs = await renderPdfToImages({ url: proxy }, 1500);
+      if (imgs.length === 0) {
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(150, 150, 150);
+        need(6); doc.text('(No se pudo cargar la partitura para imprimir.)', M, y); y += 6;
+      } else {
+        for (const img of imgs) {
+          const props = doc.getImageProperties(img);
+          const ar = props.width / props.height;
+          let w = CW, h = w / ar;
+          const maxH = PH - 2 * M;
+          if (h > maxH) { h = maxH; w = h * ar; }
+          need(h);
+          const x = M + (CW - w) / 2;
+          doc.addImage(img, 'JPEG', x, y, w, h, undefined, 'FAST');
+          y += h + 4;
+        }
+      }
+    } else if (showChordsHere) {
+      const lyrics = s.lyrics ? transposeContent(s.lyrics, t, notation) : '';
+      if (lyrics.trim()) drawChordLyrics(lyrics);
+      else { doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(150, 150, 150); need(6); doc.text('(Sin letra en el catálogo)', M, y); y += 6; }
+    } else {
+      const lyrics = s.lyrics ? stripChords(transposeContent(s.lyrics, t, notation)) : '';
+      if (lyrics.trim()) drawPlainLyrics(lyrics);
+      else { doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(150, 150, 150); need(6); doc.text('(Sin letra en el catálogo)', M, y); y += 6; }
+    }
+  }
+
+  if (!firstDrawn) {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(12); doc.setTextColor(20, 20, 20);
+    doc.text('No hay cantos en el cantoral.', M, M + 10);
+  }
+
+  const blob = doc.output('blob');
   return { blob, url: URL.createObjectURL(blob) };
 }
 
