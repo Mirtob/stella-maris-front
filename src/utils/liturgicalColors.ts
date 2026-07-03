@@ -3,13 +3,18 @@ import { getCurrentLiturgicalSeason } from './liturgicalSeason';
 import { parseYmdLocal, getTodayLocal } from './dateLocal';
 
 /**
- * Color litúrgico de HOY (por fecha, vía romcal). Antes se tomaba el color del ÚLTIMO
- * evento del array del calendario, que se quedaba "pegado" varios días (p. ej. una
- * solemnidad entre semana teñía toda la semana, en vez del verde del Tiempo Ordinario).
- * Ahora refleja el color del día actual y cambia día a día automáticamente.
+ * Color de la TEMPORADA litúrgica actual (verde en Tiempo Ordinario, morado en
+ * Adviento/Cuaresma, etc.) — para el cromo AMBIENTE (menú, cabecera, barra inferior).
+ *
+ * OJO: usa el color de la TEMPORADA, no el de la fiesta del día. Antes tomaba el color
+ * del día (`getLiturgicalColorStyle`), así que una fiesta de santo entre semana (p. ej.
+ * Santo Tomás, FIESTA blanca → gradiente ámbar/dorado) teñía todo de dorado, cuando en
+ * Tiempo Ordinario debe verse VERDE. La fiesta del día sigue disponible en el calendario
+ * y las cards vía `getLiturgicalColorStyle`.
  */
 export function getCurrentLiturgicalColor(): string {
-  return getLiturgicalColorStyle(getTodayLocal()).label;
+  const season = getCurrentLiturgicalSeason(parseYmdLocal(getTodayLocal()));
+  return PALETTE[seasonToColorId(season)].label;
 }
 
 // Mapear colores litúrgicos a colores de cruz (para iconos)
