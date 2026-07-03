@@ -13,6 +13,10 @@ interface ExtendedParish extends Parish {
   memberCount?: number;
   dioceseName?: string;
   dioceseId?: string;
+  /** true si es una parroquia AGREGADA (custom_parishes), no del catálogo estático. */
+  isCustom?: boolean;
+  /** id en custom_parishes (para editar/eliminar) cuando isCustom. */
+  customId?: string;
 }
 
 // Agrupa diócesis por región / provincia eclesiástica (para los <optgroup>).
@@ -131,8 +135,8 @@ export function ParishManager() {
   const dioceses = getDiocesesByCountry(selectedCountry);
   const diocesesByRegion = groupByRegion(dioceses);
 
-  // Obtener todas las parroquias con información adicional
-  const allParishesWithDiocese: ExtendedParish[] = selectedDiocese
+  // Parroquias del CATÁLOGO estático (según país/diócesis en foco).
+  const staticParishesList: ExtendedParish[] = selectedDiocese
     ? (dioceses.find(d => d.id === selectedDiocese)?.parishes || []).map(p => ({
         ...p,
         choirCount: 0,
@@ -147,6 +151,28 @@ export function ParishManager() {
         dioceseName: d.name,
         dioceseId: d.id
       })));
+
+  // Parroquias AGREGADAS (custom_parishes) del país/diócesis en foco → van PRIMERO en
+  // el listado, con editar/eliminar. Antes solo aparecían en una caja aparte, lo que
+  // hacía que "no se vieran" (sobre todo si el país en foco no era el suyo).
+  const countryDioceseIds = new Set(dioceses.map(d => d.id));
+  const customParishesList: ExtendedParish[] = customParishes
+    .filter(c => countryDioceseIds.has(c.dioceseId) && (!selectedDiocese || c.dioceseId === selectedDiocese))
+    .map(c => ({
+      id: c.id,
+      name: c.name,
+      city: c.city,
+      address: c.address,
+      chapels: [] as Chapel[],
+      dioceseName: c.dioceseName,
+      dioceseId: c.dioceseId,
+      choirCount: 0,
+      memberCount: 0,
+      isCustom: true,
+      customId: c.id,
+    }));
+
+  const allParishesWithDiocese: ExtendedParish[] = [...customParishesList, ...staticParishesList];
 
   const filteredParishes = allParishesWithDiocese.filter(parish =>
     parish.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -219,6 +245,10 @@ export function ParishManager() {
     if (!r.ok) { toast.error('No se pudo agregar la parroquia', { description: r.error }); return; }
 
     toast.success('¡Parroquia agregada!', { description: `${newParishName} — ${dioceseName}` });
+    // Enfocar el listado en el país/diócesis de la nueva parroquia para que se vea al
+    // instante (el listado principal por defecto está en Chile).
+    setSelectedCountry(newParishCountry);
+    setSelectedDiocese(newParishDiocese);
     await loadCustomParishes();
     setShowAddParishDialog(false);
     setNewParishName('');
@@ -366,33 +396,10 @@ export function ParishManager() {
         </div>
 
         <p className="text-center text-gray-600 dark:text-gray-400 mb-4">
-          Mostrando {filteredParishes.length} parroquias del catálogo
+          Mostrando {filteredParishes.length} parroquias{customParishesList.length > 0 ? ` (${customParishesList.length} agregada${customParishesList.length === 1 ? '' : 's'})` : ''}
         </p>
 
-        {/* Parroquias agregadas (administradas en Supabase) */}
-        {customParishes.length > 0 && (
-          <div className="mb-6 bg-green-50 dark:bg-slate-800 rounded-2xl border-2 border-green-200 dark:border-green-700 p-4">
-            <h3 className="font-bold text-green-900 dark:text-green-200 mb-3 flex items-center gap-2">
-              <Building2 className="w-5 h-5 flex-shrink-0" /> Parroquias agregadas ({customParishes.length})
-            </h3>
-            <div className="space-y-2">
-              {customParishes.map((p) => (
-                <div key={p.id} className="bg-white dark:bg-slate-700 rounded-xl p-3 border border-green-200 dark:border-slate-500 flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="font-semibold text-gray-900 dark:text-white truncate">{p.name}</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300 truncate">{p.dioceseName}{p.city ? ` · ${p.city}` : ''}</div>
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button onClick={() => openEditCustom(p)} className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20" aria-label="Editar parroquia"><Edit2 className="w-5 h-5" /></button>
-                    <button onClick={() => setPendingDeleteCustom(p)} className="p-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" aria-label="Eliminar parroquia"><Trash2 className="w-5 h-5" /></button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Parishes List */}
+        {/* Parishes List (agregadas primero, luego catálogo) */}
         <div className="space-y-4">
           {filteredParishes.map((parish) => (
             <div
@@ -404,7 +411,12 @@ export function ParishManager() {
                 <div className="flex items-start gap-3">
                   <Church className="w-8 h-8 flex-shrink-0 mt-1" strokeWidth={2.5} />
                   <div className="flex-1">
-                    <h3 className="text-base sm:text-lg font-bold mb-1 leading-tight">{parish.name}</h3>
+                    <h3 className="text-base sm:text-lg font-bold mb-1 leading-tight">
+                      {parish.name}
+                      {parish.isCustom && (
+                        <span className="ml-2 align-middle inline-block px-2 py-0.5 rounded-full bg-white/25 text-xs font-bold">Agregada</span>
+                      )}
+                    </h3>
                     <div className="text-sm opacity-90 mb-1">{parish.dioceseName}</div>
                     {(parish.address || parish.city) && (
                       <div className="flex items-start gap-2 text-base opacity-90">
@@ -480,7 +492,14 @@ export function ParishManager() {
               {/* Actions */}
               <div className="p-4 flex gap-2 flex-wrap">
                 <button className="flex-1 min-w-[140px] bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white py-3 rounded-xl flex items-center justify-center gap-2 active:scale-98 transition-all"
-                  onClick={() => handleEditParish(parish)}
+                  onClick={() => {
+                    if (parish.isCustom) {
+                      const c = customParishes.find(cp => cp.id === parish.customId);
+                      if (c) openEditCustom(c);
+                    } else {
+                      handleEditParish(parish);
+                    }
+                  }}
                 >
                   <Edit2 className="w-5 h-5" />
                   <span className="text-base font-bold">Editar</span>
@@ -491,6 +510,17 @@ export function ParishManager() {
                   <Building2 className="w-5 h-5" />
                   <span className="text-base font-bold">+ Capilla</span>
                 </button>
+                {parish.isCustom && (
+                  <button className="flex-1 min-w-[140px] bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white py-3 rounded-xl flex items-center justify-center gap-2 active:scale-98 transition-all"
+                    onClick={() => {
+                      const c = customParishes.find(cp => cp.id === parish.customId);
+                      if (c) setPendingDeleteCustom(c);
+                    }}
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    <span className="text-base font-bold">Eliminar</span>
+                  </button>
+                )}
               </div>
             </div>
           ))}
