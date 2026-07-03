@@ -13,7 +13,16 @@ import { parseYmdLocal, getTodayLocal } from './dateLocal';
  * y las cards vía `getLiturgicalColorStyle`.
  */
 export function getCurrentLiturgicalColor(): string {
-  const season = getCurrentLiturgicalSeason(parseYmdLocal(getTodayLocal()));
+  const today = getTodayLocal();
+  const info = getLiturgicalInfoForDate(today);
+  // Una SOLEMNIDAD (Corpus Christi, Sagrado Corazón, Santísima Trinidad, Navidad…) SÍ
+  // define el color del cromo ambiente. Una FIESTA o memoria de santo (p. ej. Santo
+  // Tomás, blanca) NO tiñe el cromo: se usa el color de la TEMPORADA (verde en Tiempo
+  // Ordinario). Los domingos ya coinciden con la temporada.
+  if (info && info.type === 'SOLEMNITY' && info.color in PALETTE) {
+    return PALETTE[info.color as LiturgicalColorId].label;
+  }
+  const season = getCurrentLiturgicalSeason(parseYmdLocal(today));
   return PALETTE[seasonToColorId(season)].label;
 }
 

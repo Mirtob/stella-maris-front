@@ -16,18 +16,43 @@ import { SolemnityAlerts } from './components/liturgy/SolemnityAlerts';
 
 // Vistas pesadas / no iniciales — carga diferida (code-splitting) para aligerar
 // el bundle inicial. Son exports nombrados, de ahí el `.then(m => ({ default }))`.
-const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
-const SongPlayer = lazy(() => import('./components/songs/SongPlayer').then(m => ({ default: m.SongPlayer })));
-const PlaylistPlayer = lazy(() => import('./components/songs/PlaylistPlayer').then(m => ({ default: m.PlaylistPlayer })));
-const CoursesMenu = lazy(() => import('./components/courses/CoursesMenu').then(m => ({ default: m.CoursesMenu })));
-const MusicalTheory = lazy(() => import('./components/courses/MusicalTheory').then(m => ({ default: m.MusicalTheory })));
-const Liturgy = lazy(() => import('./components/liturgy/Liturgy').then(m => ({ default: m.Liturgy })));
-const MusicalInstruments = lazy(() => import('./components/courses/MusicalInstruments').then(m => ({ default: m.MusicalInstruments })));
-const CantoralManager = lazy(() => import('./components/cantoral/CantoralManager').then(m => ({ default: m.CantoralManager })));
-const ProfileSettings = lazy(() => import('./components/profile/ProfileSettings').then(m => ({ default: m.ProfileSettings })));
-const CantoralHistory = lazy(() => import('./components/cantoral/CantoralHistory').then(m => ({ default: m.CantoralHistory })));
-const LiturgicalCalendar = lazy(() => import('./components/liturgy/LiturgicalCalendar').then(m => ({ default: m.LiturgicalCalendar })));
-const SheetMusicLibrary = lazy(() => import('./components/songs/SheetMusicLibrary').then(m => ({ default: m.SheetMusicLibrary })));
+//
+// `lazyWithReload`: como React.lazy, pero si la carga del chunk FALLA (típico tras un
+// DEPLOY: el hash viejo ya no existe → 404), recarga la página UNA vez para traer los
+// assets frescos. Evita el "no puedo entrar a esta pantalla / Algo salió mal" cuando la
+// pestaña estaba abierta durante un despliegue (p. ej. Configuración, que es lazy). Si
+// tras recargar sigue fallando, propaga el error real.
+function lazyWithReload(factory: () => Promise<{ default: any }>) {
+  return lazy(async () => {
+    try {
+      return await factory();
+    } catch (err) {
+      try {
+        const KEY = 'sm_chunk_reload_at';
+        const last = Number(sessionStorage.getItem(KEY) || '0');
+        if (Date.now() - last > 20000) {           // como máx. una recarga cada 20 s
+          sessionStorage.setItem(KEY, String(Date.now()));
+          window.location.reload();
+          return await new Promise<{ default: any }>(() => { /* la recarga toma el control */ });
+        }
+      } catch { /* sessionStorage no disponible (modo privado) */ }
+      throw err;
+    }
+  });
+}
+
+const AdminDashboard = lazyWithReload(() => import('./components/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const SongPlayer = lazyWithReload(() => import('./components/songs/SongPlayer').then(m => ({ default: m.SongPlayer })));
+const PlaylistPlayer = lazyWithReload(() => import('./components/songs/PlaylistPlayer').then(m => ({ default: m.PlaylistPlayer })));
+const CoursesMenu = lazyWithReload(() => import('./components/courses/CoursesMenu').then(m => ({ default: m.CoursesMenu })));
+const MusicalTheory = lazyWithReload(() => import('./components/courses/MusicalTheory').then(m => ({ default: m.MusicalTheory })));
+const Liturgy = lazyWithReload(() => import('./components/liturgy/Liturgy').then(m => ({ default: m.Liturgy })));
+const MusicalInstruments = lazyWithReload(() => import('./components/courses/MusicalInstruments').then(m => ({ default: m.MusicalInstruments })));
+const CantoralManager = lazyWithReload(() => import('./components/cantoral/CantoralManager').then(m => ({ default: m.CantoralManager })));
+const ProfileSettings = lazyWithReload(() => import('./components/profile/ProfileSettings').then(m => ({ default: m.ProfileSettings })));
+const CantoralHistory = lazyWithReload(() => import('./components/cantoral/CantoralHistory').then(m => ({ default: m.CantoralHistory })));
+const LiturgicalCalendar = lazyWithReload(() => import('./components/liturgy/LiturgicalCalendar').then(m => ({ default: m.LiturgicalCalendar })));
+const SheetMusicLibrary = lazyWithReload(() => import('./components/songs/SheetMusicLibrary').then(m => ({ default: m.SheetMusicLibrary })));
 import { LoadingScreen } from './components/common/LoadingScreen';
 import { SelectActiveParishDialog } from './components/profile/SelectActiveParishDialog';
 import { RoleGuard } from './components/profile/RoleGuard';
