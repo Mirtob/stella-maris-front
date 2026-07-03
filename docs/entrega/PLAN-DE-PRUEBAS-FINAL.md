@@ -55,9 +55,12 @@ node tests/integration/run-all.mjs
 | `search_songs` (6 combinaciones de filtros) | Sin error | ☐ |
 
 ### 2.2 Verificaciones SQL (manual, SQL Editor)
-Ejecutar `tests/sql/checks.sql` bloque por bloque.
+**Primero: `docs/entrega/AUDITORIA-MIGRACIONES.md`** (un solo SQL que verifica que TODAS
+las migraciones estén aplicadas — crítico porque se aplicaron a mano). Luego
+`tests/sql/checks.sql` bloque por bloque.
 | Check | Esperado | Estado |
 |---|---|---|
+| **Auditoría de migraciones** (SQL del doc) | Todo `OK`, ningún `❌ FALTA` | ☐ |
 | Tabla `admins` contiene al admin principal | 1 fila | ☐ |
 | RLS activa en tablas críticas | `rowsecurity = true` | ☐ |
 | Policies en `published_cantorals` | ≥ 4 | ☐ |
@@ -67,6 +70,9 @@ Ejecutar `tests/sql/checks.sql` bloque por bloque.
 | Triggers `set_created_by` / `updated_at` | activos | ☐ |
 | Función `api_rate_limit` (RPC) | existe | ☐ |
 | Catálogo `songs` | > 0 filas | ☐ |
+| Tabla `custom_liturgical_dates` + `cld_select` = `true` | existe, lectura pública | ☐ |
+| Tabla `push_subscriptions` (RLS activa, sin policies) + col `role` | existe | ☐ |
+| Storage INSERT → `private.is_cantoral_pdf_owner` (fix 42883) | referencia `private` | ☐ |
 
 ### 2.3 Funciones serverless (Vercel)
 | Endpoint | Caso | Esperado | Estado |
@@ -79,6 +85,10 @@ Ejecutar `tests/sql/checks.sql` bloque por bloque.
 | `/api/suggest` | sugerencia litúrgica | 200 (o degradación si falta Gemini) | ☐ |
 | `/api/admin-users` | sin sesión admin | 401/403 | ☐ |
 | `/api/recover-password` | email válido | 200 y correo enviado (Resend) | ☐ |
+| `/api/push-subscribe` | body inválido | 400 (desplegado) | ☐ |
+| `/api/notify-cantoral` | sin sesión | 401 (no 500) | ☐ |
+| `/api/push-test` | endpoint inexistente | 200 `sent:0` | ☐ |
+| `/api/cron/celebration-reminders` | sin `CRON_SECRET`/header cron | 401 (no 500) | ☐ |
 | Todas | No exponen `x-vercel-error: FUNCTION_INVOCATION_FAILED` | OK | ☐ |
 
 ### 2.4 Rate limiting (estrés controlado)
@@ -226,7 +236,69 @@ Marcar que cada función entregada sigue funcionando tras los últimos cambios:
 
 ---
 
-## 10. Cierre
+## 10. Features nuevas (post marcha blanca — desde 2026-07)
+
+> Requisito previo: la **auditoría de migraciones** (§2.2) en verde.
+
+### 10.1 Notificaciones push (Web Push)
+| # | Caso | Esperado | Estado |
+|---|---|---|---|
+| N1 | Banner en pantalla principal (sin activar) | Aparece; se puede descartar y no vuelve | ☐ |
+| N2 | Activar (Ajustes o banner) en Android | Pide permiso; llega **notificación de bienvenida** | ☐ |
+| N3 | Botón "Enviar notificación de prueba" | Llega al teléfono | ☐ |
+| N4 | iOS en Safari (sin instalar) | Indica "Agregar a inicio"; no intenta activar | ☐ |
+| N5 | iOS PWA instalada (16.4+) | Activa y recibe push | ☐ |
+| N6 | Publicar 1 cantoral | Suscriptores de esa parroquia reciben "Nuevo cantoral" | ☐ |
+| N7 | Tap en el aviso de cantoral | Abre **modo radio** primero, luego el cantoral | ☐ |
+| N8 | Publicar VARIOS a la vez (multi-día) | **UN** aviso por parroquia ("N cantorales nuevos") | ☐ |
+| N9 | Varios avisos del mismo tipo/parroquia | **No se apilan** (el nuevo reemplaza en la bandeja) | ☐ |
+| N10 | Cron: celebraciones a 7/1 día | 1 push por suscriptor con la **lista** (no uno por celebración) | ☐ |
+| N11 | Cron: "publica el cantoral" a 3 días (Coro sin publicar) | Llega al Coro; si ya publicó, **NO** llega | ☐ |
+| N12 | Desactivar | Deja de recibir; reactivable | ☐ |
+
+> Disparo manual del cron (N10/N11): `GET /api/cron/celebration-reminders` con header `Authorization: Bearer <CRON_SECRET>`.
+
+### 10.2 Celebraciones personalizadas (persistidas)
+| # | Caso | Esperado | Estado |
+|---|---|---|---|
+| CE1 | Admin agrega celebración "Todos (global)" | Aparece para TODOS (verificar desde otra cuenta) | ☐ |
+| CE2 | Coro agrega celebración | Selector "¿Para quién?" con sus parroquias; queda en esa parroquia | ☐ |
+| CE3 | Aparece en "Calendario Litúrgico" y en el selector al publicar | Sí, en ambos | ☐ |
+| CE4 | Pueblo fiel **anónimo** (sin login) | Ve las celebraciones globales (lectura pública) | ☐ |
+| CE5 | Persistencia | Sigue tras recargar / en otro dispositivo | ☐ |
+
+### 10.3 Folleto PDF en cuadernillo decorado
+| # | Caso | Esperado | Estado |
+|---|---|---|---|
+| F1 | Vista previa del folleto (al publicar) | Decorado: portada + guirnalda + separadores de sección + colores litúrgicos | ☐ |
+| F2 | Descargar / compartir por QR | **Mismo diseño impuesto como cuadernillo** (carta horizontal, doble faz) | ☐ |
+| F3 | Elegir guirnalda (25 opciones) | Se refleja en el PDF | ☐ |
+| F4 | Fuente y tamaño de letra | Se aplican | ☐ |
+| F5 | Imprimir y doblar | Calza como librito | ☐ |
+
+### 10.4 Modo Atril imprimible
+| # | Caso | Esperado | Estado |
+|---|---|---|---|
+| AT1 | Imprimir desde el atril | PDF **vertical**, tal cual se ve (no cuadernillo) | ☐ |
+| AT2 | Órgano/Guitarra | Órgano → partituras; Guitarra → letra con acordes; respeta transposición/notación actual | ☐ |
+
+### 10.5 Transpositor (teoría musical)
+| # | Caso | Esperado | Estado |
+|---|---|---|---|
+| TR1 | Bajar a Sib mayor | Acordes con **bemoles** (Sib, Mib…), no La#/Re# | ☐ |
+| TR2 | Tonalidades de sostenidos (Sol, Re, La) | Se mantienen con sostenidos | ☐ |
+| TR3 | Toggle latino/americano | Convierte sin romper la letra | ☐ |
+
+### 10.6 Gestor de cantos (Admin)
+| # | Caso | Esperado | Estado |
+|---|---|---|---|
+| GC1 | Toggle "Litúrgico / No litúrgico" | Momento y `is_liturgical` concuerdan; se puede volver a litúrgico | ☐ |
+| GC2 | Guardar canto en un momento nuevo (Padre Nuestro, etc.) | Guarda sin error (CHECK de `mass_moment` al día) | ☐ |
+| GC3 | Selector de partitura | **Agrupado por momento** (y por subcarpeta de canto polifónico) | ☐ |
+
+---
+
+## 11. Cierre
 
 - Casos ejecutados: `___` · Pass: `___` · Fail: `___`
 - Hallazgos P0/P1: `___` · P2/P3: `___`
