@@ -32,6 +32,39 @@ export async function findPrelaunchCantoralId(): Promise<string | null> {
   }
 }
 
+export interface SurveyResults {
+  total: number;
+  interestingYes: number;
+  interestingNo: number;
+  modes: Record<UsefulMode, number>;
+}
+
+/** Resultados agregados de la encuesta (solo admin puede leer, por RLS). */
+export async function getSurveyResults(): Promise<SurveyResults | null> {
+  try {
+    const sb = getSupabaseClient();
+    const { data, error } = await sb
+      .from('survey_responses')
+      .select('interesting, useful_mode')
+      .eq('survey', PRELAUNCH.survey);
+    if (error || !data) return null;
+    const res: SurveyResults = {
+      total: data.length,
+      interestingYes: 0,
+      interestingNo: 0,
+      modes: { radio: 0, folleto: 0, atril: 0 },
+    };
+    for (const r of data as { interesting: boolean | null; useful_mode: string | null }[]) {
+      if (r.interesting === true) res.interestingYes++;
+      else if (r.interesting === false) res.interestingNo++;
+      if (r.useful_mode && r.useful_mode in res.modes) res.modes[r.useful_mode as UsefulMode]++;
+    }
+    return res;
+  } catch {
+    return null;
+  }
+}
+
 export async function submitSurvey(input: {
   interesting: boolean;
   usefulMode: UsefulMode;

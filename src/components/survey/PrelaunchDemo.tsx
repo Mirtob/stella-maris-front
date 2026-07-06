@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Radio, BookOpen, Music, ArrowLeft, Loader, FileX, Sparkles, Check, PartyPopper } from 'lucide-react';
+import { Radio, BookOpen, Music, ArrowLeft, Loader, FileX, Check, PartyPopper } from 'lucide-react';
+import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
 import { PublishedCantoral } from '../../types';
 import { getCantoralById } from '../../services/cantorals';
 import { PlaylistPlayer } from '../songs/PlaylistPlayer';
@@ -169,8 +170,16 @@ export function PrelaunchDemo({ cantoralId }: { cantoralId?: string }) {
     <div className="min-h-screen p-5 sm:p-8 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950">
       <div className="max-w-md mx-auto pt-10 pb-16">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-brand to-brand-strong rounded-full flex items-center justify-center shadow-lg">
-            <Sparkles className="w-9 h-9 text-white" strokeWidth={2.5} />
+          <div className="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-4">
+            <div className="absolute inset-0 rounded-full animate-pulse opacity-20 bg-gradient-to-br from-blue-400 via-yellow-400 to-blue-600 blur-2xl" />
+            <div className="w-full h-full rounded-full overflow-hidden relative z-10 shadow-lg">
+              <img
+                src={logoStellaMaris}
+                alt="Logo Stella Maris"
+                className="w-full h-full object-cover"
+                style={{ animation: 'gentle-float 4s ease-in-out infinite' }}
+              />
+            </div>
           </div>
           <h1 className="text-2xl font-bold text-brand-ink leading-tight">Stella Maris</h1>
           <p className="text-brand-ink-soft mt-1">{massLabel || 'Cantoral de la Misa'}</p>

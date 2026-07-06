@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, Church, Music, ShieldCheck, Lock, AlertTriangle, Database, Youtube, LifeBuoy, KeyRound } from 'lucide-react';
+import { Users, Church, Music, ShieldCheck, Lock, AlertTriangle, Database, Youtube, LifeBuoy, KeyRound, BarChart3 } from 'lucide-react';
 import { ProfileManager } from '../profile/ProfileManager';
 import { ParishManager } from '../profile/ParishManager';
 import { SongManager } from '../songs/SongManager';
@@ -7,8 +7,9 @@ import { CatalogMigration } from './CatalogMigration';
 import { YouTubeSyncDialog } from './YouTubeSyncDialog';
 import { RecoveryManager } from '../profile/RecoveryManager';
 import { AdminUserAccounts } from './AdminUserAccounts';
+import { SurveyResults } from './SurveyResults';
 
-type AdminView = 'menu' | 'users' | 'accounts' | 'parishes' | 'songs' | 'migration' | 'youtube-sync' | 'recovery';
+type AdminView = 'menu' | 'users' | 'accounts' | 'parishes' | 'songs' | 'migration' | 'youtube-sync' | 'recovery' | 'survey';
 
 export function AdminDashboard() {
   const [currentView, setCurrentView] = useState<AdminView>('menu');
@@ -39,6 +40,10 @@ export function AdminDashboard() {
 
   if (currentView === 'recovery') {
     return <RecoveryManager onBack={() => setCurrentView('menu')} />;
+  }
+
+  if (currentView === 'survey') {
+    return <SurveyResults onBack={() => setCurrentView('menu')} />;
   }
 
   return (
@@ -181,6 +186,24 @@ export function AdminDashboard() {
                 <h2 className="text-2xl font-bold text-white mb-1">Migrar Catálogo</h2>
                 <p className="text-base text-emerald-100">
                   Importar canciones locales a Supabase
+                </p>
+              </div>
+            </div>
+          </button>
+
+          {/* Resultados de la encuesta (muestra pre-lanzamiento) */}
+          <button
+            onClick={() => setCurrentView('survey')}
+            className="w-full bg-gradient-to-br from-indigo-700 to-violet-900 rounded-2xl shadow-xl p-6 border-2 border-indigo-600 hover:border-indigo-400 active:scale-98 transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
+                <BarChart3 className="w-9 h-9 text-white" strokeWidth={2.5} />
+              </div>
+              <div className="text-left flex-1 min-w-0">
+                <h2 className="text-2xl font-bold text-white mb-1">Encuesta de la muestra</h2>
+                <p className="text-base text-indigo-100">
+                  Resultados del pre-lanzamiento (/demo)
                 </p>
               </div>
             </div>
