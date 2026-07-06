@@ -94,6 +94,8 @@ import { listChapels } from './services/chapels';
 import { listCustomLiturgicalDates, toLiturgicalDate } from './services/liturgicalDates';
 import { setPersistedCustomDates } from './utils/liturgicalCalendar';
 import { syncPushParishes } from './services/push';
+import { PrelaunchSurvey } from './components/survey/PrelaunchSurvey';
+import { markPrelaunchEngaged, isPrelaunchEngaged, hasAnsweredSurvey } from './services/survey';
 import { getTodayLocal, addDaysLocal, isWithinInclusive } from './utils/dateLocal';
 import { massTypeBadge } from './utils/massType';
 import { generateCantoralPDF } from './utils/cantoralPDFGenerator';
@@ -284,6 +286,10 @@ function AppContent() {
   // (tras publicar). Permite mostrar "generando PDF…" en el diálogo del QR.
   const [pdfGeneratingIds, setPdfGeneratingIds] = useState<Set<string>>(new Set());
 
+  // Encuesta de pre-lanzamiento (Misa de la Asunción): se muestra al Pueblo fiel que ya
+  // usó el cantoral de esa Misa (detector en services/survey), una sola vez.
+  const [showSurvey, setShowSurvey] = useState(false);
+
   // ── Helpers ──────────────────────────────────────────────────────────────
 
   /** Navigate to a view inside the authenticated shell.
@@ -403,6 +409,17 @@ function AppContent() {
     ].filter((x): x is string => !!x)));
     void syncPushParishes(parishes, userProfile.activeRole || userProfile.role);
   }, [route.screen, userProfile]);
+
+  // DETECTOR de la encuesta de pre-lanzamiento: al Pueblo fiel que YA usó el cantoral de
+  // la Asunción (engagement marcado en services/survey), y que no la respondió, se le
+  // muestra al volver al shell (p. ej. tras salir del modo radio). No interrumpe: el
+  // efecto solo corre en `screen:'app'`, no dentro de radio/atril.
+  useEffect(() => {
+    if (route.screen !== 'app' || !userProfile) return;
+    const role = userProfile.activeRole || userProfile.role;
+    if (role !== 'Pueblo fiel') return;
+    if (isPrelaunchEngaged() && !hasAnsweredSurvey()) setShowSurvey(true);
+  }, [route, userProfile]);
 
   // Cargar el catálogo de capillas una vez que hay sesión (para el selector de parroquia).
   useEffect(() => {
@@ -691,6 +708,7 @@ function AppContent() {
 
   // Abrir el reproductor "modo radio" con todos los cantos del cantoral.
   const handleListen = (cantoral: PublishedCantoral) => {
+    markPrelaunchEngaged(cantoral.date); // detector encuesta (solo si es el de la Asunción)
     setRoute({ screen: 'playlist', cantoral, returnView: currentView() });
   };
 
@@ -1223,6 +1241,14 @@ function AppContent() {
       />
 
       <SolemnityAlerts />
+
+      {showSurvey && (
+        <PrelaunchSurvey
+          role={effectiveRole}
+          parish={activeParishName}
+          onClose={() => setShowSurvey(false)}
+        />
+      )}
 
       {/* Tutorial en vivo (F1): auto la primera vez por rol, en la vista principal. */}
       {view === 'main' && !showParishSelector && toursByRole[effectiveRole] && !hasSeenTour(effectiveRole) && (

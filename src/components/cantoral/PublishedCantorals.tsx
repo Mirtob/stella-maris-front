@@ -7,6 +7,7 @@ import { PublishedCantoral, Song } from '../../types';
 import { getCategoryColors } from '../../utils/colors';
 import { CantoralWithOrdinary } from './CantoralWithOrdinary';
 import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
+import { markPrelaunchEngaged } from '../../services/survey';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { addDaysLocal, getWeekRangeLocal, isWithinInclusive, parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
 import { massTypeBadge, cantoralYaPaso } from '../../utils/massType';
@@ -250,7 +251,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
               Ver Ordinario
             </button>
             <button
-              onClick={() => setExpandedId(isExpandedCantoral ? null : cantoral.id)}
+              onClick={() => { markPrelaunchEngaged(cantoral.date); setExpandedId(isExpandedCantoral ? null : cantoral.id); }}
               data-tour="pf-ver-cantos"
               className="bg-gradient-to-br from-green-600 to-green-700 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-sm sm:text-base font-bold shadow-lg border-2 border-green-800 leading-tight text-center"
             >
@@ -259,6 +260,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
             </button>
             <button
               onClick={async () => {
+                markPrelaunchEngaged(cantoral.date); // detector encuesta pre-lanzamiento
                 toast.info('Preparando el cuadernillo…');
                 try {
                   const { url } = await generateCantoralPDF({ cantoral, download: false, booklet: true });
