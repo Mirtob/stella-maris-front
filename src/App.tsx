@@ -94,8 +94,7 @@ import { listChapels } from './services/chapels';
 import { listCustomLiturgicalDates, toLiturgicalDate } from './services/liturgicalDates';
 import { setPersistedCustomDates } from './utils/liturgicalCalendar';
 import { syncPushParishes } from './services/push';
-import { PrelaunchSurvey } from './components/survey/PrelaunchSurvey';
-import { markPrelaunchEngaged, isPrelaunchEngaged, hasAnsweredSurvey } from './services/survey';
+import { PrelaunchDemo } from './components/survey/PrelaunchDemo';
 import { getTodayLocal, addDaysLocal, isWithinInclusive } from './utils/dateLocal';
 import { massTypeBadge } from './utils/massType';
 import { generateCantoralPDF } from './utils/cantoralPDFGenerator';
@@ -141,6 +140,18 @@ function getCantoralIdFromPath(): string | null {
 }
 
 /**
+ * Pantalla de MUESTRA pública (pre-lanzamiento), SIN login: `/demo` (auto-encuentra el
+ * cantoral de la fecha) o `/demo/{id}` (uno específico). Ver PrelaunchDemo.
+ */
+function getDemoFromPath(): { isDemo: boolean; cantoralId?: string } {
+  const path = window.location.pathname;
+  if (path === '/demo' || path === '/demo/') return { isDemo: true };
+  const m = path.match(/^\/demo\/([^/?#]+)\/?$/);
+  if (m) return { isDemo: true, cantoralId: sanitizeCantoralId(m[1]) ?? undefined };
+  return { isDemo: false };
+}
+
+/**
  * V2 — Distinguir un deep link inválido de cantoral (`/c/<bad>`) de una URL
  * desconocida (`/foo`). Antes ambos caían al Login sin avisar.
  *
@@ -154,6 +165,8 @@ function classifyPath(): { kind: 'ok' } | { kind: 'invalid-link' | 'unknown-rout
   const path = window.location.pathname;
   // Paths conocidos del shell
   if (path === '/' || path === '/auth/callback') return { kind: 'ok' };
+  // Pantalla de muestra pública (sin login)
+  if (path === '/demo' || path.startsWith('/demo/')) return { kind: 'ok' };
   // Deep link de cantoral
   if (path.startsWith('/c/')) {
     const id = getCantoralIdFromPath();
@@ -222,6 +235,7 @@ type AppRoute =
   | { screen: 'settings'; returnView: ViewState }
   | { screen: 'cantoral-link'; cantoralId: string }
   | { screen: 'parish-link'; parish: string }
+  | { screen: 'demo'; cantoralId?: string }
   | { screen: 'terms'; returnTo: AppRoute }
   | { screen: 'privacy'; returnTo: AppRoute }
   | { screen: 'not-found'; reason: 'invalid-link' | 'unknown-route'; attemptedPath: string }
@@ -285,10 +299,6 @@ function AppContent() {
   // Ids de cantorales cuyo PDF del coro se está generando/subiendo en segundo plano
   // (tras publicar). Permite mostrar "generando PDF…" en el diálogo del QR.
   const [pdfGeneratingIds, setPdfGeneratingIds] = useState<Set<string>>(new Set());
-
-  // Encuesta de pre-lanzamiento (Misa de la Asunción): se muestra al Pueblo fiel que ya
-  // usó el cantoral de esa Misa (detector en services/survey), una sola vez.
-  const [showSurvey, setShowSurvey] = useState(false);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -410,17 +420,6 @@ function AppContent() {
     void syncPushParishes(parishes, userProfile.activeRole || userProfile.role);
   }, [route.screen, userProfile]);
 
-  // DETECTOR de la encuesta de pre-lanzamiento: al Pueblo fiel que YA usó el cantoral de
-  // la Asunción (engagement marcado en services/survey), y que no la respondió, se le
-  // muestra al volver al shell (p. ej. tras salir del modo radio). No interrumpe: el
-  // efecto solo corre en `screen:'app'`, no dentro de radio/atril.
-  useEffect(() => {
-    if (route.screen !== 'app' || !userProfile) return;
-    const role = userProfile.activeRole || userProfile.role;
-    if (role !== 'Pueblo fiel') return;
-    if (isPrelaunchEngaged() && !hasAnsweredSurvey()) setShowSurvey(true);
-  }, [route, userProfile]);
-
   // Cargar el catálogo de capillas una vez que hay sesión (para el selector de parroquia).
   useEffect(() => {
     if (!userProfile) return;
@@ -445,6 +444,14 @@ function AppContent() {
     const cls = classifyPath();
     if (cls.kind !== 'ok') {
       setRoute({ screen: 'not-found', reason: cls.kind, attemptedPath: window.location.pathname });
+      return;
+    }
+
+    // Pantalla de MUESTRA pública (pre-lanzamiento): sin login ni perfil. Se resuelve
+    // acá, antes de cualquier auth, para que sea un acceso directo al cantoral.
+    const demo = getDemoFromPath();
+    if (demo.isDemo) {
+      setRoute({ screen: 'demo', cantoralId: demo.cantoralId });
       return;
     }
 
@@ -708,7 +715,6 @@ function AppContent() {
 
   // Abrir el reproductor "modo radio" con todos los cantos del cantoral.
   const handleListen = (cantoral: PublishedCantoral) => {
-    markPrelaunchEngaged(cantoral.date); // detector encuesta (solo si es el de la Asunción)
     setRoute({ screen: 'playlist', cantoral, returnView: currentView() });
   };
 
@@ -1028,6 +1034,10 @@ function AppContent() {
     return <PrivacyPolicy onBack={() => setRoute(route.returnTo)} />;
   }
 
+  if (route.screen === 'demo') {
+    return <PrelaunchDemo cantoralId={route.cantoralId} />;
+  }
+
   if (route.screen === 'cantoral-link') {
     return (
       <CantoralDeepLink
@@ -1241,14 +1251,6 @@ function AppContent() {
       />
 
       <SolemnityAlerts />
-
-      {showSurvey && (
-        <PrelaunchSurvey
-          role={effectiveRole}
-          parish={activeParishName}
-          onClose={() => setShowSurvey(false)}
-        />
-      )}
 
       {/* Tutorial en vivo (F1): auto la primera vez por rol, en la vista principal. */}
       {view === 'main' && !showParishSelector && toursByRole[effectiveRole] && !hasSeenTour(effectiveRole) && (

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Sparkles, Radio, BookOpen, Music, PartyPopper, Loader, Check } from 'lucide-react';
 import { toast } from 'sonner';
-import { submitSurvey, markSurveyAnswered, PRELAUNCH, type UsefulMode } from '../../services/survey';
+import { submitSurvey, PRELAUNCH, type UsefulMode } from '../../services/survey';
 
 interface Props {
   role?: string;
@@ -30,13 +30,10 @@ export function PrelaunchSurvey({ role, parish, onClose }: Props) {
   const handleSubmit = async () => {
     if (interesting === null || usefulMode === null || submitting) return;
     setSubmitting(true);
-    const r = await submitSurvey({ interesting, usefulMode, role, parish });
+    // Best-effort: aunque falle el guardado, no bloqueamos al usuario en plena Misa;
+    // igual avanzamos a la invitación.
+    await submitSurvey({ interesting, usefulMode, role, parish });
     setSubmitting(false);
-    if (!r.ok) {
-      // No bloqueamos al usuario: marcamos respondida localmente igual y mostramos la
-      // invitación (la encuesta es best-effort; no vale la pena reintentar en la Misa).
-      markSurveyAnswered();
-    }
     setStep('invitation');
   };
 

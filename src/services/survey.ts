@@ -2,11 +2,11 @@ import { getSupabaseClient } from './supabaseClient';
 
 /**
  * Encuesta de satisfacción del PRE-LANZAMIENTO (Misa de la Asunción, 15-ago-2026).
- * Se dispara al Pueblo fiel que usó el cantoral de esa Misa; al responder, muestra la
- * invitación al lanzamiento oficial. Ver components/survey/PrelaunchSurvey y App.
+ * Se usa en la pantalla de MUESTRA pública (sin login) — ver components/survey/
+ * PrelaunchDemo: tras recorrer los 3 modos, encuesta → invitación al lanzamiento.
  */
 export const PRELAUNCH = {
-  /** Fecha del cantoral pre-lanzamiento (detector). Cambiar aquí si se corre la fecha. */
+  /** Fecha del cantoral de la muestra. Cambiar aquí si se corre la fecha. */
   date: '2026-08-15',
   survey: 'prelaunch_2026_08',
   /** Fecha del lanzamiento oficial (para la invitación). */
@@ -15,24 +15,21 @@ export const PRELAUNCH = {
 
 export type UsefulMode = 'radio' | 'folleto' | 'atril';
 
-const ANSWERED_KEY = `sm_survey_answered_${PRELAUNCH.survey}`;
-const ENGAGED_KEY = `sm_prelaunch_engaged_${PRELAUNCH.survey}`;
-
-export function hasAnsweredSurvey(): boolean {
-  try { return localStorage.getItem(ANSWERED_KEY) === '1'; } catch { return false; }
-}
-export function markSurveyAnswered(): void {
-  try { localStorage.setItem(ANSWERED_KEY, '1'); } catch { /* modo privado */ }
-}
-
-/** ¿El usuario ya interactuó con el cantoral del pre-lanzamiento? (detector). */
-export function isPrelaunchEngaged(): boolean {
-  try { return localStorage.getItem(ENGAGED_KEY) === '1'; } catch { return false; }
-}
-/** Marca engagement SOLO si el cantoral es el del pre-lanzamiento (Asunción, 15-ago). */
-export function markPrelaunchEngaged(cantoralDate?: string): void {
-  if (cantoralDate !== PRELAUNCH.date) return;
-  try { localStorage.setItem(ENGAGED_KEY, '1'); } catch { /* modo privado */ }
+/** Id del primer cantoral publicado para la fecha de la muestra (para `/demo` sin id). */
+export async function findPrelaunchCantoralId(): Promise<string | null> {
+  try {
+    const sb = getSupabaseClient();
+    const { data, error } = await sb
+      .from('published_cantorals')
+      .select('id')
+      .eq('date', PRELAUNCH.date)
+      .eq('status', 'published')
+      .limit(1);
+    if (error) return null;
+    return (data && data[0]?.id) || null;
+  } catch {
+    return null;
+  }
 }
 
 export async function submitSurvey(input: {
@@ -51,7 +48,6 @@ export async function submitSurvey(input: {
       parish: input.parish ?? null,
     });
     if (error) return { ok: false, error: error.message };
-    markSurveyAnswered();
     return { ok: true };
   } catch (e: any) {
     return { ok: false, error: e?.message || 'No se pudo enviar la encuesta' };
