@@ -34,13 +34,58 @@ export function CantoralPdfViewer({ cantoral, onBack }: { cantoral: PublishedCan
     toast.info('Preparando el folleto para imprimir…');
     try {
       const { url } = await generateCantoralPDF({ cantoral, download: false, booklet: true });
-      const w = window.open(url, '_blank');
-      if (!w) {
-        const a = document.createElement('a');
-        a.href = url; a.download = 'cantoral-folleto.pdf';
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      }
-      toast.success('Folleto listo para imprimir', {
+
+      // Respaldo: abrir el PDF en una pestaña (el usuario imprime con Ctrl/Cmd+P).
+      const openInTab = () => {
+        const w = window.open(url, '_blank');
+        if (!w) {
+          const a = document.createElement('a');
+          a.href = url; a.download = 'cantoral-folleto.pdf';
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        }
+      };
+
+      // Preferido: iframe oculto → dispara el diálogo de impresión DIRECTO, sin abrir
+      // otra pestaña (requiere `frame-src blob:` en el CSP). Si no carga a tiempo
+      // (CSP/entorno que lo bloquee), caemos al respaldo de pestaña.
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.setAttribute('aria-hidden', 'true');
+
+      let handled = false;
+      const cleanup = () => { try { URL.revokeObjectURL(url); iframe.remove(); } catch { /* noop */ } };
+      const timer = setTimeout(() => {
+        if (handled) return;
+        handled = true;
+        openInTab();
+        cleanup();
+      }, 2500);
+
+      iframe.onload = () => {
+        if (handled) return;
+        handled = true;
+        clearTimeout(timer);
+        // Pequeña espera para que el visor de PDF termine de renderizar antes de imprimir.
+        setTimeout(() => {
+          try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+          } catch {
+            openInTab();
+          }
+          setTimeout(cleanup, 60000);
+        }, 300);
+      };
+
+      iframe.src = url;
+      document.body.appendChild(iframe);
+
+      toast.success('Abriendo el diálogo de impresión…', {
         description: 'Imprime a doble faz y dobla al medio. Si no calzan, cambia el volteo a "borde corto".',
       });
     } catch {
