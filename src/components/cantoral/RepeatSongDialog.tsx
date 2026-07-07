@@ -1,11 +1,11 @@
-import { AlertCircle, Sparkles, ArrowRight } from 'lucide-react';
+import { AlertCircle, Sparkles, ArrowRight, CalendarClock, CalendarDays } from 'lucide-react';
+import type { UsageOccurrence } from '../../utils/previousUsage';
 
 interface Props {
-  title: string;          // título del canto
-  prevParts: string[];    // partes en que se usó la semana pasada
-  currentPart: string;    // parte a la que se está agregando ahora
-  season: string;         // tiempo litúrgico actual
-  label: string;          // referencia del cantoral anterior (celebración/fecha)
+  title: string;              // título del canto
+  occ: UsageOccurrence[];     // dónde se usó (semanas recientes y/o años previos)
+  currentPart: string;        // parte a la que se está agregando ahora
+  season: string;             // tiempo litúrgico actual
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -13,32 +13,41 @@ interface Props {
 const FLEX_PARTS = ['Entrada', 'Ofertorio', 'Comunión', 'Salida'];
 
 /**
- * Aviso al elegir un canto que ya se usó en el cantoral anterior (la "semana pasada").
- * En Adviento/Cuaresma (repertorio más corto) NO desalienta repetir: sugiere usarlo en
- * OTRA parte para dar variedad. En el resto del año invita a elegir otro canto.
+ * Aviso al elegir un canto ya usado (en las últimas 4 semanas y/o en la misma
+ * celebración anual de años previos). En Adviento/Cuaresma NO desalienta repetir:
+ * sugiere usarlo en OTRA parte. En el resto invita a elegir otro.
  */
-export function RepeatSongDialog({ title, prevParts, currentPart, season, label, onConfirm, onCancel }: Props) {
+export function RepeatSongDialog({ title, occ, currentPart, season, onConfirm, onCancel }: Props) {
   const isAdventLent = /adviento|cuaresma/i.test(season || '');
+  const hasAnnual = occ.some((o) => o.annual);
+  const prevParts = Array.from(new Set(occ.flatMap((o) => o.parts)));
   const sameSpot = prevParts.includes(currentPart);
-  const prevText = prevParts.join(' y ');
   const alts = FLEX_PARTS.filter((p) => !prevParts.includes(p) && p !== currentPart).slice(0, 2);
   const altText = alts.length ? alts.join(' o ') : 'otra parte';
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-md w-full border-4 border-amber-300 dark:border-amber-700 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-md w-full border-4 border-amber-300 dark:border-amber-700 overflow-hidden max-h-[92vh] overflow-y-auto">
         <div className={`p-5 text-white flex items-center gap-3 ${isAdventLent ? 'bg-gradient-to-r from-purple-600 to-purple-800' : 'bg-gradient-to-r from-amber-500 to-orange-600'}`}>
           {isAdventLent ? <Sparkles className="w-8 h-8 flex-shrink-0" strokeWidth={2.5} /> : <AlertCircle className="w-8 h-8 flex-shrink-0" strokeWidth={2.5} />}
           <div>
-            <h2 className="text-lg font-bold leading-tight">Ya lo usaron hace poco</h2>
+            <h2 className="text-lg font-bold leading-tight">{hasAnnual ? 'Ya lo usaron en esta celebración' : 'Ya lo usaron hace poco'}</h2>
             <p className="text-white/90 text-sm">«{title}»</p>
           </div>
         </div>
 
         <div className="p-5 space-y-4">
-          <p className="text-brand-ink">
-            La semana pasada ({label}) lo usaron como <strong>{prevText}</strong>.
-          </p>
+          {/* Lista de usos previos */}
+          <ul className="space-y-1.5">
+            {occ.map((o, i) => (
+              <li key={i} className="flex items-center gap-2 text-sm text-brand-ink">
+                {o.annual
+                  ? <CalendarDays className="w-4 h-4 text-purple-600 dark:text-purple-300 flex-shrink-0" />
+                  : <CalendarClock className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />}
+                <span><strong>{o.label}</strong> · {o.parts.join(' y ')}</span>
+              </li>
+            ))}
+          </ul>
 
           {isAdventLent ? (
             sameSpot ? (
@@ -51,12 +60,14 @@ export function RepeatSongDialog({ title, prevParts, currentPart, season, label,
               </div>
             ) : (
               <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 rounded-xl p-3 text-sm text-green-900 dark:text-green-100">
-                ¡Buena! Ya lo estás variando: la semana pasada fue <strong>{prevText}</strong> y ahora irá como <strong>{currentPart}</strong>. 👍
+                ¡Buena! Ya lo estás variando: ahora irá como <strong>{currentPart}</strong>. 👍
               </div>
             )
           ) : (
             <div className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-3 text-sm text-amber-900 dark:text-amber-100">
-              Con el repertorio de <strong>{season}</strong> conviene <strong>elegir otro canto</strong> para {currentPart} y darle variedad a la Misa.
+              {hasAnnual
+                ? <>Para que la celebración no se sienta igual que otros años, conviene <strong>elegir otro canto</strong> para {currentPart}.</>
+                : <>Con el repertorio de <strong>{season}</strong> conviene <strong>elegir otro canto</strong> para {currentPart} y darle variedad a la Misa.</>}
             </div>
           )}
 

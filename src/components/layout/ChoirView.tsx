@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Send, AlertCircle, Music } from 'lucide-react';
 import { toast } from 'sonner';
 import { Home } from './Home';
@@ -10,7 +10,8 @@ import { AtrilMode } from '../atril/AtrilMode';
 import { Tour } from '../tour/Tour';
 import { constructorTips, hasSeenTip, markTipSeen } from '../tour/tours';
 import { Song, InstrumentType, PublishedCantoral } from '../../types';
-import { PreviousUsage } from '../../utils/previousUsage';
+import { computeUsage, resolveAnnualTarget } from '../../utils/previousUsage';
+import { getTodayLocal } from '../../utils/dateLocal';
 import { getGospelAcclamationName, getGospelAcclamationIcon, getCurrentLiturgicalSeason } from '../../utils/liturgicalSeason';
 import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji, getBuildableCelebrations, SpecialLiturgicalDay } from '../../utils/specialLiturgicalDays';
 import { useSongs } from '../../hooks/useSongs';
@@ -26,8 +27,10 @@ interface ChoirViewProps {
   onRemoveFromCantoral: (songId: string) => void;
   onPlaySong: (song: Song) => void;
   onPublishCantoral: (cantorals: PublishedCantoral[]) => Promise<void> | void;
-  /** Uso de cantos en el cantoral anterior (para avisar repeticiones al armar). */
-  previousUsage?: PreviousUsage | null;
+  /** Cantorales publicados de la parroquia (para avisar cantos repetidos al armar). */
+  parishCantorals?: PublishedCantoral[];
+  /** Id del cantoral en edición (se excluye del cálculo de repeticiones). */
+  editingCantoralId?: string | null;
 }
 
 export function ChoirView({
@@ -41,7 +44,8 @@ export function ChoirView({
   onRemoveFromCantoral,
   onPlaySong,
   onPublishCantoral,
-  previousUsage,
+  parishCantorals,
+  editingCantoralId,
 }: ChoirViewProps) {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showInstrumentModal, setShowInstrumentModal] = useState(false);
@@ -69,6 +73,23 @@ export function ChoirView({
     return todaySpecial && celebrations.some(c => c.key === todaySpecial) ? todaySpecial : 'normal';
   });
   const specialDay = selectedCelebration === 'normal' ? null : selectedCelebration;
+
+  // Uso previo de cantos para avisar repeticiones: últimas 4 semanas + la MISMA
+  // celebración anual (Cristo Rey, Navidad, oficios de Semana Santa…) en años previos.
+  const previousUsage = useMemo(() => {
+    const today = getTodayLocal();
+    const selDate = selectedCelebration !== 'normal'
+      ? celebrations.find(c => c.key === selectedCelebration)?.date
+      : undefined;
+    const annual = resolveAnnualTarget(today, selDate);
+    return computeUsage(parishCantorals ?? [], {
+      excludeId: editingCantoralId,
+      todayYmd: today,
+      weeks: 4,
+      annualName: annual?.name ?? null,
+    });
+    // `celebrations` es estable durante la sesión (depende solo de hoy).
+  }, [parishCantorals, editingCantoralId, selectedCelebration]);
 
   // La aspersión aplica en tiempo pascual; si se está preparando la Vigilia o el
   // Domingo de Resurrección, también (aunque hoy aún sea Cuaresma).

@@ -12,7 +12,7 @@ import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName,
 import { getCurrentLiturgicalSeason } from '../../utils/liturgicalSeason';
 import { isOrdinary } from '../../utils/ordinary';
 import { resolveOrdinarySheetMusic } from '../../utils/ordinarySheetMusic';
-import { previousUseOf, type PreviousUsage } from '../../utils/previousUsage';
+import { previousUseOf, type PreviousUsage, type UsageOccurrence } from '../../utils/previousUsage';
 import { RepeatSongDialog } from '../cantoral/RepeatSongDialog';
 
 interface CategorySearchProps {
@@ -53,7 +53,7 @@ export function CategorySearch({
   const [pendingCordero, setPendingCordero] = useState<Song | null>(null);
   const [showPadreNuestroDialog, setShowPadreNuestroDialog] = useState(false);
   // Canto que ya se usó en el cantoral anterior: se pide confirmación antes de agregarlo.
-  const [pendingRepeat, setPendingRepeat] = useState<{ song: Song; parts: string[]; title: string } | null>(null);
+  const [pendingRepeat, setPendingRepeat] = useState<{ song: Song; occ: UsageOccurrence[]; title: string } | null>(null);
 
   // Obtener el tiempo litúrgico actual
   const currentSeason = getCurrentLiturgicalSeason();
@@ -160,8 +160,8 @@ export function CategorySearch({
     const ORDINARY_PARTS = ['Kyrie', 'Gloria', 'Santo', 'Cordero de Dios', 'Padre Nuestro', 'Credo'];
     if (!skipRepeatCheck && !ORDINARY_PARTS.includes(category)) {
       const prev = previousUseOf(previousUsage, rawSong.id);
-      if (prev && prev.parts.length) {
-        setPendingRepeat({ song: rawSong, parts: prev.parts, title: prev.title || rawSong.title });
+      if (prev && prev.occ.length) {
+        setPendingRepeat({ song: rawSong, occ: prev.occ, title: prev.title || rawSong.title });
         return;
       }
     }
@@ -672,10 +672,9 @@ export function CategorySearch({
       {pendingRepeat && (
         <RepeatSongDialog
           title={pendingRepeat.title}
-          prevParts={pendingRepeat.parts}
+          occ={pendingRepeat.occ}
           currentPart={category}
           season={currentSeason}
-          label={previousUsage?.label || 'la semana pasada'}
           onCancel={() => setPendingRepeat(null)}
           onConfirm={() => {
             const s = pendingRepeat.song;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Toaster, toast } from 'sonner';
 import { Login } from './components/auth/Login';
 import { AuthCallback } from './components/auth/AuthCallback';
@@ -95,7 +95,6 @@ import { listCustomLiturgicalDates, toLiturgicalDate } from './services/liturgic
 import { setPersistedCustomDates } from './utils/liturgicalCalendar';
 import { syncPushParishes } from './services/push';
 import { PrelaunchDemo } from './components/survey/PrelaunchDemo';
-import { computePreviousUsage } from './utils/previousUsage';
 import { getTodayLocal, addDaysLocal, isWithinInclusive } from './utils/dateLocal';
 import { massTypeBadge } from './utils/massType';
 import { generateCantoralPDF } from './utils/cantoralPDFGenerator';
@@ -991,13 +990,6 @@ function AppContent() {
     });
   };
 
-  // Uso de cantos en el cantoral PUBLICADO más reciente de la parroquia (la "semana
-  // pasada"), para avisar repeticiones al armar el nuevo. Excluye el que se edita.
-  const previousUsage = useMemo(
-    () => computePreviousUsage(publishedCantorals, editingCantoralId),
-    [publishedCantorals, editingCantoralId],
-  );
-
   // ── Route rendering ───────────────────────────────────────────────────────
 
   // Auth callback is handled before any app route
@@ -1237,7 +1229,7 @@ function AppContent() {
             cantoral,
             publishedCantorals,
             loadingCantorals,
-            previousUsage,
+            editingCantoralId,
             onAddToCantoral: handleAddToCantoral,
             onRemoveFromCantoral: handleRemoveFromCantoral,
             onPlaySong: handlePlaySong,
@@ -1285,7 +1277,7 @@ interface ViewProps {
   cantoral: Song[];
   publishedCantorals: PublishedCantoral[];
   loadingCantorals: boolean;
-  previousUsage: ReturnType<typeof computePreviousUsage>;
+  editingCantoralId: string | null;
   onAddToCantoral: (song: Song) => void;
   onRemoveFromCantoral: (songId: string) => void;
   onPlaySong: (song: Song) => void;
@@ -1313,7 +1305,8 @@ function renderView(p: ViewProps): JSX.Element | null {
             onRemoveFromCantoral={p.onRemoveFromCantoral}
             onPlaySong={p.onPlaySong}
             onPublishCantoral={p.onPublishCantoral}
-            previousUsage={p.previousUsage}
+            parishCantorals={p.publishedCantorals}
+            editingCantoralId={p.editingCantoralId}
           />
         );
       }
@@ -1345,7 +1338,8 @@ function renderView(p: ViewProps): JSX.Element | null {
           onRemoveFromCantoral={p.onRemoveFromCantoral}
           onPlaySong={p.onPlaySong}
           onPublishCantoral={p.onPublishCantoral}
-          previousUsage={p.previousUsage}
+          parishCantorals={p.publishedCantorals}
+          editingCantoralId={p.editingCantoralId}
         />
       );
 
