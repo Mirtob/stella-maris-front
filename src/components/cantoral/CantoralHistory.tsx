@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { History, Calendar, Church, ChevronDown, ChevronUp, Play, Clock, Trash2, Filter, Download, Loader, Search } from 'lucide-react';
 import { PublishedCantoral, Song } from '../../types';
 import { generateChoirBooklet } from '../../utils/atrilBookletPDF';
-import { listCantorals } from '../../services/cantorals';
+import { listCantorals, listCantoralYears } from '../../services/cantorals';
 import { americanCountries } from '../../data/countries';
 import { splitActiveParish } from '../../utils/parish';
 import { parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
@@ -19,6 +19,8 @@ interface CantoralHistoryProps {
   /** Admin gestiona cualquier cantoral; si no, solo los de estas parroquias. */
   isAdmin?: boolean;
   managedParishes?: string[];
+  /** Parroquia/capilla de uso: el Historial arranca filtrado aquí. */
+  defaultParish?: string;
 }
 
 // Diócesis → País (el string del cantoral es "Parroquia - Diócesis · Capilla", sin país;
@@ -42,44 +44,57 @@ function metaOf(parishName?: string | null) {
   return { parishFull, chapel: chapel || '', parish, diocese, country };
 }
 
-export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, isAdmin, managedParishes }: CantoralHistoryProps) {
-  // El Historial es global, pero borrar solo se permite en cantorales gestionables
-  // (los de la propia parroquia; el admin puede todos). Refleja lo que hace la RLS.
+export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, isAdmin, managedParishes, defaultParish }: CantoralHistoryProps) {
+  // Borrar solo se permite en cantorales gestionables (los de la propia parroquia; el
+  // admin puede todos). Refleja lo que hace la RLS.
   const managedSet = new Set(managedParishes ?? []);
   const canDelete = (c: PublishedCantoral) => !!isAdmin || managedSet.has(c.parishName);
+
+  // Arranque: en TU parroquia/capilla de uso (para llegar rápido al cantoral del año
+  // pasado de tu comunidad) y el año más reciente. El Historial carga UN año a la vez.
+  const initialPlace = splitActiveParish(defaultParish);
+
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  // ¿Cuándo? (año/mes) y ¿Dónde? (país/diócesis/parroquia/capilla)
   const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [selectedCountry, setSelectedCountry] = useState<string>('all');
   const [selectedDiocese, setSelectedDiocese] = useState<string>('all');
-  const [selectedParish, setSelectedParish] = useState<string>('all');
+  // Arranca en la parroquia madre (incluye todas sus capillas); la capilla se puede
+  // afinar luego.
+  const [selectedParish, setSelectedParish] = useState<string>(initialPlace.parishFull || 'all');
   const [selectedChapel, setSelectedChapel] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  // El Historial es el archivo GLOBAL: trae TODOS los cantorales publicados (de todas
-  // las parroquias/países), no solo los de la parroquia activa. Se inicia con lo que ya
-  // trae el prop y se reemplaza al cargar la lista completa.
-  const [allCantorals, setAllCantorals] = useState<PublishedCantoral[]>(cantorals);
+  // Años disponibles (global, consulta liviana) + cantorales del AÑO seleccionado
+  // (se cargan desde el servidor: solo ese año, no todo el archivo).
+  const [availableYears, setAvailableYears] = useState<string[]>([]);
+  const [yearCantorals, setYearCantorals] = useState<PublishedCantoral[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // 1) Años con cantorales; fija por defecto el más reciente (si el año actual no tiene).
   useEffect(() => {
     let cancelled = false;
-    listCantorals()
-      .then((list) => {
-        if (cancelled || !list.length) return;
-        setAllCantorals(list);
-        // Acotar por defecto al año MÁS RECIENTE con cantorales (si el año actual no
-        // tiene, saltamos al último disponible) para no volcar todo el archivo.
-        const years = Array.from(new Set(list.map(c => c.date.slice(0, 4)))).sort().reverse();
-        setSelectedYear(prev => (years.includes(prev) ? prev : (years[0] ?? prev)));
-      })
-      .catch(() => { /* se queda con el prop */ })
-      .finally(() => { if (!cancelled) setLoading(false); });
+    listCantoralYears().then((years) => {
+      if (cancelled || !years.length) return;
+      setAvailableYears(years);
+      setSelectedYear(prev => (years.includes(prev) ? prev : years[0]));
+    });
     return () => { cancelled = true; };
   }, []);
+
+  // 2) Carga los cantorales del año elegido (todas las parroquias de ese año).
+  useEffect(() => {
+    if (!/^\d{4}$/.test(selectedYear)) return;
+    let cancelled = false;
+    setLoading(true);
+    listCantorals(undefined, selectedYear)
+      .then((list) => { if (!cancelled) setYearCantorals(list); })
+      .catch(() => { /* deja lo previo */ })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedYear]);
 
   // Descarga el folleto del Coro con letras, acordes y las partituras embebidas
   // (intercaladas por canto). Puede tardar: baja cada partitura vía el proxy.
@@ -110,27 +125,23 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, isAdm
   };
 
   const pendingDeleteCantoral = pendingDeleteId
-    ? allCantorals.find(c => c.id === pendingDeleteId)
+    ? yearCantorals.find(c => c.id === pendingDeleteId)
     : null;
 
-  // ¿Cuándo? — años presentes (desc) y meses del año elegido.
-  const yearOptions = Array.from(new Set(allCantorals.map(c => c.date.slice(0, 4))))
-    .sort().reverse();
-  const monthOptions = Array.from(new Set(
-    allCantorals
-      .filter(c => selectedYear === 'all' || c.date.slice(0, 4) === selectedYear)
-      .map(c => c.date.slice(5, 7))
-  )).sort();
+  // ¿Cuándo? — años disponibles (incluye el elegido aunque aún no cargue) y meses del
+  // año cargado.
+  const yearOptions = Array.from(new Set([selectedYear, ...availableYears])).sort().reverse();
+  const monthOptions = Array.from(new Set(yearCantorals.map(c => c.date.slice(5, 7)))).sort();
 
   // Opciones en cascada País → Diócesis → Parroquia → Capilla (cada nivel acota el
   // siguiente según lo ya elegido arriba).
   const countryOptions = Array.from(
-    new Set(allCantorals.map(c => metaOf(c.parishName).country))
+    new Set(yearCantorals.map(c => metaOf(c.parishName).country))
   ).sort((a, b) => a.localeCompare(b));
 
   const dioceseOptions = Array.from(
     new Set(
-      allCantorals
+      yearCantorals
         .filter(c => selectedCountry === 'all' || metaOf(c.parishName).country === selectedCountry)
         .map(c => metaOf(c.parishName).diocese)
         .filter(Boolean)
@@ -139,7 +150,7 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, isAdm
 
   const parishOptions = Array.from(
     new Set(
-      allCantorals
+      yearCantorals
         .filter(c => {
           const m = metaOf(c.parishName);
           if (selectedCountry !== 'all' && m.country !== selectedCountry) return false;
@@ -153,7 +164,7 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, isAdm
 
   const chapelOptions = Array.from(
     new Set(
-      allCantorals
+      yearCantorals
         .filter(c => selectedParish === 'all' || metaOf(c.parishName).parishFull === selectedParish)
         .map(c => metaOf(c.parishName).chapel)
         .filter(Boolean)
@@ -162,7 +173,7 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, isAdm
 
   // Filtro combinado (cascada + búsqueda de texto libre)
   const q = search.trim().toLowerCase();
-  const filteredCantorals = allCantorals.filter(c => {
+  const filteredCantorals = yearCantorals.filter(c => {
     if (selectedYear !== 'all' && c.date.slice(0, 4) !== selectedYear) return false;
     if (selectedMonth !== 'all' && c.date.slice(5, 7) !== selectedMonth) return false;
     const m = metaOf(c.parishName);
@@ -242,7 +253,7 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, isAdm
     return icons[category] || '🎵';
   };
 
-  if (loading && allCantorals.length === 0) {
+  if (loading && yearCantorals.length === 0 && availableYears.length === 0) {
     return (
       <div className="w-full min-h-screen flex flex-col items-center justify-center gap-4 bg-gradient-to-br from-purple-50 via-blue-50 to-amber-50 dark:from-slate-900 dark:via-indigo-950 dark:to-blue-950 transition-colors">
         <Loader className="w-10 h-10 animate-spin text-purple-600 dark:text-purple-300" />
@@ -251,7 +262,8 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, isAdm
     );
   }
 
-  if (allCantorals.length === 0) {
+  // Sin cantorales en NINGÚN año (no confundir con un año puntual vacío).
+  if (!loading && availableYears.length === 0 && yearCantorals.length === 0) {
     return (
       <div className="w-full min-h-screen p-4 sm:p-6 md:p-8 bg-gradient-to-br from-purple-50 via-blue-50 to-amber-50 dark:from-slate-900 dark:via-indigo-950 dark:to-blue-950 transition-colors">
         <div className="max-w-4xl mx-auto pt-8 pb-24">
@@ -342,7 +354,6 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, isAdm
                 onChange={(e) => { setSelectedYear(e.target.value); setSelectedMonth('all'); }}
                 className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 dark:focus:border-purple-400 bg-white/60 dark:bg-white/10 text-purple-950 dark:text-white font-bold shadow-lg transition-colors"
               >
-                <option value="all">Todos los años</option>
                 {yearOptions.map(y => (
                   <option key={y} value={y}>{y}</option>
                 ))}
@@ -393,7 +404,10 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, isAdm
                 className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 dark:focus:border-purple-400 bg-white/60 dark:bg-white/10 text-purple-950 dark:text-white font-bold shadow-lg transition-colors"
               >
                 <option value="all">⛪ Todas las parroquias</option>
-                {parishOptions.map(parish => (
+                {(selectedParish !== 'all' && !parishOptions.includes(selectedParish)
+                  ? [selectedParish, ...parishOptions]
+                  : parishOptions
+                ).map(parish => (
                   <option key={parish} value={parish}>⛪ {metaOf(parish).parish}</option>
                 ))}
               </select>
@@ -416,12 +430,12 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, isAdm
             {/* Resultados + limpiar filtros */}
             <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-white/30 dark:border-white/10">
               <span className="text-sm font-bold text-purple-800 dark:text-purple-200">
-                {filteredCantorals.length} resultado{filteredCantorals.length !== 1 ? 's' : ''}
+                {loading ? 'Cargando…' : `${filteredCantorals.length} resultado${filteredCantorals.length !== 1 ? 's' : ''}`}
               </span>
-              {(selectedYear !== 'all' || selectedMonth !== 'all' || selectedCountry !== 'all' || selectedDiocese !== 'all' || selectedParish !== 'all' || selectedChapel !== 'all' || search.trim()) && (
+              {(selectedMonth !== 'all' || selectedCountry !== 'all' || selectedDiocese !== 'all' || selectedParish !== 'all' || selectedChapel !== 'all' || search.trim()) && (
                 <button
                   onClick={() => {
-                    setSelectedYear('all'); setSelectedMonth('all');
+                    setSelectedMonth('all');
                     setSelectedCountry('all'); setSelectedDiocese('all');
                     setSelectedParish('all'); setSelectedChapel('all'); setSearch('');
                   }}
@@ -435,12 +449,17 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, isAdm
         </div>
 
         {/* Grouped Cantorals by Month */}
-        {filteredCantorals.length === 0 && (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-16 text-purple-700 dark:text-purple-300">
+            <Loader className="w-8 h-8 animate-spin" />
+            <p className="font-semibold">Cargando {selectedYear}…</p>
+          </div>
+        ) : filteredCantorals.length === 0 ? (
           <div className="text-center py-12 text-purple-700 dark:text-purple-300">
             <p className="text-xl font-bold mb-1">Sin resultados</p>
             <p className="text-base">Prueba con otro año, mes o lugar, o quita algún filtro.</p>
           </div>
-        )}
+        ) : null}
         <div className="space-y-8">
           {Object.entries(groupedByMonth).map(([monthYear, cantorals]) => (
             <div key={monthYear}>

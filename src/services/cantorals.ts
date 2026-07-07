@@ -59,7 +59,7 @@ function cantoralToRow(c: PublishedCantoral): any {
  *  capitalización u origen mixto (mock data vs profile setup actual).
  *  Sin esa tolerancia, el Pueblo fiel veía la lista vacía aunque sí
  *  hubiera cantorales para su parroquia. */
-export async function listCantorals(parishName?: string): Promise<PublishedCantoral[]> {
+export async function listCantorals(parishName?: string, year?: string): Promise<PublishedCantoral[]> {
   try {
     const sb = getSupabaseClient();
     let query = sb.from(TABLE).select('*').order('date', { ascending: false });
@@ -70,6 +70,10 @@ export async function listCantorals(parishName?: string): Promise<PublishedCanto
       const escaped = normalized.replace(/[\\%_]/g, (m) => `\\${m}`);
       query = query.ilike('parish_name', escaped);
     }
+    // Acotar al año pedido (el Historial carga UN año a la vez para no traer todo).
+    if (year && /^\d{4}$/.test(year)) {
+      query = query.gte('date', `${year}-01-01`).lte('date', `${year}-12-31`);
+    }
 
     const { data, error } = await query;
     if (error) {
@@ -79,6 +83,21 @@ export async function listCantorals(parishName?: string): Promise<PublishedCanto
     return (data ?? []).map(rowToCantoral);
   } catch (err) {
     console.error('Excepción listando cantorales:', err);
+    return [];
+  }
+}
+
+/** Años (YYYY) con cantorales publicados, desc. Consulta liviana (solo la columna date). */
+export async function listCantoralYears(): Promise<string[]> {
+  try {
+    const sb = getSupabaseClient();
+    const { data, error } = await sb.from(TABLE).select('date');
+    if (error || !data) return [];
+    return Array.from(new Set(data.map((r: { date: string }) => String(r.date).slice(0, 4))))
+      .filter(Boolean)
+      .sort()
+      .reverse();
+  } catch {
     return [];
   }
 }

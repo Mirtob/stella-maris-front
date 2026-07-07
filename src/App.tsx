@@ -1410,6 +1410,7 @@ function renderView(p: ViewProps): JSX.Element | null {
             onPlaySong={p.onPlaySong}
             onDeleteCantoral={p.onDeleteCantoral}
             isAdmin={p.isVerifiedAdmin}
+            defaultParish={p.userProfile.activeParishName || p.userProfile.parishName}
             managedParishes={Array.from(new Set([
               ...(p.userProfile.parishes ?? []),
               p.userProfile.parishName,
