@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Radio, BookOpen, Music, ArrowLeft, Loader, FileX, Check, PartyPopper } from 'lucide-react';
+import { Radio, BookOpen, Music, FileX, Check, PartyPopper } from 'lucide-react';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
 import { PublishedCantoral } from '../../types';
 import { getCantoralById } from '../../services/cantorals';
 import { PlaylistPlayer } from '../songs/PlaylistPlayer';
 import { AtrilMode } from '../atril/AtrilMode';
-import { PdfBlobViewer } from '../cantoral/PdfBlobViewer';
-import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
+import { CantoralPdfViewer } from '../cantoral/CantoralPdfViewer';
 import { PrelaunchSurvey } from './PrelaunchSurvey';
 import { PRELAUNCH, findPrelaunchCantoralId } from '../../services/survey';
 
@@ -15,7 +14,7 @@ type Mode = 'radio' | 'folleto' | 'atril';
 const ORDER: Mode[] = ['radio', 'folleto', 'atril'];
 const META: Record<Mode, { label: string; desc: string; icon: typeof Radio; color: string }> = {
   radio:   { label: 'Modo radio',  desc: 'Escucha los cantos (videos del canal)', icon: Radio,    color: 'from-rose-500 to-pink-600' },
-  folleto: { label: 'Folleto PDF', desc: 'El cuadernillo con las letras',          icon: BookOpen, color: 'from-purple-600 to-indigo-700' },
+  folleto: { label: 'Folleto PDF', desc: 'Sigue la letra en pantalla (e imprime)',   icon: BookOpen, color: 'from-purple-600 to-indigo-700' },
   atril:   { label: 'Modo atril',  desc: 'Lectura continua en pantalla',           icon: Music,    color: 'from-amber-500 to-orange-600' },
 };
 
@@ -31,8 +30,6 @@ export function PrelaunchDemo({ cantoralId }: { cantoralId?: string }) {
 
   const [visited, setVisited] = useState<Mode[]>([]);
   const [active, setActive] = useState<Mode | null>(null);
-  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
-  const [pdfLoading, setPdfLoading] = useState(false);
   const [showSurvey, setShowSurvey] = useState(false);
   const [finished, setFinished] = useState(false);
 
@@ -57,24 +54,11 @@ export function PrelaunchDemo({ cantoralId }: { cantoralId?: string }) {
 
   const remaining = ORDER.filter((m) => !visited.includes(m));
 
-  const openMode = async (m: Mode) => {
-    if (m === 'folleto') {
-      if (!cantoral) return;
-      setActive('folleto'); setPdfLoading(true); setPdfBlob(null);
-      try {
-        const { blob } = await generateCantoralPDF({ cantoral, download: false, booklet: true });
-        setPdfBlob(blob);
-      } catch { /* el visor mostrará el error; "Volver" avanza igual */ }
-      setPdfLoading(false);
-    } else {
-      setActive(m);
-    }
-  };
+  const openMode = (m: Mode) => setActive(m);
 
   const exitMode = () => {
     const m = active;
     setActive(null);
-    setPdfBlob(null);
     if (!m) return;
     setVisited((prev) => {
       const next = prev.includes(m) ? prev : [...prev, m];
@@ -104,30 +88,7 @@ export function PrelaunchDemo({ cantoralId }: { cantoralId?: string }) {
   // ── Modo activo (pantalla completa) ──
   if (active === 'radio') return <PlaylistPlayer cantoral={cantoral} onBack={exitMode} />;
   if (active === 'atril') return <AtrilMode songs={cantoral.songs} userRole="Pueblo fiel" onClose={exitMode} />;
-  if (active === 'folleto') {
-    return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-slate-900">
-        <div className="flex-shrink-0 flex items-center gap-3 bg-gradient-to-r from-brand to-brand-strong text-white p-4">
-          <button onClick={exitMode} className="flex items-center gap-2 font-bold active:opacity-70">
-            <ArrowLeft className="w-6 h-6" strokeWidth={2.5} /> Volver
-          </button>
-          <span className="font-bold truncate">Folleto PDF</span>
-        </div>
-        {pdfLoading ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-white/80">
-            <Loader className="w-8 h-8 animate-spin" />
-            <p className="text-sm">Generando el folleto…</p>
-          </div>
-        ) : pdfBlob ? (
-          <PdfBlobViewer blob={pdfBlob} />
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-white/80 text-center px-6">
-            No se pudo generar el folleto. Toca «Volver» para seguir.
-          </div>
-        )}
-      </div>
-    );
-  }
+  if (active === 'folleto') return <CantoralPdfViewer cantoral={cantoral} onBack={exitMode} />;
 
   // ── Encuesta (tras recorrer los 3 modos) ──
   if (showSurvey) {

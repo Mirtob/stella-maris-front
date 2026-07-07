@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { BookOpen, Calendar, Church, Play, Music as MusicIcon, Clock, BookText, ChevronDown, ChevronUp, Download, Filter, Search, Headphones, Edit2, Trash2, QrCode, Archive, SearchX } from 'lucide-react';
+import { BookOpen, Calendar, Church, Play, Music as MusicIcon, Clock, BookText, ChevronDown, ChevronUp, Filter, Search, Headphones, Edit2, Trash2, QrCode, Archive, SearchX, FileText } from 'lucide-react';
 import { EmptyState } from '../common/EmptyState';
 import { ParishQRDialog } from './ParishQRDialog';
 import { AtrilMode } from '../atril/AtrilMode';
+import { CantoralPdfViewer } from './CantoralPdfViewer';
 import { PublishedCantoral, Song } from '../../types';
 import { getCategoryColors } from '../../utils/colors';
 import { CantoralWithOrdinary } from './CantoralWithOrdinary';
-import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { addDaysLocal, getWeekRangeLocal, isWithinInclusive, parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
 import { massTypeBadge, cantoralYaPaso } from '../../utils/massType';
@@ -42,6 +42,8 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
   const [showParishQR, setShowParishQR] = useState(false);
   // Cantoral abierto en Modo Atril (solo Coro) — leer el repertorio durante la Misa.
   const [atrilCantoral, setAtrilCantoral] = useState<PublishedCantoral | null>(null);
+  // Cantoral (letra) abierto como PDF CONTINUO para seguir en vivo (con "Imprimir folleto").
+  const [pdfCantoral, setPdfCantoral] = useState<PublishedCantoral | null>(null);
   // Coro y Admin pueden gestionar (editar/eliminar); el Pueblo fiel solo ve.
   const canManage = userRole !== 'Pueblo fiel';
   const pendingDeleteCantoral = pendingDeleteId ? cantorals.find(c => c.id === pendingDeleteId) : null;
@@ -257,28 +259,14 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
               <BookOpen className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
               {isExpandedCantoral ? 'Ocultar' : 'Ver'} Cantos
             </button>
+            {/* Cantoral (letra): en pantalla se abre como PDF CONTINUO para seguir la Misa
+                en vivo; desde el visor, "Imprimir folleto" da la versión cuadernillo. */}
             <button
-              onClick={async () => {
-                toast.info('Preparando el cuadernillo…');
-                try {
-                  const { url } = await generateCantoralPDF({ cantoral, download: false, booklet: true });
-                  const w = window.open(url, '_blank');
-                  if (!w) {
-                    const a = document.createElement('a');
-                    a.href = url; a.download = 'cantoral-cuadernillo.pdf';
-                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                  }
-                  toast.success('Cuadernillo listo', {
-                    description: 'Imprime a doble faz y dobla al medio. Si no calzan, cambia el volteo a "borde corto".',
-                  });
-                } catch {
-                  toast.error('No se pudo generar el cuadernillo');
-                }
-              }}
+              onClick={() => setPdfCantoral(cantoral)}
               className="bg-gradient-to-br from-purple-600 to-purple-700 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-purple-800 col-span-2"
             >
-              <Download className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
-              Descargar cantoral (libro)
+              <FileText className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
+              Seguir los cantos (letra)
             </button>
           </div>
 
@@ -529,6 +517,10 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
           userInstrument={userInstrument}
           onClose={() => setAtrilCantoral(null)}
         />
+      )}
+      {/* Cantoral (letra) como PDF continuo para seguir en vivo (+ imprimir folleto). */}
+      {pdfCantoral && (
+        <CantoralPdfViewer cantoral={pdfCantoral} onBack={() => setPdfCantoral(null)} />
       )}
       <div className="pt-16">
         {/* Header */}
