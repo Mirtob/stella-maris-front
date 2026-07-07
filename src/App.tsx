@@ -1409,6 +1409,12 @@ function renderView(p: ViewProps): JSX.Element | null {
             cantorals={p.publishedCantorals}
             onPlaySong={p.onPlaySong}
             onDeleteCantoral={p.onDeleteCantoral}
+            isAdmin={p.isVerifiedAdmin}
+            managedParishes={Array.from(new Set([
+              ...(p.userProfile.parishes ?? []),
+              p.userProfile.parishName,
+              p.userProfile.activeParishName,
+            ].filter((x): x is string => !!x)))}
           />
         </RoleGuard>
       );

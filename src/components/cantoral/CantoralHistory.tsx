@@ -1,8 +1,10 @@
-import { useState } from 'react';
-import { History, Calendar, Church, ChevronDown, ChevronUp, Play, Clock, Trash2, Filter, Download } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { History, Calendar, Church, ChevronDown, ChevronUp, Play, Clock, Trash2, Filter, Download, Loader, Search } from 'lucide-react';
 import { PublishedCantoral, Song } from '../../types';
 import { generateChoirBooklet } from '../../utils/atrilBookletPDF';
-import { parseParishChapel, splitActiveParish } from '../../utils/parish';
+import { listCantorals } from '../../services/cantorals';
+import { americanCountries } from '../../data/countries';
+import { splitActiveParish } from '../../utils/parish';
 import { parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
 import { massTypeBadge } from '../../utils/massType';
 import { LiturgicalColorBadge } from '../liturgy/LiturgicalColorBadge';
@@ -14,14 +16,59 @@ interface CantoralHistoryProps {
   cantorals: PublishedCantoral[];
   onPlaySong: (song: Song) => void;
   onDeleteCantoral?: (cantoralId: string) => void;
+  /** Admin gestiona cualquier cantoral; si no, solo los de estas parroquias. */
+  isAdmin?: boolean;
+  managedParishes?: string[];
 }
 
-export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: CantoralHistoryProps) {
+// Diócesis → País (el string del cantoral es "Parroquia - Diócesis · Capilla", sin país;
+// el país se deriva del catálogo). Se calcula una sola vez.
+const DIOCESE_TO_COUNTRY = new Map<string, { name: string; flag: string }>();
+for (const c of americanCountries) {
+  for (const d of c.dioceses) DIOCESE_TO_COUNTRY.set(d.name.trim(), { name: c.name, flag: c.flag });
+}
+const COUNTRY_FLAG = new Map<string, string>(americanCountries.map(c => [c.name, c.flag]));
+
+/** Descompone parishName en país/diócesis/parroquia(parishFull)/capilla. */
+function metaOf(parishName?: string | null) {
+  const { parishFull, chapel } = splitActiveParish(parishName);
+  // La diócesis es el ÚLTIMO segmento " - " de parishFull (el nombre de la parroquia
+  // puede contener guiones); usamos lastIndexOf para no cortarlo mal.
+  const idx = parishFull.lastIndexOf(' - ');
+  const parish = idx === -1 ? parishFull : parishFull.slice(0, idx).trim();
+  const diocese = idx === -1 ? '' : parishFull.slice(idx + 3).trim();
+  const country = (diocese && DIOCESE_TO_COUNTRY.get(diocese)?.name) || 'Otro';
+  return { parishFull, chapel: chapel || '', parish, diocese, country };
+}
+
+export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, isAdmin, managedParishes }: CantoralHistoryProps) {
+  // El Historial es global, pero borrar solo se permite en cantorales gestionables
+  // (los de la propia parroquia; el admin puede todos). Refleja lo que hace la RLS.
+  const managedSet = new Set(managedParishes ?? []);
+  const canDelete = (c: PublishedCantoral) => !!isAdmin || managedSet.has(c.parishName);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<string>('all');
+  const [selectedDiocese, setSelectedDiocese] = useState<string>('all');
   const [selectedParish, setSelectedParish] = useState<string>('all');
   const [selectedChapel, setSelectedChapel] = useState<string>('all');
+  const [search, setSearch] = useState('');
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  // El Historial es el archivo GLOBAL: trae TODOS los cantorales publicados (de todas
+  // las parroquias/países), no solo los de la parroquia activa. Se inicia con lo que ya
+  // trae el prop y se reemplaza al cargar la lista completa.
+  const [allCantorals, setAllCantorals] = useState<PublishedCantoral[]>(cantorals);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    listCantorals()
+      .then((list) => { if (!cancelled && list.length) setAllCantorals(list); })
+      .catch(() => { /* se queda con el prop */ })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   // Descarga el folleto del Coro con letras, acordes y las partituras embebidas
   // (intercaladas por canto). Puede tardar: baja cada partitura vía el proxy.
@@ -52,28 +99,60 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
   };
 
   const pendingDeleteCantoral = pendingDeleteId
-    ? cantorals.find(c => c.id === pendingDeleteId)
+    ? allCantorals.find(c => c.id === pendingDeleteId)
     : null;
 
-  // Opciones de parroquia (nivel 1 = parishFull) y capilla (nivel 2, separador ' · ')
+  // Opciones en cascada País → Diócesis → Parroquia → Capilla (cada nivel acota el
+  // siguiente según lo ya elegido arriba).
+  const countryOptions = Array.from(
+    new Set(allCantorals.map(c => metaOf(c.parishName).country))
+  ).sort((a, b) => a.localeCompare(b));
+
+  const dioceseOptions = Array.from(
+    new Set(
+      allCantorals
+        .filter(c => selectedCountry === 'all' || metaOf(c.parishName).country === selectedCountry)
+        .map(c => metaOf(c.parishName).diocese)
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
+
   const parishOptions = Array.from(
-    new Set(cantorals.map(c => splitActiveParish(c.parishName).parishFull).filter(Boolean))
+    new Set(
+      allCantorals
+        .filter(c => {
+          const m = metaOf(c.parishName);
+          if (selectedCountry !== 'all' && m.country !== selectedCountry) return false;
+          if (selectedDiocese !== 'all' && m.diocese !== selectedDiocese) return false;
+          return true;
+        })
+        .map(c => metaOf(c.parishName).parishFull)
+        .filter(Boolean)
+    )
   ).sort((a, b) => a.localeCompare(b));
 
   const chapelOptions = Array.from(
     new Set(
-      cantorals
-        .filter(c => selectedParish === 'all' || splitActiveParish(c.parishName).parishFull === selectedParish)
-        .map(c => splitActiveParish(c.parishName).chapel)
-        .filter((x): x is string => Boolean(x))
+      allCantorals
+        .filter(c => selectedParish === 'all' || metaOf(c.parishName).parishFull === selectedParish)
+        .map(c => metaOf(c.parishName).chapel)
+        .filter(Boolean)
     )
   ).sort((a, b) => a.localeCompare(b));
 
-  // Filtrar por parroquia y capilla seleccionadas
-  const filteredCantorals = cantorals.filter(c => {
-    const { parishFull, chapel } = splitActiveParish(c.parishName);
-    if (selectedParish !== 'all' && parishFull !== selectedParish) return false;
-    if (selectedChapel !== 'all' && chapel !== selectedChapel) return false;
+  // Filtro combinado (cascada + búsqueda de texto libre)
+  const q = search.trim().toLowerCase();
+  const filteredCantorals = allCantorals.filter(c => {
+    const m = metaOf(c.parishName);
+    if (selectedCountry !== 'all' && m.country !== selectedCountry) return false;
+    if (selectedDiocese !== 'all' && m.diocese !== selectedDiocese) return false;
+    if (selectedParish !== 'all' && m.parishFull !== selectedParish) return false;
+    if (selectedChapel !== 'all' && m.chapel !== selectedChapel) return false;
+    if (q) {
+      const hay = [c.parishName, c.choirName, (c as any).liturgicalDate, c.date, ...c.songs.map(s => s.title)]
+        .filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
     return true;
   });
 
@@ -141,7 +220,16 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
     return icons[category] || '🎵';
   };
 
-  if (cantorals.length === 0) {
+  if (loading && allCantorals.length === 0) {
+    return (
+      <div className="w-full min-h-screen flex flex-col items-center justify-center gap-4 bg-gradient-to-br from-purple-50 via-blue-50 to-amber-50 dark:from-slate-900 dark:via-indigo-950 dark:to-blue-950 transition-colors">
+        <Loader className="w-10 h-10 animate-spin text-purple-600 dark:text-purple-300" />
+        <p className="text-lg font-semibold text-purple-800 dark:text-purple-200">Cargando el historial…</p>
+      </div>
+    );
+  }
+
+  if (allCantorals.length === 0) {
     return (
       <div className="w-full min-h-screen p-4 sm:p-6 md:p-8 bg-gradient-to-br from-purple-50 via-blue-50 to-amber-50 dark:from-slate-900 dark:via-indigo-950 dark:to-blue-950 transition-colors">
         <div className="max-w-4xl mx-auto pt-8 pb-24">
@@ -200,7 +288,7 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
           </div>
         </div>
 
-        {/* Filter by Parish */}
+        {/* Buscar por País / Diócesis / Parroquia / Capilla (cascada) + texto libre */}
         <div className="mb-8">
           <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
             <label className="flex items-center gap-3 mb-3">
@@ -208,29 +296,69 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
                 <Filter className="w-6 h-6 text-white" strokeWidth={2.5} />
               </div>
               <span className="text-xl font-bold text-purple-900 dark:text-purple-200">
-                Filtrar por Parroquia / Capilla
+                Buscar cantorales
               </span>
             </label>
+
+            {/* Búsqueda libre */}
+            <div className="relative mb-3">
+              <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-purple-500 dark:text-purple-300 pointer-events-none" />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por parroquia, coro o canto…"
+                className="w-full pl-11 pr-4 py-3 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 dark:focus:border-purple-400 bg-white/60 dark:bg-white/10 text-purple-950 dark:text-white font-semibold shadow transition-colors"
+              />
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* País */}
+              <select
+                value={selectedCountry}
+                onChange={(e) => { setSelectedCountry(e.target.value); setSelectedDiocese('all'); setSelectedParish('all'); setSelectedChapel('all'); }}
+                className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 dark:focus:border-purple-400 bg-white/60 dark:bg-white/10 text-purple-950 dark:text-white font-bold shadow-lg transition-colors"
+              >
+                <option value="all">🌎 Todos los países</option>
+                {countryOptions.map(name => (
+                  <option key={name} value={name}>{COUNTRY_FLAG.get(name) || '🌐'} {name}</option>
+                ))}
+              </select>
+
+              {/* Diócesis */}
+              <select
+                value={selectedDiocese}
+                onChange={(e) => { setSelectedDiocese(e.target.value); setSelectedParish('all'); setSelectedChapel('all'); }}
+                className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 dark:focus:border-purple-400 bg-white/60 dark:bg-white/10 text-purple-950 dark:text-white font-bold shadow-lg transition-colors"
+              >
+                <option value="all">Todas las diócesis</option>
+                {dioceseOptions.map(d => (
+                  <option key={d} value={d}>✝️ {d}</option>
+                ))}
+              </select>
+
+              {/* Parroquia */}
               <select
                 value={selectedParish}
                 onChange={(e) => { setSelectedParish(e.target.value); setSelectedChapel('all'); }}
                 className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 dark:focus:border-purple-400 bg-white/60 dark:bg-white/10 text-purple-950 dark:text-white font-bold shadow-lg transition-colors"
               >
-                <option value="all">🌍 Todas las Parroquias</option>
+                <option value="all">⛪ Todas las parroquias</option>
                 {parishOptions.map(parish => (
-                  <option key={parish} value={parish}>⛪ {parseParishChapel(parish).parish}</option>
+                  <option key={parish} value={parish}>⛪ {metaOf(parish).parish}</option>
                 ))}
               </select>
-              {selectedParish !== 'all' && chapelOptions.length > 0 && (
+
+              {/* Capilla */}
+              {chapelOptions.length > 0 && (
                 <select
                   value={selectedChapel}
                   onChange={(e) => setSelectedChapel(e.target.value)}
                   className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 dark:focus:border-purple-400 bg-white/60 dark:bg-white/10 text-purple-950 dark:text-white font-bold shadow-lg transition-colors"
                 >
-                  <option value="all">Todas las Capillas</option>
+                  <option value="all">Todas las capillas</option>
                   {chapelOptions.map(chapel => (
-                    <option key={chapel} value={chapel}>⛪ {chapel}</option>
+                    <option key={chapel} value={chapel}>· {chapel}</option>
                   ))}
                 </select>
               )}
@@ -310,8 +438,8 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
 
                       {isExpanded && (
                         <div className="p-6 pt-0 space-y-4">
-                          {/* Delete Button */}
-                          {onDeleteCantoral && (
+                          {/* Delete Button — solo en cantorales gestionables */}
+                          {onDeleteCantoral && canDelete(cantoral) && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -410,6 +538,8 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral }: Can
         onConfirm={() => {
           if (pendingDeleteId && onDeleteCantoral) {
             onDeleteCantoral(pendingDeleteId);
+            // Reflejar el borrado en la lista global local (el prop no la controla).
+            setAllCantorals(prev => prev.filter(c => c.id !== pendingDeleteId));
           }
           setPendingDeleteId(null);
         }}
