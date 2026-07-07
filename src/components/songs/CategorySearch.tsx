@@ -12,6 +12,8 @@ import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName,
 import { getCurrentLiturgicalSeason } from '../../utils/liturgicalSeason';
 import { isOrdinary } from '../../utils/ordinary';
 import { resolveOrdinarySheetMusic } from '../../utils/ordinarySheetMusic';
+import { previousUseOf, type PreviousUsage } from '../../utils/previousUsage';
+import { RepeatSongDialog } from '../cantoral/RepeatSongDialog';
 
 interface CategorySearchProps {
   category: string;
@@ -24,6 +26,8 @@ interface CategorySearchProps {
   cantoral: Song[];
   onPlaySong: (song: Song) => void;
   preferredInstrument?: InstrumentType;
+  /** Uso de cantos en el cantoral anterior (la "semana pasada"), para avisar repeticiones. */
+  previousUsage?: PreviousUsage | null;
 }
 
 export function CategorySearch({ 
@@ -34,9 +38,10 @@ export function CategorySearch({
   onClose, 
   onAddToCantoral, 
   onRemoveFromCantoral, 
-  cantoral, 
-  onPlaySong, 
-  preferredInstrument 
+  cantoral,
+  onPlaySong,
+  preferredInstrument,
+  previousUsage,
 }: CategorySearchProps) {
   const { songs } = useSongs();
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,6 +52,8 @@ export function CategorySearch({
   const [pendingSanto, setPendingSanto] = useState<Song | null>(null);
   const [pendingCordero, setPendingCordero] = useState<Song | null>(null);
   const [showPadreNuestroDialog, setShowPadreNuestroDialog] = useState(false);
+  // Canto que ya se usó en el cantoral anterior: se pide confirmación antes de agregarlo.
+  const [pendingRepeat, setPendingRepeat] = useState<{ song: Song; parts: string[]; title: string } | null>(null);
 
   // Obtener el tiempo litúrgico actual
   const currentSeason = getCurrentLiturgicalSeason();
@@ -145,7 +152,20 @@ export function CategorySearch({
     }
   };
 
-  const handleAddSong = (rawSong: Song) => {
+  const handleAddSong = (rawSong: Song, skipRepeatCheck = false) => {
+    // ¿Ya se usó este canto en el cantoral anterior (la "semana pasada")? Avisamos para
+    // fomentar variedad antes de agregarlo. En Adviento/Cuaresma sugerimos otra parte.
+    // OJO: no avisamos en el ORDINARIO (Kyrie/Gloria/Santo/Cordero/Padre Nuestro): esas
+    // partes se mantienen a propósito durante un tiempo litúrgico.
+    const ORDINARY_PARTS = ['Kyrie', 'Gloria', 'Santo', 'Cordero de Dios', 'Padre Nuestro', 'Credo'];
+    if (!skipRepeatCheck && !ORDINARY_PARTS.includes(category)) {
+      const prev = previousUseOf(previousUsage, rawSong.id);
+      if (prev && prev.parts.length) {
+        setPendingRepeat({ song: rawSong, parts: prev.parts, title: prev.title || rawSong.title });
+        return;
+      }
+    }
+
     // Si el canto se agrega desde una parte distinta a su principal (porque sirve
     // para varias), fijar la categoría a la de esta tarjeta para que caiga en el
     // lugar correcto del cantoral.
@@ -648,6 +668,23 @@ export function CategorySearch({
         </div>
       )}
       
+      {/* Aviso de canto repetido respecto al cantoral anterior (la "semana pasada") */}
+      {pendingRepeat && (
+        <RepeatSongDialog
+          title={pendingRepeat.title}
+          prevParts={pendingRepeat.parts}
+          currentPart={category}
+          season={currentSeason}
+          label={previousUsage?.label || 'la semana pasada'}
+          onCancel={() => setPendingRepeat(null)}
+          onConfirm={() => {
+            const s = pendingRepeat.song;
+            setPendingRepeat(null);
+            handleAddSong(s, true); // ya confirmado: se salta la comprobación
+          }}
+        />
+      )}
+
       {/* Add Gloria Dialog — siempre pregunta; permite elegir con buscador */}
       {showGloriaDialog && (
         <AddGloriaDialog

@@ -10,6 +10,7 @@ import { AtrilMode } from '../atril/AtrilMode';
 import { Tour } from '../tour/Tour';
 import { constructorTips, hasSeenTip, markTipSeen } from '../tour/tours';
 import { Song, InstrumentType, PublishedCantoral } from '../../types';
+import { PreviousUsage } from '../../utils/previousUsage';
 import { getGospelAcclamationName, getGospelAcclamationIcon, getCurrentLiturgicalSeason } from '../../utils/liturgicalSeason';
 import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji, getBuildableCelebrations, SpecialLiturgicalDay } from '../../utils/specialLiturgicalDays';
 import { useSongs } from '../../hooks/useSongs';
@@ -25,6 +26,8 @@ interface ChoirViewProps {
   onRemoveFromCantoral: (songId: string) => void;
   onPlaySong: (song: Song) => void;
   onPublishCantoral: (cantorals: PublishedCantoral[]) => Promise<void> | void;
+  /** Uso de cantos en el cantoral anterior (para avisar repeticiones al armar). */
+  previousUsage?: PreviousUsage | null;
 }
 
 export function ChoirView({
@@ -38,6 +41,7 @@ export function ChoirView({
   onRemoveFromCantoral,
   onPlaySong,
   onPublishCantoral,
+  previousUsage,
 }: ChoirViewProps) {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showInstrumentModal, setShowInstrumentModal] = useState(false);
@@ -355,6 +359,7 @@ export function ChoirView({
                 cantoral={cantoral}
                 onPlaySong={onPlaySong}
                 preferredInstrument={preferredInstrument}
+                previousUsage={previousUsage}
               />
             );
           })}
