@@ -1,4 +1,5 @@
 import { memo, useMemo } from 'react';
+import { stripLyricsFormatting } from '../../utils/lyricsFormat';
 
 interface LyricsWithChordsProps {
   lyrics: string;
@@ -30,6 +31,7 @@ function LyricsWithChordsImpl({ lyrics }: LyricsWithChordsProps) {
 
   // Función para procesar cada línea y mostrar acordes encima
   const processLine = (line: string, lineIndex: number) => {
+    line = stripLyricsFormatting(line); // el Coro ve la letra sin marcadores de formato
     if (line.trim() === '') {
       return <div key={lineIndex} className="h-4" />; // Espacio en blanco
     }

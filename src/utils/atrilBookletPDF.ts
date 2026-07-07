@@ -4,6 +4,7 @@ import { getDrivePdfProxyUrl } from './driveProxy';
 import { sortByMassOrder, isOrdinary } from './ordinary';
 import { transposeContent, getChordNotation, getTransposedKey, keyPrefersFlats, type ChordNotation } from './chordTranspose';
 import { getOfflinePdf } from '../services/offlineCache';
+import { stripLyricsFormatting } from './lyricsFormat';
 
 // =============================================================================
 // Cuadernillo imprimible del Modo Atril.
@@ -122,7 +123,7 @@ function buildLyricsBuffer(
     titleLines.forEach((ln) => { need(5.5); doc.text(ln, M, y); y += 5.5; });
     y += 1.5;
 
-    const raw = song.lyrics || '';
+    const raw = stripLyricsFormatting(song.lyrics || ''); // sin marcadores del editor
     const lyrics = opts.withChords
       ? transposeContent(raw, 0, opts.notation, keyPrefersFlats(song.originalKey || '', 0))
       : stripChords(raw);
@@ -387,11 +388,11 @@ export async function generateAtrilPrintable(opts: AtrilPrintOptions): Promise<{
       }
     } else if (showChordsHere) {
       const preferFlats = keyPrefersFlats(s.originalKey || '', t);
-      const lyrics = s.lyrics ? transposeContent(s.lyrics, t, notation, preferFlats) : '';
+      const lyrics = s.lyrics ? transposeContent(stripLyricsFormatting(s.lyrics), t, notation, preferFlats) : '';
       if (lyrics.trim()) drawChordLyrics(lyrics);
       else { doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(150, 150, 150); need(6); doc.text('(Sin letra en el catálogo)', M, y); y += 6; }
     } else {
-      const lyrics = s.lyrics ? stripChords(transposeContent(s.lyrics, t, notation)) : '';
+      const lyrics = s.lyrics ? stripChords(transposeContent(stripLyricsFormatting(s.lyrics), t, notation)) : '';
       if (lyrics.trim()) drawPlainLyrics(lyrics);
       else { doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(150, 150, 150); need(6); doc.text('(Sin letra en el catálogo)', M, y); y += 6; }
     }

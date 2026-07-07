@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import { Song, InstrumentType } from '../types';
 import { isOrdinary } from './ordinary';
 import { embedPartituraPages } from './embedPartitura';
+import { stripLyricsFormatting } from './lyricsFormat';
 
 type VoiceSelection = 'Soprano' | 'Contralto' | 'Tenor' | 'Bajo' | 'Full Score';
 
@@ -217,7 +218,7 @@ export const generateChoirCantoralPDF = async (
   // Función para procesar letra con acordes (para guitarristas)
   const renderLyricsWithChords = (lyrics: string, yStart: number): number => {
     let y = yStart;
-    const lines = lyrics.split('\n');
+    const lines = stripLyricsFormatting(lyrics).split('\n');
     
     pdf.setFontSize(9);
     pdf.setFont('courier', 'normal'); // Courier para mantener alineación
@@ -285,7 +286,7 @@ export const generateChoirCantoralPDF = async (
   // Función para renderizar letra simple (sin acordes)
   const renderPlainLyrics = (lyrics: string, yStart: number): number => {
     let y = yStart;
-    const lines = lyrics.split('\n');
+    const lines = stripLyricsFormatting(lyrics).split('\n');
     
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');

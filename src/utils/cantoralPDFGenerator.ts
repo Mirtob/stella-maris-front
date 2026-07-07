@@ -7,6 +7,7 @@ import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551
 import { getGarland } from '../data/garlands';
 import { getPdfFont, getPdfScale } from '../data/pdfStyle';
 import { renderPdfToImages, imposeBooklet } from './atrilBookletPDF';
+import { stripLyricsFormatting } from './lyricsFormat';
 
 interface PDFGeneratorOptions {
   cantoral: PublishedCantoral;
@@ -243,6 +244,8 @@ const CHORD_TOKEN = new RegExp(
 function cleanLyrics(lyrics: string): string {
   if (!lyrics) return '';
 
+  // Quitar marcadores de formato del editor (**negrita**, *cursiva*, __subrayado__, ">> ").
+  lyrics = stripLyricsFormatting(lyrics);
   // Quitar acordes inline entre corchetes (cualquier notación): [Sol] [La m] [C#m7] [Re/Fa#]
   let cleaned = lyrics.replace(/\[[^\]]*\]/g, '');
 

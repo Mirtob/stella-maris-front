@@ -1,5 +1,6 @@
 import { Music, Search, Trash2, FileText, Youtube, Loader, RefreshCw, Pencil, X, Check, Ban, Plus } from 'lucide-react';
-import { useState, useEffect, useCallback, type Dispatch, type SetStateAction } from 'react';
+import { useState, useEffect, useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
+import { LyricsToolbar } from './LyricsToolbar';
 import { toast } from 'sonner';
 import { Song, MassMoment, LiturgicalSeason, InstrumentType, LITURGICAL_SEASON_LABELS } from '../../types';
 import { listSongs, deleteSong, updateSong, approveSong, rejectSong, addSong } from '../../services/songs';
@@ -117,6 +118,9 @@ export function SongManager() {
   // Alta manual de un canto (p. ej. de un canal ajeno: pones tú la metadata).
   const [showAdd, setShowAdd] = useState(false);
   const [na, setNa] = useState<SongForm>(emptyForm);
+  // Refs de los textarea de letra para el toolbar de formato (negrita/cursiva/…).
+  const naLyricsRef = useRef<HTMLTextAreaElement>(null);
+  const fLyricsRef = useRef<HTMLTextAreaElement>(null);
   // Toggler de etiqueta genérico para cualquiera de los dos formularios (edición/alta).
   const toggleSeasonIn = (setForm: Dispatch<SetStateAction<SongForm>>, s: string) =>
     setForm(prev => ({
@@ -791,7 +795,9 @@ export function SongManager() {
 
               <div>
                 <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Letra</label>
+                <LyricsToolbar textareaRef={fLyricsRef} value={f.lyrics} onChange={(v) => setF(prev => ({ ...prev, lyrics: v }))} />
                 <textarea
+                  ref={fLyricsRef}
                   value={f.lyrics}
                   onChange={(e) => setF(prev => ({ ...prev, lyrics: e.target.value }))}
                   rows={5}
@@ -1002,7 +1008,9 @@ export function SongManager() {
 
               <div>
                 <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Letra (con acordes [G] si aplica)</label>
+                <LyricsToolbar textareaRef={naLyricsRef} value={na.lyrics} onChange={(v) => setNa(prev => ({ ...prev, lyrics: v }))} />
                 <textarea
+                  ref={naLyricsRef}
                   value={na.lyrics}
                   onChange={(e) => setNa(prev => ({ ...prev, lyrics: e.target.value }))}
                   rows={5}

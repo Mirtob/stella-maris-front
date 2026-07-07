@@ -1,3 +1,6 @@
+import { FormattedText } from './FormattedText';
+import { isCenteredLine, stripCenterMarker } from '../../utils/lyricsFormat';
+
 interface LyricsOnlyProps {
   lyrics: string;
 }
@@ -24,7 +27,9 @@ export function LyricsOnly({ lyrics }: LyricsOnlyProps) {
 
   // Función para procesar cada línea
   const processLine = (line: string, lineIndex: number) => {
-    const cleanedLine = removeChords(line);
+    // Centrado (prefijo ">> ") y luego quitar acordes.
+    const centered = isCenteredLine(line);
+    const cleanedLine = removeChords(centered ? stripCenterMarker(line) : line);
 
     // Línea vacía = espacio
     if (cleanedLine.trim() === '') {
@@ -34,16 +39,16 @@ export function LyricsOnly({ lyrics }: LyricsOnlyProps) {
     // Detectar si es un encabezado de sección (Coro, Estrofa, Puente, etc.)
     if (/^(Coro|Estrofa|Puente|Intro|Final|Verso)(\s+\d+)?:?\s*$/i.test(cleanedLine.trim())) {
       return (
-        <div key={lineIndex} className="text-blue-700 dark:text-blue-300 font-bold text-lg mt-4 mb-2">
+        <div key={lineIndex} className={`text-blue-700 dark:text-blue-300 font-bold text-lg mt-4 mb-2 ${centered ? 'text-center' : ''}`}>
           {cleanedLine.trim()}
         </div>
       );
     }
 
-    // Texto normal (sin acordes)
+    // Texto normal (sin acordes), con formato inline (**negrita**, *cursiva*, __subrayado__).
     return (
-      <div key={lineIndex} className="text-gray-900 dark:text-gray-100 text-base leading-relaxed py-1">
-        {cleanedLine}
+      <div key={lineIndex} className={`text-gray-900 dark:text-gray-100 text-base leading-relaxed py-1 ${centered ? 'text-center' : ''}`}>
+        <FormattedText text={cleanedLine} />
       </div>
     );
   };

@@ -2,6 +2,7 @@ import { X, Download, Music } from 'lucide-react';
 import { Song, InstrumentType, PublishedCantoral } from '../../types';
 import { useState } from 'react';
 import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
+import { stripLyricsFormatting } from '../../utils/lyricsFormat';
 import { DEFAULT_GARLAND_ID } from '../../data/garlands';
 import { DEFAULT_PDF_FONT, DEFAULT_PDF_SIZE } from '../../data/pdfStyle';
 import { getTodayLocal } from '../../utils/dateLocal';
@@ -244,8 +245,8 @@ export function CantoralPDFPreview({
                           ♫ Letra con Acordes
                         </p>
                         <div className="text-sm text-gray-700 dark:text-gray-300 font-mono whitespace-pre-wrap max-h-32 overflow-y-auto">
-                          {song.lyrics.split('\n').slice(0, 6).join('\n')}
-                          {song.lyrics.split('\n').length > 6 && '\n...'}
+                          {stripLyricsFormatting(song.lyrics).split('\n').slice(0, 6).join('\n')}
+                          {stripLyricsFormatting(song.lyrics).split('\n').length > 6 && '\n...'}
                         </div>
                       </div>
                     )}

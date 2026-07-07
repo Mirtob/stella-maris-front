@@ -7,6 +7,7 @@ import { changePassword, isUsernameAccount } from '../../services/supabaseClient
 import { resetAllTutorials } from '../tour/tours';
 import { ParishPicker } from './ParishPicker';
 import { PushNotificationsCard } from './PushNotificationsCard';
+import { ChoirContactCard } from './ChoirContactCard';
 import { deleteMyAccount } from '../../services/account';
 import { signOutOnly } from '../../services/googleAuth';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -573,6 +574,11 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
         )}
 
         {/* Notificaciones push (celebraciones + nuevo cantoral) */}
+        {/* Datos de contacto del coro (solo Coro): directorio para intercambiar con otros coros. */}
+        {canChangeInstrument && (
+          <ChoirContactCard userId={userProfile.id} defaultParish={activeParish} />
+        )}
+
         <PushNotificationsCard parishes={canManageParishes ? parishes : (activeParish ? [activeParish] : [])} role={effectiveRole} />
 
         {/* Tutoriales — volver a verlos (F4) */}
