@@ -765,7 +765,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    return res.status(200).json({ ok: true, date: today, generalSent, coroSent });
+    // ── 3) CÁPSULA DE LA SEMANA (lunes) → formación (Cursos) ──
+    // Solo se envía cuando ya HAY videos: se activa con la env var COURSE_WEEKLY_ENABLED.
+    // Un único aviso semanal a todos los suscriptores; abre directo el módulo Cursos.
+    let courseSent = 0;
+    const courseOn = /^(1|true|yes|on)$/i.test((process.env.COURSE_WEEKLY_ENABLED || '').trim());
+    const isMonday = new Date(`${today}T12:00:00Z`).getUTCDay() === 1;
+    if (courseOn && isMonday) {
+      const allSubs = await querySubs(''); // querySubs arma ?select=...&<filtro>; vacío = todos
+      courseSent = await sendToSubs(allSubs, {
+        title: '🎓 Lunes de formación',
+        body: 'Tu cápsula de la semana te espera: 5 minutos para crecer como músico católico.',
+        url: '/?goto=cursos',
+        tag: `formacion-${today}`, // estable por semana (solo corre el lunes)
+      });
+    }
+
+    return res.status(200).json({ ok: true, date: today, generalSent, coroSent, courseSent });
   } catch (e: any) {
     return res.status(500).json({ error: e?.message || 'Error del servidor' });
   }

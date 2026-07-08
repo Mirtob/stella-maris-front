@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { GraduationCap, Flame, CheckCircle2, Lock, PlayCircle, Award, ChevronRight, Circle } from 'lucide-react';
-import { CURRICULUM, ACTIVE_CAPSULES, EJE_META, findCapsule, type Capsule } from '../../data/courseCurriculum';
+import { GraduationCap, Flame, CheckCircle2, Lock, PlayCircle, Award, ChevronRight, Circle, RefreshCw } from 'lucide-react';
+import { CURRICULUM, ACTIVE_CAPSULES, EJE_META, MODULE_BADGES, isModuleDone, findCapsule, type Capsule } from '../../data/courseCurriculum';
 import { getMyProgress, completeCapsule, computeStreakWeeks, type CapsuleProgress } from '../../services/courseProgress';
 import { CapsuleView } from './CapsuleView';
+import { CertificateModal } from './CertificateModal';
 
-export function FormacionRoadmap({ userId }: { userId: string }) {
+export function FormacionRoadmap({ userId, userName }: { userId: string; userName?: string }) {
+  const [showCertificate, setShowCertificate] = useState(false);
   const [progress, setProgress] = useState<CapsuleProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -24,6 +26,19 @@ export function FormacionRoadmap({ userId }: { userId: string }) {
   const nextCapsule = nextIdx >= 0 ? ACTIVE_CAPSULES[nextIdx] : null;
   const doneCount = ACTIVE_CAPSULES.filter((c) => completed.has(c.id)).length;
   const allDone = doneCount === ACTIVE_CAPSULES.length;
+
+  // Repaso espaciado: la cápsula completada más antigua (≥ 1 semana) vuelve para repasar.
+  const reviewCapsule = useMemo(() => {
+    const weekAgo = Date.now() - 7 * 86400000;
+    const oldest = [...progress].sort((a, b) => (a.completedAt < b.completedAt ? -1 : 1));
+    for (const p of oldest) {
+      if (new Date(p.completedAt).getTime() <= weekAgo) {
+        const cap = findCapsule(p.capsuleId);
+        if (cap) return cap;
+      }
+    }
+    return null;
+  }, [progress]);
 
   const handlePass = async (capsule: Capsule, score: number) => {
     if (completed.has(capsule.id)) return;
@@ -99,9 +114,41 @@ export function FormacionRoadmap({ userId }: { userId: string }) {
           </button>
         )}
         {!loading && allDone && (
-          <div className="w-full mb-6 bg-gradient-to-r from-amber-500 to-orange-600 text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg border-2 border-amber-700">
+          <button onClick={() => setShowCertificate(true)} className="w-full mb-6 bg-gradient-to-r from-amber-500 to-orange-600 text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg border-2 border-amber-700 active:scale-[0.99] transition-all text-left">
             <Award className="w-9 h-9 flex-shrink-0" strokeWidth={2.2} />
-            <div><div className="font-bold leading-tight">¡Completaste el Año 1!</div><div className="text-sm text-amber-50">Certificado: {year1.certificate}</div></div>
+            <div className="flex-1 min-w-0"><div className="font-bold leading-tight">¡Completaste el Año 1!</div><div className="text-sm text-amber-50">Toca para ver tu certificado</div></div>
+            <ChevronRight className="w-6 h-6 flex-shrink-0" />
+          </button>
+        )}
+
+        {/* Repaso espaciado */}
+        {!loading && reviewCapsule && (
+          <button onClick={() => setSelectedId(reviewCapsule.id)} className="w-full mb-6 bg-white dark:bg-slate-800 border-2 border-teal-300 dark:border-teal-800 p-4 rounded-2xl flex items-center gap-3 active:scale-[0.99] transition-all text-left">
+            <RefreshCw className="w-8 h-8 flex-shrink-0 text-teal-600 dark:text-teal-400" strokeWidth={2.2} />
+            <div className="flex-1 min-w-0">
+              <div className="text-xs uppercase tracking-wide font-bold text-teal-700 dark:text-teal-300">Repaso de la semana</div>
+              <div className="font-bold text-brand-ink leading-tight truncate">{reviewCapsule.n}. {reviewCapsule.title}</div>
+            </div>
+            <ChevronRight className="w-6 h-6 flex-shrink-0 text-teal-600 dark:text-teal-400" />
+          </button>
+        )}
+
+        {/* Insignias */}
+        {!loading && (
+          <div className="mb-6">
+            <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#9a7636' }}>Insignias</div>
+            <div className="grid grid-cols-4 gap-2">
+              {CURRICULUM[0].modules.map((mod) => {
+                const earned = isModuleDone(mod, completed);
+                const badge = MODULE_BADGES[mod.id];
+                return (
+                  <div key={mod.id} className={`rounded-xl p-2 text-center border-2 ${earned ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700' : 'bg-gray-100 dark:bg-slate-800/50 border-gray-200 dark:border-slate-700'}`}>
+                    <div className={`text-2xl leading-none ${earned ? '' : 'grayscale opacity-40'}`}>{badge?.emoji}</div>
+                    <div className={`text-[10px] leading-tight mt-1 font-semibold ${earned ? 'text-brand-ink' : 'text-gray-400'}`}>{badge?.name}</div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -176,6 +223,14 @@ export function FormacionRoadmap({ userId }: { userId: string }) {
             </div>
           ))}
         </div>
+
+        {showCertificate && (
+          <CertificateModal
+            name={userName || 'Miembro del coro'}
+            title={year1.certificate || 'Cantor Litúrgico — Fundamentos'}
+            onClose={() => setShowCertificate(false)}
+          />
+        )}
       </div>
     </div>
   );

@@ -420,6 +420,17 @@ function AppContent() {
     void syncPushParishes(parishes, userProfile.activeRole || userProfile.role);
   }, [route.screen, userProfile]);
 
+  // Deep link de la cápsula semanal (push /?goto=cursos): al estar logueado, abre Cursos.
+  const [gotoHandled, setGotoHandled] = useState(false);
+  useEffect(() => {
+    if (gotoHandled || route.screen !== 'app' || !userProfile) return;
+    if (new URLSearchParams(window.location.search).get('goto') === 'cursos') {
+      setGotoHandled(true);
+      try { window.history.replaceState({}, '', '/'); } catch { /* noop */ }
+      navigate('courses');
+    }
+  }, [gotoHandled, route.screen, userProfile]);
+
   // Cargar el catálogo de capillas una vez que hay sesión (para el selector de parroquia).
   useEffect(() => {
     if (!userProfile) return;
@@ -1373,7 +1384,7 @@ function renderView(p: ViewProps): JSX.Element | null {
       );
 
     case 'courses':
-      return <FormacionRoadmap userId={p.userProfile.id} />;
+      return <FormacionRoadmap userId={p.userProfile.id} userName={p.userProfile.name} />;
 
     case 'theory':
       return <MusicalTheory onBack={() => p.navigate('courses')} />;

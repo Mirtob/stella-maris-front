@@ -274,3 +274,15 @@ export const ACTIVE_CAPSULES: Capsule[] = YEAR1.modules.flatMap((m) => m.capsule
 export function findCapsule(id: string): Capsule | undefined {
   return ACTIVE_CAPSULES.find((c) => c.id === id);
 }
+
+/** Insignia que se gana al completar cada módulo (trimestre) del Año 1. */
+export const MODULE_BADGES: Record<string, { name: string; emoji: string }> = {
+  'y1-t1': { name: 'Servidor del altar', emoji: '🕊️' },
+  'y1-t2': { name: 'Conoce la Misa', emoji: '⛪' },
+  'y1-t3': { name: 'Voz al servicio', emoji: '🎵' },
+  'y1-t4': { name: 'Guardián del tiempo litúrgico', emoji: '📅' },
+};
+
+export function isModuleDone(mod: Module, done: Set<string>): boolean {
+  return mod.capsules.length > 0 && mod.capsules.every((c) => done.has(c.id));
+}
