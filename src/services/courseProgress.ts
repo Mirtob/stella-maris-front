@@ -34,6 +34,20 @@ export async function completeCapsule(userId: string, capsuleId: string, quizSco
   }
 }
 
+export interface RankingRow { parish: string; capsules: number; members: number; }
+
+/** Ranking amistoso por parroquia (cápsulas completadas por su coro). */
+export async function getCourseRanking(): Promise<RankingRow[]> {
+  try {
+    const sb = getSupabaseClient();
+    const { data, error } = await sb.rpc('course_ranking');
+    if (error || !data) return [];
+    return (data as any[]).map((d) => ({ parish: d.parish, capsules: Number(d.capsules), members: Number(d.members) }));
+  } catch {
+    return [];
+  }
+}
+
 // ── Racha (semanas consecutivas con al menos una cápsula completada) ──────────
 
 /** Clave ISO-semana (lunes) de una fecha, p. ej. "2026-W28". */

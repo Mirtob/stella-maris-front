@@ -18,9 +18,10 @@ export function CapsuleView({ capsule, done, hasNext, onBack, onNext, onPass }: 
   const [checked, setChecked] = useState(false);
   const [passed, setPassed] = useState(done);
 
-  const total = capsule.quiz.length;
-  const allAnswered = capsule.quiz.every((_, i) => answers[i] != null);
-  const correctCount = capsule.quiz.reduce((n, q, i) => n + (answers[i] === q.answer ? 1 : 0), 0);
+  const quiz = capsule.quiz ?? [];
+  const total = quiz.length;
+  const allAnswered = quiz.every((_, i) => answers[i] != null);
+  const correctCount = quiz.reduce((n, q, i) => n + (answers[i] === q.answer ? 1 : 0), 0);
 
   const openVideo = () => {
     const a = document.createElement('a');
@@ -39,6 +40,8 @@ export function CapsuleView({ capsule, done, hasNext, onBack, onNext, onPass }: 
       onPass(correctCount);
     }
   };
+
+  const markSeen = () => { setPassed(true); onPass(0); };
 
   const retry = () => { setChecked(false); setAnswers({}); };
 
@@ -78,11 +81,11 @@ export function CapsuleView({ capsule, done, hasNext, onBack, onNext, onPass }: 
 
         {/* Quiz */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border-2 border-amber-200 dark:border-amber-800">
-          <h2 className="text-lg font-bold text-brand-ink mb-1">Comprueba lo aprendido</h2>
-          <p className="text-sm text-brand-ink-soft mb-4">Responde para completar la cápsula.</p>
+          <h2 className="text-lg font-bold text-brand-ink mb-1">{total > 0 ? 'Comprueba lo aprendido' : 'Completar cápsula'}</h2>
+          <p className="text-sm text-brand-ink-soft mb-4">{total > 0 ? 'Responde para completar la cápsula.' : 'Marca la cápsula cuando la hayas visto.'}</p>
 
           <div className="space-y-5">
-            {capsule.quiz.map((q, qi) => (
+            {quiz.map((q, qi) => (
               <div key={qi}>
                 <p className="font-semibold text-brand-ink mb-2">{qi + 1}. {q.q}</p>
                 <div className="space-y-2">
@@ -132,6 +135,10 @@ export function CapsuleView({ capsule, done, hasNext, onBack, onNext, onPass }: 
               <p className="text-red-700 dark:text-red-300 font-semibold mb-3">Casi… acertaste {correctCount} de {total}. Repasa y vuelve a intentar.</p>
               <button onClick={retry} className="w-full bg-amber-500 text-white py-3 rounded-xl font-bold active:scale-95 transition-all">Intentar de nuevo</button>
             </div>
+          ) : total === 0 ? (
+            <button onClick={markSeen} className="w-full mt-5 py-3 rounded-xl font-bold bg-gradient-to-r from-green-600 to-green-700 text-white active:scale-95 transition-all">
+              Marcar como completada
+            </button>
           ) : (
             <button
               onClick={check}

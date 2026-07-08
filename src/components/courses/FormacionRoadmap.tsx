@@ -1,15 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
-import { GraduationCap, Flame, CheckCircle2, Lock, PlayCircle, Award, ChevronRight, Circle, RefreshCw } from 'lucide-react';
-import { CURRICULUM, ACTIVE_CAPSULES, EJE_META, MODULE_BADGES, isModuleDone, findCapsule, type Capsule } from '../../data/courseCurriculum';
+import { GraduationCap, Flame, CheckCircle2, Lock, PlayCircle, Award, ChevronRight, Circle, RefreshCw, Trophy, Sparkles } from 'lucide-react';
+import {
+  CURRICULUM, PERMANENT_CAPSULES, EJE_META, MODULE_BADGES,
+  trackCapsules, isModuleDone, findCapsule, type Capsule, type Track,
+} from '../../data/courseCurriculum';
 import { getMyProgress, completeCapsule, computeStreakWeeks, type CapsuleProgress } from '../../services/courseProgress';
 import { CapsuleView } from './CapsuleView';
 import { CertificateModal } from './CertificateModal';
+import { CourseRankingModal } from './CourseRankingModal';
 
-export function FormacionRoadmap({ userId, userName }: { userId: string; userName?: string }) {
-  const [showCertificate, setShowCertificate] = useState(false);
+// Orden lineal de todo el itinerario (Año 1 → 2 → 3). La primera cápsula de un año se
+// abre al completar la última del año anterior.
+const ORDERED: Capsule[] = CURRICULUM.flatMap(trackCapsules);
+
+export function FormacionRoadmap({ userId, userName, userParish }: { userId: string; userName?: string; userParish?: string }) {
   const [progress, setProgress] = useState<CapsuleProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showCertificate, setShowCertificate] = useState(false);
+  const [showRanking, setShowRanking] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -20,21 +29,23 @@ export function FormacionRoadmap({ userId, userName }: { userId: string; userNam
   const completed = useMemo(() => new Set(progress.map((p) => p.capsuleId)), [progress]);
   const streak = useMemo(() => computeStreakWeeks(progress.map((p) => p.completedAt)), [progress]);
 
-  // Desbloqueo lineal: una cápsula está disponible si es la primera o la anterior está hecha.
-  const isUnlocked = (idx: number) => idx === 0 || completed.has(ACTIVE_CAPSULES[idx - 1].id);
-  const nextIdx = ACTIVE_CAPSULES.findIndex((c, i) => !completed.has(c.id) && isUnlocked(i));
-  const nextCapsule = nextIdx >= 0 ? ACTIVE_CAPSULES[nextIdx] : null;
-  const doneCount = ACTIVE_CAPSULES.filter((c) => completed.has(c.id)).length;
-  const allDone = doneCount === ACTIVE_CAPSULES.length;
+  const orderIndex = (id: string) => ORDERED.findIndex((c) => c.id === id);
+  const orderUnlocked = (id: string) => { const g = orderIndex(id); return g <= 0 ? g === 0 : completed.has(ORDERED[g - 1].id); };
+  const nextCapsule = ORDERED.find((c, i) => !completed.has(c.id) && (i === 0 || completed.has(ORDERED[i - 1].id))) || null;
 
-  // Repaso espaciado: la cápsula completada más antigua (≥ 1 semana) vuelve para repasar.
+  const y1 = CURRICULUM[0];
+  const y1Caps = trackCapsules(y1);
+  const y1Done = y1Caps.filter((c) => completed.has(c.id)).length;
+  const y1AllDone = y1Done === y1Caps.length;
+  const pct = Math.round((y1Done / y1Caps.length) * 100);
+
   const reviewCapsule = useMemo(() => {
     const weekAgo = Date.now() - 7 * 86400000;
     const oldest = [...progress].sort((a, b) => (a.completedAt < b.completedAt ? -1 : 1));
     for (const p of oldest) {
       if (new Date(p.completedAt).getTime() <= weekAgo) {
-        const cap = findCapsule(p.capsuleId);
-        if (cap) return cap;
+        const c = findCapsule(p.capsuleId);
+        if (c) return c;
       }
     }
     return null;
@@ -48,25 +59,97 @@ export function FormacionRoadmap({ userId, userName }: { userId: string; userNam
 
   // ── Vista de una cápsula ──
   if (selectedId) {
-    const cap = findCapsule(selectedId);
-    if (cap) {
-      const idx = ACTIVE_CAPSULES.findIndex((c) => c.id === cap.id);
-      const next = ACTIVE_CAPSULES[idx + 1];
+    const capsule = findCapsule(selectedId);
+    if (capsule) {
+      const gi = orderIndex(capsule.id);
+      const next = gi >= 0 ? ORDERED[gi + 1] : undefined;
       return (
         <CapsuleView
-          capsule={cap}
-          done={completed.has(cap.id)}
+          capsule={capsule}
+          done={completed.has(capsule.id)}
           hasNext={!!next}
           onBack={() => setSelectedId(null)}
           onNext={() => next && setSelectedId(next.id)}
-          onPass={(score) => handlePass(cap, score)}
+          onPass={(score) => handlePass(capsule, score)}
         />
       );
     }
   }
 
-  const year1 = CURRICULUM[0];
-  const pct = Math.round((doneCount / ACTIVE_CAPSULES.length) * 100);
+  const gold = '#9a7636';
+
+  const CapsuleRow = ({ cap, clickable }: { cap: Capsule; clickable: boolean }) => {
+    const isDone = completed.has(cap.id);
+    const unlocked = clickable && orderUnlocked(cap.id);
+    const isNext = nextCapsule?.id === cap.id;
+    const eje = EJE_META[cap.eje];
+    return (
+      <button
+        disabled={!unlocked}
+        onClick={() => unlocked && setSelectedId(cap.id)}
+        className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${
+          isDone ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+          : isNext ? 'bg-white dark:bg-slate-800 border-brand shadow-md'
+          : unlocked ? 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700'
+          : 'bg-gray-100 dark:bg-slate-800/50 border-gray-100 dark:border-slate-800 opacity-70'}`}
+      >
+        <span className="flex-shrink-0">
+          {isDone ? <CheckCircle2 className="w-6 h-6 text-green-600" />
+            : !unlocked ? <Lock className="w-5 h-5 text-gray-400" />
+            : isNext ? <PlayCircle className="w-6 h-6 text-brand" />
+            : <Circle className="w-5 h-5 text-gray-300 dark:text-slate-600" />}
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block font-semibold text-brand-ink leading-tight truncate">{cap.n}. {cap.title}</span>
+          <span className="text-xs text-brand-ink-soft">{cap.duration}</span>
+        </span>
+        <span className="text-[10px] font-bold uppercase tracking-wide text-white px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: eje.color }}>{eje.label}</span>
+      </button>
+    );
+  };
+
+  const renderTrack = (track: Track, index: number) => {
+    const caps = trackCapsules(track);
+    const first = caps[0];
+    const open = index === 0 || (caps.length > 0 && orderUnlocked(first.id));
+    const done = caps.every((c) => completed.has(c.id));
+    return (
+      <div key={track.id} className="mt-8">
+        <div className="flex items-center gap-2">
+          <div className="min-w-0">
+            <div className="text-xs font-bold uppercase tracking-widest" style={{ color: gold }}>{track.cycle}</div>
+            <h2 className="text-xl font-bold text-brand-ink leading-tight">{track.title}</h2>
+            <p className="text-sm italic text-brand-ink-soft">«{track.motto}»</p>
+          </div>
+          {done && <CheckCircle2 className="w-6 h-6 text-green-600 ml-auto flex-shrink-0" />}
+          {!open && !done && <Lock className="w-5 h-5 text-gray-400 ml-auto flex-shrink-0" />}
+        </div>
+        {!open && (
+          <p className="text-xs text-brand-ink-soft mt-1 mb-1">🔒 Se abre al completar el ciclo anterior · vista previa del contenido</p>
+        )}
+        <div className="space-y-5 mt-3">
+          {track.modules.map((mod) => (
+            <div key={mod.id}>
+              <div className="flex items-baseline gap-2 mb-2 border-b-2 pb-1" style={{ borderColor: '#e0d6bd' }}>
+                <span className="text-xs font-bold uppercase tracking-wide" style={{ color: gold }}>{mod.term}</span>
+                <span className="font-bold text-brand-ink text-sm">{mod.title}</span>
+                {MODULE_BADGES[mod.id] && isModuleDone(mod, completed) && <span className="ml-auto text-base">{MODULE_BADGES[mod.id].emoji}</span>}
+              </div>
+              <div className="space-y-2">
+                {mod.capsules.map((cap) => <CapsuleRow key={cap.id} cap={cap} clickable={open} />)}
+              </div>
+            </div>
+          ))}
+        </div>
+        {track.certificate && (
+          <div className="mt-4 flex items-center gap-2 text-sm text-brand-ink-soft">
+            <Award className="w-5 h-5 flex-shrink-0" style={{ color: gold }} />
+            <span>Certificado: <strong className="text-brand-ink">{track.certificate}</strong></span>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="w-full max-w-md md:max-w-2xl mx-auto min-h-screen p-3 sm:p-4 md:p-6 pb-24 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
@@ -82,7 +165,7 @@ export function FormacionRoadmap({ userId, userName }: { userId: string; userNam
           <p className="text-brand-ink-soft mt-1">Formación teológico-litúrgica y musical, paso a paso</p>
         </div>
 
-        {/* Racha + progreso */}
+        {/* Racha + progreso del Año 1 */}
         <div className="grid grid-cols-2 gap-3 mb-5">
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border-2 border-orange-200 dark:border-orange-900 flex items-center gap-3">
             <Flame className={`w-9 h-9 flex-shrink-0 ${streak > 0 ? 'text-orange-500' : 'text-gray-300 dark:text-slate-600'}`} strokeWidth={2.2} />
@@ -93,8 +176,8 @@ export function FormacionRoadmap({ userId, userName }: { userId: string; userNam
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border-2 border-blue-200 dark:border-blue-900">
             <div className="flex items-baseline justify-between">
-              <span className="text-2xl font-extrabold text-brand-ink leading-none">{doneCount}<span className="text-base text-brand-ink-soft">/{ACTIVE_CAPSULES.length}</span></span>
-              <span className="text-xs text-brand-ink-soft">{pct}%</span>
+              <span className="text-2xl font-extrabold text-brand-ink leading-none">{y1Done}<span className="text-base text-brand-ink-soft">/{y1Caps.length}</span></span>
+              <span className="text-xs text-brand-ink-soft">Año 1 · {pct}%</span>
             </div>
             <div className="mt-2 h-2 rounded-full bg-gray-200 dark:bg-slate-700 overflow-hidden">
               <div className="h-full rounded-full bg-gradient-to-r from-brand to-brand-strong transition-all" style={{ width: `${pct}%` }} />
@@ -104,17 +187,17 @@ export function FormacionRoadmap({ userId, userName }: { userId: string; userNam
 
         {/* Continuar */}
         {!loading && nextCapsule && (
-          <button onClick={() => setSelectedId(nextCapsule.id)} className="w-full mb-6 bg-gradient-to-r from-brand to-brand-strong text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg border-2 border-brand-border active:scale-[0.99] transition-all text-left">
+          <button onClick={() => setSelectedId(nextCapsule.id)} className="w-full mb-4 bg-gradient-to-r from-brand to-brand-strong text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg border-2 border-brand-border active:scale-[0.99] transition-all text-left">
             <PlayCircle className="w-9 h-9 flex-shrink-0" strokeWidth={2.2} />
             <div className="flex-1 min-w-0">
-              <div className="text-xs uppercase tracking-wide text-blue-200 font-bold">{doneCount === 0 ? 'Empieza aquí' : 'Continuar'}</div>
+              <div className="text-xs uppercase tracking-wide text-blue-200 font-bold">{completed.size === 0 ? 'Empieza aquí' : 'Continuar'}</div>
               <div className="font-bold leading-tight truncate">{nextCapsule.n}. {nextCapsule.title}</div>
             </div>
             <ChevronRight className="w-6 h-6 flex-shrink-0" />
           </button>
         )}
-        {!loading && allDone && (
-          <button onClick={() => setShowCertificate(true)} className="w-full mb-6 bg-gradient-to-r from-amber-500 to-orange-600 text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg border-2 border-amber-700 active:scale-[0.99] transition-all text-left">
+        {!loading && y1AllDone && (
+          <button onClick={() => setShowCertificate(true)} className="w-full mb-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg border-2 border-amber-700 active:scale-[0.99] transition-all text-left">
             <Award className="w-9 h-9 flex-shrink-0" strokeWidth={2.2} />
             <div className="flex-1 min-w-0"><div className="font-bold leading-tight">¡Completaste el Año 1!</div><div className="text-sm text-amber-50">Toca para ver tu certificado</div></div>
             <ChevronRight className="w-6 h-6 flex-shrink-0" />
@@ -123,7 +206,7 @@ export function FormacionRoadmap({ userId, userName }: { userId: string; userNam
 
         {/* Repaso espaciado */}
         {!loading && reviewCapsule && (
-          <button onClick={() => setSelectedId(reviewCapsule.id)} className="w-full mb-6 bg-white dark:bg-slate-800 border-2 border-teal-300 dark:border-teal-800 p-4 rounded-2xl flex items-center gap-3 active:scale-[0.99] transition-all text-left">
+          <button onClick={() => setSelectedId(reviewCapsule.id)} className="w-full mb-4 bg-white dark:bg-slate-800 border-2 border-teal-300 dark:border-teal-800 p-4 rounded-2xl flex items-center gap-3 active:scale-[0.99] transition-all text-left">
             <RefreshCw className="w-8 h-8 flex-shrink-0 text-teal-600 dark:text-teal-400" strokeWidth={2.2} />
             <div className="flex-1 min-w-0">
               <div className="text-xs uppercase tracking-wide font-bold text-teal-700 dark:text-teal-300">Repaso de la semana</div>
@@ -133,12 +216,22 @@ export function FormacionRoadmap({ userId, userName }: { userId: string; userNam
           </button>
         )}
 
-        {/* Insignias */}
+        {/* Ranking de coros */}
+        <button onClick={() => setShowRanking(true)} className="w-full mb-2 bg-white dark:bg-slate-800 border-2 border-amber-300 dark:border-amber-800 p-4 rounded-2xl flex items-center gap-3 active:scale-[0.99] transition-all text-left">
+          <Trophy className="w-8 h-8 flex-shrink-0 text-amber-500" strokeWidth={2.2} />
+          <div className="flex-1 min-w-0">
+            <div className="font-bold text-brand-ink leading-tight">Ranking de coros</div>
+            <div className="text-xs text-brand-ink-soft">Formarse en comunidad: mira cómo avanzan los coros</div>
+          </div>
+          <ChevronRight className="w-6 h-6 flex-shrink-0 text-amber-500" />
+        </button>
+
+        {/* Insignias del Año 1 */}
         {!loading && (
-          <div className="mb-6">
-            <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#9a7636' }}>Insignias</div>
+          <div className="mt-6 mb-2">
+            <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: gold }}>Insignias · Año 1</div>
             <div className="grid grid-cols-4 gap-2">
-              {CURRICULUM[0].modules.map((mod) => {
+              {y1.modules.map((mod) => {
                 const earned = isModuleDone(mod, completed);
                 const badge = MODULE_BADGES[mod.id];
                 return (
@@ -152,85 +245,35 @@ export function FormacionRoadmap({ userId, userName }: { userId: string; userNam
           </div>
         )}
 
-        {/* Track Año 1 */}
-        <div className="mb-2">
-          <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#9a7636' }}>{year1.cycle}</div>
-          <h2 className="text-xl font-bold text-brand-ink">{year1.title}</h2>
-          <p className="text-sm italic text-brand-ink-soft">«{year1.motto}»</p>
-        </div>
+        {/* Los tres ciclos */}
+        {CURRICULUM.map((t, i) => renderTrack(t, i))}
 
-        <div className="space-y-5 mt-4">
-          {year1.modules.map((mod) => (
-            <div key={mod.id}>
-              <div className="flex items-baseline gap-2 mb-2 border-b-2 pb-1" style={{ borderColor: '#e0d6bd' }}>
-                <span className="text-xs font-bold uppercase tracking-wide" style={{ color: '#9a7636' }}>{mod.term}</span>
-                <span className="font-bold text-brand-ink text-sm">{mod.title}</span>
-              </div>
-              <div className="space-y-2">
-                {mod.capsules.map((cap) => {
-                  const idx = ACTIVE_CAPSULES.findIndex((c) => c.id === cap.id);
-                  const isDone = completed.has(cap.id);
-                  const unlocked = isUnlocked(idx);
-                  const isNext = nextCapsule?.id === cap.id;
-                  const eje = EJE_META[cap.eje];
-                  return (
-                    <button
-                      key={cap.id}
-                      disabled={!unlocked}
-                      onClick={() => unlocked && setSelectedId(cap.id)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${
-                        isDone ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                        : isNext ? 'bg-white dark:bg-slate-800 border-brand shadow-md'
-                        : unlocked ? 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700'
-                        : 'bg-gray-100 dark:bg-slate-800/50 border-gray-100 dark:border-slate-800 opacity-70'}`}
-                    >
-                      <span className="flex-shrink-0">
-                        {isDone ? <CheckCircle2 className="w-6 h-6 text-green-600" />
-                          : !unlocked ? <Lock className="w-5 h-5 text-gray-400" />
-                          : isNext ? <PlayCircle className="w-6 h-6 text-brand" />
-                          : <Circle className="w-5 h-5 text-gray-300 dark:text-slate-600" />}
-                      </span>
-                      <span className="flex-1 min-w-0">
-                        <span className="block font-semibold text-brand-ink leading-tight truncate">{cap.n}. {cap.title}</span>
-                        <span className="text-xs text-brand-ink-soft">{cap.duration}</span>
-                      </span>
-                      <span className="text-[10px] font-bold uppercase tracking-wide text-white px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: eje.color }}>{eje.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Certificado */}
-        <div className="mt-6 bg-white/60 dark:bg-white/5 border-2 border-dashed rounded-2xl p-4 flex items-center gap-3" style={{ borderColor: '#d8cfb8' }}>
-          <Award className="w-8 h-8 flex-shrink-0" style={{ color: '#9a7636' }} />
-          <p className="text-sm text-brand-ink-soft">Al completar las {ACTIVE_CAPSULES.length} cápsulas obtienes el certificado <strong className="text-brand-ink">{year1.certificate}</strong>.</p>
-        </div>
-
-        {/* Próximos ciclos */}
-        <div className="mt-6 space-y-3">
-          {CURRICULUM.filter((t) => t.status === 'coming').map((t) => (
-            <div key={t.id} className="bg-gray-100 dark:bg-slate-800/50 rounded-2xl p-4 border-2 border-gray-200 dark:border-slate-700 flex items-center gap-3 opacity-80">
-              <Lock className="w-6 h-6 text-gray-400 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold uppercase tracking-wide" style={{ color: '#9a7636' }}>{t.cycle}</div>
-                <div className="font-bold text-brand-ink leading-tight">{t.title}</div>
-                <div className="text-xs italic text-brand-ink-soft">«{t.motto}»</div>
-              </div>
-              <span className="text-xs font-bold text-gray-500 whitespace-nowrap">Próximamente</span>
-            </div>
-          ))}
+        {/* Formación permanente */}
+        <div className="mt-8">
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles className="w-5 h-5" style={{ color: gold }} />
+            <h2 className="text-xl font-bold text-brand-ink">Formación permanente</h2>
+          </div>
+          <p className="text-sm text-brand-ink-soft mb-3">Cápsulas mensuales, disponibles siempre — mantienen viva tu formación.</p>
+          <div className="space-y-2">
+            {PERMANENT_CAPSULES.map((cap) => {
+              const isDone = completed.has(cap.id);
+              const eje = EJE_META[cap.eje];
+              return (
+                <button key={cap.id} onClick={() => setSelectedId(cap.id)} className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left active:scale-[0.99] transition-all ${isDone ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700'}`}>
+                  <span className="flex-shrink-0">{isDone ? <CheckCircle2 className="w-6 h-6 text-green-600" /> : <Circle className="w-5 h-5 text-gray-300 dark:text-slate-600" />}</span>
+                  <span className="flex-1 min-w-0"><span className="block font-semibold text-brand-ink leading-tight truncate">{cap.title}</span><span className="text-xs text-brand-ink-soft">{cap.source}</span></span>
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-white px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: eje.color }}>{eje.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {showCertificate && (
-          <CertificateModal
-            name={userName || 'Miembro del coro'}
-            title={year1.certificate || 'Cantor Litúrgico — Fundamentos'}
-            onClose={() => setShowCertificate(false)}
-          />
+          <CertificateModal name={userName || 'Miembro del coro'} title={y1.certificate || 'Cantor Litúrgico — Fundamentos'} onClose={() => setShowCertificate(false)} />
         )}
+        {showRanking && <CourseRankingModal userId={userId} myParish={userParish} onClose={() => setShowRanking(false)} />}
       </div>
     </div>
   );

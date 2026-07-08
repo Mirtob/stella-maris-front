@@ -1384,7 +1384,7 @@ function renderView(p: ViewProps): JSX.Element | null {
       );
 
     case 'courses':
-      return <FormacionRoadmap userId={p.userProfile.id} userName={p.userProfile.name} />;
+      return <FormacionRoadmap userId={p.userProfile.id} userName={p.userProfile.name} userParish={p.activeParishName || p.userProfile.parishName} />;
 
     case 'theory':
       return <MusicalTheory onBack={() => p.navigate('courses')} />;
