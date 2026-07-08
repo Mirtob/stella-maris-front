@@ -44,7 +44,7 @@ function lazyWithReload(factory: () => Promise<{ default: any }>) {
 const AdminDashboard = lazyWithReload(() => import('./components/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const SongPlayer = lazyWithReload(() => import('./components/songs/SongPlayer').then(m => ({ default: m.SongPlayer })));
 const PlaylistPlayer = lazyWithReload(() => import('./components/songs/PlaylistPlayer').then(m => ({ default: m.PlaylistPlayer })));
-const CoursesMenu = lazyWithReload(() => import('./components/courses/CoursesMenu').then(m => ({ default: m.CoursesMenu })));
+const FormacionRoadmap = lazyWithReload(() => import('./components/courses/FormacionRoadmap').then(m => ({ default: m.FormacionRoadmap })));
 const MusicalTheory = lazyWithReload(() => import('./components/courses/MusicalTheory').then(m => ({ default: m.MusicalTheory })));
 const Liturgy = lazyWithReload(() => import('./components/liturgy/Liturgy').then(m => ({ default: m.Liturgy })));
 const MusicalInstruments = lazyWithReload(() => import('./components/courses/MusicalInstruments').then(m => ({ default: m.MusicalInstruments })));
@@ -1373,7 +1373,7 @@ function renderView(p: ViewProps): JSX.Element | null {
       );
 
     case 'courses':
-      return <CoursesMenu onSelectCourse={course => p.navigate(course)} />;
+      return <FormacionRoadmap userId={p.userProfile.id} />;
 
     case 'theory':
       return <MusicalTheory onBack={() => p.navigate('courses')} />;
