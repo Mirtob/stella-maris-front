@@ -1,7 +1,8 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
-import { Users, Save, Loader, Mail, Phone, Church, Music } from 'lucide-react';
+import { Users, Save, Loader, Mail, Phone, Church, Music, BookUser } from 'lucide-react';
 import { toast } from 'sonner';
 import { getMyChoirContact, saveChoirContact, EMPTY_CHOIR_CONTACT, type ChoirContact } from '../../services/choirContacts';
+import { ChoirDirectoryModal } from './ChoirDirectoryModal';
 
 interface Props {
   userId: string;
@@ -17,6 +18,7 @@ export function ChoirContactCard({ userId, defaultParish }: Props) {
   const [c, setC] = useState<ChoirContact>({ ...EMPTY_CHOIR_CONTACT, parish: defaultParish || '' });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showDirectory, setShowDirectory] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,20 +84,31 @@ export function ChoirContactCard({ userId, defaultParish }: Props) {
             <textarea value={c.notes} onChange={set('notes')} rows={2} placeholder="Instagram @…, ensayamos jueves 20:00…" className={`${inputCls} resize-y`} />
           </div>
 
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full mt-2 bg-gradient-to-r from-teal-600 to-emerald-700 text-white py-3 rounded-xl flex items-center justify-center gap-2 font-bold active:scale-95 transition-all disabled:opacity-60"
-          >
-            {saving ? <Loader className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-            Guardar contacto
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2 mt-2">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 bg-gradient-to-r from-teal-600 to-emerald-700 text-white py-3 rounded-xl flex items-center justify-center gap-2 font-bold active:scale-95 transition-all disabled:opacity-60"
+            >
+              {saving ? <Loader className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+              Guardar contacto
+            </button>
+            <button
+              onClick={() => setShowDirectory(true)}
+              className="flex-1 bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-200 border-2 border-teal-300 dark:border-teal-700 py-3 rounded-xl flex items-center justify-center gap-2 font-bold active:scale-95 transition-all"
+            >
+              <BookUser className="w-5 h-5" />
+              Ver directorio
+            </button>
+          </div>
 
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             Estos datos quedan visibles para otros coros de la app. Deja en blanco lo que no quieras compartir.
           </p>
         </div>
       )}
+
+      {showDirectory && <ChoirDirectoryModal onClose={() => setShowDirectory(false)} />}
     </div>
   );
 }

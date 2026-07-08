@@ -7,7 +7,6 @@ import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551
 import { getGarland } from '../data/garlands';
 import { getPdfFont, getPdfScale } from '../data/pdfStyle';
 import { renderPdfToImages, imposeBooklet } from './atrilBookletPDF';
-import { stripLyricsFormatting } from './lyricsFormat';
 
 interface PDFGeneratorOptions {
   cantoral: PublishedCantoral;
@@ -241,11 +240,93 @@ const CHORD_TOKEN = new RegExp(
   `^${NOTE}[#b]?(maj|min|m|sus|dim|aug|add)?[0-9]?(\\/${NOTE}[#b]?)?$`
 );
 
+// ──────────────────────────────────────────────
+// Formato de letra en el folleto: **negrita**, *cursiva*, __subrayado__, ">> " centrado.
+// Los cantos SIN marcadores siguen el camino justificado de siempre (no se tocan).
+// ──────────────────────────────────────────────
+
+interface StyledWord { t: string; b: boolean; i: boolean; u: boolean }
+
+/** ¿La línea trae marcadores de formato? (para no tocar los cantos sin formato). */
+function hasLyricFormatting(line: string): boolean {
+  return /^\s*>>\s?/.test(line) || /\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*/.test(line);
+}
+
+/** Descompone una línea en centrado + runs con estilo (**b**, *i*, __u__). */
+function parseRuns(raw: string): { centered: boolean; runs: StyledWord[] } {
+  let text = raw.replace(/^\s+/, '');
+  let centered = false;
+  if (/^>>\s?/.test(text)) { centered = true; text = text.replace(/^>>\s?/, ''); }
+  const runs: StyledWord[] = [];
+  const re = /(\*\*([^*]+)\*\*|__([^_]+)__|\*([^*]+)\*)/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) runs.push({ t: text.slice(last, m.index), b: false, i: false, u: false });
+    if (m[2] != null) runs.push({ t: m[2], b: true, i: false, u: false });        // **negrita**
+    else if (m[3] != null) runs.push({ t: m[3], b: false, i: false, u: true });   // __subrayado__
+    else if (m[4] != null) runs.push({ t: m[4], b: false, i: true, u: false });   // *cursiva*
+    last = re.lastIndex;
+  }
+  if (last < text.length) runs.push({ t: text.slice(last), b: false, i: false, u: false });
+  return { centered, runs };
+}
+
+function styleFont(pdf: any, b: boolean, i: boolean) {
+  pdf.setFont('helvetica', b && i ? 'bolditalic' : b ? 'bold' : i ? 'italic' : 'normal');
+}
+
+/** Parte los runs en palabras con estilo y las envuelve al ancho dado. */
+function wrapStyledRuns(pdf: any, runs: StyledWord[], width: number): StyledWord[][] {
+  const words: StyledWord[] = [];
+  for (const r of runs) {
+    for (const p of r.t.split(/\s+/)) if (p) words.push({ ...r, t: p });
+  }
+  styleFont(pdf, false, false);
+  const sw = pdf.getTextWidth(' ');
+  const lines: StyledWord[][] = [];
+  let cur: StyledWord[] = [];
+  let curW = 0;
+  for (const w of words) {
+    styleFont(pdf, w.b, w.i);
+    const ww = pdf.getTextWidth(w.t);
+    const add = cur.length ? sw + ww : ww;
+    if (cur.length && curW + add > width) { lines.push(cur); cur = [w]; curW = ww; }
+    else { cur.push(w); curW += add; }
+  }
+  if (cur.length) lines.push(cur);
+  return lines.length ? lines : [[]];
+}
+
+/** Dibuja líneas ya envueltas (izquierda o centradas) y devuelve la nueva Y. */
+function drawStyledLines(pdf: any, lines: StyledWord[][], x: number, yStart: number, width: number, centered: boolean, lineAdv: number): number {
+  let y = yStart;
+  styleFont(pdf, false, false);
+  const sw = pdf.getTextWidth(' ');
+  for (const line of lines) {
+    let lw = 0;
+    line.forEach((w, idx) => { styleFont(pdf, w.b, w.i); lw += pdf.getTextWidth(w.t) + (idx ? sw : 0); });
+    let cx = centered ? x + Math.max(0, (width - lw) / 2) : x;
+    for (let idx = 0; idx < line.length; idx++) {
+      const w = line[idx];
+      if (idx) cx += sw;
+      styleFont(pdf, w.b, w.i);
+      pdf.text(w.t, cx, y);
+      const ww = pdf.getTextWidth(w.t);
+      if (w.u) { pdf.setLineWidth(0.3); pdf.line(cx, y + 0.9, cx + ww, y + 0.9); }
+      cx += ww;
+    }
+    y += lineAdv;
+  }
+  styleFont(pdf, false, false);
+  return y;
+}
+
 function cleanLyrics(lyrics: string): string {
   if (!lyrics) return '';
 
-  // Quitar marcadores de formato del editor (**negrita**, *cursiva*, __subrayado__, ">> ").
-  lyrics = stripLyricsFormatting(lyrics);
+  // NOTA: se CONSERVAN los marcadores de formato (**negrita**, *cursiva*, __subrayado__,
+  // ">> " centrado); el dibujo del folleto los interpreta (ver parseRuns/drawStyledLines).
   // Quitar acordes inline entre corchetes (cualquier notación): [Sol] [La m] [C#m7] [Re/Fa#]
   let cleaned = lyrics.replace(/\[[^\]]*\]/g, '');
 
@@ -473,6 +554,13 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     for (const raw of stanza) {
       const line = raw.replace(/\s+$/, '');
       if (SECTION_RE.test(line.trim())) { h += adv(6); continue; }
+      if (hasLyricFormatting(line)) {
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(10.5);
+        const { runs } = parseRuns(line);
+        h += wrapStyledRuns(pdf, runs, width).length * adv(5.5);
+        continue;
+      }
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(10.5);
       const wrapped = pdf.splitTextToSize(line, width) as string[];
@@ -494,6 +582,14 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
         pdf.setTextColor(80, 80, 80);
         pdf.text(line.trim(), x, yy);
         yy += adv(6);
+        continue;
+      }
+      if (hasLyricFormatting(line)) {
+        pdf.setFontSize(10.5);
+        pdf.setTextColor(40, 40, 40);
+        const { centered, runs } = parseRuns(line);
+        const wl = wrapStyledRuns(pdf, runs, width);
+        yy = drawStyledLines(pdf, wl, x, yy, width, centered, adv(5.5));
         continue;
       }
       pdf.setFont('helvetica', 'normal');
