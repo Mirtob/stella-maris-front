@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { GraduationCap, Flame, CheckCircle2, Lock, PlayCircle, Award, ChevronRight, Circle, RefreshCw, Trophy, Sparkles } from 'lucide-react';
+import { GraduationCap, Flame, CheckCircle2, Lock, PlayCircle, Award, ChevronRight, Circle, RefreshCw, Trophy, Sparkles, Youtube } from 'lucide-react';
 import {
   CURRICULUM, PERMANENT_CAPSULES, EJE_META, MODULE_BADGES,
   trackCapsules, isModuleDone, isTrackDone, findCapsule, baseQuizFor, type Capsule, type Track, type QuizQuestion,
@@ -7,7 +7,7 @@ import {
 import { getMyProgress, completeCapsule, computeStreakWeeks, type CapsuleProgress } from '../../services/courseProgress';
 import { getQuizOverrides } from '../../services/courseQuizzes';
 import { getCourseVideos } from '../../services/courseVideoLoader';
-import { getVideoUrl } from '../../services/youtube';
+import { getVideoUrl, getSubscribeUrl } from '../../services/youtube';
 import { CapsuleView } from './CapsuleView';
 import { CertificateModal } from './CertificateModal';
 import { CourseRankingModal } from './CourseRankingModal';
@@ -30,6 +30,12 @@ export function FormacionRoadmap({ userId, userName, userParish }: { userId: str
     getQuizOverrides().then((q) => { if (!cancelled) setQuizOverrides(q); });
     return () => { cancelled = true; };
   }, [userId]);
+
+  const openExternal = (href: string) => {
+    const a = document.createElement('a');
+    a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    document.body.appendChild(a); a.click(); a.remove();
+  };
 
   const videoUrlFor = (id: string) => (videoMap[id] ? getVideoUrl(videoMap[id]) : undefined);
   const quizFor = (id: string) => quizOverrides[id] ?? baseQuizFor(id);
@@ -253,6 +259,16 @@ export function FormacionRoadmap({ userId, userName, userParish }: { userId: str
             <div className="text-xs text-brand-ink-soft">Formarse en comunidad: mira cómo avanzan los coros</div>
           </div>
           <ChevronRight className="w-6 h-6 flex-shrink-0 text-amber-500" />
+        </button>
+
+        {/* Suscripción al canal */}
+        <button onClick={() => openExternal(getSubscribeUrl())} className="w-full mt-2 bg-gradient-to-r from-rose-600 to-red-700 text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg border-2 border-rose-800 active:scale-[0.99] transition-all text-left">
+          <Youtube className="w-8 h-8 flex-shrink-0" strokeWidth={2.2} />
+          <div className="flex-1 min-w-0">
+            <div className="font-bold leading-tight">Suscríbete al canal</div>
+            <div className="text-xs text-rose-100">Apoya la formación y no te pierdas las nuevas cápsulas en video</div>
+          </div>
+          <ChevronRight className="w-6 h-6 flex-shrink-0" />
         </button>
 
         {/* Insignias del Año 1 */}
