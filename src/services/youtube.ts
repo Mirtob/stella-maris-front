@@ -102,6 +102,14 @@ export function getChannelUrl(): string {
 }
 
 /**
+ * URL que abre el diálogo de suscripción al canal oficial.
+ * `?sub_confirmation=1` hace que YouTube muestre el pop de "Suscribirse".
+ */
+export function getSubscribeUrl(): string {
+  return `https://www.youtube.com/channel/${YOUTUBE_CONFIG.channelId}?sub_confirmation=1`;
+}
+
+/**
  * Obtener URL de embed
  */
 export function getEmbedUrl(videoId: string, params?: Record<string, any>): string {

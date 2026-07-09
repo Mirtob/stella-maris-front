@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ArrowLeft, PlayCircle, BookOpen, CheckCircle2, XCircle, Award, ChevronRight } from 'lucide-react';
-import { getChannelUrl } from '../../services/youtube';
+import { ArrowLeft, PlayCircle, BookOpen, CheckCircle2, XCircle, Award, ChevronRight, Youtube, Bell, ArrowDown } from 'lucide-react';
+import { getChannelUrl, getSubscribeUrl, getEmbedUrl, extractVideoId } from '../../services/youtube';
 import { EJE_META, type Capsule, type QuizQuestion } from '../../data/courseCurriculum';
 
 interface Props {
@@ -25,10 +25,12 @@ export function CapsuleView({ capsule, done, hasNext, videoUrl, quiz: quizProp, 
   const allAnswered = quiz.every((_, i) => answers[i] != null);
   const correctCount = quiz.reduce((n, q, i) => n + (answers[i] === q.answer ? 1 : 0), 0);
 
-  const hasVideo = !!(videoUrl || capsule.videoUrl);
-  const openVideo = () => {
+  const rawVideoUrl = videoUrl || capsule.videoUrl || '';
+  const videoId = rawVideoUrl ? extractVideoId(rawVideoUrl) : null;
+  const hasVideo = !!videoId;
+  const openExternal = (href: string) => {
     const a = document.createElement('a');
-    a.href = videoUrl || capsule.videoUrl || getChannelUrl();
+    a.href = href;
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
     document.body.appendChild(a);
@@ -71,9 +73,36 @@ export function CapsuleView({ capsule, done, hasNext, videoUrl, quiz: quizProp, 
         </div>
 
         {/* Video */}
-        <button onClick={openVideo} className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-bold text-lg shadow-lg border-2 active:scale-95 transition-all mb-4 ${hasVideo ? 'bg-gradient-to-r from-rose-600 to-red-700 text-white border-rose-800' : 'bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-slate-600'}`}>
-          <PlayCircle className="w-7 h-7" strokeWidth={2.5} /> {hasVideo ? `Ver el video (${capsule.duration})` : 'Video en preparación · ir al canal'}
-        </button>
+        {hasVideo ? (
+          <div className="mb-4">
+            {/* Reproductor oficial embebido: la vista cuenta en YouTube y el usuario se queda en la app para el quiz */}
+            <div className="relative w-full rounded-2xl overflow-hidden border-2 border-rose-200 dark:border-rose-900 shadow-lg bg-black" style={{ aspectRatio: '16 / 9' }}>
+              <iframe
+                className="absolute inset-0 w-full h-full"
+                src={getEmbedUrl(videoId!, { rel: 0, modestbranding: 1, playsinline: 1 })}
+                title={capsule.title}
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
+            <div className="flex gap-2 mt-2">
+              <button onClick={() => openExternal(rawVideoUrl)} className="flex-1 py-2.5 rounded-xl flex items-center justify-center gap-2 font-bold text-sm bg-white dark:bg-slate-800 text-brand-ink border-2 border-gray-200 dark:border-slate-600 active:scale-95 transition-all">
+                <Youtube className="w-5 h-5 text-red-600" strokeWidth={2.2} /> Ver en YouTube
+              </button>
+              <button onClick={() => openExternal(getSubscribeUrl())} className="flex-1 py-2.5 rounded-xl flex items-center justify-center gap-2 font-bold text-sm bg-gradient-to-r from-rose-600 to-red-700 text-white border-2 border-rose-800 active:scale-95 transition-all">
+                <Bell className="w-5 h-5" strokeWidth={2.2} /> Suscríbete al canal
+              </button>
+            </div>
+            <p className="mt-2 flex items-center justify-center gap-1.5 text-sm text-brand-ink-soft">
+              <ArrowDown className="w-4 h-4 text-brand animate-bounce" /> Al terminar, responde el quiz aquí abajo
+            </p>
+          </div>
+        ) : (
+          <button onClick={() => openExternal(getChannelUrl())} className="w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-bold text-lg shadow-lg border-2 active:scale-95 transition-all mb-4 bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-slate-600">
+            <PlayCircle className="w-7 h-7" strokeWidth={2.5} /> Video en preparación · ir al canal
+          </button>
+        )}
 
         {/* Texto de apoyo + fuente */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border-2 border-blue-100 dark:border-slate-700 mb-4">
