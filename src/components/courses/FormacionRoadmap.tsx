@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { GraduationCap, Flame, CheckCircle2, Lock, PlayCircle, Award, ChevronRight, Circle, RefreshCw, Trophy, Sparkles } from 'lucide-react';
 import {
   CURRICULUM, PERMANENT_CAPSULES, EJE_META, MODULE_BADGES,
-  trackCapsules, isModuleDone, findCapsule, type Capsule, type Track,
+  trackCapsules, isModuleDone, isTrackDone, findCapsule, type Capsule, type Track,
 } from '../../data/courseCurriculum';
 import { getMyProgress, completeCapsule, computeStreakWeeks, type CapsuleProgress } from '../../services/courseProgress';
 import { getCourseVideos } from '../../services/courseVideoLoader';
@@ -11,9 +11,7 @@ import { CapsuleView } from './CapsuleView';
 import { CertificateModal } from './CertificateModal';
 import { CourseRankingModal } from './CourseRankingModal';
 
-// Orden lineal de todo el itinerario (Año 1 → 2 → 3). La primera cápsula de un año se
-// abre al completar la última del año anterior.
-const ORDERED: Capsule[] = CURRICULUM.flatMap(trackCapsules);
+const trackById: Record<string, Track> = Object.fromEntries(CURRICULUM.map((t) => [t.id, t]));
 
 export function FormacionRoadmap({ userId, userName, userParish }: { userId: string; userName?: string; userParish?: string }) {
   const [progress, setProgress] = useState<CapsuleProgress[]>([]);
@@ -35,9 +33,20 @@ export function FormacionRoadmap({ userId, userName, userParish }: { userId: str
   const completed = useMemo(() => new Set(progress.map((p) => p.capsuleId)), [progress]);
   const streak = useMemo(() => computeStreakWeeks(progress.map((p) => p.completedAt)), [progress]);
 
-  const orderIndex = (id: string) => ORDERED.findIndex((c) => c.id === id);
-  const orderUnlocked = (id: string) => { const g = orderIndex(id); return g <= 0 ? g === 0 : completed.has(ORDERED[g - 1].id); };
-  const nextCapsule = ORDERED.find((c, i) => !completed.has(c.id) && (i === 0 || completed.has(ORDERED[i - 1].id))) || null;
+  // Desbloqueo POR TRACK: un track se abre si no depende de otro (paralelo) o si su
+  // dependencia está completa; dentro del track, las cápsulas se abren en orden.
+  const trackOpen = (t: Track) => !t.requiresTrack || isTrackDone(trackById[t.requiresTrack], completed);
+  const capUnlocked = (t: Track, cap: Capsule) => {
+    if (!trackOpen(t)) return false;
+    const caps = trackCapsules(t);
+    const j = caps.findIndex((c) => c.id === cap.id);
+    return j <= 0 ? j === 0 : completed.has(caps[j - 1].id);
+  };
+  let nextCapsule: Capsule | null = null;
+  for (const t of CURRICULUM) {
+    const c = trackCapsules(t).find((x) => !completed.has(x.id) && capUnlocked(t, x));
+    if (c) { nextCapsule = c; break; }
+  }
 
   const y1 = CURRICULUM[0];
   const y1Caps = trackCapsules(y1);
@@ -67,8 +76,10 @@ export function FormacionRoadmap({ userId, userName, userParish }: { userId: str
   if (selectedId) {
     const capsule = findCapsule(selectedId);
     if (capsule) {
-      const gi = orderIndex(capsule.id);
-      const next = gi >= 0 ? ORDERED[gi + 1] : undefined;
+      const t = CURRICULUM.find((tr) => trackCapsules(tr).some((c) => c.id === capsule.id));
+      const tcaps = t ? trackCapsules(t) : [];
+      const j = tcaps.findIndex((c) => c.id === capsule.id);
+      const next = j >= 0 ? tcaps[j + 1] : undefined;
       return (
         <CapsuleView
           capsule={capsule}
@@ -85,9 +96,9 @@ export function FormacionRoadmap({ userId, userName, userParish }: { userId: str
 
   const gold = '#9a7636';
 
-  const CapsuleRow = ({ cap, clickable }: { cap: Capsule; clickable: boolean }) => {
+  const CapsuleRow = ({ track, cap }: { track: Track; cap: Capsule }) => {
     const isDone = completed.has(cap.id);
-    const unlocked = clickable && orderUnlocked(cap.id);
+    const unlocked = capUnlocked(track, cap);
     const isNext = nextCapsule?.id === cap.id;
     const eje = EJE_META[cap.eje];
     return (
@@ -117,9 +128,9 @@ export function FormacionRoadmap({ userId, userName, userParish }: { userId: str
 
   const renderTrack = (track: Track, index: number) => {
     const caps = trackCapsules(track);
-    const first = caps[0];
-    const open = index === 0 || (caps.length > 0 && orderUnlocked(first.id));
-    const done = caps.every((c) => completed.has(c.id));
+    const open = trackOpen(track);
+    const doneCount = caps.filter((c) => completed.has(c.id)).length;
+    const done = doneCount === caps.length && caps.length > 0;
     return (
       <div key={track.id} className="mt-8">
         <div className="flex items-center gap-2">
@@ -128,8 +139,10 @@ export function FormacionRoadmap({ userId, userName, userParish }: { userId: str
             <h2 className="text-xl font-bold text-brand-ink leading-tight">{track.title}</h2>
             <p className="text-sm italic text-brand-ink-soft">«{track.motto}»</p>
           </div>
-          {done && <CheckCircle2 className="w-6 h-6 text-green-600 ml-auto flex-shrink-0" />}
-          {!open && !done && <Lock className="w-5 h-5 text-gray-400 ml-auto flex-shrink-0" />}
+          <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+            <span className="text-sm font-bold text-brand-ink-soft" style={{ fontVariantNumeric: 'tabular-nums' }}>{doneCount}/{caps.length}</span>
+            {done ? <CheckCircle2 className="w-6 h-6 text-green-600" /> : !open ? <Lock className="w-5 h-5 text-gray-400" /> : null}
+          </div>
         </div>
         {!open && (
           <p className="text-xs text-brand-ink-soft mt-1 mb-1">🔒 Se abre al completar el ciclo anterior · vista previa del contenido</p>
@@ -143,7 +156,7 @@ export function FormacionRoadmap({ userId, userName, userParish }: { userId: str
                 {MODULE_BADGES[mod.id] && isModuleDone(mod, completed) && <span className="ml-auto text-base">{MODULE_BADGES[mod.id].emoji}</span>}
               </div>
               <div className="space-y-2">
-                {mod.capsules.map((cap) => <CapsuleRow key={cap.id} cap={cap} clickable={open} />)}
+                {mod.capsules.map((cap) => <CapsuleRow key={cap.id} track={track} cap={cap} />)}
               </div>
             </div>
           ))}

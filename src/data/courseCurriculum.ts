@@ -46,6 +46,8 @@ export interface Track {
   motto: string;
   status: 'active' | 'coming';
   certificate?: string;
+  /** Id del track que hay que completar para abrir este. Sin valor = abierto (paralelo). */
+  requiresTrack?: string;
   modules: Module[];
 }
 
@@ -248,6 +250,113 @@ const YEAR1: Track = {
   ],
 };
 
+// Cápsula de teoría musical (siempre eje Musical; con resumen y quiz).
+const th = (id: string, n: number, duration: string, title: string, source: string, idea: string, summary: string, quiz?: QuizQuestion[]): Capsule =>
+  ({ id, n, eje: 'M', duration, title, source, idea, summary, quiz });
+
+// Track PARALELO de teoría musical dentro del Año 1 (base indispensable para el órgano:
+// culmina en el círculo de quintas). Abierto desde el inicio, no bloquea el camino.
+const YEAR1_THEORY: Track = {
+  id: 'y1-teoria',
+  cycle: 'Ciclo I · Teoría Musical',
+  title: 'Año 1 — Teoría Musical (base para el órgano)',
+  motto: 'Del sonido al círculo de quintas',
+  status: 'active',
+  certificate: 'Teoría Musical — Fundamentos',
+  modules: [
+    { id: 'y1-th-a', term: 'Módulo A', title: 'Principios y el sonido', capsules: [
+      th('y1-th-c1', 1, '7 min', '¿Qué es la música? Principios básicos', 'Teoría musical · fundamentos',
+        'La música es el arte de combinar sonidos en el tiempo; se sostiene en tres elementos: melodía, armonía y ritmo.',
+        'Melodía (sucesión de sonidos), armonía (sonidos simultáneos) y ritmo (su organización en el tiempo) son los tres pilares. Todo lo que estudiaremos desarrolla alguno de ellos.',
+        [{ q: 'Los tres elementos de la música son…', options: ['letra, voz y volumen', 'melodía, armonía y ritmo', 'grave, medio y agudo'], answer: 1 }]),
+      th('y1-th-c2', 2, '8 min', 'Las propiedades del sonido', 'Acústica musical',
+        'Todo sonido tiene cuatro propiedades: altura, duración, intensidad y timbre.',
+        'Altura (grave/agudo, según la frecuencia), duración (largo/corto), intensidad (fuerte/suave) y timbre (el "color" que distingue una voz de un órgano). La música juega con las cuatro.',
+        [{ q: '¿Qué propiedad define si una nota es grave o aguda?', options: ['la intensidad', 'la altura', 'el timbre'], answer: 1 }]),
+    ]},
+    { id: 'y1-th-b', term: 'Módulo B', title: 'La escritura musical', capsules: [
+      th('y1-th-c3', 3, '9 min', 'El pentagrama y el endecagrama', 'Notación musical',
+        'El pentagrama tiene cinco líneas; uniendo el de Sol y el de Fa se forma el gran sistema (endecagrama) con el Do central en medio.',
+        'Las notas se escriben en las líneas y espacios del pentagrama, y en líneas adicionales fuera de él. El "endecagrama" (once líneas) une las claves de Sol y Fa —clave para el órgano—, con el Do central como puente.',
+        [{ q: '¿Cuántas líneas tiene un pentagrama?', options: ['cuatro', 'cinco', 'seis'], answer: 1 }]),
+      th('y1-th-c4', 4, '8 min', 'Las claves (Sol, Fa, Do)', 'Notación musical',
+        'La clave fija el nombre de las notas en el pentagrama; Sol para agudos, Fa para graves, Do para voces medias.',
+        'Sin clave, las notas no tienen nombre. La clave de Sol se usa para sonidos agudos (voces altas, mano derecha del órgano); la de Fa, para graves (bajos, pedal). El organista lee ambas a la vez.',
+        [{ q: 'La clave de Fa se usa sobre todo para sonidos…', options: ['agudos', 'graves', 'medios'], answer: 1 }]),
+      th('y1-th-c5', 5, '8 min', 'Las notas y su ubicación', 'Notación musical',
+        'Siete nombres —Do, Re, Mi, Fa, Sol, La, Si— se ubican en líneas y espacios y se repiten por octavas.',
+        'Aprender a reconocer cada nota por su posición es leer música. Con la clave de Sol, memoriza las notas en líneas y espacios; luego se amplía con líneas adicionales.',
+        [{ q: '¿Cuántos nombres de nota se repiten en toda la música?', options: ['cinco', 'siete', 'doce'], answer: 1 }]),
+      th('y1-th-c6', 6, '10 min', 'Duración de las notas y silencios', 'Ritmo · notación',
+        'Cada figura (redonda, blanca, negra, corchea…) vale la mitad de la anterior; los silencios son su ausencia con igual valor.',
+        'Redonda = 2 blancas = 4 negras = 8 corcheas. A cada figura le corresponde un silencio de igual duración. Dominar esto es la base de la lectura rítmica.',
+        [{ q: 'Una blanca equivale a…', options: ['una negra', 'dos negras', 'cuatro negras'], answer: 1 }]),
+      th('y1-th-c7', 7, '9 min', 'Compás, métrica y pulso', 'Ritmo',
+        'El pulso es el latido regular; el compás lo agrupa (2/4, 3/4, 4/4) con acentos.',
+        'El número de arriba dice cuántos tiempos hay por compás; el de abajo, qué figura vale un tiempo. El primer tiempo lleva el acento. Sentir el pulso y el compás ordena el canto y el acompañamiento.',
+        [{ q: 'En un compás de 3/4 hay…', options: ['dos tiempos', 'tres tiempos', 'cuatro tiempos'], answer: 1 }]),
+      th('y1-th-c8', 8, '8 min', 'Alteraciones: sostenido, bemol, becuadro', 'Notación musical',
+        'El sostenido sube medio tono, el bemol lo baja, y el becuadro anula la alteración.',
+        'Estos signos modifican la altura de una nota en un semitono. Son imprescindibles para las escalas, las tonalidades y —más adelante— el círculo de quintas.',
+        [{ q: 'El sostenido (♯) hace que la nota…', options: ['suba medio tono', 'baje medio tono', 'no cambie'], answer: 0 }]),
+    ]},
+    { id: 'y1-th-c', term: 'Módulo C', title: 'Solfeo', capsules: [
+      th('y1-th-c9', 9, '9 min', 'Solfeo rítmico', 'Solfeo',
+        'Leer y ejecutar solo el ritmo (con palmas o percusión) antes de añadir la altura.',
+        'El solfeo rítmico entrena a leer figuras y silencios a tiempo, marcando el pulso. Es el primer paso para leer música con seguridad.',
+        [{ q: 'El solfeo rítmico se ocupa sobre todo de…', options: ['la afinación', 'la duración y el pulso', 'el timbre'], answer: 1 }]),
+      th('y1-th-c10', 10, '9 min', 'Solfeo hablado', 'Solfeo',
+        'Nombrar las notas (Do, Re, Mi…) en voz alta y a tiempo, sin entonar.',
+        'Une la lectura de las notas con el ritmo, pero sin cantar la altura todavía. Prepara el paso siguiente: entonar.',
+        [{ q: 'En el solfeo hablado…', options: ['se cantan las notas afinadas', 'se nombran las notas a tiempo, sin afinar', 'solo se palmea el ritmo'], answer: 1 }]),
+      th('y1-th-c11', 11, '10 min', 'Solfeo cantado (entonado)', 'Solfeo',
+        'Cantar las notas afinadas: unir nombre, ritmo y altura.',
+        'Es la meta del solfeo: leer y entonar. Se apoya en la escala y en los intervalos (módulo siguiente). Afinar leyendo transforma a un coro.',
+        [{ q: 'El solfeo cantado añade, a lo anterior…', options: ['el timbre', 'la afinación de cada nota', 'la armonía'], answer: 1 }]),
+    ]},
+    { id: 'y1-th-d', term: 'Módulo D', title: 'Escalas, intervalos y acordes', capsules: [
+      th('y1-th-c12', 12, '8 min', 'Tono y semitono', 'Teoría musical',
+        'El semitono es la mínima distancia entre dos notas; el tono equivale a dos semitonos.',
+        'En el teclado, dos teclas contiguas (con o sin negra en medio) están a un semitono. Mi–Fa y Si–Do son semitonos naturales. Tono y semitono son la unidad de medida de escalas e intervalos.',
+        [{ q: 'Entre Mi y Fa hay…', options: ['un tono', 'un semitono', 'un tono y medio'], answer: 1 }]),
+      th('y1-th-c13', 13, '10 min', 'La escala mayor', 'Teoría musical',
+        'La escala mayor sigue el patrón Tono–Tono–semitono–Tono–Tono–Tono–semitono.',
+        'Do mayor (todas las notas blancas) es el modelo: T-T-s-T-T-T-s. Ese patrón, empezado en cualquier nota, genera todas las escalas mayores (y explica sus alteraciones).',
+        [{ q: 'El patrón de la escala mayor es…', options: ['T-s-T-T-s-T-T', 'T-T-s-T-T-T-s', 'todos tonos'], answer: 1 }]),
+      th('y1-th-c14', 14, '10 min', 'Las escalas menores', 'Teoría musical',
+        'Hay tres formas de escala menor: natural, armónica (7.º grado elevado) y melódica.',
+        'La menor natural es relativa de una mayor (misma armadura). La armónica sube el 7.º grado para crear la sensible; la melódica modifica el 6.º y 7.º al subir. Cada una da un color distinto.',
+        [{ q: 'La escala menor armónica se caracteriza por…', options: ['bajar el 2.º grado', 'elevar el 7.º grado', 'no tener alteraciones'], answer: 1 }]),
+      th('y1-th-c15', 15, '10 min', 'Los intervalos', 'Teoría musical',
+        'Un intervalo es la distancia entre dos notas; se mide por su número (2.ª, 3.ª, 5.ª…) y su calidad (mayor, menor, justa).',
+        'Contar las notas da el número; contar los tonos/semitonos da la calidad. Los intervalos son la base de la afinación (solfeo cantado) y de los acordes.',
+        [{ q: 'Un intervalo se define por…', options: ['su número y su calidad', 'solo su color', 'su duración'], answer: 0 }]),
+      th('y1-th-c16', 16, '11 min', 'Los acordes (tríadas)', 'Armonía',
+        'Una tríada son tres notas superpuestas por terceras; según sus intervalos es mayor, menor, aumentada o disminuida.',
+        'Sobre una nota (fundamental) se apilan una tercera y una quinta. Tríada mayor (3.ª mayor + 3.ª menor), menor (al revés), aumentada y disminuida. Los acordes son el corazón de la armonía y del acompañamiento.',
+        [{ q: 'Una tríada está formada por…', options: ['dos notas', 'tres notas por terceras', 'cinco notas'], answer: 1 }]),
+      th('y1-th-c17', 17, '9 min', 'Inversiones de acordes', 'Armonía',
+        'Un mismo acorde cambia de inversión según qué nota quede en el bajo: fundamental, primera o segunda inversión.',
+        'Si el bajo es la fundamental, está en estado fundamental; si es la 3.ª, primera inversión; si es la 5.ª, segunda inversión. Las inversiones dan variedad y suavizan el bajo (clave en el órgano).',
+        [{ q: 'Un acorde está en primera inversión cuando en el bajo suena…', options: ['la fundamental', 'la tercera', 'la quinta'], answer: 1 }]),
+    ]},
+    { id: 'y1-th-e', term: 'Módulo E', title: 'Tonalidad y círculo de quintas', capsules: [
+      th('y1-th-c18', 18, '10 min', 'Tonalidades y armadura de clave', 'Teoría musical',
+        'La tonalidad es el "centro" de una pieza; la armadura de clave indica sus sostenidos o bemoles.',
+        'Cada escala mayor/menor tiene sus alteraciones fijas, escritas al inicio como armadura. Reconocer la armadura te dice la tonalidad y qué notas van alteradas en toda la pieza.',
+        [{ q: 'La armadura de clave indica…', options: ['el tempo', 'los sostenidos o bemoles de la tonalidad', 'el volumen'], answer: 1 }]),
+      th('y1-th-c19', 19, '12 min', 'El círculo de quintas', 'Teoría musical',
+        'El círculo de quintas ordena las 12 tonalidades por intervalos de quinta: hacia la derecha se ganan sostenidos; hacia la izquierda, bemoles.',
+        'Partiendo de Do (sin alteraciones), cada quinta ascendente añade un sostenido (Sol, Re, La…); cada quinta descendente añade un bemol (Fa, Sib, Mib…). Orden de sostenidos: Fa-Do-Sol-Re-La-Mi-Si; los bemoles, al revés. Es el mapa que todo organista debe dominar.',
+        [{ q: 'El círculo de quintas ordena las tonalidades por intervalos de…', options: ['segunda', 'quinta', 'octava'], answer: 1 }]),
+      th('y1-th-c20', 20, '11 min', 'Del círculo de quintas al acompañamiento', 'Armonía aplicada',
+        'En el círculo, tónica, subdominante y dominante son vecinas: eso explica los acordes que más se usan y facilita transportar.',
+        'La dominante está una quinta arriba de la tónica; la subdominante, una quinta abajo: son las vecinas inmediatas en el círculo. Con esto se arman los acompañamientos, se transporta y se entiende por qué el órgano exige este dominio.',
+        [{ q: 'Respecto de la tónica, la dominante está…', options: ['una quinta arriba', 'una octava abajo', 'un semitono arriba'], answer: 0 }]),
+    ]},
+  ],
+};
+
 const cap = (id: string, n: number, eje: Eje, duration: string, title: string, source: string, idea: string): Capsule =>
   ({ id, n, eje, duration, title, source, idea });
 
@@ -257,6 +366,7 @@ const YEAR2: Track = {
   title: 'Año 2 — El arte al servicio del misterio',
   motto: 'La belleza es camino hacia Dios',
   status: 'active',
+  requiresTrack: 'y1',
   certificate: 'Músico Litúrgico — Intermedio',
   modules: [
     { id: 'y2-m1', term: 'Módulo 1', title: 'Teología litúrgica: el misterio que cantamos', capsules: [
@@ -298,6 +408,7 @@ const YEAR3: Track = {
   title: 'Año 3 — Maestros y transmisores',
   motto: 'Recibimos un tesoro para entregarlo',
   status: 'active',
+  requiresTrack: 'y2',
   certificate: 'Formador de Música Sacra — Avanzado',
   modules: [
     { id: 'y3-m1', term: 'Módulo 1', title: 'Historia de la música sacra', capsules: [
@@ -352,7 +463,7 @@ export const PERMANENT_CAPSULES: Capsule[] = [
   P('perm-pieza3', 'M', 'Pieza del mes', 'O magnum mysterium (Victoria)', 'Apreciación musical', 'El asombro ante el misterio de la Navidad.', 'Escucha guiada: intensidad contenida al servicio del texto.'),
 ];
 
-export const CURRICULUM: Track[] = [YEAR1, YEAR2, YEAR3];
+export const CURRICULUM: Track[] = [YEAR1, YEAR1_THEORY, YEAR2, YEAR3];
 
 /** Cápsulas del Año 1 (progreso principal / racha del track intensivo). */
 export const ACTIVE_CAPSULES: Capsule[] = YEAR1.modules.flatMap((m) => m.capsules);
@@ -379,6 +490,12 @@ export const MODULE_BADGES: Record<string, { name: string; emoji: string }> = {
   'y1-t2': { name: 'Conoce la Misa', emoji: '⛪' },
   'y1-t3': { name: 'Voz al servicio', emoji: '🎵' },
   'y1-t4': { name: 'Guardián del tiempo litúrgico', emoji: '📅' },
+  // Teoría musical
+  'y1-th-a': { name: 'Oído despierto', emoji: '🔊' },
+  'y1-th-b': { name: 'Sabe leer música', emoji: '🎼' },
+  'y1-th-c': { name: 'Solfea', emoji: '🎯' },
+  'y1-th-d': { name: 'Domina los acordes', emoji: '🎹' },
+  'y1-th-e': { name: 'Círculo de quintas', emoji: '🧭' },
 };
 
 export function isModuleDone(mod: Module, done: Set<string>): boolean {

@@ -100,6 +100,16 @@ requiere demostración musical (asignar a un músico).
 | `y1-t4-c19` | Primer encuentro con el gregoriano 🎵 | M |
 | `y1-t4-c20` | Síntesis y envío | E |
 
+### AÑO 1 — Teoría Musical (paralelo)  🎵 (músico) · guion: `guiones-teoria-musical.md`
+De lo básico a intermedio; culmina en el círculo de quintas (base para el órgano). Van
+en el track «Año 1 — Teoría Musical», abierto en paralelo al camino.
+
+**Sesión T1 · Principios y sonido**: `y1-th-c1`, `y1-th-c2`
+**Sesión T2 · Escritura musical**: `y1-th-c3`, `y1-th-c4`, `y1-th-c5`, `y1-th-c6`, `y1-th-c7`, `y1-th-c8`
+**Sesión T3 · Solfeo** (rítmico/hablado/cantado): `y1-th-c9`, `y1-th-c10`, `y1-th-c11`
+**Sesión T4 · Escalas, intervalos y acordes**: `y1-th-c12`, `y1-th-c13`, `y1-th-c14`, `y1-th-c15`, `y1-th-c16`, `y1-th-c17`
+**Sesión T5 · Tonalidad y círculo de quintas**: `y1-th-c18`, `y1-th-c19`, `y1-th-c20`
+
 ### AÑO 2 — Intermedio  · guion: `guiones-ano-2.md`
 
 **Sesión B1 · Teología litúrgica** (teológico): `y2-c1`, `y2-c2`, `y2-c3`
