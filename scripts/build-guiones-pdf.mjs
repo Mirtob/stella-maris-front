@@ -11,6 +11,7 @@ const FILES = [
   'guiones-trimestre-2.md',
   'guiones-trimestre-3.md',
   'guiones-trimestre-4.md',
+  'guiones-teoria-musical.md',
   'guiones-ano-2.md',
   'guiones-ano-3.md',
 ];

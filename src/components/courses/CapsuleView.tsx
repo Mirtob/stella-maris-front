@@ -35,9 +35,11 @@ export function CapsuleView({ capsule, done, hasNext, videoUrl, onBack, onNext, 
     a.remove();
   };
 
+  const PASS_RATIO = 0.8; // se aprueba con 80% de aciertos
+  const scorePct = total > 0 ? Math.round((correctCount / total) * 100) : 0;
   const check = () => {
     setChecked(true);
-    if (correctCount === total) {
+    if (total > 0 && correctCount / total >= PASS_RATIO) {
       setPassed(true);
       onPass(correctCount);
     }
@@ -84,7 +86,7 @@ export function CapsuleView({ capsule, done, hasNext, videoUrl, onBack, onNext, 
         {/* Quiz */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border-2 border-amber-200 dark:border-amber-800">
           <h2 className="text-lg font-bold text-brand-ink mb-1">{total > 0 ? 'Comprueba lo aprendido' : 'Completar cápsula'}</h2>
-          <p className="text-sm text-brand-ink-soft mb-4">{total > 0 ? 'Responde para completar la cápsula.' : 'Marca la cápsula cuando la hayas visto.'}</p>
+          <p className="text-sm text-brand-ink-soft mb-4">{total > 0 ? `Responde para completar. Se aprueba con al menos 80% de aciertos (${total} preguntas).` : 'Marca la cápsula cuando la hayas visto.'}</p>
 
           <div className="space-y-5">
             {quiz.map((q, qi) => (
@@ -121,7 +123,7 @@ export function CapsuleView({ capsule, done, hasNext, videoUrl, onBack, onNext, 
           {passed ? (
             <div className="mt-5">
               <div className="flex items-center gap-2 text-green-700 dark:text-green-300 font-bold mb-3">
-                <Award className="w-6 h-6" /> ¡Cápsula completada!
+                <Award className="w-6 h-6" /> ¡Aprobada!{total > 0 && ` ${correctCount}/${total} (${scorePct}%)`}
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <button onClick={onBack} className="flex-1 bg-gray-100 dark:bg-slate-700 text-brand-ink py-3 rounded-xl font-bold border-2 border-gray-200 dark:border-slate-600 active:scale-95 transition-all">Volver al camino</button>
@@ -134,7 +136,7 @@ export function CapsuleView({ capsule, done, hasNext, videoUrl, onBack, onNext, 
             </div>
           ) : checked ? (
             <div className="mt-5">
-              <p className="text-red-700 dark:text-red-300 font-semibold mb-3">Casi… acertaste {correctCount} de {total}. Repasa y vuelve a intentar.</p>
+              <p className="text-red-700 dark:text-red-300 font-semibold mb-3">Necesitas 80% para aprobar. Acertaste {correctCount} de {total} ({scorePct}%). Repasa y vuelve a intentar.</p>
               <button onClick={retry} className="w-full bg-amber-500 text-white py-3 rounded-xl font-bold active:scale-95 transition-all">Intentar de nuevo</button>
             </div>
           ) : total === 0 ? (

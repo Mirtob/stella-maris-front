@@ -31,6 +31,7 @@ export function FormacionRoadmap({ userId, userName, userParish }: { userId: str
   const videoUrlFor = (id: string) => (videoMap[id] ? getVideoUrl(videoMap[id]) : undefined);
 
   const completed = useMemo(() => new Set(progress.map((p) => p.capsuleId)), [progress]);
+  const scoreById = useMemo(() => Object.fromEntries(progress.map((p) => [p.capsuleId, p.quizScore])), [progress]);
   const streak = useMemo(() => computeStreakWeeks(progress.map((p) => p.completedAt)), [progress]);
 
   // Desbloqueo POR TRACK: un track se abre si no depende de otro (paralelo) o si su
@@ -119,7 +120,10 @@ export function FormacionRoadmap({ userId, userName, userParish }: { userId: str
         </span>
         <span className="flex-1 min-w-0">
           <span className="block font-semibold text-brand-ink leading-tight truncate">{cap.n}. {cap.title}</span>
-          <span className="text-xs text-brand-ink-soft">{cap.duration}</span>
+          <span className="text-xs text-brand-ink-soft">
+            {cap.duration}
+            {isDone && cap.quiz && cap.quiz.length > 0 && scoreById[cap.id] != null && ` · quiz ${scoreById[cap.id]}/${cap.quiz.length}`}
+          </span>
         </span>
         <span className="text-[10px] font-bold uppercase tracking-wide text-white px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: eje.color }}>{eje.label}</span>
       </button>
