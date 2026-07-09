@@ -60,7 +60,7 @@ export function CapsuleView({ capsule, done, hasNext, videoUrl, quiz: quizProp, 
         </button>
 
         {/* Cabecera */}
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2">
           <span className="text-xs font-bold uppercase tracking-wide text-white px-2.5 py-1 rounded-full" style={{ background: eje.color }}>{eje.label}</span>
           <span className="text-sm text-brand-ink-soft">Cápsula {capsule.n} · {capsule.duration}</span>
           {passed && <span className="ml-auto inline-flex items-center gap-1 text-sm font-bold text-green-700 dark:text-green-300"><CheckCircle2 className="w-4 h-4" /> Completada</span>}

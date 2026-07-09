@@ -14,6 +14,10 @@ import { CourseRankingModal } from './CourseRankingModal';
 
 const trackById: Record<string, Track> = Object.fromEntries(CURRICULUM.map((t) => [t.id, t]));
 
+// Ranking de coros oculto a pedido: las clasificaciones incomodan en contexto
+// eclesial. El código se conserva; poner en true para reactivarlo.
+const SHOW_RANKING = false;
+
 export function FormacionRoadmap({ userId, userName, userParish }: { userId: string; userName?: string; userParish?: string }) {
   const [progress, setProgress] = useState<CapsuleProgress[]>([]);
   const [loading, setLoading] = useState(true);
@@ -251,15 +255,17 @@ export function FormacionRoadmap({ userId, userName, userParish }: { userId: str
           </button>
         )}
 
-        {/* Ranking de coros */}
-        <button onClick={() => setShowRanking(true)} className="w-full mb-2 bg-white dark:bg-slate-800 border-2 border-amber-300 dark:border-amber-800 p-4 rounded-2xl flex items-center gap-3 active:scale-[0.99] transition-all text-left">
-          <Trophy className="w-8 h-8 flex-shrink-0 text-amber-500" strokeWidth={2.2} />
-          <div className="flex-1 min-w-0">
-            <div className="font-bold text-brand-ink leading-tight">Ranking de coros</div>
-            <div className="text-xs text-brand-ink-soft">Formarse en comunidad: mira cómo avanzan los coros</div>
-          </div>
-          <ChevronRight className="w-6 h-6 flex-shrink-0 text-amber-500" />
-        </button>
+        {/* Ranking de coros (oculto: ver SHOW_RANKING) */}
+        {SHOW_RANKING && (
+          <button onClick={() => setShowRanking(true)} className="w-full mb-2 bg-white dark:bg-slate-800 border-2 border-amber-300 dark:border-amber-800 p-4 rounded-2xl flex items-center gap-3 active:scale-[0.99] transition-all text-left">
+            <Trophy className="w-8 h-8 flex-shrink-0 text-amber-500" strokeWidth={2.2} />
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-brand-ink leading-tight">Ranking de coros</div>
+              <div className="text-xs text-brand-ink-soft">Formarse en comunidad: mira cómo avanzan los coros</div>
+            </div>
+            <ChevronRight className="w-6 h-6 flex-shrink-0 text-amber-500" />
+          </button>
+        )}
 
         {/* Suscripción al canal */}
         <button onClick={() => openExternal(getSubscribeUrl())} className="w-full mt-2 bg-gradient-to-r from-rose-600 to-red-700 text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg border-2 border-rose-800 active:scale-[0.99] transition-all text-left">
@@ -318,7 +324,7 @@ export function FormacionRoadmap({ userId, userName, userParish }: { userId: str
         {showCertificate && (
           <CertificateModal name={userName || 'Miembro del coro'} title={y1.certificate || 'Cantor Litúrgico — Fundamentos'} onClose={() => setShowCertificate(false)} />
         )}
-        {showRanking && <CourseRankingModal userId={userId} myParish={userParish} onClose={() => setShowRanking(false)} />}
+        {SHOW_RANKING && showRanking && <CourseRankingModal userId={userId} myParish={userParish} onClose={() => setShowRanking(false)} />}
       </div>
     </div>
   );
