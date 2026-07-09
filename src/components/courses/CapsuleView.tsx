@@ -1,25 +1,26 @@
 import { useState } from 'react';
 import { ArrowLeft, PlayCircle, BookOpen, CheckCircle2, XCircle, Award, ChevronRight } from 'lucide-react';
 import { getChannelUrl } from '../../services/youtube';
-import { EJE_META, type Capsule } from '../../data/courseCurriculum';
+import { EJE_META, type Capsule, type QuizQuestion } from '../../data/courseCurriculum';
 
 interface Props {
   capsule: Capsule;
   done: boolean;
   hasNext: boolean;
   videoUrl?: string; // resuelto desde el canal (course_videos); si no, cae al del currículo
+  quiz?: QuizQuestion[]; // resuelto (override de BD > base); si no, el del currículo
   onBack: () => void;
   onNext: () => void;
   onPass: (score: number) => void;
 }
 
-export function CapsuleView({ capsule, done, hasNext, videoUrl, onBack, onNext, onPass }: Props) {
+export function CapsuleView({ capsule, done, hasNext, videoUrl, quiz: quizProp, onBack, onNext, onPass }: Props) {
   const eje = EJE_META[capsule.eje];
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [checked, setChecked] = useState(false);
   const [passed, setPassed] = useState(done);
 
-  const quiz = capsule.quiz ?? [];
+  const quiz = quizProp ?? capsule.quiz ?? [];
   const total = quiz.length;
   const allAnswered = quiz.every((_, i) => answers[i] != null);
   const correctCount = quiz.reduce((n, q, i) => n + (answers[i] === q.answer ? 1 : 0), 0);

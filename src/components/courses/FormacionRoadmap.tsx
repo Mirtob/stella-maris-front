@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { GraduationCap, Flame, CheckCircle2, Lock, PlayCircle, Award, ChevronRight, Circle, RefreshCw, Trophy, Sparkles } from 'lucide-react';
 import {
   CURRICULUM, PERMANENT_CAPSULES, EJE_META, MODULE_BADGES,
-  trackCapsules, isModuleDone, isTrackDone, findCapsule, type Capsule, type Track,
+  trackCapsules, isModuleDone, isTrackDone, findCapsule, baseQuizFor, type Capsule, type Track, type QuizQuestion,
 } from '../../data/courseCurriculum';
 import { getMyProgress, completeCapsule, computeStreakWeeks, type CapsuleProgress } from '../../services/courseProgress';
+import { getQuizOverrides } from '../../services/courseQuizzes';
 import { getCourseVideos } from '../../services/courseVideoLoader';
 import { getVideoUrl } from '../../services/youtube';
 import { CapsuleView } from './CapsuleView';
@@ -20,15 +21,18 @@ export function FormacionRoadmap({ userId, userName, userParish }: { userId: str
   const [showCertificate, setShowCertificate] = useState(false);
   const [showRanking, setShowRanking] = useState(false);
   const [videoMap, setVideoMap] = useState<Record<string, string>>({});
+  const [quizOverrides, setQuizOverrides] = useState<Record<string, QuizQuestion[]>>({});
 
   useEffect(() => {
     let cancelled = false;
     getMyProgress(userId).then((p) => { if (!cancelled) { setProgress(p); setLoading(false); } });
     getCourseVideos().then((m) => { if (!cancelled) setVideoMap(m); });
+    getQuizOverrides().then((q) => { if (!cancelled) setQuizOverrides(q); });
     return () => { cancelled = true; };
   }, [userId]);
 
   const videoUrlFor = (id: string) => (videoMap[id] ? getVideoUrl(videoMap[id]) : undefined);
+  const quizFor = (id: string) => quizOverrides[id] ?? baseQuizFor(id);
 
   const completed = useMemo(() => new Set(progress.map((p) => p.capsuleId)), [progress]);
   const scoreById = useMemo(() => Object.fromEntries(progress.map((p) => [p.capsuleId, p.quizScore])), [progress]);
@@ -87,6 +91,7 @@ export function FormacionRoadmap({ userId, userName, userParish }: { userId: str
           done={completed.has(capsule.id)}
           hasNext={!!next}
           videoUrl={videoUrlFor(capsule.id)}
+          quiz={quizFor(capsule.id)}
           onBack={() => setSelectedId(null)}
           onNext={() => next && setSelectedId(next.id)}
           onPass={(score) => handlePass(capsule, score)}
@@ -122,7 +127,7 @@ export function FormacionRoadmap({ userId, userName, userParish }: { userId: str
           <span className="block font-semibold text-brand-ink leading-tight truncate">{cap.n}. {cap.title}</span>
           <span className="text-xs text-brand-ink-soft">
             {cap.duration}
-            {isDone && cap.quiz && cap.quiz.length > 0 && scoreById[cap.id] != null && ` · quiz ${scoreById[cap.id]}/${cap.quiz.length}`}
+            {isDone && quizFor(cap.id).length > 0 && scoreById[cap.id] != null && ` · quiz ${scoreById[cap.id]}/${quizFor(cap.id).length}`}
           </span>
         </span>
         <span className="text-[10px] font-bold uppercase tracking-wide text-white px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: eje.color }}>{eje.label}</span>

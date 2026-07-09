@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, Church, Music, ShieldCheck, Lock, AlertTriangle, Database, Youtube, LifeBuoy, KeyRound, BarChart3 } from 'lucide-react';
+import { Users, Church, Music, ShieldCheck, Lock, AlertTriangle, Database, Youtube, LifeBuoy, KeyRound, BarChart3, GraduationCap } from 'lucide-react';
 import { ProfileManager } from '../profile/ProfileManager';
 import { ParishManager } from '../profile/ParishManager';
 import { SongManager } from '../songs/SongManager';
@@ -8,8 +8,9 @@ import { YouTubeSyncDialog } from './YouTubeSyncDialog';
 import { RecoveryManager } from '../profile/RecoveryManager';
 import { AdminUserAccounts } from './AdminUserAccounts';
 import { SurveyResults } from './SurveyResults';
+import { CourseQuizEditor } from './CourseQuizEditor';
 
-type AdminView = 'menu' | 'users' | 'accounts' | 'parishes' | 'songs' | 'migration' | 'youtube-sync' | 'recovery' | 'survey';
+type AdminView = 'menu' | 'users' | 'accounts' | 'parishes' | 'songs' | 'migration' | 'youtube-sync' | 'recovery' | 'survey' | 'quizzes';
 
 export function AdminDashboard() {
   const [currentView, setCurrentView] = useState<AdminView>('menu');
@@ -44,6 +45,10 @@ export function AdminDashboard() {
 
   if (currentView === 'survey') {
     return <SurveyResults onBack={() => setCurrentView('menu')} />;
+  }
+
+  if (currentView === 'quizzes') {
+    return <CourseQuizEditor onBack={() => setCurrentView('menu')} />;
   }
 
   return (
@@ -204,6 +209,24 @@ export function AdminDashboard() {
                 <h2 className="text-2xl font-bold text-white mb-1">Encuesta de la muestra</h2>
                 <p className="text-base text-indigo-100">
                   Resultados del pre-lanzamiento (/demo)
+                </p>
+              </div>
+            </div>
+          </button>
+
+          {/* Editar quizzes de Cursos */}
+          <button
+            onClick={() => setCurrentView('quizzes')}
+            className="w-full bg-gradient-to-br from-teal-700 to-cyan-900 rounded-2xl shadow-xl p-6 border-2 border-teal-600 hover:border-teal-400 active:scale-98 transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
+                <GraduationCap className="w-9 h-9 text-white" strokeWidth={2.5} />
+              </div>
+              <div className="text-left flex-1 min-w-0">
+                <h2 className="text-2xl font-bold text-white mb-1">Quizzes de Cursos</h2>
+                <p className="text-base text-teal-100">
+                  Edita el texto y el enfoque de las preguntas
                 </p>
               </div>
             </div>
