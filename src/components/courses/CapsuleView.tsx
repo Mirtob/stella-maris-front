@@ -7,12 +7,13 @@ interface Props {
   capsule: Capsule;
   done: boolean;
   hasNext: boolean;
+  videoUrl?: string; // resuelto desde el canal (course_videos); si no, cae al del currículo
   onBack: () => void;
   onNext: () => void;
   onPass: (score: number) => void;
 }
 
-export function CapsuleView({ capsule, done, hasNext, onBack, onNext, onPass }: Props) {
+export function CapsuleView({ capsule, done, hasNext, videoUrl, onBack, onNext, onPass }: Props) {
   const eje = EJE_META[capsule.eje];
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [checked, setChecked] = useState(false);
@@ -23,9 +24,10 @@ export function CapsuleView({ capsule, done, hasNext, onBack, onNext, onPass }: 
   const allAnswered = quiz.every((_, i) => answers[i] != null);
   const correctCount = quiz.reduce((n, q, i) => n + (answers[i] === q.answer ? 1 : 0), 0);
 
+  const hasVideo = !!(videoUrl || capsule.videoUrl);
   const openVideo = () => {
     const a = document.createElement('a');
-    a.href = capsule.videoUrl || getChannelUrl();
+    a.href = videoUrl || capsule.videoUrl || getChannelUrl();
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
     document.body.appendChild(a);
@@ -66,8 +68,8 @@ export function CapsuleView({ capsule, done, hasNext, onBack, onNext, onPass }: 
         </div>
 
         {/* Video */}
-        <button onClick={openVideo} className="w-full bg-gradient-to-r from-rose-600 to-red-700 text-white py-4 rounded-2xl flex items-center justify-center gap-3 font-bold text-lg shadow-lg border-2 border-rose-800 active:scale-95 transition-all mb-4">
-          <PlayCircle className="w-7 h-7" strokeWidth={2.5} /> Ver el video ({capsule.duration})
+        <button onClick={openVideo} className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-bold text-lg shadow-lg border-2 active:scale-95 transition-all mb-4 ${hasVideo ? 'bg-gradient-to-r from-rose-600 to-red-700 text-white border-rose-800' : 'bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-slate-600'}`}>
+          <PlayCircle className="w-7 h-7" strokeWidth={2.5} /> {hasVideo ? `Ver el video (${capsule.duration})` : 'Video en preparación · ir al canal'}
         </button>
 
         {/* Texto de apoyo + fuente */}

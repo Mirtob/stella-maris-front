@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ArrowLeft, Youtube, CheckCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Youtube, CheckCircle, AlertCircle, Loader2, RefreshCw, GraduationCap } from 'lucide-react';
 import { syncYouTubeToSupabase, MigrationResult } from '../../scripts/migrateSongsToSupabase';
+import { syncCourseVideos } from '../../services/courseVideoLoader';
 
 interface YouTubeSyncDialogProps {
   onBack: () => void;
@@ -9,6 +10,16 @@ interface YouTubeSyncDialogProps {
 export function YouTubeSyncDialog({ onBack }: YouTubeSyncDialogProps) {
   const [status, setStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
   const [result, setResult] = useState<MigrationResult | null>(null);
+  const [courseState, setCourseState] = useState<'idle' | 'running' | 'done'>('idle');
+  const [courseResult, setCourseResult] = useState<{ mapped: number; ignored: number; error?: string } | null>(null);
+
+  const runCourseSync = async () => {
+    setCourseState('running');
+    setCourseResult(null);
+    const r = await syncCourseVideos();
+    setCourseResult(r);
+    setCourseState('done');
+  };
 
   const runSync = async () => {
     setStatus('running');
@@ -190,6 +201,42 @@ Letra del canto...`}</pre>
             </button>
           </div>
         )}
+
+        {/* ── Videos de Cursos (Camino de formación) ── */}
+        <div className="mt-8 pt-6 border-t-2 border-blue-200 dark:border-brand-border">
+          <div className="flex items-center gap-3 mb-2">
+            <GraduationCap className="w-7 h-7 text-brand" strokeWidth={2.2} />
+            <h2 className="text-xl font-bold text-brand-ink">Videos de Cursos</h2>
+          </div>
+          <p className="text-sm text-brand-ink-soft mb-3">
+            Lee el canal y vincula cada cápsula de formación con su video. En la descripción del
+            video incluye el bloque:
+          </p>
+          <pre className="text-xs font-mono bg-slate-100 dark:bg-slate-800 rounded-xl p-3 border border-slate-300 dark:border-slate-600 mb-3 whitespace-pre-wrap">{`STELLA_MARIS_CURSO
+capsula: y1-t1-c1`}</pre>
+
+          <button
+            onClick={runCourseSync}
+            disabled={courseState === 'running'}
+            className="w-full py-4 bg-gradient-to-br from-brand to-brand-strong text-white rounded-2xl text-lg font-bold shadow-lg active:scale-95 transition-all border-2 border-brand-border flex items-center justify-center gap-3 disabled:opacity-60"
+          >
+            {courseState === 'running' ? <Loader2 className="w-6 h-6 animate-spin" /> : <RefreshCw className="w-6 h-6" />}
+            Sincronizar videos de Cursos
+          </button>
+
+          {courseResult && (
+            <div className={`mt-3 rounded-2xl border-2 p-4 ${courseResult.error ? 'bg-red-50 dark:bg-red-950/30 border-red-400' : 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-400'}`}>
+              {courseResult.error ? (
+                <p className="text-sm font-semibold text-red-800 dark:text-red-200">{courseResult.error}</p>
+              ) : (
+                <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+                  {courseResult.mapped} cápsula{courseResult.mapped !== 1 ? 's' : ''} vinculada{courseResult.mapped !== 1 ? 's' : ''} a su video.
+                  {courseResult.ignored > 0 && ` (${courseResult.ignored} con id de cápsula inexistente, ignorada${courseResult.ignored !== 1 ? 's' : ''}.)`}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

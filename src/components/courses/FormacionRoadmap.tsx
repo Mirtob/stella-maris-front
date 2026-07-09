@@ -5,6 +5,8 @@ import {
   trackCapsules, isModuleDone, findCapsule, type Capsule, type Track,
 } from '../../data/courseCurriculum';
 import { getMyProgress, completeCapsule, computeStreakWeeks, type CapsuleProgress } from '../../services/courseProgress';
+import { getCourseVideos } from '../../services/courseVideoLoader';
+import { getVideoUrl } from '../../services/youtube';
 import { CapsuleView } from './CapsuleView';
 import { CertificateModal } from './CertificateModal';
 import { CourseRankingModal } from './CourseRankingModal';
@@ -19,12 +21,16 @@ export function FormacionRoadmap({ userId, userName, userParish }: { userId: str
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCertificate, setShowCertificate] = useState(false);
   const [showRanking, setShowRanking] = useState(false);
+  const [videoMap, setVideoMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
     getMyProgress(userId).then((p) => { if (!cancelled) { setProgress(p); setLoading(false); } });
+    getCourseVideos().then((m) => { if (!cancelled) setVideoMap(m); });
     return () => { cancelled = true; };
   }, [userId]);
+
+  const videoUrlFor = (id: string) => (videoMap[id] ? getVideoUrl(videoMap[id]) : undefined);
 
   const completed = useMemo(() => new Set(progress.map((p) => p.capsuleId)), [progress]);
   const streak = useMemo(() => computeStreakWeeks(progress.map((p) => p.completedAt)), [progress]);
@@ -68,6 +74,7 @@ export function FormacionRoadmap({ userId, userName, userParish }: { userId: str
           capsule={capsule}
           done={completed.has(capsule.id)}
           hasNext={!!next}
+          videoUrl={videoUrlFor(capsule.id)}
           onBack={() => setSelectedId(null)}
           onNext={() => next && setSelectedId(next.id)}
           onPass={(score) => handlePass(capsule, score)}
