@@ -599,7 +599,10 @@ const BASE_CELEBRATIONS: { date: string; name: string }[] = [
   { date: "2032-12-25", name: "Natividad del Señor" },
 ];
 
-// Cron DIARIO. Dos tipos de aviso:
+// Cron DIARIO a las 14:00 UTC (= 10:00 de Chile en invierno UTC−4; 11:00 en verano
+// UTC−3, porque los crons de Vercel son SOLO en UTC y Chile cambia de horario). El
+// aviso al coro del domingo cae en la corrida del JUEVES (domingo − 3 = jueves), o sea
+// ~10:00 hora chilena los jueves. Dos tipos de aviso:
 //  1) Recordatorio general de celebraciones PERSONALIZADAS (7 y 1 día antes) → a todos
 //     los suscriptores con topic 'celebrations'.
 //  2) Recordatorio al CORO (3 días antes) de celebraciones POR DEFECTO (calendario:
