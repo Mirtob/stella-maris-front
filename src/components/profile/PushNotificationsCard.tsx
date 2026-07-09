@@ -39,7 +39,7 @@ export function PushNotificationsCard({ parishes, role }: Props) {
       const r = await sendTestPush();
       if (r.ok) {
         toast.success('Notificación de prueba enviada', {
-          description: 'Debería aparecer en tu teléfono en unos segundos.',
+          description: 'Debería aparecer en este dispositivo en unos segundos.',
         });
       } else if (r.reason === 'no-subscription') {
         toast.error('No hay suscripción en este dispositivo', { description: 'Vuelve a activar las notificaciones.' });
@@ -90,7 +90,7 @@ export function PushNotificationsCard({ parishes, role }: Props) {
         </div>
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Notificaciones</h2>
-          <p className="text-sm text-gray-600">Avisos al teléfono, aunque la app esté cerrada</p>
+          <p className="text-sm text-gray-600">Avisos a este dispositivo, aunque la app esté cerrada</p>
         </div>
       </div>
 
