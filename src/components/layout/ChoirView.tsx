@@ -386,16 +386,16 @@ export function ChoirView({
           })}
         </div>
 
-        {/* Spacer so the last category isn't covered by the sticky CTA */}
-        {cantoral.length > 0 && <div aria-hidden className="h-24" />}
+        {/* Spacer so the last category isn't covered by the sticky CTA (que en
+            móvil/tablet va por encima de la BottomNav → necesita más aire). */}
+        {cantoral.length > 0 && <div aria-hidden className="h-40 lg:h-28" />}
       </div>
 
       {/* Sticky Publish CTA — always visible at the bottom of the viewport
           while there is at least one song in the draft. Respects iOS safe area. */}
       {cantoral.length > 0 && (
         <div
-          className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-amber-100 via-amber-100/95 to-amber-100/0 dark:from-slate-900 dark:via-slate-900/95 dark:to-slate-900/0 px-3 sm:px-4 pt-6"
-          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+          className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] lg:bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-amber-100 via-amber-100/95 to-amber-100/0 dark:from-slate-900 dark:via-slate-900/95 dark:to-slate-900/0 px-3 sm:px-4 pt-6 pb-3 lg:pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
         >
           <div className="max-w-md md:max-w-2xl mx-auto">
             <button
