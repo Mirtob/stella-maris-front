@@ -4,7 +4,7 @@
 > algo relevante (módulo, infraestructura, plan de pruebas), se edita aquí y se anota en
 > la **Bitácora de cambios** al final.
 >
-> - **Versión:** 1.1
+> - **Versión:** 1.2
 > - **Última actualización:** 2026-07-10
 > - **Estado del proyecto:** módulos maduros para producción · **freeze ~31-jul-2026** → luego QA final
 > - **App en producción:** https://stella-maris-front.vercel.app/
@@ -160,3 +160,4 @@ Insumos existentes que alimentarán este plan:
 |---|---|---|
 | 2026-07-10 | 1.0 | Creación del informe. Reordenamiento de documentación (raíz → `docs/`, `_archivo/`, índice maestro). Instructivo de levantamiento actualizado con VAPID/CRON/flags. |
 | 2026-07-10 | 1.1 | Agregados **Plan de Riesgos** (23 riesgos) e **Informe Presupuestario** (UF/USD/CLP). PDF del informe (`scripts/build-informe-pdf.mjs` → Descargas). |
+| 2026-07-10 | 1.2 | Informe Presupuestario: **proyección de ingresos del canal de YouTube** (3 escenarios), recuperación de la inversión y modelo de reinversión. |

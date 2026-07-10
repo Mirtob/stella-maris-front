@@ -105,7 +105,72 @@ Cuánto costaría **reconstruir hoy** una app equivalente (≈600 h), según qui
 
 ---
 
-## 6. Resumen ejecutivo
+## 6. Proyección de ingresos del canal de YouTube (reinversión en el proyecto)
+
+El canal de YouTube (los videos de cantos y de Cursos) puede generar ingresos que, con el
+tiempo, ayuden a **recuperar la inversión** y, sobre todo, a **financiar el proyecto**. La
+política definida es que **toda ganancia se reinvierte** (ver §6.4).
+
+### 6.1 Requisitos y supuestos (importante)
+
+- **Monetización (YPP):** YouTube paga solo tras cumplir el **Programa de Socios**: ≥1.000
+  suscriptores y ≥4.000 horas de reproducción en 12 meses (o 10M vistas de Shorts en 90 días).
+  Hasta entonces el ingreso por anuncios es **US$0**.
+- **RPM bajo de nicho:** contenido católico/musical en español para Chile/LatAm tiene un
+  **RPM neto** (lo que recibe el canal por cada 1.000 visualizaciones, ya descontada la
+  comisión de YouTube) típicamente de **US$0,5 – 1,5** — muy inferior a nichos como finanzas
+  o tecnología en EE.UU. Solo una parte de las vistas se monetiza; eso ya está incorporado en
+  el RPM usado.
+- ⚠️ **Estas cifras son ilustrativas y NO garantizadas.** El crecimiento del canal depende de
+  la constancia de publicación y de la audiencia.
+
+### 6.2 Escenarios a 3 años (solo ingreso por anuncios)
+
+> Supuestos de conversión: 1 USD = CLP 950; 1 UF ≈ US$41,6 (§1).
+
+| Escenario | Año | Vistas/mes (fin de año) | RPM | Ingreso anual (USD) | Acumulado (USD) | Acum. (UF) |
+|---|---|---:|---:|---:|---:|---:|
+| **Conservador** | 1 | 10.000 | 0,7 | ~40 | 40 | 1,0 |
+| | 2 | 30.000 | 0,8 | ~290 | 330 | 7,9 |
+| | 3 | 60.000 | 0,9 | ~650 | ~980 | 23,6 |
+| **Moderado** | 1 | 25.000 | 1,0 | ~150 | 150 | 3,6 |
+| | 2 | 80.000 | 1,1 | ~1.060 | 1.210 | 29,1 |
+| | 3 | 180.000 | 1,2 | ~2.590 | ~3.800 | 91,3 |
+| **Optimista** | 1 | 60.000 | 1,2 | ~430 | 430 | 10,3 |
+| | 2 | 200.000 | 1,3 | ~3.120 | 3.550 | 85,3 |
+| | 3 | 500.000 | 1,5 | ~9.000 | ~12.550 | 301,7 |
+
+### 6.3 ¿Cuándo se recupera la inversión real (US$2.500 ≈ 60 UF)?
+
+| Escenario | Punto de recuperación de los US$2.500 |
+|---|---|
+| Conservador | Más allá de 3 años (aprox. **año 5–6**) |
+| Moderado | Durante el **año 3** (el acumulado cruza los US$2.500 a mitad del año 3) |
+| Optimista | Durante el **año 2** |
+
+> Solo con anuncios, y siendo realistas, la recuperación es **lenta** (2 a 6 años). El canal
+> se entiende mejor como una **fuente de financiamiento que crece de a poco**, no como retorno
+> rápido.
+
+### 6.4 Otras vías de ingreso y modelo de reinversión
+
+- **Complementos de YouTube:** membresías del canal, "Súper Gracias"/Súper Chat, que en una
+  comunidad fiel pueden superar al ingreso por anuncios.
+- **Donaciones/aportes** de parroquias y fieles (fuera de YouTube).
+- **Modelo de reinversión (definido):** el 100% de lo recaudado se destina a **recursos del
+  proyecto** — equipos de grabación, **honorarios del desarrollador**, **honorarios de
+  profesores de música**, organización de **cursos** y producción de contenido. No hay
+  extracción de utilidades; el objetivo es la **sostenibilidad** de la obra.
+
+### 6.5 Riesgo relevante
+
+Los **derechos de autor** de cantos/partituras/audio pueden **desmonetizar** videos o
+derivar el ingreso al titular de los derechos. Mitigación: usar contenido **propio, con
+licencia o de dominio público** (ver R-18 en [PLAN-DE-RIESGOS](PLAN-DE-RIESGOS.md)).
+
+---
+
+## 7. Resumen ejecutivo
 
 | Concepto | USD | UF | CLP |
 |---|---:|---:|---:|
@@ -113,11 +178,16 @@ Cuánto costaría **reconstruir hoy** una app equivalente (≈600 h), según qui
 | Valor de reposición (central) | 18.000–28.000 | 433–673 | 17,1M–26,6M |
 | Costo operativo actual | ≈ 0 / mes | ≈ 0 | ≈ 0 |
 | Costo operativo si escala | ≈ 780 / año | ≈ 19,7 / año | ≈ 741.000 / año |
+| Ingreso YouTube 3 años (moderado) | ~3.800 | ~91 | ~3,6M |
+| Recuperación de los US$2.500 | año 2–6 según escenario | | |
 
 **Conclusión:** el proyecto se construyó con una inversión real muy baja (US$2.500 y
 prácticamente US$0 de infraestructura), pero su **valor económico de mercado se estima
-entre 433 y 673 UF** (US$18.000–28.000). Mantenerla operativa cuesta hoy casi nada; solo
-al escalar aparecen costos mensuales moderados y acotados.
+entre 433 y 673 UF** (US$18.000–28.000). Mantenerla operativa cuesta hoy casi nada. El
+**canal de YouTube** puede recuperar la inversión de US$2.500 en un plazo de **2 a 6 años**
+según el escenario, y sus ingresos **se reinvierten íntegramente** en el proyecto (equipos,
+honorarios de desarrollo y de profesores, cursos). El canal es, por tanto, un motor de
+**sostenibilidad** más que de utilidad.
 
 > Ver riesgos de costos en [PLAN-DE-RIESGOS](PLAN-DE-RIESGOS.md) (R-23) y estado general en
 > [INFORME-FINAL](../INFORME-FINAL.md).
