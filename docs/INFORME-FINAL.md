@@ -4,7 +4,7 @@
 > algo relevante (módulo, infraestructura, plan de pruebas), se edita aquí y se anota en
 > la **Bitácora de cambios** al final.
 >
-> - **Versión:** 1.0
+> - **Versión:** 1.1
 > - **Última actualización:** 2026-07-10
 > - **Estado del proyecto:** módulos maduros para producción · **freeze ~31-jul-2026** → luego QA final
 > - **App en producción:** https://stella-maris-front.vercel.app/
@@ -100,6 +100,11 @@ con editor + navegador + dev server abiertos. Mejora opcional: subir a 16 GB.
 5. **Respaldos:** mantener `scripts/backup-local.ps1` con regularidad, sobre todo tras el freeze.
 6. **Plan de Vercel:** Hobby limita cron a diario y es para uso no comercial.
 
+> 📋 **Registro de riesgos detallado** (23 riesgos, con probabilidad/impacto/severidad,
+> mitigación y contingencia): [entrega/PLAN-DE-RIESGOS.md](entrega/PLAN-DE-RIESGOS.md).
+> 💰 **Valor económico y presupuesto** (UF/USD/CLP, gasto real y valor de reposición):
+> [entrega/INFORME-PRESUPUESTARIO.md](entrega/INFORME-PRESUPUESTARIO.md).
+
 ---
 
 ## 6. Mapa de la documentación
@@ -154,3 +159,4 @@ Insumos existentes que alimentarán este plan:
 | Fecha | Versión | Cambio |
 |---|---|---|
 | 2026-07-10 | 1.0 | Creación del informe. Reordenamiento de documentación (raíz → `docs/`, `_archivo/`, índice maestro). Instructivo de levantamiento actualizado con VAPID/CRON/flags. |
+| 2026-07-10 | 1.1 | Agregados **Plan de Riesgos** (23 riesgos) e **Informe Presupuestario** (UF/USD/CLP). PDF del informe (`scripts/build-informe-pdf.mjs` → Descargas). |

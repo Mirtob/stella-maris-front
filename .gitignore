@@ -40,3 +40,6 @@ tmp_*.py
 
 # Caché
 .cache/
+
+# Temporales de generación de PDF
+scripts/.*.tmp.html

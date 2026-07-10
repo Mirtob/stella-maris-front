@@ -38,6 +38,8 @@ Todo lo necesario para operar, respaldar y traspasar el proyecto.
 - [INFORME-FINAL-STAKEHOLDERS.md](entrega/INFORME-FINAL-STAKEHOLDERS.md) — informe a stakeholders.
 - [LEVANTAR-LA-APP-PASO-A-PASO.md](entrega/LEVANTAR-LA-APP-PASO-A-PASO.md) — **levantar en otro PC desde cero**.
 - [MANUAL-ADMINISTRADOR-CRITICO.md](entrega/MANUAL-ADMINISTRADOR-CRITICO.md) — servicios, credenciales (inventario) y operación.
+- [PLAN-DE-RIESGOS.md](entrega/PLAN-DE-RIESGOS.md) — registro de riesgos (prob./impacto/mitigación/contingencia).
+- [INFORME-PRESUPUESTARIO.md](entrega/INFORME-PRESUPUESTARIO.md) — valor económico y presupuesto (UF/USD/CLP).
 - [CREDENCIALES.PLANTILLA.md](entrega/CREDENCIALES.PLANTILLA.md) — plantilla de credenciales (no versionar valores reales).
 - [MIGRACION-A-CUENTA-OFICIAL.md](entrega/MIGRACION-A-CUENTA-OFICIAL.md) — pasar servicios a la cuenta oficial.
 - [BACKUP-Y-RESTAURACION.md](entrega/BACKUP-Y-RESTAURACION.md) — respaldo local y portabilidad.
