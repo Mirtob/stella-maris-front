@@ -47,23 +47,33 @@ En la raíz del proyecto, crear un archivo llamado **`.env.local`** (no se sube 
 Tomar como base `.env.production.example` y **completar con los valores reales**:
 
 ```env
-# --- Cliente (se inyectan en el navegador) ---
+# --- Cliente (se inyectan en el navegador; NO son secretas) ---
 VITE_SUPABASE_URL=https://szoaiiipglebpewwzfgh.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon key de Supabase>
 VITE_GOOGLE_CLIENT_ID=<client id OAuth de Google>
 VITE_YOUTUBE_API_KEY=<api key de YouTube>
 VITE_YOUTUBE_CHANNEL_ID=<id del canal>
+VITE_YOUTUBE_CHANNEL_ID_2=<id 2º canal, opcional>
 VITE_GOOGLE_DRIVE_API_KEY=<api key de Drive>
 VITE_GOOGLE_DRIVE_SHEET_MUSIC_FOLDER=<id carpeta partituras>
 VITE_GOOGLE_DRIVE_MEDIA_FOLDER=<id carpeta media>
+VITE_VAPID_PUBLIC_KEY=<clave pública VAPID (hay un fallback embebido; opcional)>
 VITE_SENTRY_DSN=<dsn de Sentry, opcional en local>
 
-# --- Servidor (para las funciones /api en local) ---
-SUPABASE_SERVICE_ROLE_KEY=<service role key de Supabase>
-GOOGLE_API_KEY=<api key server de Google>
-GEMINI_API_KEY=<api key de Gemini>
-RESEND_API_KEY=<api key de Resend>
+# --- Servidor (para las funciones /api en local y en Vercel) ---
+SUPABASE_SERVICE_ROLE_KEY=<service role key de Supabase>   # SECRETA
+GOOGLE_API_KEY=<api key server de Google>                  # SECRETA
+GEMINI_API_KEY=<api key de Gemini>                         # SECRETA
+RESEND_API_KEY=<api key de Resend>                         # SECRETA
 RESEND_FROM=<remitente verificado, ej: no-reply@tudominio>
+# Notificaciones push (Web Push). La privada es SECRETA; sin ella el push no envía.
+VAPID_PRIVATE_KEY=<clave privada VAPID>                    # SECRETA
+VAPID_PUBLIC_KEY=<clave pública VAPID (misma que la del cliente)>
+VAPID_SUBJECT=mailto:tu-correo@dominio
+# Protege el cron de recordatorios (Vercel lo manda como Authorization: Bearer <valor>).
+CRON_SECRET=<cadena larga aleatoria>                       # SECRETA
+# Interruptor del aviso semanal de Cursos: dejar sin poner (OFF) hasta que haya videos.
+COURSE_WEEKLY_ENABLED=
 ALLOWED_ORIGINS=http://localhost:5173
 PUBLIC_ORIGIN=http://localhost:5173
 ```
@@ -98,8 +108,10 @@ Debe terminar con `built in ...` y generar la carpeta `build/`.
 1. Si el proyecto `szoaiiipglebpewwzfgh` existe y funciona, **saltar al paso B.1.e**.
 2. Crear un proyecto nuevo en https://supabase.com (anotar URL y claves).
 3. **Aplicar el esquema:** en Supabase → **SQL Editor**, abrir cada archivo de
-   `supabase/migrations/` **en orden cronológico** (los nombres llevan fecha:
-   `20260602_...` → `20260620_...`), pegar y ejecutar uno por uno.
+   `supabase/migrations/` **en orden cronológico** (los nombres llevan fecha, desde
+   `20260602_...` hasta la más reciente — a jul-2026 llegan a `20260709_...`; son ~38
+   archivos), pegar y ejecutar uno por uno. Ejecutarlos **todos** en orden garantiza el
+   esquema completo.
    - Esto crea tablas (`published_cantorals`, `songs`, `user_profiles`, `admins`,
      `custom_parishes`…), RLS, RPC (`search_songs`, `api_rate_limit`, `is_admin`…),
      triggers e índices (incl. `vigil` y el único por Misa).
@@ -152,10 +164,13 @@ Debe terminar con `built in ...` y generar la carpeta `build/`.
 
 | Variable | Local (`.env.local`) | Producción (Vercel) | Secreta |
 |---|:---:|:---:|:---:|
-| `VITE_*` (Supabase URL/anon, Google client, YouTube, Drive, Sentry) | Sí | Sí | No |
+| `VITE_*` (Supabase URL/anon, Google client, YouTube, Drive, VAPID pública, Sentry) | Sí | Sí | No |
 | `SUPABASE_SERVICE_ROLE_KEY` | Sí (si usas `/api`) | Sí | **Sí** |
 | `GOOGLE_API_KEY`, `GEMINI_API_KEY` | Sí (si usas `/api`) | Sí | **Sí** |
 | `RESEND_API_KEY`, `RESEND_FROM` | Sí (si usas `/api`) | Sí | **Sí** |
+| `VAPID_PRIVATE_KEY` (+ `VAPID_PUBLIC_KEY`, `VAPID_SUBJECT`) | Sí (si pruebas push) | Sí | **Sí** (la privada) |
+| `CRON_SECRET` | No hace falta | Sí | **Sí** |
+| `COURSE_WEEKLY_ENABLED` (flag aviso Cursos) | No | Opcional (ON cuando haya videos) | No |
 | `ALLOWED_ORIGINS`, `PUBLIC_ORIGIN` | Sí | Sí | No |
 
 ---

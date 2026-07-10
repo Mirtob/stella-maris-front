@@ -49,9 +49,14 @@ PDFs: [`docs/manuales/pdf/`](docs/manuales/pdf).
 ```
 .
 ├─ api/                     # Funciones serverless (Vercel): pdf, sheets, suggest
-├─ docs/
-│  ├─ manuales/             # Manuales de usuario (Pueblo fiel, Coro, Canal) + PDFs
-│  ├─ dev/                  # Documentación técnica interna (arquitectura, BD, OAuth, QA…)
+├─ docs/                    # Documentación (índice maestro: docs/README.md)
+│  ├─ INFORME-FINAL.md      #   Informe final vivo (estado del proyecto)
+│  ├─ entrega/              #   Traspaso y operación (levantar, credenciales, backup…)
+│  ├─ manuales/             #   Manuales de usuario (Pueblo fiel, Coro, Canal) + PDFs
+│  ├─ dev/                  #   Documentación técnica interna (arquitectura, BD, OAuth, QA…)
+│  ├─ formacion/            #   Guiones del módulo Cursos
+│  ├─ presentacion/         #   Material de presentación (PDF, QR)
+│  ├─ _archivo/             #   Documentos históricos superados
 │  ├─ BACKUP-SETUP.md
 │  ├─ RECOVERY-PROCEDURE.md
 │  └─ SENTRY-SETUP.md
@@ -98,9 +103,13 @@ PDFs: [`docs/manuales/pdf/`](docs/manuales/pdf).
 
 ---
 
-## Documentación técnica
+## Documentación
 
-La documentación interna de desarrollo está en [`docs/dev/`](docs/dev/) (arquitectura,
+- 📇 **Índice maestro de toda la documentación:** [`docs/README.md`](docs/README.md)
+- 📄 **Informe final (documento vivo, estado del proyecto):** [`docs/INFORME-FINAL.md`](docs/INFORME-FINAL.md)
+- 🚀 **Levantar en otro PC desde cero:** [`docs/entrega/LEVANTAR-LA-APP-PASO-A-PASO.md`](docs/entrega/LEVANTAR-LA-APP-PASO-A-PASO.md)
+
+La documentación técnica de desarrollo está en [`docs/dev/`](docs/dev/) (arquitectura,
 esquema de base de datos, integración OAuth/YouTube, guías de QA, etc.).
 
 ## Pruebas
