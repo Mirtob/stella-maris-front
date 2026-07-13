@@ -111,6 +111,11 @@ El canal de YouTube (los videos de cantos y de Cursos) puede generar ingresos qu
 tiempo, ayuden a **recuperar la inversión** y, sobre todo, a **financiar el proyecto**. La
 política definida es que **toda ganancia se reinvierte** (ver §6.4).
 
+> 📊 **Hoja de cálculo editable:** esta proyección existe además como planilla con celdas
+> editables (supuestos, vistas/mes y RPM) y fórmulas que recalculan solas. Generarla con
+> `.venv/Scripts/python.exe scripts/build-proyeccion-xlsx.py` → queda en
+> `Descargas/Proyeccion-YouTube-StellaMaris.xlsx` (se abre en Excel o Google Sheets).
+
 ### 6.1 Requisitos y supuestos (importante)
 
 - **Monetización (YPP):** YouTube paga solo tras cumplir el **Programa de Socios**: ≥1.000

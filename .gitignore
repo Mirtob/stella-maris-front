@@ -43,3 +43,6 @@ tmp_*.py
 
 # Temporales de generación de PDF
 scripts/.*.tmp.html
+
+# Entorno virtual de Python (solo herramientas locales, p. ej. openpyxl)
+.venv/
