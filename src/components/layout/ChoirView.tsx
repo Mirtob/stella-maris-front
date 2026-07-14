@@ -9,7 +9,7 @@ import { SelectInstrumentModal } from '../cantoral/SelectInstrumentModal';
 import { AtrilMode } from '../atril/AtrilMode';
 import { Tour } from '../tour/Tour';
 import { constructorTips, hasSeenTip, markTipSeen } from '../tour/tours';
-import { Song, InstrumentType, PublishedCantoral } from '../../types';
+import { Song, InstrumentType, PublishedCantoral, MassType } from '../../types';
 import { PsalmFromBook } from '../songs/PsalmFromBook';
 import { getLiturgicalDateForDate } from '../../utils/liturgicalCalendar';
 import { getSundayCycle } from '../../utils/liturgicalCycle';
@@ -64,6 +64,8 @@ export function ChoirView({
   // Fecha de la Misa para la que se arma el cantoral: fija la celebración/ciclo desde el
   // inicio (para cargar el salmo del libro) y pre-llena la fecha al publicar.
   const [massDate, setMassDate] = useState(getTodayLocal());
+  const [massTime, setMassTime] = useState('10:00');
+  const [massType, setMassType] = useState<MassType>('dia');
   // Antífona del salmo (editable): por defecto la del índice de la celebración; el coro
   // puede cambiarla si no usa la misma. Viaja al cantoral publicado (y al PDF/pueblo).
   const [psalmAntiphon, setPsalmAntiphon] = useState('');
@@ -147,6 +149,14 @@ export function ChoirView({
     toast.success(`Instrumento seleccionado: ${instrument}`, {
       description: 'Los cantos se filtrarán para este instrumento'
     });
+  };
+
+  // 'HH:MM' (24h del input time) → 'HH:MM AM/PM' (formato que usa el modal de publicación).
+  const to12h = (hhmm: string): string => {
+    const [h, m] = (hhmm || '10:00').split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const dh = h % 12 === 0 ? 12 : h % 12;
+    return `${String(dh).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
   };
 
   const handleToggleCategory = (category: string) => {
@@ -243,21 +253,49 @@ export function ChoirView({
       <div className="w-full max-w-md md:max-w-2xl mx-auto min-h-screen p-3 sm:p-4 md:p-6 pb-24 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
         <Home />
 
-        {/* Fecha de la Misa — al inicio: fija la celebración/ciclo (carga el salmo del
-            libro) y pre-llena la fecha al publicar. */}
+        {/* Datos de la Misa — al inicio: fecha + hora + tipo. Fijan la celebración/ciclo
+            (cargan el salmo del libro) y pre-llenan el menú de publicación. */}
         <div className="mt-4 bg-white/50 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-4 border-2 border-blue-300/60 dark:border-blue-700/60 transition-colors">
-          <label htmlFor="mass-date" className="text-base font-bold text-brand-ink flex items-center gap-2 mb-2">
+          <h3 className="text-base font-bold text-brand-ink flex items-center gap-2 mb-3">
             <span className="text-xl flex-shrink-0">📅</span>
-            <span>¿Para qué fecha es la Misa?</span>
-          </label>
-          <input
-            id="mass-date"
-            type="date"
-            value={massDate}
-            onChange={(e) => setMassDate(e.target.value || getTodayLocal())}
-            className="w-full px-3 py-2.5 rounded-xl border-2 border-blue-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-brand-ink font-semibold focus:outline-none focus:border-brand"
-          />
-          <p className="text-sm text-brand-ink-soft mt-2">
+            <span>Datos de la Misa</span>
+          </h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="mass-date" className="text-xs font-bold text-brand-ink-soft mb-1 block">Fecha</label>
+              <input
+                id="mass-date"
+                type="date"
+                value={massDate}
+                onChange={(e) => setMassDate(e.target.value || getTodayLocal())}
+                className="w-full px-3 py-2.5 rounded-xl border-2 border-blue-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-brand-ink font-semibold focus:outline-none focus:border-brand"
+              />
+            </div>
+            <div>
+              <label htmlFor="mass-time" className="text-xs font-bold text-brand-ink-soft mb-1 block">Hora</label>
+              <input
+                id="mass-time"
+                type="time"
+                value={massTime}
+                onChange={(e) => setMassTime(e.target.value || '10:00')}
+                className="w-full px-3 py-2.5 rounded-xl border-2 border-blue-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-brand-ink font-semibold focus:outline-none focus:border-brand"
+              />
+            </div>
+          </div>
+          <div className="mt-3">
+            <label htmlFor="mass-type" className="text-xs font-bold text-brand-ink-soft mb-1 block">Tipo de Misa</label>
+            <select
+              id="mass-type"
+              value={massType}
+              onChange={(e) => setMassType(e.target.value as MassType)}
+              className="w-full px-3 py-2.5 rounded-xl border-2 border-blue-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-brand-ink font-semibold focus:outline-none focus:border-brand"
+            >
+              <option value="dia">Misa del día</option>
+              <option value="visperas_i">I Vísperas (sábado por la tarde)</option>
+              <option value="visperas_ii">II Vísperas (domingo por la tarde)</option>
+            </select>
+          </div>
+          <p className="text-sm text-brand-ink-soft mt-3">
             {massCelebration
               ? <>{formatYmdForDisplay(massDate, { weekday: 'long', day: 'numeric', month: 'long' })} · <strong className="text-brand-ink">{massCelebration}</strong> · Año {massCycle}</>
               : <>{formatYmdForDisplay(massDate, { weekday: 'long', day: 'numeric', month: 'long' })} — sin celebración dominical (el salmo del libro es para domingos y solemnidades).</>}
@@ -494,6 +532,8 @@ export function ChoirView({
           parishes={parishes}
           isAdmin={isAdmin}
           initialDate={massDate}
+          initialMassTime={to12h(massTime)}
+          initialMassType={massType}
           onClose={() => setShowPublishModal(false)}
           onPublish={handlePublish}
           userInstruments={userInstruments}

@@ -46,8 +46,10 @@ interface PublishCantoralModalProps {
   parishes?: string[];
   /** Admin verificado: sus celebraciones agregadas son globales (para todos los usuarios). */
   isAdmin?: boolean;
-  /** Fecha pre-seleccionada (la elegida al inicio del constructor). */
+  /** Datos pre-seleccionados al inicio del constructor (fecha/hora/tipo de Misa). */
   initialDate?: string;
+  initialMassTime?: string;
+  initialMassType?: MassType;
   onClose: () => void;
   onPublish: (targets: PublishTarget[]) => Promise<void> | void;
   userInstruments?: InstrumentType[];
@@ -83,7 +85,7 @@ function normalizeMassTime(raw: string): string {
   return `${String(displayH).padStart(2, '0')}:${min} ${period}`;
 }
 
-export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAdmin = false, initialDate, onClose, onPublish, userInstruments = [] }: PublishCantoralModalProps) {
+export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAdmin = false, initialDate, initialMassTime, initialMassType, onClose, onPublish, userInstruments = [] }: PublishCantoralModalProps) {
   // Lista efectiva de parroquias (con fallback a la activa). >1 ⇒ modo multi-parroquia.
   const allParishes = parishes.length > 0 ? parishes : (parishName ? [parishName] : []);
   const isMulti = allParishes.length > 1;
@@ -93,11 +95,11 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
   // (Chile, México, Argentina) publishing for "tomorrow" when it's 22:00.
   const [selectedDate, setSelectedDate] = useState(initialDate || getTodayLocal());
   const [liturgicalDate, setLiturgicalDate] = useState('');
-  const [massTime, setMassTime] = useState('');
+  const [massTime, setMassTime] = useState(initialMassTime || '');
   // Tipo de horario litúrgico: I Vísperas (tarde del día anterior), Misa del día
   // (mismo día 00–15h) o II Vísperas (mismo día 15:01–23:59). Para I Vísperas la
   // fecha publicada es el día anterior (se muestra antes de publicar).
-  const [massType, setMassType] = useState<MassType>('dia');
+  const [massType, setMassType] = useState<MassType>(initialMassType || 'dia');
   const [dateChangeSource, setDateChangeSource] = useState<'calendar' | 'liturgical' | null>(null);
 
   // ── Estado modo multi-parroquia ───────────────────────────────────────────

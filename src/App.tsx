@@ -1383,10 +1383,10 @@ function renderView(p: ViewProps): JSX.Element | null {
           userRole={p.effectiveRole}
           userInstrument={p.userProfile.instrument}
           userParishName={p.activeParishName}
-          // Editar/Eliminar/Clonar solo Coro/Admin; Compartir (QR) lo puede usar también el Pueblo fiel.
+          // Editar/Eliminar solo Coro/Admin; Compartir (QR) lo puede usar también el Pueblo fiel.
+          // "Usar como base" (clonar) va SOLO en el Historial (los publicados duran poco).
           onEdit={p.effectiveRole !== 'Pueblo fiel' ? p.onEditCantoral : undefined}
           onDelete={p.effectiveRole !== 'Pueblo fiel' ? p.onDeleteCantoral : undefined}
-          onClone={p.effectiveRole !== 'Pueblo fiel' ? p.onCloneCantoral : undefined}
           onShare={p.onShareCantoral}
         />
       );
