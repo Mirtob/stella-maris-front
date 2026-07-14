@@ -7,6 +7,7 @@ Uso: .venv/Scripts/python.exe scripts/import-psalm-index.py [ruta_al_xlsx]
      (por defecto: C:/Users/gusta/Downloads/Indice-Salmos-StellaMaris.xlsx)
 """
 import json
+import re
 import sys
 from openpyxl import load_workbook
 
@@ -31,10 +32,15 @@ for letter in ("A", "B", "C"):
         page = row[2]
         antiphon = row[3]
         entry = {}
+        # Página: número, "N", o rango "N-M" / "N - M" (salmo a dos páginas).
         if isinstance(page, (int, float)) and page:
             entry["page"] = int(page)
-        elif isinstance(page, str) and page.strip().isdigit():
-            entry["page"] = int(page.strip())
+        elif isinstance(page, str):
+            nums = re.findall(r"\d+", page)
+            if nums:
+                entry["page"] = int(nums[0])
+                if len(nums) > 1 and int(nums[-1]) != int(nums[0]):
+                    entry["pageEnd"] = int(nums[-1])
         if isinstance(antiphon, str) and antiphon.strip():
             entry["antiphon"] = antiphon.strip()
         if entry:
@@ -51,6 +57,8 @@ def ts_obj(d):
         parts = []
         if "page" in entry:
             parts.append(f"page: {entry['page']}")
+        if "pageEnd" in entry:
+            parts.append(f"pageEnd: {entry['pageEnd']}")
         if "antiphon" in entry:
             parts.append(f"antiphon: {json.dumps(entry['antiphon'], ensure_ascii=False)}")
         lines.append(f"    {json.dumps(cel, ensure_ascii=False)}: {{ {', '.join(parts)} }},")
@@ -60,7 +68,7 @@ def ts_obj(d):
 ts = (
     "// ARCHIVO GENERADO por scripts/import-psalm-index.py — NO editar a mano.\n"
     "// Se regenera desde la planilla del índice de salmos (Indice-Salmos-StellaMaris.xlsx).\n"
-    "export interface PsalmEntryData { page?: number; antiphon?: string; }\n\n"
+    "export interface PsalmEntryData { page?: number; pageEnd?: number; antiphon?: string; }\n\n"
     "export const PSALM_INDEX_DATA: Record<'A' | 'B' | 'C', Record<string, PsalmEntryData>> = {\n"
     f"  A: {ts_obj(result['A'])},\n"
     f"  B: {ts_obj(result['B'])},\n"

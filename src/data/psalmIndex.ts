@@ -14,8 +14,20 @@ import { PSALM_INDEX_DATA } from './psalmIndex.data';
  */
 export interface PsalmEntry {
   page?: number;
+  /** Última página si el salmo ocupa un rango (p. ej. Epifanía "18-19"). */
+  pageEnd?: number;
   antiphon?: string;
 }
+
+/**
+ * Alias: etiqueta del calendario de la app (`getLiturgicalDateForDate`) → clave usada en
+ * la planilla del índice, cuando difieren. La mayoría de los domingos coinciden tal cual.
+ */
+const CELEBRATION_ALIASES: Record<string, string> = {
+  'Jesucristo, Rey del Universo': '34.º Domingo T.O. — Cristo Rey',
+  'Natividad del Señor': 'Natividad del Señor (Misa del día)',
+  'Domingo de la Divina Misericordia (2.º de Pascua)': '2.º Domingo de Pascua',
+};
 
 /** ID de archivo de Google Drive del PDF de cada año (uno por ciclo). */
 export const PSALM_BOOKS: Record<SundayCycle, { driveFileId: string }> = {
@@ -56,7 +68,8 @@ function normalizedIndex(cycle: SundayCycle): Record<string, PsalmEntry> {
 export function resolvePsalm(cycle: SundayCycle, celebrationKey: string): (PsalmEntry & { driveFileId: string }) | null {
   const book = PSALM_BOOKS[cycle];
   if (!book?.driveFileId || !celebrationKey) return null;
-  const entry = PSALM_INDEX[cycle]?.[celebrationKey] ?? normalizedIndex(cycle)[normKey(celebrationKey)];
+  const key = CELEBRATION_ALIASES[celebrationKey] ?? celebrationKey;
+  const entry = PSALM_INDEX[cycle]?.[key] ?? normalizedIndex(cycle)[normKey(key)];
   if (!entry || (entry.page == null && !entry.antiphon)) return null;
   return { ...entry, driveFileId: book.driveFileId };
 }

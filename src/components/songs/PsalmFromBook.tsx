@@ -71,7 +71,7 @@ export function PsalmFromBook({ date, role, zoom = 1 }: { date?: string; role?: 
       {/* Partitura (página del libro) — SOLO coro/admin. */}
       {!isPueblo && psalm.page != null && (
         <div className="bg-white dark:bg-gray-900 rounded-xl p-2 border border-amber-200 dark:border-amber-800">
-          <PdfPages proxyUrl={proxyUrl} driveViewUrl={driveViewUrl} title={`Salmo — ${celebration}`} zoom={zoom} fromPage={psalm.page} toPage={psalm.page} />
+          <PdfPages proxyUrl={proxyUrl} driveViewUrl={driveViewUrl} title={`Salmo — ${celebration}`} zoom={zoom} fromPage={psalm.page} toPage={psalm.pageEnd ?? psalm.page} />
         </div>
       )}
       {!isPueblo && psalm.page == null && (
