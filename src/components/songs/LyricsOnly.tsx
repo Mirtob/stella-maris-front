@@ -1,17 +1,26 @@
 import { FormattedText } from './FormattedText';
 import { isCenteredLine, stripCenterMarker } from '../../utils/lyricsFormat';
+import { useReadingPrefs } from '../../hooks/useReadingPrefs';
 
 interface LyricsOnlyProps {
   lyrics: string;
+  /** Aplica la preferencia de lectura (tamaño + alto contraste). El Atril lo desactiva
+   *  porque tiene su propio zoom y fondo oscuro. */
+  applyReadingPrefs?: boolean;
 }
 
 /**
  * Componente para mostrar SOLO la letra de cantos (sin acordes).
  * Para uso exclusivo de Pueblo Fiel.
- * 
+ *
  * Este componente elimina todos los acordes [X] y muestra únicamente el texto.
+ * El tamaño de letra y el alto contraste se controlan con `useReadingPrefs`.
  */
-export function LyricsOnly({ lyrics }: LyricsOnlyProps) {
+export function LyricsOnly({ lyrics, applyReadingPrefs = true }: LyricsOnlyProps) {
+  const { prefs } = useReadingPrefs();
+  const scale = applyReadingPrefs ? prefs.scale : 1;
+  const hc = applyReadingPrefs && prefs.highContrast;
+
   if (!lyrics) {
     return (
       <div className="text-center text-gray-600 dark:text-gray-400 py-4">
@@ -39,7 +48,7 @@ export function LyricsOnly({ lyrics }: LyricsOnlyProps) {
     // Detectar si es un encabezado de sección (Coro, Estrofa, Puente, etc.)
     if (/^(Coro|Estrofa|Puente|Intro|Final|Verso)(\s+\d+)?:?\s*$/i.test(cleanedLine.trim())) {
       return (
-        <div key={lineIndex} className={`text-blue-700 dark:text-blue-300 font-bold text-lg mt-4 mb-2 ${centered ? 'text-center' : ''}`}>
+        <div key={lineIndex} className={`font-bold text-[1.15em] mt-4 mb-2 ${hc ? 'text-blue-900 dark:text-blue-100' : 'text-blue-700 dark:text-blue-300'} ${centered ? 'text-center' : ''}`}>
           {cleanedLine.trim()}
         </div>
       );
@@ -47,7 +56,7 @@ export function LyricsOnly({ lyrics }: LyricsOnlyProps) {
 
     // Texto normal (sin acordes), con formato inline (**negrita**, *cursiva*, __subrayado__).
     return (
-      <div key={lineIndex} className={`text-gray-900 dark:text-gray-100 text-base leading-relaxed py-1 ${centered ? 'text-center' : ''}`}>
+      <div key={lineIndex} className={`text-[1em] leading-relaxed py-1 ${hc ? 'text-black dark:text-white font-medium' : 'text-gray-900 dark:text-gray-100'} ${centered ? 'text-center' : ''}`}>
         <FormattedText text={cleanedLine} />
       </div>
     );
@@ -56,7 +65,10 @@ export function LyricsOnly({ lyrics }: LyricsOnlyProps) {
   const lines = lyrics.split('\n');
 
   return (
-    <div className="bg-white/80 dark:bg-white/10 rounded-xl p-6 border-2 border-blue-200 dark:border-blue-700">
+    <div
+      className={`rounded-xl p-6 border-2 ${hc ? 'bg-white dark:bg-black border-black dark:border-white' : 'bg-white/80 dark:bg-white/10 border-blue-200 dark:border-blue-700'}`}
+      style={{ fontSize: `${scale}rem` }}
+    >
       <div className="space-y-1">
         {lines.map((line, index) => processLine(line, index))}
       </div>

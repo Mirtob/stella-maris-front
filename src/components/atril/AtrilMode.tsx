@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, ZoomIn, ZoomOut, ChevronUp, ChevronDown, RotateCcw, Play, Pause, Maximize2, Minimize2, Music, List, Printer, Loader } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, ChevronUp, ChevronDown, RotateCcw, Play, Pause, Maximize2, Minimize2, Music, List, Printer, Loader, Timer, Minus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Song, UserRole, InstrumentType } from '../../types';
 import { transposeContent, getTransposedKey, keyPrefersFlats, formatTransposition, getChordNotation, setChordNotation, type ChordNotation } from '../../utils/chordTranspose';
 import { LyricsWithChords } from '../songs/LyricsWithChords';
 import { LyricsOnly } from '../songs/LyricsOnly';
 import { useWakeLock } from '../../hooks/useWakeLock';
+import { useMetronome } from '../../hooks/useMetronome';
 import { Tour } from '../tour/Tour';
 import { atrilTips, hasSeenTip, markTipSeen } from '../tour/tours';
 import { isOrdinary, sortByMassOrder } from '../../utils/ordinary';
@@ -46,6 +47,8 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
   const [showTip, setShowTip] = useState(() => !hasSeenTip('atril'));
   const [activeIndex, setActiveIndex] = useState(0);
   const [printing, setPrinting] = useState(false);
+  const [showMetro, setShowMetro] = useState(false);
+  const metro = useMetronome(90);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<(HTMLElement | null)[]>([]);
@@ -215,6 +218,19 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
           </button>
         )}
 
+        {/* Metrónomo (solo músicos del coro) */}
+        {hasChords && (
+          <button
+            onClick={() => setShowMetro((s) => !s)}
+            className={`${btn} w-11 h-11 flex-shrink-0 ${showMetro || metro.running ? 'bg-amber-500/30 border-amber-400' : ''}`}
+            aria-label="Metrónomo"
+            aria-pressed={showMetro}
+            title="Metrónomo"
+          >
+            <Timer className="w-6 h-6" strokeWidth={2.5} />
+          </button>
+        )}
+
         {/* Imprimir el atril (PDF vertical, tal cual se ve) */}
         <button onClick={handlePrint} disabled={printing} className={`${btn} w-11 h-11 flex-shrink-0 disabled:opacity-60`} aria-label="Imprimir" title="Imprimir (PDF vertical, tal cual se ve)">
           {printing ? <Loader className="w-6 h-6 animate-spin" /> : <Printer className="w-6 h-6" strokeWidth={2.5} />}
@@ -297,7 +313,7 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
                       <PdfPages proxyUrl={proxy!} driveViewUrl={s.sheetMusicUrl!} title={s.title} zoom={pdfZoom} />
                     ) : lyrics ? (
                       <div style={{ zoom: fontScale } as any}>
-                        {showChordsHere ? <LyricsWithChords lyrics={lyrics} /> : <LyricsOnly lyrics={lyrics} />}
+                        {showChordsHere ? <LyricsWithChords lyrics={lyrics} /> : <LyricsOnly lyrics={lyrics} applyReadingPrefs={false} />}
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center text-white/40 gap-2 py-10 text-center">
@@ -317,6 +333,33 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
           <button onClick={() => setFocus(false)} className={`${btn} fixed bottom-24 left-4 w-12 h-12 z-10`} aria-label="Mostrar repertorio"><List className="w-6 h-6" strokeWidth={2.5} /></button>
         )}
       </div>
+
+      {/* Panel del metrónomo (músicos): play/stop, BPM ± y slider, tap tempo y pulso visual */}
+      {showMetro && hasChords && (
+        <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 bg-slate-950 border-t border-white/10 flex-shrink-0">
+          <button onClick={metro.toggle} className={`${btn} w-11 h-11 flex-shrink-0 ${metro.running ? 'bg-amber-500/30 border-amber-400' : ''}`} aria-label={metro.running ? 'Detener metrónomo' : 'Iniciar metrónomo'}>
+            {metro.running ? <Pause className="w-6 h-6" fill="currentColor" /> : <Play className="w-6 h-6" fill="currentColor" />}
+          </button>
+          <div className="flex items-center gap-1.5 flex-shrink-0" aria-hidden="true">
+            {Array.from({ length: metro.beatsPerBar }).map((_, i) => (
+              <span key={i} className={`w-2.5 h-2.5 rounded-full transition-colors ${metro.running && metro.beat === i ? (i === 0 ? 'bg-amber-400 scale-125' : 'bg-white') : 'bg-white/25'}`} />
+            ))}
+          </div>
+          <button onClick={() => metro.setBpm(metro.bpm - 1)} className={`${btn} w-9 h-9 flex-shrink-0`} aria-label="Menos BPM"><Minus className="w-5 h-5" strokeWidth={2.5} /></button>
+          <div className="text-center flex-shrink-0 w-14">
+            <div className="text-2xl font-extrabold text-amber-300 leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>{metro.bpm}</div>
+            <div className="text-[10px] text-white/50 -mt-0.5">BPM</div>
+          </div>
+          <button onClick={() => metro.setBpm(metro.bpm + 1)} className={`${btn} w-9 h-9 flex-shrink-0`} aria-label="Más BPM"><Plus className="w-5 h-5" strokeWidth={2.5} /></button>
+          <input
+            type="range" min={40} max={240} step={1} value={metro.bpm}
+            onChange={(e) => metro.setBpm(Number(e.target.value))}
+            className="flex-1 min-w-0 accent-amber-400 h-2"
+            aria-label="Tempo (BPM)"
+          />
+          <button onClick={metro.tap} className={`${btn} px-3 h-9 flex-shrink-0 text-xs font-bold`} title="Tap tempo: toca al ritmo">TAP</button>
+        </div>
+      )}
 
       {/* Barra de autoscroll global (letra y partituras) */}
       <div data-tour="atril-autoscroll" className="flex items-center gap-3 px-4 py-3 bg-slate-950 border-t border-white/10 flex-shrink-0" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>

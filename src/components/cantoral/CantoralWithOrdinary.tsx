@@ -6,6 +6,7 @@ import { postureIcons, postureLabels, postureColors, MassSection } from '../../d
 import { getOrdinaryForCantoral } from '../../data/massOrdinaryVariants';
 import { PDFViewer } from '../common/PDFViewer';
 import { LyricsOnly } from '../songs/LyricsOnly';
+import { LyricsReadingControls } from '../songs/LyricsReadingControls';
 import { LyricsWithChords } from '../songs/LyricsWithChords';
 import { transposeContent, getChordNotation, keyPrefersFlats } from '../../utils/chordTranspose';
 import { AtrilMode } from '../atril/AtrilMode';
@@ -412,6 +413,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
                     <div className="flex items-center gap-2 mb-3">
                       <FileText className="w-6 h-6 text-blue-900 dark:text-blue-200 flex-shrink-0" strokeWidth={2.5} />
                       <h4 className="text-xl font-bold text-brand-ink">Letra</h4>
+                      {!showChords && <LyricsReadingControls className="ml-auto" />}
                     </div>
                     <div className="bg-white dark:bg-gray-900 rounded-xl p-4 max-h-[40vh] overflow-auto transition-colors">
                       {showChords
