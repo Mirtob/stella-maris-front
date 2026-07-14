@@ -100,6 +100,9 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
   // (mismo día 00–15h) o II Vísperas (mismo día 15:01–23:59). Para I Vísperas la
   // fecha publicada es el día anterior (se muestra antes de publicar).
   const [massType, setMassType] = useState<MassType>(initialMassType || 'dia');
+  // Si los datos de la Misa (fecha/hora/tipo) vienen del constructor, el menú de
+  // publicación no los vuelve a pedir: muestra un resumen y se centra en el PDF.
+  const prefilled = !!initialDate && !isMulti;
   const [dateChangeSource, setDateChangeSource] = useState<'calendar' | 'liturgical' | null>(null);
 
   // ── Estado modo multi-parroquia ───────────────────────────────────────────
@@ -547,6 +550,22 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
                     </div>
                   </div>
 
+                  {prefilled ? (
+                    <div className="bg-blue-50/60 dark:bg-blue-950/30 rounded-2xl p-4 border-2 border-blue-200 dark:border-blue-700 transition-colors">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Calendar className="w-5 h-5 text-blue-900 dark:text-blue-200 flex-shrink-0" strokeWidth={2.5} />
+                        <span className="font-bold text-brand-ink">Misa</span>
+                        {selectedDate && <span className="ml-auto"><LiturgicalColorBadge date={selectedDate} /></span>}
+                      </div>
+                      <p className="text-sm text-brand-ink-soft">
+                        {formatYmdForDisplay(selectedDate, { weekday: 'long', day: 'numeric', month: 'long' })}
+                        {massTime ? ` · ${massTime}` : ''}
+                        {massType === 'visperas_i' ? ' · I Vísperas' : massType === 'visperas_ii' ? ' · II Vísperas' : ''}
+                        {liturgicalDate ? ` · ${liturgicalDate}` : ''}
+                      </p>
+                      <p className="text-xs text-brand-ink-soft mt-1">Elegiste estos datos al inicio. Para cambiarlos, vuelve al constructor.</p>
+                    </div>
+                  ) : (<>
                   {/* Date Selection */}
                   <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
                     <label className="flex items-center gap-3 mb-3">
@@ -667,6 +686,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
                       {MASS_TYPE_RANGE[massType]}
                     </p>
                   </div>
+                  </>)}
                 </>
               )}
 
