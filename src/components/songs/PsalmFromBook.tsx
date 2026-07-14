@@ -11,7 +11,18 @@ import { PdfPages } from '../atril/PdfPages';
  *  - Pueblo fiel → solo la ANTÍFONA (texto de la respuesta).
  * Si no hay dato para esa celebración, muestra un aviso "pendiente" (nada roto).
  */
-export function PsalmFromBook({ date, role, zoom = 1 }: { date?: string; role?: UserRole; zoom?: number }) {
+interface PsalmFromBookProps {
+  date?: string;
+  role?: UserRole;
+  zoom?: number;
+  /** Antífona controlada (override editable). Si se omite, usa la del índice. */
+  antiphon?: string;
+  /** Si se pasa junto con `editable`, la antífona se muestra como campo editable. */
+  onAntiphonChange?: (value: string) => void;
+  editable?: boolean;
+}
+
+export function PsalmFromBook({ date, role, zoom = 1, antiphon, onAntiphonChange, editable }: PsalmFromBookProps) {
   const isPueblo = role === 'Pueblo fiel';
 
   const box = 'bg-white/70 dark:bg-white/10 rounded-2xl p-4 border-2 border-amber-200 dark:border-amber-800';
@@ -50,6 +61,7 @@ export function PsalmFromBook({ date, role, zoom = 1 }: { date?: string; role?: 
 
   const proxyUrl = `/api/pdf?id=${psalm.driveFileId}`;
   const driveViewUrl = `https://drive.google.com/file/d/${psalm.driveFileId}/view`;
+  const shownAntiphon = antiphon !== undefined ? antiphon : (psalm.antiphon ?? '');
 
   return (
     <div className={box}>
@@ -61,12 +73,25 @@ export function PsalmFromBook({ date, role, zoom = 1 }: { date?: string; role?: 
         <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300 flex-shrink-0">Del libro · Año {cycle}</span>
       </div>
 
-      {/* Antífona (respuesta del pueblo). Visible para todos. */}
-      {psalm.antiphon && (
+      {/* Antífona (respuesta del pueblo). Editable en el constructor. */}
+      {editable && onAntiphonChange ? (
+        <div className="mb-3">
+          <label className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1 mb-1">
+            Antífona (respuesta del pueblo) · editable
+          </label>
+          <textarea
+            value={shownAntiphon}
+            onChange={(e) => onAntiphonChange(e.target.value)}
+            rows={2}
+            placeholder="Escribe la antífona del salmo…"
+            className="w-full px-3 py-2 rounded-xl border-2 border-amber-200 dark:border-amber-800 bg-white dark:bg-slate-900 text-brand-ink font-semibold focus:outline-none focus:border-amber-500 resize-y"
+          />
+        </div>
+      ) : shownAntiphon ? (
         <p className="text-brand-ink font-semibold leading-relaxed bg-white dark:bg-slate-900 rounded-xl p-3 border border-amber-200 dark:border-amber-800 mb-3">
-          <span className="text-amber-700 dark:text-amber-300 font-bold mr-1">R/</span>{psalm.antiphon}
+          <span className="text-amber-700 dark:text-amber-300 font-bold mr-1">R/</span>{shownAntiphon}
         </p>
-      )}
+      ) : null}
 
       {/* Partitura (página del libro) — SOLO coro/admin. */}
       {!isPueblo && psalm.page != null && (
@@ -76,9 +101,6 @@ export function PsalmFromBook({ date, role, zoom = 1 }: { date?: string; role?: 
       )}
       {!isPueblo && psalm.page == null && (
         <p className="text-xs text-brand-ink-soft">Partitura del salmo pendiente en el índice.</p>
-      )}
-      {isPueblo && !psalm.antiphon && (
-        <p className="text-sm text-brand-ink-soft">Antífona pendiente en el índice.</p>
       )}
     </div>
   );

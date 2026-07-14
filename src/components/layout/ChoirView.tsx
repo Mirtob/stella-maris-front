@@ -13,6 +13,7 @@ import { Song, InstrumentType, PublishedCantoral } from '../../types';
 import { PsalmFromBook } from '../songs/PsalmFromBook';
 import { getLiturgicalDateForDate } from '../../utils/liturgicalCalendar';
 import { getSundayCycle } from '../../utils/liturgicalCycle';
+import { resolvePsalm } from '../../data/psalmIndex';
 import { computeUsage, resolveAnnualTarget } from '../../utils/previousUsage';
 import { getTodayLocal, formatYmdForDisplay } from '../../utils/dateLocal';
 import { getGospelAcclamationName, getGospelAcclamationIcon, getCurrentLiturgicalSeason } from '../../utils/liturgicalSeason';
@@ -63,6 +64,14 @@ export function ChoirView({
   // Fecha de la Misa para la que se arma el cantoral: fija la celebración/ciclo desde el
   // inicio (para cargar el salmo del libro) y pre-llena la fecha al publicar.
   const [massDate, setMassDate] = useState(getTodayLocal());
+  // Antífona del salmo (editable): por defecto la del índice de la celebración; el coro
+  // puede cambiarla si no usa la misma. Viaja al cantoral publicado (y al PDF/pueblo).
+  const [psalmAntiphon, setPsalmAntiphon] = useState('');
+  useEffect(() => {
+    const cel = getLiturgicalDateForDate(massDate);
+    const p = cel ? resolvePsalm(getSundayCycle(massDate), cel) : null;
+    setPsalmAntiphon(p?.antiphon ?? '');
+  }, [massDate]);
   // Tip contextual del constructor (F4): 1ª vez que se abre una categoría.
   const [showConstructorTip, setShowConstructorTip] = useState(false);
   const { songs: allSongs } = useSongs();
@@ -178,6 +187,24 @@ export function ChoirView({
     // Un PublishedCantoral por destino (parroquia + fecha + horario), todos con los
     // MISMOS cantos del draft. Cada uno con su propio UUID para PDF/QR independientes.
     const now = new Date().toISOString();
+
+    // Incluir el salmo del libro como un canto "Salmo" (antífona = letra) para que viaje
+    // al PDF y a la vista publicada: el Pueblo fiel ve la antífona; el coro ve además la
+    // partitura (derivada de la fecha). Solo si hay antífona y el draft no trae ya un Salmo.
+    const psalmText = psalmAntiphon.trim();
+    const songsForPublish: Song[] = psalmText && !cantoral.some((s) => s.category === 'Salmo')
+      ? [...cantoral, {
+          id: `psalm-${massDate}`,
+          title: 'Salmo responsorial',
+          category: 'Salmo',
+          youtubeId: '',
+          duration: '',
+          lyrics: psalmText,
+          massMoment: 'salmo',
+          isLiturgical: true,
+        } as Song]
+      : cantoral;
+
     const cantorals: PublishedCantoral[] = targets.map((t) => ({
       id: newCantoralId(),
       choirId: 'current_user',
@@ -191,7 +218,7 @@ export function ChoirView({
       createdAt: now,
       publishedBy: 'Mi Coro',
       publishedAt: now,
-      songs: cantoral,
+      songs: songsForPublish,
       status: 'published',
       garland: t.garland,
       pdfFont: t.pdfFont,
@@ -398,24 +425,37 @@ export function ChoirView({
             // Al tocar el Kyrie en Pascua, preguntar primero: acto penitencial o aspersión.
             const askFirst = isEaster && rawCategory === 'Kyrie' && penitentialChoice === null;
 
+            // El Salmo NO se elige del catálogo: viene del libro musicalizado según la
+            // fecha (partitura para el coro + antífona editable). Reemplaza a la tarjeta.
+            if (category === 'Salmo') {
+              return (
+                <div key={rawCategory}>
+                  <PsalmFromBook
+                    date={massDate}
+                    role="Coro"
+                    antiphon={psalmAntiphon}
+                    onAntiphonChange={setPsalmAntiphon}
+                    editable
+                  />
+                </div>
+              );
+            }
+
             return (
-              <div key={rawCategory} className="space-y-3">
-                <CategorySearch
-                  category={category}
-                  icon={icon}
-                  isExpanded={expandedCategories[category] || false}
-                  onToggle={askFirst ? () => setShowAspersionDialog(true) : () => handleToggleCategory(category)}
-                  onClose={() => handleCloseCategory(category)}
-                  onAddToCantoral={onAddToCantoral}
-                  onRemoveFromCantoral={onRemoveFromCantoral}
-                  cantoral={cantoral}
-                  onPlaySong={onPlaySong}
-                  preferredInstrument={preferredInstrument}
-                  previousUsage={previousUsage}
-                />
-                {/* Salmo del libro musicalizado (partitura para el coro), según la fecha. */}
-                {category === 'Salmo' && <PsalmFromBook date={massDate} role="Coro" />}
-              </div>
+              <CategorySearch
+                key={rawCategory}
+                category={category}
+                icon={icon}
+                isExpanded={expandedCategories[category] || false}
+                onToggle={askFirst ? () => setShowAspersionDialog(true) : () => handleToggleCategory(category)}
+                onClose={() => handleCloseCategory(category)}
+                onAddToCantoral={onAddToCantoral}
+                onRemoveFromCantoral={onRemoveFromCantoral}
+                cantoral={cantoral}
+                onPlaySong={onPlaySong}
+                preferredInstrument={preferredInstrument}
+                previousUsage={previousUsage}
+              />
             );
           })}
         </div>
