@@ -102,7 +102,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
   const [massType, setMassType] = useState<MassType>(initialMassType || 'dia');
   // Si los datos de la Misa (fecha/hora/tipo) vienen del constructor, el menú de
   // publicación no los vuelve a pedir: muestra un resumen y se centra en el PDF.
-  const prefilled = !!initialDate && !isMulti;
+  const prefilled = !!initialDate;
   const [dateChangeSource, setDateChangeSource] = useState<'calendar' | 'liturgical' | null>(null);
 
   // ── Estado modo multi-parroquia ───────────────────────────────────────────
@@ -112,12 +112,14 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
   );
   // Fecha/celebración/horario por parroquia.
   const [schedules, setSchedules] = useState<Record<string, ParishSchedule>>(() => {
-    const today = getTodayLocal();
-    // Auto-derivar la celebración de hoy (si es domingo/solemnidad del calendario)
-    // para no obligar a re-elegir la fecha cuando ya es la correcta.
-    const todayLiturgical = getLiturgicalDateForDate(today) || '';
+    // Sembrar con los datos elegidos en el constructor (fecha/hora/tipo) para no
+    // volver a pedirlos; si no vienen, cae a hoy.
+    const date = initialDate || getTodayLocal();
+    const liturgical = getLiturgicalDateForDate(date) || '';
+    const time = initialMassTime || '';
+    const type: MassType = initialMassType || 'dia';
     const init: Record<string, ParishSchedule> = {};
-    allParishes.forEach(p => { init[p] = { date: today, liturgicalDate: todayLiturgical, massTime: '', massType: 'dia', vigil: false }; });
+    allParishes.forEach(p => { init[p] = { date, liturgicalDate: liturgical, massTime: time, massType: type, vigil: type === 'visperas_i' }; });
     return init;
   });
 
@@ -417,10 +419,22 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
                     <div className="flex-1">
                       <div className="text-xl font-bold text-brand-ink">¿A qué parroquias?</div>
                       <div className="text-sm text-blue-900 dark:text-blue-200">
-                        Mismos cantos; indica fecha y horario de cada misa.
+                        {prefilled ? 'Mismos cantos, misma fecha y horario.' : 'Mismos cantos; indica fecha y horario de cada misa.'}
                       </div>
                     </div>
                   </div>
+
+                  {prefilled && (
+                    <div className="mb-3 bg-blue-50/60 dark:bg-blue-950/30 rounded-xl p-3 border-2 border-blue-200 dark:border-blue-700">
+                      <p className="text-sm text-brand-ink-soft">
+                        <strong className="text-brand-ink">{formatYmdForDisplay(initialDate!, { weekday: 'long', day: 'numeric', month: 'long' })}</strong>
+                        {initialMassTime ? ` · ${initialMassTime}` : ''}
+                        {initialMassType === 'visperas_i' ? ' · I Vísperas' : initialMassType === 'visperas_ii' ? ' · II Vísperas' : ''}
+                        {getLiturgicalDateForDate(initialDate!) ? ` · ${getLiturgicalDateForDate(initialDate!)}` : ''}
+                      </p>
+                      <p className="text-xs text-brand-ink-soft mt-1">Elegiste estos datos al inicio. Para cambiarlos, vuelve al constructor.</p>
+                    </div>
+                  )}
 
                   <button
                     onClick={toggleSelectAll}
@@ -453,7 +467,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
                             <span className="text-base font-bold text-brand-ink break-words">{formatActiveParishLabel(parish)}</span>
                           </label>
 
-                          {checked && (
+                          {!prefilled && checked && (
                             <div className="px-3 pb-4 pt-1 space-y-3 border-t-2 border-white/50 dark:border-white/10">
                               {/* Fecha */}
                               <div>
