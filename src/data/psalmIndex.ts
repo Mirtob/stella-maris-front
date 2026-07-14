@@ -19,8 +19,8 @@ export interface PsalmEntry {
 
 /** ID de archivo de Google Drive del PDF de cada año (uno por ciclo). */
 export const PSALM_BOOKS: Record<SundayCycle, { driveFileId: string }> = {
-  A: { driveFileId: '' }, // TODO: pegar ID de Drive del PDF Año A
-  B: { driveFileId: '' }, // TODO: pegar ID de Drive del PDF Año B
+  A: { driveFileId: '177Y1H6MXqvtxsBi1VVoP60rzJu6mRwi7' }, // PDF Año A
+  B: { driveFileId: '11RO4bNj2sSfr7iVPsY5WqcV2TBQZutlC' }, // PDF Año B
   C: { driveFileId: '' }, // TODO: pegar ID de Drive del PDF Año C
 };
 
