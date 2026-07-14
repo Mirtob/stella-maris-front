@@ -56,27 +56,28 @@ SOLEMNIDADES = [
 
 
 def build_sheet(ws, year_letter):
-    ws.merge_cells("A1:D1")
+    ws.merge_cells("A1:E1")
     ws["A1"] = f"Índice de Salmos — Año {year_letter}"
     ws["A1"].font = title_font
-    ws.merge_cells("A2:D2")
-    ws["A2"] = ("Anota en la columna PÁGINA (amarilla) el número de página del PDF de este "
-                "año donde está el salmo de cada celebración. Un salmo por página. Deja en "
-                "blanco las que el libro no traiga.")
+    ws.merge_cells("A2:E2")
+    ws["A2"] = ("Columnas amarillas: PÁGINA = página del PDF de este año donde está el salmo "
+                "(un salmo por página, para el coro). ANTÍFONA = el texto de la respuesta que "
+                "canta el Pueblo fiel (una línea). Deja en blanco lo que el libro no traiga.")
     ws["A2"].font = sub_font
     ws["A2"].alignment = Alignment(wrap_text=True, vertical="center")
     ws.row_dimensions[2].height = 30
 
     r = 4
-    for col, name in enumerate(["Sección", "Celebración", "Página", "Notas"], start=1):
+    headers = ["Sección", "Celebración", "Página", "Antífona (Pueblo fiel)", "Notas"]
+    for col, name in enumerate(headers, start=1):
         c = ws.cell(row=r, column=col, value=name)
         c.font = head_font; c.fill = head_fill; c.border = border
-        c.alignment = Alignment(horizontal="center")
+        c.alignment = Alignment(horizontal="center", wrap_text=True)
     r += 1
 
     for groups in (TEMPORAL, SOLEMNIDADES):
         for section, items in groups:
-            ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=4)
+            ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=5)
             sc = ws.cell(row=r, column=1, value=section)
             sc.font = sec_font; sc.fill = sec_fill; sc.border = border
             sc.alignment = Alignment(horizontal="left", vertical="center")
@@ -87,10 +88,13 @@ def build_sheet(ws, year_letter):
                 pag = ws.cell(row=r, column=3, value=None)
                 pag.border = border; pag.fill = input_fill
                 pag.alignment = Alignment(horizontal="center")
-                ws.cell(row=r, column=4, value="").border = border
+                ant = ws.cell(row=r, column=4, value=None)
+                ant.border = border; ant.fill = input_fill
+                ant.alignment = Alignment(wrap_text=True, vertical="center")
+                ws.cell(row=r, column=5, value="").border = border
                 r += 1
 
-    for col, w in zip("ABCD", [4, 42, 12, 26]):
+    for col, w in zip("ABCDE", [4, 40, 9, 46, 18]):
         ws.column_dimensions[col].width = w
     ws.freeze_panes = "A5"
 
@@ -105,9 +109,9 @@ notes = [
     "Objetivo: mapear cada celebración a la página de su salmo en el PDF de cada año (A, B, C).",
     "El libro tiene UN salmo por página, así que basta el número de página (sin rangos).",
     "Hay una hoja por año: 'Año A', 'Año B', 'Año C'. Abre el PDF de ese año y completa su hoja.",
-    "Solo llena la columna PÁGINA (amarilla). Deja en blanco lo que el libro no traiga.",
+    "Columna PÁGINA: la partitura del salmo (se muestra SOLO al coro).",
+    "Columna ANTÍFONA: el texto de la respuesta que canta el Pueblo fiel (una línea, solo letra).",
     "Las solemnidades/fiestas van en su sección (el capítulo aparte del final del libro).",
-    "Este salmo musicalizado es SOLO para el coro; no se muestra al Pueblo fiel.",
     "Cuando termines, envíamelo y con eso construyo la función (después del freeze/QA).",
 ]
 row = 3
