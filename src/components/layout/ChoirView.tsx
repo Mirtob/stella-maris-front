@@ -10,8 +10,11 @@ import { AtrilMode } from '../atril/AtrilMode';
 import { Tour } from '../tour/Tour';
 import { constructorTips, hasSeenTip, markTipSeen } from '../tour/tours';
 import { Song, InstrumentType, PublishedCantoral } from '../../types';
+import { PsalmFromBook } from '../songs/PsalmFromBook';
+import { getLiturgicalDateForDate } from '../../utils/liturgicalCalendar';
+import { getSundayCycle } from '../../utils/liturgicalCycle';
 import { computeUsage, resolveAnnualTarget } from '../../utils/previousUsage';
-import { getTodayLocal } from '../../utils/dateLocal';
+import { getTodayLocal, formatYmdForDisplay } from '../../utils/dateLocal';
 import { getGospelAcclamationName, getGospelAcclamationIcon, getCurrentLiturgicalSeason } from '../../utils/liturgicalSeason';
 import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji, getBuildableCelebrations, SpecialLiturgicalDay } from '../../utils/specialLiturgicalDays';
 import { useSongs } from '../../hooks/useSongs';
@@ -57,6 +60,9 @@ export function ChoirView({
   const [penitentialChoice, setPenitentialChoice] = useState<'kyrie' | 'aspersion' | null>(null);
   const [showAspersionDialog, setShowAspersionDialog] = useState(false);
   const [showAtril, setShowAtril] = useState(false);
+  // Fecha de la Misa para la que se arma el cantoral: fija la celebración/ciclo desde el
+  // inicio (para cargar el salmo del libro) y pre-llena la fecha al publicar.
+  const [massDate, setMassDate] = useState(getTodayLocal());
   // Tip contextual del constructor (F4): 1ª vez que se abre una categoría.
   const [showConstructorTip, setShowConstructorTip] = useState(false);
   const { songs: allSongs } = useSongs();
@@ -105,6 +111,10 @@ export function ChoirView({
   const specialDayName = getSpecialDayName(specialDay);
   const specialDayEmoji = getSpecialDayEmoji(specialDay);
   const categoryConfig = getCategoriesForSpecialDay(specialDay);
+
+  // Celebración y ciclo (A/B/C) derivados de la fecha de la Misa, para el salmo del libro.
+  const massCelebration = getLiturgicalDateForDate(massDate);
+  const massCycle = getSundayCycle(massDate);
 
   // Mostrar modal de selección de instrumento siempre al inicio
   useEffect(() => {
@@ -205,6 +215,27 @@ export function ChoirView({
     <>
       <div className="w-full max-w-md md:max-w-2xl mx-auto min-h-screen p-3 sm:p-4 md:p-6 pb-24 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
         <Home />
+
+        {/* Fecha de la Misa — al inicio: fija la celebración/ciclo (carga el salmo del
+            libro) y pre-llena la fecha al publicar. */}
+        <div className="mt-4 bg-white/50 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-4 border-2 border-blue-300/60 dark:border-blue-700/60 transition-colors">
+          <label htmlFor="mass-date" className="text-base font-bold text-brand-ink flex items-center gap-2 mb-2">
+            <span className="text-xl flex-shrink-0">📅</span>
+            <span>¿Para qué fecha es la Misa?</span>
+          </label>
+          <input
+            id="mass-date"
+            type="date"
+            value={massDate}
+            onChange={(e) => setMassDate(e.target.value || getTodayLocal())}
+            className="w-full px-3 py-2.5 rounded-xl border-2 border-blue-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-brand-ink font-semibold focus:outline-none focus:border-brand"
+          />
+          <p className="text-sm text-brand-ink-soft mt-2">
+            {massCelebration
+              ? <>{formatYmdForDisplay(massDate, { weekday: 'long', day: 'numeric', month: 'long' })} · <strong className="text-brand-ink">{massCelebration}</strong> · Año {massCycle}</>
+              : <>{formatYmdForDisplay(massDate, { weekday: 'long', day: 'numeric', month: 'long' })} — sin celebración dominical (el salmo del libro es para domingos y solemnidades).</>}
+          </p>
+        </div>
 
         {/* Modo Atril — leer el repertorio durante la Misa */}
         {cantoral.length > 0 && (
@@ -368,20 +399,23 @@ export function ChoirView({
             const askFirst = isEaster && rawCategory === 'Kyrie' && penitentialChoice === null;
 
             return (
-              <CategorySearch
-                key={rawCategory}
-                category={category}
-                icon={icon}
-                isExpanded={expandedCategories[category] || false}
-                onToggle={askFirst ? () => setShowAspersionDialog(true) : () => handleToggleCategory(category)}
-                onClose={() => handleCloseCategory(category)}
-                onAddToCantoral={onAddToCantoral}
-                onRemoveFromCantoral={onRemoveFromCantoral}
-                cantoral={cantoral}
-                onPlaySong={onPlaySong}
-                preferredInstrument={preferredInstrument}
-                previousUsage={previousUsage}
-              />
+              <div key={rawCategory} className="space-y-3">
+                <CategorySearch
+                  category={category}
+                  icon={icon}
+                  isExpanded={expandedCategories[category] || false}
+                  onToggle={askFirst ? () => setShowAspersionDialog(true) : () => handleToggleCategory(category)}
+                  onClose={() => handleCloseCategory(category)}
+                  onAddToCantoral={onAddToCantoral}
+                  onRemoveFromCantoral={onRemoveFromCantoral}
+                  cantoral={cantoral}
+                  onPlaySong={onPlaySong}
+                  preferredInstrument={preferredInstrument}
+                  previousUsage={previousUsage}
+                />
+                {/* Salmo del libro musicalizado (partitura para el coro), según la fecha. */}
+                {category === 'Salmo' && <PsalmFromBook date={massDate} role="Coro" />}
+              </div>
             );
           })}
         </div>
@@ -419,6 +453,7 @@ export function ChoirView({
           parishName={parishName}
           parishes={parishes}
           isAdmin={isAdmin}
+          initialDate={massDate}
           onClose={() => setShowPublishModal(false)}
           onPublish={handlePublish}
           userInstruments={userInstruments}

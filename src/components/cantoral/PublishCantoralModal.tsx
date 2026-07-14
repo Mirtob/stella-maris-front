@@ -46,6 +46,8 @@ interface PublishCantoralModalProps {
   parishes?: string[];
   /** Admin verificado: sus celebraciones agregadas son globales (para todos los usuarios). */
   isAdmin?: boolean;
+  /** Fecha pre-seleccionada (la elegida al inicio del constructor). */
+  initialDate?: string;
   onClose: () => void;
   onPublish: (targets: PublishTarget[]) => Promise<void> | void;
   userInstruments?: InstrumentType[];
@@ -81,7 +83,7 @@ function normalizeMassTime(raw: string): string {
   return `${String(displayH).padStart(2, '0')}:${min} ${period}`;
 }
 
-export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAdmin = false, onClose, onPublish, userInstruments = [] }: PublishCantoralModalProps) {
+export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAdmin = false, initialDate, onClose, onPublish, userInstruments = [] }: PublishCantoralModalProps) {
   // Lista efectiva de parroquias (con fallback a la activa). >1 ⇒ modo multi-parroquia.
   const allParishes = parishes.length > 0 ? parishes : (parishName ? [parishName] : []);
   const isMulti = allParishes.length > 1;
@@ -89,7 +91,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
   // ── Estado modo una sola parroquia ────────────────────────────────────────
   // Use local-timezone today to avoid the user in a negative-offset TZ
   // (Chile, México, Argentina) publishing for "tomorrow" when it's 22:00.
-  const [selectedDate, setSelectedDate] = useState(getTodayLocal());
+  const [selectedDate, setSelectedDate] = useState(initialDate || getTodayLocal());
   const [liturgicalDate, setLiturgicalDate] = useState('');
   const [massTime, setMassTime] = useState('');
   // Tipo de horario litúrgico: I Vísperas (tarde del día anterior), Misa del día
