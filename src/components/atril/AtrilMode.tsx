@@ -270,6 +270,8 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
             <div className="h-full flex items-center justify-center text-white/50">No hay cantos en el cantoral</div>
           ) : (
             orderedSongs.map((s, i) => {
+              // Salmo del libro: se muestra la página del PDF del libro (coro) + antífona.
+              const isPsalm = s.psalmPage != null && !!s.psalmBookId;
               const mode = modeFor(s);
               const proxy = mode === 'score' ? getDrivePdfProxyUrl(s.sheetMusicUrl) : null;
               const showScore = mode === 'score' && !!proxy;
@@ -309,7 +311,27 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
 
                   {/* Contenido de la sección */}
                   <div className="px-3 sm:px-6 py-4">
-                    {showScore ? (
+                    {isPsalm ? (
+                      <>
+                        {s.lyrics && (
+                          <div style={{ zoom: fontScale } as any}>
+                            <LyricsOnly lyrics={s.lyrics} applyReadingPrefs={false} />
+                          </div>
+                        )}
+                        {!isPuebloFiel && (
+                          <div className="mt-3">
+                            <PdfPages
+                              proxyUrl={`/api/pdf?id=${s.psalmBookId}`}
+                              driveViewUrl={`https://drive.google.com/file/d/${s.psalmBookId}/view`}
+                              title={s.title}
+                              zoom={pdfZoom}
+                              fromPage={s.psalmPage}
+                              toPage={s.psalmPageEnd ?? s.psalmPage}
+                            />
+                          </div>
+                        )}
+                      </>
+                    ) : showScore ? (
                       <PdfPages proxyUrl={proxy!} driveViewUrl={s.sheetMusicUrl!} title={s.title} zoom={pdfZoom} />
                     ) : lyrics ? (
                       <div style={{ zoom: fontScale } as any}>

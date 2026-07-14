@@ -105,6 +105,10 @@ export interface Song {
   massMoment?: MassMoment;           // Momento canónico de la Misa (reemplaza 'category' a largo plazo)
   liturgicalSeasons?: LiturgicalSeason[]; // Tiempos litúrgicos válidos (array; vacío = todos)
   driveFileId?: string;              // ID del archivo en Google Drive (en vez de URL completa)
+  // ── Salmo del libro musicalizado (canto "Salmo" sintético) ──────────────────
+  psalmBookId?: string;              // ID de Drive del PDF del libro de salmos (año A/B/C)
+  psalmPage?: number;                // Página del salmo dentro del libro (un salmo por página)
+  psalmPageEnd?: number;             // Última página si el salmo ocupa un rango
 }
 
 export type UserRole = 'Coro' | 'Pueblo fiel' | 'Admin';

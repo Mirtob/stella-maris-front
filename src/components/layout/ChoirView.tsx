@@ -74,6 +74,29 @@ export function ChoirView({
     const p = cel ? resolvePsalm(getSundayCycle(massDate), cel) : null;
     setPsalmAntiphon(p?.antiphon ?? '');
   }, [massDate]);
+
+  // Canto "Salmo" sintético: antífona (letra) + referencia a la página del libro. Viaja al
+  // cantoral publicado, al PDF y al Modo Atril. `null` si no hay salmo para la fecha.
+  const psalmSong = useMemo<Song | null>(() => {
+    const cel = getLiturgicalDateForDate(massDate);
+    const p = cel ? resolvePsalm(getSundayCycle(massDate), cel) : null;
+    if (!p) return null;
+    const antiphon = psalmAntiphon.trim();
+    if (!antiphon && p.page == null) return null;
+    return {
+      id: `psalm-${massDate}`,
+      title: 'Salmo responsorial',
+      category: 'Salmo',
+      youtubeId: '',
+      duration: '',
+      lyrics: antiphon,
+      massMoment: 'salmo',
+      isLiturgical: true,
+      psalmBookId: p.driveFileId,
+      psalmPage: p.page,
+      psalmPageEnd: p.pageEnd,
+    } as Song;
+  }, [massDate, psalmAntiphon]);
   // Tip contextual del constructor (F4): 1ª vez que se abre una categoría.
   const [showConstructorTip, setShowConstructorTip] = useState(false);
   const { songs: allSongs } = useSongs();
@@ -198,21 +221,10 @@ export function ChoirView({
     // MISMOS cantos del draft. Cada uno con su propio UUID para PDF/QR independientes.
     const now = new Date().toISOString();
 
-    // Incluir el salmo del libro como un canto "Salmo" (antífona = letra) para que viaje
-    // al PDF y a la vista publicada: el Pueblo fiel ve la antífona; el coro ve además la
-    // partitura (derivada de la fecha). Solo si hay antífona y el draft no trae ya un Salmo.
-    const psalmText = psalmAntiphon.trim();
-    const songsForPublish: Song[] = psalmText && !cantoral.some((s) => s.category === 'Salmo')
-      ? [...cantoral, {
-          id: `psalm-${massDate}`,
-          title: 'Salmo responsorial',
-          category: 'Salmo',
-          youtubeId: '',
-          duration: '',
-          lyrics: psalmText,
-          massMoment: 'salmo',
-          isLiturgical: true,
-        } as Song]
+    // Incluir el salmo del libro (canto "Salmo": antífona = letra + página del libro) para
+    // que viaje al PDF y a la vista publicada. Solo si hay salmo y el draft no trae ya uno.
+    const songsForPublish: Song[] = psalmSong && !cantoral.some((s) => s.category === 'Salmo')
+      ? [...cantoral, psalmSong]
       : cantoral;
 
     const cantorals: PublishedCantoral[] = targets.map((t) => ({
@@ -543,7 +555,7 @@ export function ChoirView({
       {/* Modo Atril */}
       {showAtril && (
         <AtrilMode
-          songs={cantoral}
+          songs={psalmSong && !cantoral.some((s) => s.category === 'Salmo') ? [...cantoral, psalmSong] : cantoral}
           userRole="Coro"
           userInstrument={selectedInstrumentForMass}
           onClose={() => setShowAtril(false)}
