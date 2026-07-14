@@ -37,6 +37,15 @@ interface ChoirViewProps {
   editingCantoralId?: string | null;
 }
 
+// Horarios de Misa seleccionables cada 30 min (06:00–22:00). Valor 'HH:MM' (24h).
+const MASS_TIME_OPTIONS: string[] = (() => {
+  const out: string[] = [];
+  for (let mins = 6 * 60; mins <= 22 * 60; mins += 30) {
+    out.push(`${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`);
+  }
+  return out;
+})();
+
 export function ChoirView({
   preferredInstrument,
   userInstruments,
@@ -285,13 +294,16 @@ export function ChoirView({
             </div>
             <div>
               <label htmlFor="mass-time" className="text-xs font-bold text-brand-ink-soft mb-1 block">Hora</label>
-              <input
+              <select
                 id="mass-time"
-                type="time"
                 value={massTime}
-                onChange={(e) => setMassTime(e.target.value || '10:00')}
+                onChange={(e) => setMassTime(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl border-2 border-blue-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-brand-ink font-semibold focus:outline-none focus:border-brand"
-              />
+              >
+                {MASS_TIME_OPTIONS.map((t) => (
+                  <option key={t} value={t}>{to12h(t)}</option>
+                ))}
+              </select>
             </div>
           </div>
           <div className="mt-3">
