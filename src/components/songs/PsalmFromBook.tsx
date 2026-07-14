@@ -20,9 +20,11 @@ interface PsalmFromBookProps {
   /** Si se pasa junto con `editable`, la antífona se muestra como campo editable. */
   onAntiphonChange?: (value: string) => void;
   editable?: boolean;
+  /** Oculta la partitura (en el constructor solo interesa la antífona editable). */
+  hideScore?: boolean;
 }
 
-export function PsalmFromBook({ date, role, zoom = 1, antiphon, onAntiphonChange, editable }: PsalmFromBookProps) {
+export function PsalmFromBook({ date, role, zoom = 1, antiphon, onAntiphonChange, editable, hideScore }: PsalmFromBookProps) {
   const isPueblo = role === 'Pueblo fiel';
 
   const box = 'bg-white/70 dark:bg-white/10 rounded-2xl p-4 border-2 border-amber-200 dark:border-amber-800';
@@ -93,13 +95,13 @@ export function PsalmFromBook({ date, role, zoom = 1, antiphon, onAntiphonChange
         </p>
       ) : null}
 
-      {/* Partitura (página del libro) — SOLO coro/admin. */}
-      {!isPueblo && psalm.page != null && (
+      {/* Partitura (página del libro) — SOLO coro/admin, y solo si no se oculta. */}
+      {!hideScore && !isPueblo && psalm.page != null && (
         <div className="bg-white dark:bg-gray-900 rounded-xl p-2 border border-amber-200 dark:border-amber-800">
           <PdfPages proxyUrl={proxyUrl} driveViewUrl={driveViewUrl} title={`Salmo — ${celebration}`} zoom={zoom} fromPage={psalm.page} toPage={psalm.pageEnd ?? psalm.page} />
         </div>
       )}
-      {!isPueblo && psalm.page == null && (
+      {!hideScore && !isPueblo && psalm.page == null && (
         <p className="text-xs text-brand-ink-soft">Partitura del salmo pendiente en el índice.</p>
       )}
     </div>

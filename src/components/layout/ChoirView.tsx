@@ -486,6 +486,7 @@ export function ChoirView({
                     antiphon={psalmAntiphon}
                     onAntiphonChange={setPsalmAntiphon}
                     editable
+                    hideScore
                   />
                 </div>
               );
