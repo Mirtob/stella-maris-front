@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { History, Calendar, Church, ChevronDown, ChevronUp, Play, Clock, Trash2, Filter, Download, Loader, Search } from 'lucide-react';
+import { History, Calendar, Church, ChevronDown, ChevronUp, Play, Clock, Trash2, Filter, Download, Loader, Search, Copy } from 'lucide-react';
 import { PublishedCantoral, Song } from '../../types';
 import { generateChoirBooklet } from '../../utils/atrilBookletPDF';
 import { listCantorals, listCantoralYears } from '../../services/cantorals';
@@ -16,6 +16,8 @@ interface CantoralHistoryProps {
   cantorals: PublishedCantoral[];
   onPlaySong: (song: Song) => void;
   onDeleteCantoral?: (cantoralId: string) => void;
+  /** Clonar: usar este cantoral (de cualquier parroquia/año) como base para una Misa nueva. */
+  onClone?: (cantoral: PublishedCantoral) => void;
   /** Admin gestiona cualquier cantoral; si no, solo los de estas parroquias. */
   isAdmin?: boolean;
   managedParishes?: string[];
@@ -44,7 +46,7 @@ function metaOf(parishName?: string | null) {
   return { parishFull, chapel: chapel || '', parish, diocese, country };
 }
 
-export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, isAdmin, managedParishes, defaultParish }: CantoralHistoryProps) {
+export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, onClone, isAdmin, managedParishes, defaultParish }: CantoralHistoryProps) {
   // Borrar solo se permite en cantorales gestionables (los de la propia parroquia; el
   // admin puede todos). Refleja lo que hace la RLS.
   const managedSet = new Set(managedParishes ?? []);
@@ -531,6 +533,18 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, isAdm
 
                       {isExpanded && (
                         <div className="p-6 pt-0 space-y-4">
+                          {/* Usar como base — clona los cantos a una Misa nueva de la parroquia activa */}
+                          {onClone && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onClone(cantoral); }}
+                              className="w-full bg-gradient-to-br from-amber-500 to-amber-600 text-white border-3 border-amber-700 py-4 px-3 sm:px-4 rounded-2xl font-bold text-xl flex items-center justify-center gap-3 active:scale-95 transition-all"
+                              title="Copiar estos cantos a una Misa nueva"
+                            >
+                              <Copy className="w-6 h-6" strokeWidth={2.5} />
+                              Usar como base para una Misa
+                            </button>
+                          )}
+
                           {/* Delete Button — solo en cantorales gestionables */}
                           {onDeleteCantoral && canDelete(cantoral) && (
                             <button

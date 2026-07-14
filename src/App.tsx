@@ -1001,6 +1001,20 @@ function AppContent() {
     });
   };
 
+  // Clonar: carga los cantos de un cantoral (propio, de otra parroquia o del historial)
+  // al constructor como un cantoral NUEVO (editingCantoralId = null → al publicar se crea
+  // uno nuevo en la parroquia activa). Recibe el objeto para funcionar también desde el
+  // Historial (que trae cantorales que no están en `publishedCantorals`). El original no
+  // se toca.
+  const handleCloneCantoral = (c: PublishedCantoral) => {
+    setCantoral(c.songs);
+    setEditingCantoralId(null);
+    navigate('main');
+    toast.info('Cantoral copiado como base', {
+      description: 'Elige la nueva fecha y horario, ajusta lo que quieras y publícalo. El original no se modifica.',
+    });
+  };
+
   // ── Route rendering ───────────────────────────────────────────────────────
 
   // Auth callback is handled before any app route
@@ -1248,6 +1262,7 @@ function AppContent() {
             navigate,
             onDeleteCantoral: handleDeleteCantoral,
             onEditCantoral: handleEditCantoral,
+            onCloneCantoral: handleCloneCantoral,
             onShareCantoral: handleShareCantoral,
             onListen: handleListen,
           })}
@@ -1296,6 +1311,7 @@ interface ViewProps {
   navigate: (view: string) => void;
   onDeleteCantoral: (id: string) => Promise<void>;
   onEditCantoral: (id: string) => void;
+  onCloneCantoral: (cantoral: PublishedCantoral) => void;
   onShareCantoral: (cantoral: PublishedCantoral) => void;
   onListen: (cantoral: PublishedCantoral) => void;
 }
@@ -1364,9 +1380,10 @@ function renderView(p: ViewProps): JSX.Element | null {
           userRole={p.effectiveRole}
           userInstrument={p.userProfile.instrument}
           userParishName={p.activeParishName}
-          // Editar/Eliminar solo Coro/Admin; Compartir (QR) lo puede usar también el Pueblo fiel.
+          // Editar/Eliminar/Clonar solo Coro/Admin; Compartir (QR) lo puede usar también el Pueblo fiel.
           onEdit={p.effectiveRole !== 'Pueblo fiel' ? p.onEditCantoral : undefined}
           onDelete={p.effectiveRole !== 'Pueblo fiel' ? p.onDeleteCantoral : undefined}
+          onClone={p.effectiveRole !== 'Pueblo fiel' ? p.onCloneCantoral : undefined}
           onShare={p.onShareCantoral}
         />
       );
@@ -1426,6 +1443,7 @@ function renderView(p: ViewProps): JSX.Element | null {
             cantorals={p.publishedCantorals}
             onPlaySong={p.onPlaySong}
             onDeleteCantoral={p.onDeleteCantoral}
+            onClone={p.onCloneCantoral}
             isAdmin={p.isVerifiedAdmin}
             defaultParish={p.userProfile.activeParishName || p.userProfile.parishName}
             managedParishes={Array.from(new Set([

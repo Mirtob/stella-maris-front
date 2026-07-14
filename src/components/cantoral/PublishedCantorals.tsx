@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, Calendar, Church, Play, Music as MusicIcon, Clock, BookText, ChevronDown, ChevronUp, Filter, Search, Headphones, Edit2, Trash2, QrCode, Archive, SearchX, FileText } from 'lucide-react';
+import { BookOpen, Calendar, Church, Play, Music as MusicIcon, Clock, BookText, ChevronDown, ChevronUp, Filter, Search, Headphones, Edit2, Trash2, QrCode, Archive, SearchX, FileText, Copy } from 'lucide-react';
 import { EmptyState } from '../common/EmptyState';
 import { ParishQRDialog } from './ParishQRDialog';
 import { AtrilMode } from '../atril/AtrilMode';
@@ -24,6 +24,8 @@ interface PublishedCantoralsProps {
   userParishName?: string; // Parroquia del usuario para filtrar
   /** Editar un cantoral publicado (solo Coro/Admin). */
   onEdit?: (cantoralId: string) => void;
+  /** Clonar: usar este cantoral como base para una Misa nueva (solo Coro/Admin). */
+  onClone?: (cantoral: PublishedCantoral) => void;
   /** Eliminar un cantoral publicado (solo Coro/Admin). */
   onDelete?: (cantoralId: string) => void;
   /** Mostrar el QR del cantoral para compartir/imprimir (solo Coro/Admin). */
@@ -33,7 +35,7 @@ interface PublishedCantoralsProps {
 // Pueblo fiel solo ve hasta 2 semanas adelante en el dashboard.
 const PUEBLO_FIEL_WINDOW_DAYS = 14;
 
-export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onListen, userRole, userInstrument, userParishName, onEdit, onDelete, onShare }: PublishedCantoralsProps) {
+export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onListen, userRole, userInstrument, userParishName, onEdit, onClone, onDelete, onShare }: PublishedCantoralsProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewingOrdinary, setViewingOrdinary] = useState<string | null>(null);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
@@ -272,7 +274,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
 
           {/* Compartir (QR) — disponible para todos los perfiles, incluido Pueblo fiel.
               Editar/Eliminar — solo Coro/Admin, sobre los cantorales de la parroquia activa. */}
-          {(onShare || (canManage && (onEdit || onDelete))) && (
+          {(onShare || (canManage && (onEdit || onDelete || onClone))) && (
             <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-white/40 dark:border-white/20">
               {onShare && (
                 <button
@@ -299,6 +301,16 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                 >
                   <Trash2 className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
                   Eliminar
+                </button>
+              )}
+              {canManage && onClone && (
+                <button
+                  onClick={() => onClone(cantoral)}
+                  className="col-span-2 bg-gradient-to-br from-amber-500 to-amber-600 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-amber-700"
+                  title="Copiar estos cantos a una Misa nueva"
+                >
+                  <Copy className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
+                  Usar como base
                 </button>
               )}
             </div>
