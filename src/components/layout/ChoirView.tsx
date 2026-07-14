@@ -11,9 +11,11 @@ import { Tour } from '../tour/Tour';
 import { constructorTips, hasSeenTip, markTipSeen } from '../tour/tours';
 import { Song, InstrumentType, PublishedCantoral, MassType } from '../../types';
 import { PsalmFromBook } from '../songs/PsalmFromBook';
-import { getLiturgicalDateForDate } from '../../utils/liturgicalCalendar';
+import { getLiturgicalDateForDate, getPersistedCustomDates, setPersistedCustomDates } from '../../utils/liturgicalCalendar';
 import { getSundayCycle } from '../../utils/liturgicalCycle';
 import { resolvePsalm } from '../../data/psalmIndex';
+import { AddSolemnityModal } from '../liturgy/AddSolemnityModal';
+import { addCustomLiturgicalDate, toLiturgicalDate } from '../../services/liturgicalDates';
 import { computeUsage, resolveAnnualTarget } from '../../utils/previousUsage';
 import { getTodayLocal, formatYmdForDisplay } from '../../utils/dateLocal';
 import { getGospelAcclamationName, getGospelAcclamationIcon, getCurrentLiturgicalSeason } from '../../utils/liturgicalSeason';
@@ -70,6 +72,8 @@ export function ChoirView({
   const [penitentialChoice, setPenitentialChoice] = useState<'kyrie' | 'aspersion' | null>(null);
   const [showAspersionDialog, setShowAspersionDialog] = useState(false);
   const [showAtril, setShowAtril] = useState(false);
+  const [showAddSolemnity, setShowAddSolemnity] = useState(false);
+  const [celebTick, setCelebTick] = useState(0);
   // Fecha de la Misa para la que se arma el cantoral: fija la celebración/ciclo desde el
   // inicio (para cargar el salmo del libro) y pre-llena la fecha al publicar.
   const [massDate, setMassDate] = useState(getTodayLocal());
@@ -156,7 +160,8 @@ export function ChoirView({
   const categoryConfig = getCategoriesForSpecialDay(specialDay);
 
   // Celebración y ciclo (A/B/C) derivados de la fecha de la Misa, para el salmo del libro.
-  const massCelebration = getLiturgicalDateForDate(massDate);
+  // `celebTick` fuerza recomputar tras agregar una celebración custom.
+  const massCelebration = useMemo(() => getLiturgicalDateForDate(massDate), [massDate, celebTick]);
   const massCycle = getSundayCycle(massDate);
 
   // Mostrar modal de selección de instrumento siempre al inicio
@@ -322,8 +327,16 @@ export function ChoirView({
           <p className="text-sm text-brand-ink-soft mt-3">
             {massCelebration
               ? <>{formatYmdForDisplay(massDate, { weekday: 'long', day: 'numeric', month: 'long' })} · <strong className="text-brand-ink">{massCelebration}</strong> · Año {massCycle}</>
-              : <>{formatYmdForDisplay(massDate, { weekday: 'long', day: 'numeric', month: 'long' })} — sin celebración dominical (el salmo del libro es para domingos y solemnidades).</>}
+              : <>{formatYmdForDisplay(massDate, { weekday: 'long', day: 'numeric', month: 'long' })} — esta fecha no tiene una celebración en el calendario.</>}
           </p>
+          {!massCelebration && (
+            <button
+              onClick={() => setShowAddSolemnity(true)}
+              className="mt-2 inline-flex items-center gap-1.5 text-sm font-bold text-purple-800 dark:text-purple-200 active:opacity-70"
+            >
+              <span className="text-base">➕</span> Agregar celebración para esta fecha
+            </button>
+          )}
         </div>
 
         {/* Modo Atril — leer el repertorio durante la Misa */}
@@ -572,6 +585,27 @@ export function ChoirView({
           userRole="Coro"
           userInstrument={selectedInstrumentForMass}
           onClose={() => setShowAtril(false)}
+        />
+      )}
+
+      {/* Agregar celebración para una fecha sin celebración en el calendario */}
+      {showAddSolemnity && (
+        <AddSolemnityModal
+          selectedDate={massDate}
+          isAdmin={isAdmin}
+          parishes={parishes}
+          onClose={() => setShowAddSolemnity(false)}
+          onAdd={async (name, date, scope, type) => {
+            setShowAddSolemnity(false);
+            const r = await addCustomLiturgicalDate({ name, date, type, scope });
+            if (r.ok && r.row) {
+              setPersistedCustomDates([...getPersistedCustomDates(), toLiturgicalDate(r.row)]);
+              toast.success('Celebración agregada', { description: name });
+            } else {
+              toast.warning('No se pudo guardar la celebración', { description: r.error });
+            }
+            setCelebTick((t) => t + 1);
+          }}
         />
       )}
 
