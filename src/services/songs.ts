@@ -141,6 +141,19 @@ export async function getSongById(id: string): Promise<Song | null> {
   }
 }
 
+/** Fetch varias canciones por sus IDs (para "Mis cantos"/favoritos). */
+export async function listSongsByIds(ids: string[]): Promise<Song[]> {
+  if (ids.length === 0) return [];
+  try {
+    const sb = getSupabaseClient();
+    const { data, error } = await sb.from('songs').select('*').in('id', ids);
+    if (error || !data) return [];
+    return data.map(rowToSong);
+  } catch {
+    return [];
+  }
+}
+
 /** Fetch all songs pending admin review. */
 export async function listPendingSongs(): Promise<Song[]> {
   try {

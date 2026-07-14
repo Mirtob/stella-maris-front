@@ -43,6 +43,7 @@ function lazyWithReload(factory: () => Promise<{ default: any }>) {
 
 const AdminDashboard = lazyWithReload(() => import('./components/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const SongPlayer = lazyWithReload(() => import('./components/songs/SongPlayer').then(m => ({ default: m.SongPlayer })));
+const Favorites = lazyWithReload(() => import('./components/songs/Favorites').then(m => ({ default: m.Favorites })));
 const PlaylistPlayer = lazyWithReload(() => import('./components/songs/PlaylistPlayer').then(m => ({ default: m.PlaylistPlayer })));
 const FormacionRoadmap = lazyWithReload(() => import('./components/courses/FormacionRoadmap').then(m => ({ default: m.FormacionRoadmap })));
 const MusicalTheory = lazyWithReload(() => import('./components/courses/MusicalTheory').then(m => ({ default: m.MusicalTheory })));
@@ -209,6 +210,7 @@ type ViewState =
   | 'manage-cantorals'
   | 'history'
   | 'liturgical-calendar'
+  | 'favorites'
   | 'sheet-music';
 
 /**
@@ -1104,6 +1106,7 @@ function AppContent() {
           onBack={handleBackFromPlayer}
           userInstrument={userProfile?.instrument}
           userRole={userProfile?.role}
+          userId={userProfile?.id}
         />
       </Suspense>
     );
@@ -1399,6 +1402,9 @@ function renderView(p: ViewProps): JSX.Element | null {
           <AdminDashboard />
         </RoleGuard>
       );
+
+    case 'favorites':
+      return <Favorites userId={p.userProfile.id} onPlaySong={p.onPlaySong} />;
 
     case 'courses':
       return <FormacionRoadmap userId={p.userProfile.id} userName={p.userProfile.name} userParish={p.activeParishName || p.userProfile.parishName} />;

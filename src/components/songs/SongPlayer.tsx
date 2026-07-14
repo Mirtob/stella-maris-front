@@ -19,15 +19,18 @@ import { getCategoryColors, getCategoryHeaderGradient } from '../../utils/colors
 import { transposeContent, getTransposedKey, keyPrefersFlats, formatTransposition, getChordNotation, setChordNotation, type ChordNotation } from '../../utils/chordTranspose';
 import { LyricsWithChords } from './LyricsWithChords';
 import { LyricsOnly } from './LyricsOnly';
+import { FavoriteButton } from './FavoriteButton';
 
 interface SongPlayerProps {
   song: Song;
   onBack: () => void;
   userInstrument?: InstrumentType;
   userRole?: UserRole;
+  /** Usuario actual (para guardar el canto en "Mis cantos"). */
+  userId?: string;
 }
 
-export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlayerProps) {
+export function SongPlayer({ song, onBack, userInstrument, userRole, userId }: SongPlayerProps) {
   const [showSheetMusic, setShowSheetMusic] = useState(false);
   const [sheetMusicScale, setSheetMusicScale] = useState(1);
   const [transposition, setTransposition] = useState(0); // Semitonos de transposición
@@ -108,13 +111,16 @@ export function SongPlayer({ song, onBack, userInstrument, userRole }: SongPlaye
     <div className="w-full max-w-md md:max-w-2xl mx-auto min-h-screen bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
       {/* Header */}
       <div className={`bg-gradient-to-r from-brand to-brand-strong text-white p-6 pb-8 border-b-4 border-brand-border`}>
-        <button
-          onClick={onBack}
-          className="mb-6 flex items-center gap-2 text-xl active:opacity-70"
-        >
-          <ArrowLeft className="w-8 h-8" strokeWidth={2.5} />
-          <span className="font-bold">Volver</span>
-        </button>
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 text-xl active:opacity-70"
+          >
+            <ArrowLeft className="w-8 h-8" strokeWidth={2.5} />
+            <span className="font-bold">Volver</span>
+          </button>
+          <FavoriteButton songId={song.id} userId={userId} className="text-white hover:bg-white/15" />
+        </div>
         
         <div className="mb-4">
           <div className="text-lg opacity-90 mb-2">{song.category}</div>

@@ -1,4 +1,4 @@
-import { X, Home, BookOpen, GraduationCap, ShieldCheck, Music, LogOut, User, Settings, List, History, Calendar, Church, Book, Cross, ChevronDown, Check } from 'lucide-react';
+import { X, Home, BookOpen, GraduationCap, ShieldCheck, Music, LogOut, User, Settings, List, History, Calendar, Church, Book, Cross, ChevronDown, Check, Heart } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { UserProfile, UserRole } from '../../types';
 import { IconButton } from '../common/IconButton';
@@ -52,6 +52,7 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
     { id: 'history', label: 'Historial de Cantorales', icon: History, roles: ['Coro', 'Admin'] },
     { id: 'sheet-music', label: 'Banco de Partituras', icon: Music, roles: ['Coro', 'Admin'] },
     { id: 'liturgical-calendar', label: 'Calendario Litúrgico', icon: Calendar, roles: ['Coro', 'Pueblo fiel', 'Admin'] },
+    { id: 'favorites', label: 'Mis Cantos', icon: Heart, roles: ['Coro', 'Pueblo fiel', 'Admin'] },
     { id: 'manage-cantorals', label: 'Mis Cantorales', icon: BookOpen, roles: ['Coro'] },
     { id: 'courses', label: 'Cursos', icon: GraduationCap, roles: ['Coro', 'Pueblo fiel', 'Admin'] },
     { id: 'admin', label: 'Panel Admin', icon: ShieldCheck, roles: ['Admin'] },
