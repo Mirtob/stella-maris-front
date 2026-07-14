@@ -21,7 +21,7 @@ export interface PsalmEntry {
 export const PSALM_BOOKS: Record<SundayCycle, { driveFileId: string }> = {
   A: { driveFileId: '177Y1H6MXqvtxsBi1VVoP60rzJu6mRwi7' }, // PDF Año A
   B: { driveFileId: '11RO4bNj2sSfr7iVPsY5WqcV2TBQZutlC' }, // PDF Año B
-  C: { driveFileId: '' }, // TODO: pegar ID de Drive del PDF Año C
+  C: { driveFileId: '1SxNEkB8yAvsn17NQsFAul4LbgrHu7I9v' }, // PDF Año C
 };
 
 /** ciclo → (clave de celebración → entrada). Datos generados por el importador. */
@@ -32,14 +32,31 @@ export function psalmBooksReady(): boolean {
   return Object.values(PSALM_BOOKS).some((b) => !!b.driveFileId);
 }
 
+/** Normaliza una etiqueta de celebración para emparejar pese a acentos/mayúsculas/puntuación. */
+const normKey = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ').trim();
+
+// Índice normalizado por ciclo (se arma una vez, en el primer uso).
+const normalizedByCycle: Partial<Record<SundayCycle, Record<string, PsalmEntry>>> = {};
+function normalizedIndex(cycle: SundayCycle): Record<string, PsalmEntry> {
+  if (!normalizedByCycle[cycle]) {
+    const map: Record<string, PsalmEntry> = {};
+    for (const [k, v] of Object.entries(PSALM_INDEX[cycle] ?? {})) map[normKey(k)] = v;
+    normalizedByCycle[cycle] = map;
+  }
+  return normalizedByCycle[cycle]!;
+}
+
 /**
  * Resuelve el salmo del libro para una celebración: devuelve la entrada (página/antífona)
- * y el ID de Drive del PDF del ciclo. `null` si no hay dato o falta el PDF.
+ * y el ID de Drive del PDF del ciclo. `null` si no hay dato o falta el PDF. El match es
+ * exacto primero y luego normalizado (tolerante a acentos/mayúsculas/puntuación).
  */
 export function resolvePsalm(cycle: SundayCycle, celebrationKey: string): (PsalmEntry & { driveFileId: string }) | null {
   const book = PSALM_BOOKS[cycle];
-  if (!book?.driveFileId) return null;
-  const entry = PSALM_INDEX[cycle]?.[celebrationKey];
+  if (!book?.driveFileId || !celebrationKey) return null;
+  const entry = PSALM_INDEX[cycle]?.[celebrationKey] ?? normalizedIndex(cycle)[normKey(celebrationKey)];
   if (!entry || (entry.page == null && !entry.antiphon)) return null;
   return { ...entry, driveFileId: book.driveFileId };
 }
