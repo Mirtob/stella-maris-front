@@ -10,6 +10,10 @@ interface PdfPagesProps {
   title: string;
   /** Zoom global del atril (1 = ancho del contenedor). */
   zoom: number;
+  /** Rango de páginas a renderizar (1-indexado). Por defecto, todas. Para el salmo del
+   *  libro (un salmo por página) se pasa fromPage = toPage = página de la celebración. */
+  fromPage?: number;
+  toPage?: number;
 }
 
 /**
@@ -17,7 +21,7 @@ interface PdfPagesProps {
  * poder encadenar varias partituras dentro del scroll continuo del Modo Atril (Órgano).
  * Carga con fallback a la copia offline cacheada, igual que PDFViewer.
  */
-export function PdfPages({ proxyUrl, driveViewUrl, title, zoom }: PdfPagesProps) {
+export function PdfPages({ proxyUrl, driveViewUrl, title, zoom, fromPage, toPage }: PdfPagesProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [pdf, setPdf] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -77,7 +81,9 @@ export function PdfPages({ proxyUrl, driveViewUrl, title, zoom }: PdfPagesProps)
       try {
         container.innerHTML = '';
         const containerWidth = (container.clientWidth || 600) - 8;
-        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const from = Math.max(1, fromPage ?? 1);
+        const to = Math.min(pdf.numPages, toPage ?? pdf.numPages);
+        for (let pageNum = from; pageNum <= to; pageNum++) {
           const page = await pdf.getPage(pageNum);
           if (cancelled) return;
           const baseViewport = page.getViewport({ scale: 1 });
@@ -108,7 +114,7 @@ export function PdfPages({ proxyUrl, driveViewUrl, title, zoom }: PdfPagesProps)
     })();
 
     return () => { cancelled = true; };
-  }, [pdf, zoom]);
+  }, [pdf, zoom, fromPage, toPage]);
 
   return (
     <div className="relative">
