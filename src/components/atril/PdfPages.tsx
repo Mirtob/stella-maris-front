@@ -44,7 +44,13 @@ export function PdfPages({ proxyUrl, driveViewUrl, title, zoom, fromPage, toPage
         if (!cancelled) { setError(true); setLoading(false); }
         return;
       }
-      const load = async (url: string) => (await pdfjsLib.getDocument({ url }).promise);
+      // Al pedir un rango de páginas (salmo del libro), desactivar la descarga automática
+      // del PDF completo: pdf.js baja SOLO los bytes de esa página vía Range.
+      const rangeMode = fromPage != null;
+      const load = async (url: string) => (await pdfjsLib.getDocument({
+        url,
+        ...(rangeMode ? { disableAutoFetch: true, disableStream: false } : {}),
+      }).promise);
       try {
         const doc = await load(proxyUrl);
         if (cancelled) return;

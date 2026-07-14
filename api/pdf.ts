@@ -121,7 +121,9 @@ async function rateLimit(req: VercelRequest, res: VercelResponse, endpoint: stri
 // --- Handler ---
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!applyCors(req, res)) return;
-  if (!(await rateLimit(req, res, 'pdf', 30, 60_000))) return;
+  // Límite alto: pdf.js hace VARIAS peticiones por rango para una misma partitura
+  // (más aún en libros grandes como el de salmos), así que 30/min se quedaba corto.
+  if (!(await rateLimit(req, res, 'pdf', 150, 60_000))) return;
 
   const { id } = req.query;
   if (!id || typeof id !== 'string' || !/^[a-zA-Z0-9_-]{10,64}$/.test(id)) {
@@ -130,15 +132,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const driveUrl = `https://drive.usercontent.google.com/download?id=${id}&export=download&authuser=0`;
+    // Reenviar el header Range (pdf.js lo usa para pedir solo las páginas que necesita;
+    // clave en libros grandes como el de salmos: renderiza 1 página sin bajar los 18 MB).
+    const rangeHeader = req.headers['range'];
+    const range = Array.isArray(rangeHeader) ? rangeHeader[0] : rangeHeader;
     const driveRes = await fetch(driveUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; StellaMaris/1.0)' },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; StellaMaris/1.0)',
+        ...(range ? { Range: range } : {}),
+      },
     });
-    if (!driveRes.ok) {
+    // 206 = respuesta parcial (rango) válida; no es un error.
+    if (!driveRes.ok && driveRes.status !== 206) {
       return res.status(driveRes.status).json({ error: 'No se pudo obtener el archivo' });
     }
-    const buffer = await driveRes.arrayBuffer();
+    const buffer = Buffer.from(await driveRes.arrayBuffer());
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Accept-Ranges', 'bytes');
+    const contentRange = driveRes.headers.get('content-range');
+    const contentLength = driveRes.headers.get('content-length');
+    if (contentLength) res.setHeader('Content-Length', contentLength);
     // Una partitura (id de Drive fijo) es prácticamente inmutable, así que la cacheamos
     // agresivamente en el EDGE de Vercel (s-maxage) además del navegador (max-age):
     //  - max-age=3600            → el navegador la reusa 1 h sin pedir nada.
@@ -147,7 +161,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     //                              el mismo QR y ven la misma partitura a la vez).
     //  - stale-while-revalidate  → la sigue sirviendo al instante mientras revalida.
     res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800');
-    res.status(200).send(Buffer.from(buffer));
+    if (driveRes.status === 206 && contentRange) {
+      res.setHeader('Content-Range', contentRange);
+      res.status(206).send(buffer);
+    } else {
+      res.status(200).send(buffer);
+    }
   } catch (err: any) {
     console.error('pdf proxy error:', err?.message);
     res.status(500).json({ error: 'Error descargando el PDF' });
