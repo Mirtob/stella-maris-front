@@ -20,6 +20,18 @@ export interface PsalmEntry {
 }
 
 /**
+ * Excepciones de página: celebraciones cuyo salmo está en OTRA sección del libro (con
+ * numeración distinta), donde el offset no aplica. Aquí la página es la REAL del PDF
+ * (el número del visor, ej. "24/151"), NO la impresa. Se ignora el pageOffset.
+ * Formato: PSALM_PAGE_OVERRIDES[ciclo][clave de celebración] = { page, pageEnd? }.
+ */
+export const PSALM_PAGE_OVERRIDES: Record<SundayCycle, Record<string, { page: number; pageEnd?: number }>> = {
+  A: {},
+  B: {},
+  C: {},
+};
+
+/**
  * Alias: etiqueta del calendario de la app (`getLiturgicalDateForDate`) → clave usada en
  * la planilla del índice, cuando difieren. La mayoría de los domingos coinciden tal cual.
  */
@@ -85,6 +97,11 @@ export function resolvePsalm(cycle: SundayCycle, celebrationKey: string): (Psalm
   const key = CELEBRATION_ALIASES[celebrationKey] ?? celebrationKey;
   const entry = PSALM_INDEX[cycle]?.[key] ?? normalizedIndex(cycle)[normKey(key)];
   if (!entry || (entry.page == null && !entry.antiphon)) return null;
+  // Excepción: página REAL del PDF (otra sección) → sin offset.
+  const override = PSALM_PAGE_OVERRIDES[cycle]?.[key];
+  if (override) {
+    return { antiphon: entry.antiphon, page: override.page, pageEnd: override.pageEnd, driveFileId: book.driveFileId };
+  }
   // La página del índice es la IMPRESA; se suma el offset del libro para la página real del PDF.
   const off = book.pageOffset ?? 0;
   return {
