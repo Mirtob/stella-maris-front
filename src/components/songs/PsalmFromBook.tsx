@@ -2,8 +2,8 @@ import { BookOpen } from 'lucide-react';
 import { UserRole } from '../../types';
 import { getSundayCycle } from '../../utils/liturgicalCycle';
 import { getLiturgicalDateForDate } from '../../utils/liturgicalCalendar';
-import { resolvePsalm, psalmBookProxyUrl } from '../../data/psalmIndex';
-import { PdfPages } from '../atril/PdfPages';
+import { resolvePsalm } from '../../data/psalmIndex';
+import { PsalmPageImage } from './PsalmPageImage';
 
 /**
  * Salmo responsorial del libro musicalizado, según la celebración de la fecha:
@@ -61,7 +61,6 @@ export function PsalmFromBook({ date, role, zoom = 1, antiphon, onAntiphonChange
     );
   }
 
-  const proxyUrl = psalmBookProxyUrl(psalm.driveFileId);
   const driveViewUrl = `https://drive.google.com/file/d/${psalm.driveFileId}/view`;
   const shownAntiphon = antiphon !== undefined ? antiphon : (psalm.antiphon ?? '');
 
@@ -98,7 +97,7 @@ export function PsalmFromBook({ date, role, zoom = 1, antiphon, onAntiphonChange
       {/* Partitura (página del libro) — SOLO coro/admin, y solo si no se oculta. */}
       {!hideScore && !isPueblo && psalm.page != null && (
         <div className="bg-white dark:bg-gray-900 rounded-xl p-2 border border-amber-200 dark:border-amber-800">
-          <PdfPages proxyUrl={proxyUrl} driveViewUrl={driveViewUrl} title={`Salmo — ${celebration}`} zoom={zoom} fromPage={psalm.page} toPage={psalm.pageEnd ?? psalm.page} />
+          <PsalmPageImage cycle={cycle} page={psalm.page} pageEnd={psalm.pageEnd} title={`Salmo — ${celebration}`} driveViewUrl={driveViewUrl} zoom={zoom} />
         </div>
       )}
       {!hideScore && !isPueblo && psalm.page == null && (

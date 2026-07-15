@@ -11,9 +11,10 @@ import { Tour } from '../tour/Tour';
 import { atrilTips, hasSeenTip, markTipSeen } from '../tour/tours';
 import { isOrdinary, sortByMassOrder } from '../../utils/ordinary';
 import { getDrivePdfProxyUrl } from '../../utils/driveProxy';
-import { psalmBookProxyUrl } from '../../data/psalmIndex';
+import { cycleForBookId } from '../../data/psalmIndex';
 import { generateAtrilPrintable } from '../../utils/atrilBookletPDF';
 import { PdfPages } from './PdfPages';
+import { PsalmPageImage } from '../songs/PsalmPageImage';
 
 interface AtrilModeProps {
   songs: Song[];
@@ -319,15 +320,16 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
                             <LyricsOnly lyrics={s.lyrics} applyReadingPrefs={false} />
                           </div>
                         )}
-                        {!isPuebloFiel && (
+                        {!isPuebloFiel && cycleForBookId(s.psalmBookId) && s.psalmPage != null && (
                           <div className="mt-3">
-                            <PdfPages
-                              proxyUrl={psalmBookProxyUrl(s.psalmBookId!)}
-                              driveViewUrl={`https://drive.google.com/file/d/${s.psalmBookId}/view`}
+                            <PsalmPageImage
+                              cycle={cycleForBookId(s.psalmBookId)!}
+                              page={s.psalmPage}
+                              pageEnd={s.psalmPageEnd}
                               title={s.title}
+                              driveViewUrl={`https://drive.google.com/file/d/${s.psalmBookId}/view`}
                               zoom={pdfZoom}
-                              fromPage={s.psalmPage}
-                              toPage={s.psalmPageEnd ?? s.psalmPage}
+                              onDark
                             />
                           </div>
                         )}

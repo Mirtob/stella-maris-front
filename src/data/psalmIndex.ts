@@ -65,6 +65,24 @@ export const PSALM_BOOK_VERSION = 'lin1';
 /** URL del proxy para una página del libro de salmos (con cache-buster de versión). */
 export const psalmBookProxyUrl = (driveFileId: string) => `/api/pdf?id=${driveFileId}&v=${PSALM_BOOK_VERSION}`;
 
+/** Ciclo (A/B/C) al que pertenece un ID de Drive del libro de salmos. `null` si no coincide. */
+export function cycleForBookId(driveFileId?: string): SundayCycle | null {
+  if (!driveFileId) return null;
+  for (const [cycle, b] of Object.entries(PSALM_BOOKS)) {
+    if (b.driveFileId === driveFileId) return cycle as SundayCycle;
+  }
+  return null;
+}
+
+/**
+ * Ruta de la IMAGEN pre-renderizada de una página del libro de salmos.
+ * Las partituras escaneadas usan JBIG2 y pdf.js no las renderiza bajo la CSP estricta
+ * (necesitaría 'unsafe-eval', inseguro). Por eso servimos cada página como imagen estática
+ * en `public/salmos/<ciclo>/<páginaPDF>.webp` (generadas por scripts/render-salmos-webp.py).
+ * `page` es la página REAL del PDF (ya con el offset aplicado por resolvePsalm).
+ */
+export const psalmPageImageUrl = (cycle: SundayCycle, page: number) => `/salmos/${cycle}/${page}.webp`;
+
 /** ¿Hay al menos un PDF configurado? (si no, la función está inactiva). */
 export function psalmBooksReady(): boolean {
   return Object.values(PSALM_BOOKS).some((b) => !!b.driveFileId);

@@ -8,7 +8,8 @@ import { PDFViewer } from '../common/PDFViewer';
 import { LyricsOnly } from '../songs/LyricsOnly';
 import { LyricsReadingControls } from '../songs/LyricsReadingControls';
 import { PdfPages } from '../atril/PdfPages';
-import { psalmBookProxyUrl } from '../../data/psalmIndex';
+import { cycleForBookId } from '../../data/psalmIndex';
+import { PsalmPageImage } from '../songs/PsalmPageImage';
 import { LyricsWithChords } from '../songs/LyricsWithChords';
 import { transposeContent, getChordNotation, keyPrefersFlats } from '../../utils/chordTranspose';
 import { AtrilMode } from '../atril/AtrilMode';
@@ -426,20 +427,20 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
                 )}
 
                 {/* Partitura del salmo del libro (página del PDF) — solo Coro/Admin */}
-                {!isPuebloFiel && selectedSong.psalmPage != null && selectedSong.psalmBookId && (
+                {!isPuebloFiel && selectedSong.psalmPage != null && cycleForBookId(selectedSong.psalmBookId) && (
                   <div className="bg-white/40 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-4 border-2 border-amber-200 dark:border-amber-800 transition-colors">
                     <div className="flex items-center gap-2 mb-3">
                       <Music className="w-6 h-6 text-amber-700 dark:text-amber-300 flex-shrink-0" strokeWidth={2.5} />
                       <h4 className="text-xl font-bold text-brand-ink">Partitura del salmo (del libro)</h4>
                     </div>
                     <div className="bg-white dark:bg-gray-900 rounded-xl p-2 border border-amber-200 dark:border-amber-800">
-                      <PdfPages
-                        proxyUrl={psalmBookProxyUrl(selectedSong.psalmBookId!)}
-                        driveViewUrl={`https://drive.google.com/file/d/${selectedSong.psalmBookId}/view`}
+                      <PsalmPageImage
+                        cycle={cycleForBookId(selectedSong.psalmBookId)!}
+                        page={selectedSong.psalmPage}
+                        pageEnd={selectedSong.psalmPageEnd}
                         title={selectedSong.title}
+                        driveViewUrl={`https://drive.google.com/file/d/${selectedSong.psalmBookId}/view`}
                         zoom={1}
-                        fromPage={selectedSong.psalmPage}
-                        toPage={selectedSong.psalmPageEnd ?? selectedSong.psalmPage}
                       />
                     </div>
                   </div>
