@@ -49,7 +49,10 @@ export function PdfPages({ proxyUrl, driveViewUrl, title, zoom, fromPage, toPage
       // (no alcanzaba a traer las imágenes). Sin esa opción, con el PDF linearizado + el
       // soporte de Range del proxy, pdf.js igual renderiza la página rápido (por rango) y
       // completa el resto en segundo plano.
-      const load = async (url: string) => (await pdfjsLib.getDocument({ url }).promise);
+      // wasmUrl: pdf.js 5 decodifica JBIG2 / JPEG2000 con WASM (las partituras escaneadas
+      // del libro de salmos usan JBIG2). Sin esto, "JBig2 failed to initialize" → hoja en
+      // blanco. Los .wasm viven en public/wasm y se sirven en /wasm/.
+      const load = async (url: string) => (await pdfjsLib.getDocument({ url, wasmUrl: '/wasm/' }).promise);
       try {
         const doc = await load(proxyUrl);
         if (cancelled) return;

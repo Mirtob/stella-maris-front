@@ -57,7 +57,9 @@ export function PDFViewer({ proxyUrl, driveViewUrl, title, durationSeconds }: PD
         return;
       }
 
-      const load = async (url: string) => (await pdfjsLib.getDocument({ url }).promise);
+      // wasmUrl: pdf.js 5 usa WASM para JBIG2 / JPEG2000 (partituras escaneadas). Sin esto
+      // esas páginas salen en blanco. Los .wasm están en public/wasm → /wasm/.
+      const load = async (url: string) => (await pdfjsLib.getDocument({ url, wasmUrl: '/wasm/' }).promise);
 
       try {
         const loadedPdf = await load(proxyUrl);
