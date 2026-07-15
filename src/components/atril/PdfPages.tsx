@@ -44,15 +44,12 @@ export function PdfPages({ proxyUrl, driveViewUrl, title, zoom, fromPage, toPage
         if (!cancelled) { setError(true); setLoading(false); }
         return;
       }
-      // Al pedir un rango de páginas (salmo del libro), con disableAutoFetch pdf.js baja
-      // SOLO los bytes de esa página vía Range. Requiere PDF LINEARIZADO (el libro de
-      // salmos ya lo está); en no-linearizados no ubicaría la página, por eso se activa
-      // solo cuando se pide un rango.
-      const rangeMode = fromPage != null;
-      const load = async (url: string) => (await pdfjsLib.getDocument({
-        url,
-        ...(rangeMode ? { disableAutoFetch: true, disableStream: false } : {}),
-      }).promise);
+      // NOTA: no usamos disableAutoFetch. Estas partituras escaneadas tienen muchas
+      // imágenes por página y con disableAutoFetch pdf.js renderizaba la hoja en BLANCO
+      // (no alcanzaba a traer las imágenes). Sin esa opción, con el PDF linearizado + el
+      // soporte de Range del proxy, pdf.js igual renderiza la página rápido (por rango) y
+      // completa el resto en segundo plano.
+      const load = async (url: string) => (await pdfjsLib.getDocument({ url }).promise);
       try {
         const doc = await load(proxyUrl);
         if (cancelled) return;

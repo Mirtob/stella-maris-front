@@ -29,11 +29,15 @@ const CELEBRATION_ALIASES: Record<string, string> = {
   'Domingo de la Divina Misericordia (2.º de Pascua)': '2.º Domingo de Pascua',
 };
 
-/** ID de archivo de Google Drive del PDF de cada año (uno por ciclo). */
-export const PSALM_BOOKS: Record<SundayCycle, { driveFileId: string }> = {
-  A: { driveFileId: '177Y1H6MXqvtxsBi1VVoP60rzJu6mRwi7' }, // PDF Año A
-  B: { driveFileId: '11RO4bNj2sSfr7iVPsY5WqcV2TBQZutlC' }, // PDF Año B
-  C: { driveFileId: '1SxNEkB8yAvsn17NQsFAul4LbgrHu7I9v' }, // PDF Año C
+/**
+ * ID de Drive del PDF de cada año + `pageOffset`: páginas de portada/índice ANTES de la
+ * página impresa 1. El índice guarda el número IMPRESO del libro; la página real del PDF
+ * = página impresa + pageOffset. (Año A verificado: impresa 93 = PDF 99 → offset 6.)
+ */
+export const PSALM_BOOKS: Record<SundayCycle, { driveFileId: string; pageOffset: number }> = {
+  A: { driveFileId: '177Y1H6MXqvtxsBi1VVoP60rzJu6mRwi7', pageOffset: 6 }, // PDF Año A
+  B: { driveFileId: '11RO4bNj2sSfr7iVPsY5WqcV2TBQZutlC', pageOffset: 0 }, // PDF Año B (ajustar al llenar)
+  C: { driveFileId: '1SxNEkB8yAvsn17NQsFAul4LbgrHu7I9v', pageOffset: 0 }, // PDF Año C (ajustar al llenar)
 };
 
 /** ciclo → (clave de celebración → entrada). Datos generados por el importador. */
@@ -81,5 +85,12 @@ export function resolvePsalm(cycle: SundayCycle, celebrationKey: string): (Psalm
   const key = CELEBRATION_ALIASES[celebrationKey] ?? celebrationKey;
   const entry = PSALM_INDEX[cycle]?.[key] ?? normalizedIndex(cycle)[normKey(key)];
   if (!entry || (entry.page == null && !entry.antiphon)) return null;
-  return { ...entry, driveFileId: book.driveFileId };
+  // La página del índice es la IMPRESA; se suma el offset del libro para la página real del PDF.
+  const off = book.pageOffset ?? 0;
+  return {
+    ...entry,
+    page: entry.page != null ? entry.page + off : undefined,
+    pageEnd: entry.pageEnd != null ? entry.pageEnd + off : undefined,
+    driveFileId: book.driveFileId,
+  };
 }
