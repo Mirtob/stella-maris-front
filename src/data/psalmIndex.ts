@@ -39,6 +39,16 @@ export const PSALM_BOOKS: Record<SundayCycle, { driveFileId: string }> = {
 /** ciclo → (clave de celebración → entrada). Datos generados por el importador. */
 export const PSALM_INDEX: Record<SundayCycle, Record<string, PsalmEntry>> = PSALM_INDEX_DATA;
 
+/**
+ * Versión del libro de salmos: se incrementa al REEMPLAZAR los PDF en Drive, para saltar
+ * la caché del CDN del proxy (`s-maxage` 24 h) y que se sirva la versión nueva de una.
+ * ('lin1' = primera subida linearizada/web-optimized.)
+ */
+export const PSALM_BOOK_VERSION = 'lin1';
+
+/** URL del proxy para una página del libro de salmos (con cache-buster de versión). */
+export const psalmBookProxyUrl = (driveFileId: string) => `/api/pdf?id=${driveFileId}&v=${PSALM_BOOK_VERSION}`;
+
 /** ¿Hay al menos un PDF configurado? (si no, la función está inactiva). */
 export function psalmBooksReady(): boolean {
   return Object.values(PSALM_BOOKS).some((b) => !!b.driveFileId);

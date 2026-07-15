@@ -2,7 +2,7 @@ import { BookOpen } from 'lucide-react';
 import { UserRole } from '../../types';
 import { getSundayCycle } from '../../utils/liturgicalCycle';
 import { getLiturgicalDateForDate } from '../../utils/liturgicalCalendar';
-import { resolvePsalm } from '../../data/psalmIndex';
+import { resolvePsalm, psalmBookProxyUrl } from '../../data/psalmIndex';
 import { PdfPages } from '../atril/PdfPages';
 
 /**
@@ -61,7 +61,7 @@ export function PsalmFromBook({ date, role, zoom = 1, antiphon, onAntiphonChange
     );
   }
 
-  const proxyUrl = `/api/pdf?id=${psalm.driveFileId}`;
+  const proxyUrl = psalmBookProxyUrl(psalm.driveFileId);
   const driveViewUrl = `https://drive.google.com/file/d/${psalm.driveFileId}/view`;
   const shownAntiphon = antiphon !== undefined ? antiphon : (psalm.antiphon ?? '');
 

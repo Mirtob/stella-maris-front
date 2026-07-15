@@ -8,6 +8,7 @@ import { PDFViewer } from '../common/PDFViewer';
 import { LyricsOnly } from '../songs/LyricsOnly';
 import { LyricsReadingControls } from '../songs/LyricsReadingControls';
 import { PdfPages } from '../atril/PdfPages';
+import { psalmBookProxyUrl } from '../../data/psalmIndex';
 import { LyricsWithChords } from '../songs/LyricsWithChords';
 import { transposeContent, getChordNotation, keyPrefersFlats } from '../../utils/chordTranspose';
 import { AtrilMode } from '../atril/AtrilMode';
@@ -433,7 +434,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
                     </div>
                     <div className="bg-white dark:bg-gray-900 rounded-xl p-2 border border-amber-200 dark:border-amber-800">
                       <PdfPages
-                        proxyUrl={`/api/pdf?id=${selectedSong.psalmBookId}`}
+                        proxyUrl={psalmBookProxyUrl(selectedSong.psalmBookId!)}
                         driveViewUrl={`https://drive.google.com/file/d/${selectedSong.psalmBookId}/view`}
                         title={selectedSong.title}
                         zoom={1}

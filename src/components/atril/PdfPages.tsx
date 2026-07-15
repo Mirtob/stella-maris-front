@@ -44,12 +44,15 @@ export function PdfPages({ proxyUrl, driveViewUrl, title, zoom, fromPage, toPage
         if (!cancelled) { setError(true); setLoading(false); }
         return;
       }
-      // NOTA: no usamos disableAutoFetch. En PDFs NO linearizados (como el libro de
-      // salmos escaneado) pdf.js no puede ubicar la página sin descargar, y con
-      // disableAutoFetch la partitura no renderiza. El soporte de Range del proxy igual
-      // acelera la carga (xref por rango). Para acceso instantáneo a 1 página, el PDF
-      // debería estar linearizado (qpdf --linearize / Ghostscript).
-      const load = async (url: string) => (await pdfjsLib.getDocument({ url }).promise);
+      // Al pedir un rango de páginas (salmo del libro), con disableAutoFetch pdf.js baja
+      // SOLO los bytes de esa página vía Range. Requiere PDF LINEARIZADO (el libro de
+      // salmos ya lo está); en no-linearizados no ubicaría la página, por eso se activa
+      // solo cuando se pide un rango.
+      const rangeMode = fromPage != null;
+      const load = async (url: string) => (await pdfjsLib.getDocument({
+        url,
+        ...(rangeMode ? { disableAutoFetch: true, disableStream: false } : {}),
+      }).promise);
       try {
         const doc = await load(proxyUrl);
         if (cancelled) return;

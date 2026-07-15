@@ -11,6 +11,7 @@ import { Tour } from '../tour/Tour';
 import { atrilTips, hasSeenTip, markTipSeen } from '../tour/tours';
 import { isOrdinary, sortByMassOrder } from '../../utils/ordinary';
 import { getDrivePdfProxyUrl } from '../../utils/driveProxy';
+import { psalmBookProxyUrl } from '../../data/psalmIndex';
 import { generateAtrilPrintable } from '../../utils/atrilBookletPDF';
 import { PdfPages } from './PdfPages';
 
@@ -321,7 +322,7 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
                         {!isPuebloFiel && (
                           <div className="mt-3">
                             <PdfPages
-                              proxyUrl={`/api/pdf?id=${s.psalmBookId}`}
+                              proxyUrl={psalmBookProxyUrl(s.psalmBookId!)}
                               driveViewUrl={`https://drive.google.com/file/d/${s.psalmBookId}/view`}
                               title={s.title}
                               zoom={pdfZoom}
