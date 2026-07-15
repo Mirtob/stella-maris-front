@@ -419,7 +419,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
                     <div className="flex-1">
                       <div className="text-xl font-bold text-brand-ink">¿A qué parroquias?</div>
                       <div className="text-sm text-blue-900 dark:text-blue-200">
-                        {prefilled ? 'Mismos cantos, misma fecha y horario.' : 'Mismos cantos; indica fecha y horario de cada misa.'}
+                        {prefilled ? 'Mismos cantos. Tu parroquia usa los datos del inicio; en las otras elige su fecha y horario.' : 'Mismos cantos; indica fecha y horario de cada misa.'}
                       </div>
                     </div>
                   </div>
@@ -432,7 +432,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
                         {initialMassType === 'visperas_i' ? ' · I Vísperas' : initialMassType === 'visperas_ii' ? ' · II Vísperas' : ''}
                         {getLiturgicalDateForDate(initialDate!) ? ` · ${getLiturgicalDateForDate(initialDate!)}` : ''}
                       </p>
-                      <p className="text-xs text-brand-ink-soft mt-1">Elegiste estos datos al inicio. Para cambiarlos, vuelve al constructor.</p>
+                      <p className="text-xs text-brand-ink-soft mt-1">Datos de tu parroquia (elegidos al inicio). Otras parroquias pueden tener su propia fecha y horario abajo.</p>
                     </div>
                   )}
 
@@ -467,7 +467,14 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
                             <span className="text-base font-bold text-brand-ink break-words">{formatActiveParishLabel(parish)}</span>
                           </label>
 
-                          {!prefilled && checked && (
+                          {/* Fecha/hora/tipo por parroquia: la parroquia activa usa los datos
+                              del constructor (ocultos); las demás eligen los suyos. */}
+                          {checked && prefilled && parish === parishName && (
+                            <div className="px-3 pb-3 pt-1 border-t-2 border-white/50 dark:border-white/10">
+                              <p className="text-xs text-brand-ink-soft">Usa la fecha y horario que elegiste al inicio.</p>
+                            </div>
+                          )}
+                          {checked && (!prefilled || parish !== parishName) && (
                             <div className="px-3 pb-4 pt-1 space-y-3 border-t-2 border-white/50 dark:border-white/10">
                               {/* Fecha */}
                               <div>
