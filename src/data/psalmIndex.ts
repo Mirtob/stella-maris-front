@@ -48,8 +48,8 @@ const CELEBRATION_ALIASES: Record<string, string> = {
  */
 export const PSALM_BOOKS: Record<SundayCycle, { driveFileId: string; pageOffset: number }> = {
   A: { driveFileId: '177Y1H6MXqvtxsBi1VVoP60rzJu6mRwi7', pageOffset: 6 }, // PDF Año A
-  B: { driveFileId: '11RO4bNj2sSfr7iVPsY5WqcV2TBQZutlC', pageOffset: 0 }, // PDF Año B (ajustar al llenar)
-  C: { driveFileId: '1SxNEkB8yAvsn17NQsFAul4LbgrHu7I9v', pageOffset: 0 }, // PDF Año C (ajustar al llenar)
+  B: { driveFileId: '11RO4bNj2sSfr7iVPsY5WqcV2TBQZutlC', pageOffset: 5 }, // PDF Año B (impresa 1 = PDF 6)
+  C: { driveFileId: '1SxNEkB8yAvsn17NQsFAul4LbgrHu7I9v', pageOffset: 5 }, // PDF Año C (impresa 1 = PDF 6)
 };
 
 /** ciclo → (clave de celebración → entrada). Datos generados por el importador. */
