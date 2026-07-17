@@ -15,6 +15,7 @@ import { cycleForBookId } from '../../data/psalmIndex';
 import { generateAtrilPrintable } from '../../utils/atrilBookletPDF';
 import { PdfPages } from './PdfPages';
 import { PsalmPageImage } from '../songs/PsalmPageImage';
+import { FavoriteButton } from '../songs/FavoriteButton';
 
 interface AtrilModeProps {
   songs: Song[];
@@ -309,6 +310,7 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
                         )}
                       </div>
                     )}
+                    <FavoriteButton songId={s.id} className="text-white/70 hover:bg-white/10 flex-shrink-0" />
                   </div>
 
                   {/* Contenido de la sección */}

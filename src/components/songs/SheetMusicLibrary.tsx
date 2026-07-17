@@ -5,6 +5,7 @@ import { useSongs } from '../../hooks/useSongs';
 import { LyricsWithChords } from './LyricsWithChords';
 import { matchesSearch } from '../../utils/textSearch';
 import { EmptyState } from '../common/EmptyState';
+import { FavoriteButton } from './FavoriteButton';
 
 interface SheetMusicLibraryProps {
   onPlaySong: (song: Song) => void;
@@ -303,6 +304,7 @@ export function SheetMusicLibrary({ onPlaySong }: SheetMusicLibraryProps) {
                                         </span>
                                       )}
                                     </div>
+                                    <FavoriteButton songId={song.id} className="text-rose-400 hover:bg-rose-50 dark:hover:bg-white/10 flex-shrink-0 -mt-1 -mr-1" />
                                   </div>
                                   <div className="space-y-2">
                                     <button
@@ -428,6 +430,7 @@ export function SheetMusicLibrary({ onPlaySong }: SheetMusicLibraryProps) {
                               </span>
                             )}
                           </div>
+                          <FavoriteButton songId={song.id} className="text-rose-400 hover:bg-rose-50 dark:hover:bg-white/10 flex-shrink-0 -mt-1 -mr-1" />
                         </div>
                         <div className="space-y-2">
                           <button

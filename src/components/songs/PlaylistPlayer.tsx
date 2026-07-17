@@ -3,6 +3,7 @@ import { ArrowLeft, Play, Pause, SkipBack, SkipForward, Repeat, Music as MusicIc
 import { PublishedCantoral, Song } from '../../types';
 import { getCategoryColors } from '../../utils/colors';
 import { normalizeCategory } from '../../utils/category';
+import { FavoriteButton } from './FavoriteButton';
 
 const CATEGORY_ORDER = [
   'Entrada', 'Kyrie', 'Gloria', 'Salmo', 'Aleluya', 'Post Evangelio',
@@ -165,9 +166,12 @@ export function PlaylistPlayer({ cantoral, onBack }: PlaylistPlayerProps) {
 
               {/* Now playing + controles */}
               <div className="p-4 bg-white/40 dark:bg-white/10 backdrop-blur-sm">
-                <div className="mb-3">
-                  <div className="text-xs text-blue-700 dark:text-blue-300">{normalizeCategory(current?.category)}</div>
-                  <div className="text-base font-bold text-brand-ink truncate">{current?.title}</div>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-xs text-blue-700 dark:text-blue-300">{normalizeCategory(current?.category)}</div>
+                    <div className="text-base font-bold text-brand-ink truncate">{current?.title}</div>
+                  </div>
+                  {current && <FavoriteButton songId={current.id} className="text-rose-400 hover:bg-white/40 dark:hover:bg-white/10 flex-shrink-0" />}
                 </div>
                 <div className="flex items-center justify-center gap-3">
                   <button onClick={goPrev} aria-label="Anterior" className="w-12 h-12 rounded-full bg-white/60 dark:bg-white/15 flex items-center justify-center text-brand-ink active:scale-95 transition-all">

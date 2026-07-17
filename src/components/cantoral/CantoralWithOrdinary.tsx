@@ -10,6 +10,7 @@ import { LyricsReadingControls } from '../songs/LyricsReadingControls';
 import { PdfPages } from '../atril/PdfPages';
 import { cycleForBookId } from '../../data/psalmIndex';
 import { PsalmPageImage } from '../songs/PsalmPageImage';
+import { FavoriteButton } from '../songs/FavoriteButton';
 import { LyricsWithChords } from '../songs/LyricsWithChords';
 import { transposeContent, getChordNotation, keyPrefersFlats } from '../../utils/chordTranspose';
 import { AtrilMode } from '../atril/AtrilMode';
@@ -127,6 +128,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
                   {song.artist || 'Artista desconocido'}
                 </p>
               </div>
+              <FavoriteButton songId={song.id} className="text-rose-400 hover:bg-rose-50 dark:hover:bg-white/10 flex-shrink-0" />
             </div>
           </div>
 
@@ -384,9 +386,12 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
               <div className="p-6 space-y-6">
                 {/* Información del Canto */}
                 <div className="bg-white/30 backdrop-blur-sm rounded-2xl p-3 sm:p-4 border-2 border-white/40 transition-colors">
-                  <h3 className="text-lg sm:text-2xl font-bold text-brand-ink mb-2">
-                    {selectedSong.title}
-                  </h3>
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="text-lg sm:text-2xl font-bold text-brand-ink mb-2 min-w-0">
+                      {selectedSong.title}
+                    </h3>
+                    <FavoriteButton songId={selectedSong.id} className="text-rose-400 hover:bg-white/40 dark:hover:bg-white/10 flex-shrink-0 -mt-1 -mr-1" />
+                  </div>
                   <p className="text-xl text-brand-ink-soft mb-4">
                     {selectedSong.artist || 'Artista desconocido'}
                   </p>

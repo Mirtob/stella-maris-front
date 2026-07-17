@@ -101,6 +101,7 @@ import { massTypeBadge } from './utils/massType';
 import { generateCantoralPDF } from './utils/cantoralPDFGenerator';
 import { isCurrentUserAdmin } from './services/admin';
 import { upsertCurrentUserProfile, getCurrentUserProfile } from './services/userProfiles';
+import { setCurrentUserId } from './services/currentUser';
 import { setSentryUserContext, clearSentryUserContext } from './services/sentry';
 
 const PENDING_CANTORAL_KEY = 'stella_maris_pending_cantoral_id';
@@ -337,6 +338,12 @@ function AppContent() {
   useEffect(() => {
     logApiConfig();
   }, []);
+
+  // Publica el ID del usuario actual en el store, para que el corazón de Favoritos
+  // (FavoriteButton) funcione en cualquier pantalla sin pasar userId por props.
+  useEffect(() => {
+    setCurrentUserId(userProfile?.id);
+  }, [userProfile?.id]);
 
   // Verify admin status against Supabase every time the user changes.
   // We never trust userProfile.role === 'Admin' from localStorage on its own;

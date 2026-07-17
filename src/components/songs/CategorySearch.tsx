@@ -14,6 +14,7 @@ import { isOrdinary } from '../../utils/ordinary';
 import { resolveOrdinarySheetMusic } from '../../utils/ordinarySheetMusic';
 import { previousUseOf, type PreviousUsage, type UsageOccurrence } from '../../utils/previousUsage';
 import { RepeatSongDialog } from '../cantoral/RepeatSongDialog';
+import { FavoriteButton } from './FavoriteButton';
 
 interface CategorySearchProps {
   category: string;
@@ -632,12 +633,15 @@ export function CategorySearch({
                         {song.duration}
                       </p>
                     </div>
-                    {isInCantoral(song.id) && (
-                      <div className="flex-shrink-0 flex items-center gap-1.5 bg-green-500/20 backdrop-blur-sm rounded-full pl-2 pr-3 py-1 border-2 border-green-500" aria-label="Agregado al cantoral">
-                        <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" strokeWidth={2.5} />
-                        <span className="text-xs font-bold text-green-700 dark:text-green-300">Agregado</span>
-                      </div>
-                    )}
+                    <div className="flex-shrink-0 flex flex-col items-end gap-1.5">
+                      <FavoriteButton songId={song.id} className="text-rose-400 hover:bg-white/40 dark:hover:bg-white/10 -mr-1 -mt-1" />
+                      {isInCantoral(song.id) && (
+                        <div className="flex items-center gap-1.5 bg-green-500/20 backdrop-blur-sm rounded-full pl-2 pr-3 py-1 border-2 border-green-500" aria-label="Agregado al cantoral">
+                          <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" strokeWidth={2.5} />
+                          <span className="text-xs font-bold text-green-700 dark:text-green-300">Agregado</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex gap-2">
