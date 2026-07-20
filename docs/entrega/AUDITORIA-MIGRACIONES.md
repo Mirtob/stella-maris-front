@@ -25,6 +25,12 @@ WITH checks(tipo, objeto, ok) AS (
   SELECT 'tabla','public.custom_parishes',       to_regclass('public.custom_parishes')       IS NOT NULL UNION ALL
   SELECT 'tabla','public.custom_liturgical_dates', to_regclass('public.custom_liturgical_dates') IS NOT NULL UNION ALL
   SELECT 'tabla','public.push_subscriptions',    to_regclass('public.push_subscriptions')    IS NOT NULL UNION ALL
+  SELECT 'tabla','public.survey_responses',      to_regclass('public.survey_responses')      IS NOT NULL UNION ALL
+  SELECT 'tabla','public.choir_contacts',        to_regclass('public.choir_contacts')        IS NOT NULL UNION ALL
+  SELECT 'tabla','public.course_progress',       to_regclass('public.course_progress')       IS NOT NULL UNION ALL
+  SELECT 'tabla','public.course_quizzes',        to_regclass('public.course_quizzes')        IS NOT NULL UNION ALL
+  SELECT 'tabla','public.course_videos',         to_regclass('public.course_videos')         IS NOT NULL UNION ALL
+  SELECT 'tabla','public.song_favorites',        to_regclass('public.song_favorites')        IS NOT NULL UNION ALL
   -- ── Esquema privado ───────────────────────────────────────────────────────
   SELECT 'esquema','private', EXISTS(SELECT 1 FROM information_schema.schemata WHERE schema_name='private') UNION ALL
   -- ── Funciones ─────────────────────────────────────────────────────────────
@@ -63,6 +69,12 @@ WITH checks(tipo, objeto, ok) AS (
   -- push_subscriptions: RLS activa y SIN policies (solo service role):
   SELECT 'rls','push_subscriptions RLS activa', coalesce((SELECT relrowsecurity FROM pg_class WHERE oid=to_regclass('public.push_subscriptions')), false) UNION ALL
   SELECT 'rls','push_subscriptions SIN policies (solo service role)', NOT EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='push_subscriptions') UNION ALL
+  -- song_favorites / choir_contacts / course_progress: RLS activa + con policies (acceso por usuario):
+  SELECT 'rls','song_favorites RLS activa',  coalesce((SELECT relrowsecurity FROM pg_class WHERE oid=to_regclass('public.song_favorites')),  false) UNION ALL
+  SELECT 'policy','song_favorites tiene policies (por auth.uid())', EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='song_favorites') UNION ALL
+  SELECT 'rls','choir_contacts RLS activa',  coalesce((SELECT relrowsecurity FROM pg_class WHERE oid=to_regclass('public.choir_contacts')),  false) UNION ALL
+  SELECT 'rls','course_progress RLS activa', coalesce((SELECT relrowsecurity FROM pg_class WHERE oid=to_regclass('public.course_progress')), false) UNION ALL
+  SELECT 'admin','2º admin stellamaris en public.admins', EXISTS(SELECT 1 FROM public.admins WHERE lower(email)='stellamarismusicacatolica@gmail.com') UNION ALL
   -- ── Índices / constraints ─────────────────────────────────────────────────
   SELECT 'índice','published_cantorals_mass_uk (única)', to_regclass('public.published_cantorals_mass_uk') IS NOT NULL UNION ALL
   SELECT 'índice','custom_liturgical_dates_uniq',        to_regclass('public.custom_liturgical_dates_uniq') IS NOT NULL UNION ALL
@@ -115,6 +127,14 @@ ORDER BY ok ASC, tipo, objeto;
 | **`20260702_cld_public_read`** | `cld_select` = `USING (true)` | Que el Pueblo fiel anónimo vea celebraciones |
 | **`20260702_push_subscriptions`** | tabla `push_subscriptions` (RLS sin policies) | Notificaciones push |
 | **`20260702_push_subscription_role`** | `push_subscriptions.role` | Recordatorio "publica el cantoral" al Coro |
+| `20260706_survey_responses` | tabla `survey_responses` (INSERT anónimo) | Muestra pre-lanzamiento `/demo` |
+| `20260708_add_admin_stellamaris` | 2º admin en `admins` | Acceso admin de la cuenta oficial |
+| `20260708_choir_contacts` | tabla `choir_contacts` + RLS | Directorio / datos de contacto del coro |
+| `20260708_course_progress` | tabla `course_progress` + RLS | Progreso/racha del Camino de formación |
+| `20260708_course_ranking` | tabla/vista `course_ranking` | Ranking de cursos (hoy oculto por flag) |
+| `20260709_course_quizzes` | tabla `course_quizzes` | Quizzes de las cápsulas |
+| `20260709_course_videos` | tabla `course_videos` | Videos embebidos de las cápsulas |
+| **`20260714_song_favorites`** | tabla `song_favorites` (RLS por `auth.uid()`) | Favoritos "Mis cantos" |
 
 ## Notas de orden
 - Orden = alfabético por nombre de archivo (fecha). Aplica en ese orden.

@@ -1,12 +1,16 @@
 # Plan de Pruebas Final — Stella Maris (Backend + Frontend)
 
-> **Propósito:** validar de punta a punta la aplicación antes de cerrar la marcha
-> blanca. Cubre backend (Supabase + funciones serverless de Vercel) y frontend
-> (PWA: Pueblo fiel, Coro, Admin), seguridad, rendimiento, offline y accesibilidad.
+> **Propósito:** QA completo de punta a punta para el **freeze / entrega final** (congelación
+> de funcionalidades ~31-jul-2026). Cubre backend (Supabase + funciones serverless de Vercel)
+> y frontend (PWA: Pueblo fiel, Coro, Admin), seguridad, rendimiento, offline y accesibilidad.
 >
 > **Cómo usarlo:** cada caso tiene **pasos**, **resultado esperado** y una casilla de
 > **estado** (☐ Pass / ☐ Fail / ☐ N/A). Anotar evidencia (captura, log) en los fallos.
 > Los bloques automatizables apuntan a los scripts existentes en `tests/`.
+>
+> **Última actualización del plan:** 2026-07-20 — incluye salmo del libro (imagen A/B/C),
+> favoritos en todas las pantallas, historial global, clonar cantoral, cursos con video
+> embebido, metrónomo del atril y eliminación de cuenta. Alineado hasta el commit `cece530`.
 
 | Campo | Valor |
 |---|---|
@@ -73,6 +77,11 @@ las migraciones estén aplicadas — crítico porque se aplicaron a mano). Luego
 | Tabla `custom_liturgical_dates` + `cld_select` = `true` | existe, lectura pública | ☐ |
 | Tabla `push_subscriptions` (RLS activa, sin policies) + col `role` | existe | ☐ |
 | Storage INSERT → `private.is_cantoral_pdf_owner` (fix 42883) | referencia `private` | ☐ |
+| Tabla `song_favorites` (RLS por `auth.uid()`) — migración 20260714 | existe; INSERT ajeno rechazado | ☐ |
+| Tabla `choir_contacts` (directorio del coro) — 20260708 | existe, RLS activa | ☐ |
+| Tablas de cursos: `course_progress`, `course_quizzes`, `course_videos`, `course_ranking` — 20260708/09 | existen | ☐ |
+| Tabla `survey_responses` (muestra /demo) — 20260706 | existe; INSERT anónimo permitido (encuesta) | ☐ |
+| `mass_moment` CHECK acepta partes extra (salmo, padre_nuestro, no-liturgico) — 20260627/29 | sin error al guardar | ☐ |
 
 ### 2.3 Funciones serverless (Vercel)
 | Endpoint | Caso | Esperado | Estado |
@@ -88,7 +97,10 @@ las migraciones estén aplicadas — crítico porque se aplicaron a mano). Luego
 | `/api/push-subscribe` | body inválido | 400 (desplegado) | ☐ |
 | `/api/notify-cantoral` | sin sesión | 401 (no 500) | ☐ |
 | `/api/push-test` | endpoint inexistente | 200 `sent:0` | ☐ |
+| `/api/notify-cantoral` | publicación real (con sesión) | Encola push a la parroquia | ☐ |
+| `/api/delete-account` | sin sesión | 401/403 (no 500) | ☐ |
 | `/api/cron/celebration-reminders` | sin `CRON_SECRET`/header cron | 401 (no 500) | ☐ |
+| `/api/pdf?id=<libro salmos>` | PDF grande linearizado | 200 `application/pdf` **+ `Accept-Ranges: bytes`** (206 con `Range`) | ☐ |
 | Todas | No exponen `x-vercel-error: FUNCTION_INVOCATION_FAILED` | OK | ☐ |
 
 ### 2.4 Rate limiting (estrés controlado)
@@ -144,6 +156,10 @@ node tests/stress/rate-limit.mjs
 | C8 | Modo Atril | **NO** disponible para Pueblo fiel | ☐ |
 | C9 | Campana de notificaciones | Avisa cantoral nuevo | ☐ |
 | C10 | Deep link / QR | Abre el cantoral correcto | ☐ |
+| C11 | Salmo responsorial (del libro) | Ve **solo la antífona** (texto R/), **sin** partitura | ☐ |
+| C12 | Corazón de Favoritos visible | En radio, Ver Ordinario y demás pantallas de cantos | ☐ |
+| C13 | Controles de lectura (Ver Cantos) | Tamaño de letra / contraste ajustables y persistidos | ☐ |
+| C14 | "Mis cantos" | Los cantos guardados aparecen y se abren en el reproductor | ☐ |
 
 ---
 
@@ -165,7 +181,16 @@ node tests/stress/rate-limit.mjs
 | D12 | Historial de cantorales | Re-descarga y gestión | ☐ |
 | D13 | Modo Atril — letra/acordes | Canto sin partitura → letra con acordes | ☐ |
 | D14 | Modo Atril — **partituras de todos** | Cantos con partitura → PDF en orden de la Misa | ☐ |
-| D15 | Atril: zoom, transpositor, autoscroll, concentración | Funcionan | ☐ |
+| D15 | Atril: zoom, transpositor, autoscroll, concentración, **metrónomo** | Funcionan | ☐ |
+| D16 | Datos de Misa **al inicio** del constructor | Fecha + hora (combobox ½ h) + tipo antes de elegir cantos | ☐ |
+| D17 | Fecha sin celebración | Ofrece **agregar la celebración** (persistida) | ☐ |
+| D18 | Salmo en el constructor | Solo **antífona editable** (sin partitura); va al PDF/pueblo | ☐ |
+| D19 | Salmo en Modo Atril (Coro) | Muestra la **partitura del libro** (imagen, año A/B/C correcto) | ☐ |
+| D20 | Aviso de canto repetido | Avisa si un canto se usó la semana pasada (excluye ordinario) | ☐ |
+| D21 | Publicar — modal centrado en PDF | Solo diseño/letra/tamaño/guirnalda; Misa **prellenada** | ☐ |
+| D22 | Historial global (archivo) | Buscador Año/Mes + País/Diócesis/Parroquia/Capilla | ☐ |
+| D23 | Clonar cantoral ("usar como base") | Solo desde Historial; precarga los cantos | ☐ |
+| D24 | Directorio / contacto del coro | Tarjeta editable en perfil; visible en el directorio | ☐ |
 
 ---
 
@@ -206,7 +231,9 @@ node tests/stress/rate-limit.mjs
 |---|---|---|
 | Bundle sin claves sensibles | `grep AIza`/service-role en `build/` → vacío | ☐ |
 | CSP y headers (vercel.json) | Presentes en respuesta | ☐ |
-| Secretos solo server-side | Sin `VITE_` para service-role/Resend/Gemini | ☐ |
+| CSP `script-src` con `'wasm-unsafe-eval'` pero **sin** `'unsafe-eval'` | Correcto (WASM sí, eval de strings no) | ☐ |
+| Imágenes del salmo (`/salmos/**`) son estáticas | Sin datos sensibles; `img-src 'self'` las sirve | ☐ |
+| Secretos solo server-side | Sin `VITE_` para service-role/Resend/Gemini/VAPID privada | ☐ |
 | Rotación de la key Google expuesta (pendiente histórico) | Confirmar rotada | ☐ |
 
 ### 8.4 Rendimiento / errores
@@ -231,8 +258,11 @@ node tests/stress/rate-limit.mjs
 Marcar que cada función entregada sigue funcionando tras los últimos cambios:
 - ☐ Rate limit distribuido · ☐ Login usuario/clave + recuperación · ☐ CRUD admin completo
 - ☐ Proxy YouTube (key fuera del bundle) · ☐ Guía litúrgica en Ver Ordinario
-- ☐ Modo Atril A+B · ☐ Tutorial F1–F4 · ☐ Misa vespertina · ☐ Partituras del ordinario
-- ☐ Separación PDF/Atril por perfil · ☐ Ordinario en latín
+- ☐ Modo Atril A+B+metrónomo · ☐ Tutorial F1–F4 · ☐ Misa vespertina · ☐ Partituras del ordinario
+- ☐ Separación PDF/Atril por perfil · ☐ Ordinario en latín · ☐ Notificaciones push (cron + al publicar)
+- ☐ Folleto cuadernillo decorado · ☐ Celebraciones persistidas · ☐ Salmo del libro (imagen A/B/C)
+- ☐ Favoritos en todas las pantallas · ☐ Historial global · ☐ Clonar cantoral · ☐ Cursos (video+quiz)
+- ☐ Datos de contacto del coro · ☐ Aviso de canto repetido · ☐ Transpositor con bemoles
 
 ---
 
@@ -253,7 +283,7 @@ Marcar que cada función entregada sigue funcionando tras los últimos cambios:
 | N8 | Publicar VARIOS a la vez (multi-día) | **UN** aviso por parroquia ("N cantorales nuevos") | ☐ |
 | N9 | Varios avisos del mismo tipo/parroquia | **No se apilan** (el nuevo reemplaza en la bandeja) | ☐ |
 | N10 | Cron: celebraciones a 7/1 día | 1 push por suscriptor con la **lista** (no uno por celebración) | ☐ |
-| N11 | Cron: "publica el cantoral" a 3 días (Coro sin publicar) | Llega al Coro; si ya publicó, **NO** llega | ☐ |
+| N11 | Cron: "publica el cantoral" (Coro sin publicar) — **jueves 10:00 Chile** (14 UTC) | Llega al Coro; si ya publicó, **NO** llega | ☐ |
 | N12 | Desactivar | Deja de recibir; reactivable | ☐ |
 
 > Disparo manual del cron (N10/N11): `GET /api/cron/celebration-reminders` con header `Authorization: Bearer <CRON_SECRET>`.
@@ -295,6 +325,53 @@ Marcar que cada función entregada sigue funcionando tras los últimos cambios:
 | GC1 | Toggle "Litúrgico / No litúrgico" | Momento y `is_liturgical` concuerdan; se puede volver a litúrgico | ☐ |
 | GC2 | Guardar canto en un momento nuevo (Padre Nuestro, etc.) | Guarda sin error (CHECK de `mass_moment` al día) | ☐ |
 | GC3 | Selector de partitura | **Agrupado por momento** (y por subcarpeta de canto polifónico) | ☐ |
+| GC4 | Formato de letra (negrita/cursiva/subrayado/centrado) | Se ve en la letra del Pueblo; **limpio** en acordes/PDF | ☐ |
+| GC5 | Canto multi-parte (chips ★ principal) | Sirve en varias partes sin duplicar id | ☐ |
+
+### 10.7 Salmo responsorial del libro (imagen)
+
+> Contexto: la partitura del salmo se sirve como **imagen WebP** (`public/salmos/<A|B|C>/<pág>.webp`),
+> NO por pdf.js (JBIG2 + CSP estricta lo impiden). Datos en `src/data/psalmIndex*.ts`. **2026 = Año A.**
+
+| # | Caso | Esperado | Estado |
+|---|---|---|---|
+| SL1 | Ciclo litúrgico correcto por fecha | A/B/C según el domingo (Adviento 2026 → Año C) | ☐ |
+| SL2 | Coro — partitura en Modo Atril | Imagen nítida de la página del libro; zoom del atril funciona | ☐ |
+| SL3 | Coro — salmo en el constructor | Solo antífona editable (sin partitura) | ☐ |
+| SL4 | Pueblo — antífona | Solo texto R/ (sin partitura) | ☐ |
+| SL5 | Antífona editada → PDF/pueblo | El texto editado aparece en el folleto y para el Pueblo | ☐ |
+| SL6 | Salmo a dos páginas (rango) | Muestra ambas páginas (p. ej. Epifanía) | ☐ |
+| SL7 | Solemnidad de otra sección | Página correcta (Carmen 125, Inmaculada 130, etc.) | ☐ |
+| SL8 | Celebración sin salmo en el índice | Aviso "pendiente" (nada roto) | ☐ |
+| SL9 | Imagen faltante (B/C incompletos) | Cae a "Abrir el libro en Drive" | ☐ |
+
+### 10.8 Favoritos ("Mis cantos")
+
+| # | Caso | Esperado | Estado |
+|---|---|---|---|
+| FV1 | Corazón en **todas** las pantallas de cantos | Constructor, Atril, Ver Ordinario (lista+ficha), Radio, Banco de Partituras | ☐ |
+| FV2 | Guardar/quitar | Se pinta rosado; se refleja en "Mis cantos" | ☐ |
+| FV3 | Sincronización entre dispositivos | Mismo usuario ve los mismos favoritos (RLS por `auth.uid()`) | ☐ |
+| FV4 | Sin sesión | No aparece el corazón | ☐ |
+| FV5 | Cantos no persistibles (salmo, Padre Nuestro generado, id `::`) | **No** muestran corazón | ☐ |
+| FV6 | Canto quitado del catálogo | No rompe "Mis cantos" (se omite el que ya no existe) | ☐ |
+
+### 10.9 Camino de formación (Cursos)
+
+| # | Caso | Esperado | Estado |
+|---|---|---|---|
+| CU1 | Ver cápsula con video embebido | Reproduce en la app y **suma vista** en YouTube | ☐ |
+| CU2 | Botón "Suscríbete" (cápsula y pantalla principal) | Lleva al canal | ☐ |
+| CU3 | Quiz tras el video | Corrige y guarda avance (`course_progress`) | ☐ |
+| CU4 | Progreso / racha | Se actualizan y persisten | ☐ |
+| CU5 | Ranking **oculto** | No visible (flag `SHOW_RANKING=false`); sin restos en UI | ☐ |
+
+### 10.10 Eliminar cuenta (autoservicio)
+
+| # | Caso | Esperado | Estado |
+|---|---|---|---|
+| DA1 | Ajustes → eliminar mi cuenta | Pide confirmación; borra perfil y datos asociados | ☐ |
+| DA2 | Reingreso tras borrar | Trata al usuario como nuevo (onboarding) | ☐ |
 
 ---
 

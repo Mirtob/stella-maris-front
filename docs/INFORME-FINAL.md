@@ -20,7 +20,8 @@ litúrgico, notificaciones y un módulo de **formación (Cursos)**.
 
 A julio de 2026 todos los módulos se consideran **suficientemente maduros para
 producción**. El plan es **congelar funcionalidades al cierre de julio** y desde ahí
-ejecutar el **QA final** (ver §8, plan de pruebas pendiente de integrar).
+ejecutar el **QA final**, cuyo plan de pruebas (backend + frontend) ya está consolidado
+y al día (ver §8).
 
 ---
 
@@ -127,15 +128,21 @@ en orden) + Google Cloud + Vercel (variables de entorno) + deploy.
 
 ---
 
-## 8. Plan de pruebas (PENDIENTE — se integra tras el freeze)
+## 8. Plan de pruebas (LISTO para el QA final)
 
-> 🔜 **Reservado.** Al cerrar el freeze (~31-jul-2026) se consolidará aquí el **plan de
-> pruebas final** para el QA. Esta sección se completará con: alcance, matriz de casos por
-> rol (Coro / Pueblo fiel / Admin), pruebas de regresión, criterios de aceptación y
-> registro de corridas.
+> ✅ **Consolidado (2026-07-20), alineado al commit `cece530`.** El plan de pruebas
+> final cubre **backend + frontend** de punta a punta: RLS/Storage, funciones serverless,
+> rate limit, matriz de casos por rol (Coro / Pueblo fiel / Admin), regresión, seguridad,
+> PWA/offline, accesibilidad y **todas las features nuevas** (salmo del libro por imagen,
+> favoritos, historial global, clonar cantoral, cursos con video embebido, metrónomo del
+> atril, celebraciones persistidas, push, eliminación de cuenta).
 
-Insumos existentes que alimentarán este plan:
-- `docs/entrega/PLAN-DE-PRUEBAS-FINAL.md` — plan detallado backend + frontend.
+**Documento canónico:** [`docs/entrega/PLAN-DE-PRUEBAS-FINAL.md`](entrega/PLAN-DE-PRUEBAS-FINAL.md).
+
+Ejecución: primero la **auditoría de migraciones** (`docs/entrega/AUDITORIA-MIGRACIONES.md`,
+también al día) en verde, luego las suites automatizadas y la matriz manual por rol.
+
+Insumos de apoyo:
 - `tests/PLAN-QA-DIARIO.md` — rutina diaria de QA (build + integración + smoke).
 - `tests/INFORME-QA-FRONTEND.md` — auditoría de frontend/UX (histórica, jun-2026).
 - `tests/smoke/CHECKLIST.md` — smoke test manual.
@@ -148,7 +155,7 @@ Insumos existentes que alimentarán este plan:
 - [ ] Fijar versión de `jspdf` (quitar `"*"`).
 - [ ] Confirmar versión de Node en Vercel (paridad con local).
 - [ ] Decidir plan pago de Supabase para evitar pausa por inactividad.
-- [ ] Completar el **plan de pruebas** (§8) tras el freeze.
+- [x] Completar el **plan de pruebas** (§8) — listo 2026-07-20; pendiente **ejecutarlo** en el QA final.
 - [ ] Subir videos de Cursos + activar `COURSE_WEEKLY_ENABLED`.
 - [ ] (Opcional) Subir RAM del PC a 16 GB para comodidad de desarrollo.
 
@@ -162,3 +169,4 @@ Insumos existentes que alimentarán este plan:
 | 2026-07-10 | 1.1 | Agregados **Plan de Riesgos** (23 riesgos) e **Informe Presupuestario** (UF/USD/CLP). PDF del informe (`scripts/build-informe-pdf.mjs` → Descargas). |
 | 2026-07-10 | 1.2 | Informe Presupuestario: **proyección de ingresos del canal de YouTube** (3 escenarios), recuperación de la inversión y modelo de reinversión. |
 | 2026-07-13 | 1.3 | Proyección del canal como **hoja de cálculo editable** (`scripts/build-proyeccion-xlsx.py` → `.xlsx` con fórmulas). |
+| 2026-07-20 | 1.4 | **Preparación del freeze:** §8 plan de pruebas consolidado (front+back, features nuevas) y auditoría de migraciones al día (favoritos, cursos, contacto del coro, encuesta). |
