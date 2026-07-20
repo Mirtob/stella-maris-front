@@ -283,7 +283,7 @@ Marcar que cada función entregada sigue funcionando tras los últimos cambios:
 | N8 | Publicar VARIOS a la vez (multi-día) | **UN** aviso por parroquia ("N cantorales nuevos") | ☐ |
 | N9 | Varios avisos del mismo tipo/parroquia | **No se apilan** (el nuevo reemplaza en la bandeja) | ☐ |
 | N10 | Cron: celebraciones a 7/1 día | 1 push por suscriptor con la **lista** (no uno por celebración) | ☐ |
-| N11 | Cron: "publica el cantoral" (Coro sin publicar) — **jueves 10:00 Chile** (14 UTC) | Llega al Coro; si ya publicó, **NO** llega | ☐ |
+| N11 | Cron: "publica el cantoral" (Coro **o Admin** sin publicar) — **jueves 10:00 Chile** (14 UTC) | Llega a Coro y Admin (rol permanente); si ya publicó, **NO** llega | ☐ |
 | N12 | Desactivar | Deja de recibir; reactivable | ☐ |
 
 > Disparo manual del cron (N10/N11): `GET /api/cron/celebration-reminders` con header `Authorization: Bearer <CRON_SECRET>`.

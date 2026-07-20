@@ -605,10 +605,10 @@ const BASE_CELEBRATIONS: { date: string; name: string }[] = [
 // ~10:00 hora chilena los jueves. Dos tipos de aviso:
 //  1) Recordatorio general de celebraciones PERSONALIZADAS (7 y 1 día antes) → a todos
 //     los suscriptores con topic 'celebrations'.
-//  2) Recordatorio al CORO (3 días antes) de celebraciones POR DEFECTO (calendario:
+//  2) Recordatorio al CORO/ADMIN (3 días antes) de celebraciones POR DEFECTO (calendario:
 //     domingos + solemnidades) y AGREGADAS, "publica el cantoral si no lo has hecho":
-//     solo a suscriptores con role='Coro', por parroquia, y SOLO si esa parroquia aún
-//     no tiene un cantoral publicado para esa fecha.
+//     a suscriptores con role IN ('Coro','Admin'), por parroquia, y SOLO si esa parroquia
+//     aún no tiene un cantoral publicado para esa fecha.
 //
 // AUTOCONTENIDO (sin imports de api/_*). El calendario base va como MÓDULO .ts
 // (api/baseCelebrations.ts) — NO como .json: el import de JSON en ESM de Vercel exige
@@ -744,7 +744,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const base3 = baseCelebrationsOn(target3);           // domingos + solemnidades (globales)
     const custom3 = await customCelebrationsOn(target3);
 
-    const cr = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?role=eq.Coro&select=endpoint,p256dh,auth,parishes`, { headers: svcHeaders });
+    // role IN (Coro, Admin): ambos arman y publican cantorales. El Admin también debe
+    // recibir el recordatorio de "publica el cantoral" (antes solo iba a role=eq.Coro,
+    // por lo que un Admin —o un Coro que quedó con la suscripción en otro rol— no lo recibía).
+    const cr = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?role=in.(Coro,Admin)&select=endpoint,p256dh,auth,parishes`, { headers: svcHeaders });
     const coroSubs: { endpoint: string; p256dh: string; auth: string; parishes: string[] }[] = cr.ok ? await cr.json() : [];
 
     for (const sub of coroSubs) {

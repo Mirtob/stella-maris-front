@@ -579,7 +579,7 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
           <ChoirContactCard userId={userProfile.id} defaultParish={activeParish} />
         )}
 
-        <PushNotificationsCard parishes={canManageParishes ? parishes : (activeParish ? [activeParish] : [])} role={effectiveRole} />
+        <PushNotificationsCard parishes={canManageParishes ? parishes : (activeParish ? [activeParish] : [])} role={userProfile.role} />
 
         {/* Tutoriales — volver a verlos (F4) */}
         <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-indigo-200 mb-6">

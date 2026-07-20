@@ -426,7 +426,9 @@ function AppContent() {
       userProfile.parishName,
       userProfile.activeParishName,
     ].filter((x): x is string => !!x)));
-    void syncPushParishes(parishes, userProfile.activeRole || userProfile.role);
+    // Rol PERMANENTE (no el de vista temporal): el recordatorio "publica el cantoral"
+    // debe seguir llegando a un Coro/Admin aunque esté actuando como Pueblo fiel.
+    void syncPushParishes(parishes, userProfile.role);
   }, [route.screen, userProfile]);
 
   // Deep link de la cápsula semanal (push /?goto=cursos): al estar logueado, abre Cursos.
@@ -1248,7 +1250,7 @@ function AppContent() {
             userProfile.parishName,
             userProfile.activeParishName,
           ].filter((x): x is string => !!x)))}
-          role={effectiveRole}
+          role={userProfile.role}
         />
       )}
 
