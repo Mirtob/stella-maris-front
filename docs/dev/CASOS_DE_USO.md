@@ -280,10 +280,19 @@ Aplicado en la UI **y** por trigger en base de datos.
 Gloria/Aleluya en Cuaresma, canto no litúrgico en un momento de la Misa, secuencias faltantes en
 Pascua/Pentecostés. Todos son **avisos**: la decisión pastoral es del coro.
 
+### RN-12 · Cualquier momento admite varios cantos
+Un momento de la Misa puede llevar **más de un canto**, no solo la Comunión. La única restricción es
+no repetir **el mismo** canto dentro del cantoral (control por `id`).
+
+**Razón:** en la práctica pastoral varios momentos admiten más de un canto (una entrada larga, una
+procesión de ofrendas extensa, un final con doble canto). La restricción original —"solo Comunión"—
+era una simplificación de la primera versión y **se levantó de forma intencional**.
+
 > #### ⚠️ Reglas derogadas
-> - **"Solo el momento Comunión admite varios cantos"** — **ya no rige**. Verificado en
->   `src/App.tsx` (`handleAddToCantoral`): la única restricción es no repetir el mismo canto (por
->   `id`); cualquier momento acepta varios. Documentado como regla activa hasta jul-2026 por error.
+> - **"Solo el momento Comunión admite varios cantos"** — derogada. Era una regla de la versión
+>   inicial; hoy **cualquier momento admite varios cantos** (ver RN-12). Comportamiento actual
+>   **confirmado como correcto** por el responsable del producto (21-jul-2026): no es una regresión
+>   y **no debe "arreglarse"** durante el QA final.
 > - **"Validación de cantos mínimos obligatorios"** — nunca se implementó como bloqueo; su rol lo
 >   cumple la revisión litúrgica (RN-11).
 
