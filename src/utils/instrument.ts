@@ -14,6 +14,23 @@ import { Song, InstrumentType } from '../types';
  * Por eso la compatibilidad se decide SIEMPRE con esta función y nunca con
  * `song.version`, que se conserva solo para mostrar la etiqueta en la ficha.
  */
+/**
+ * Normaliza un nombre de instrumento para poder compararlo.
+ *
+ * La BD guarda los valores en minúscula y SIN tilde ("organo", "guitarra",
+ * "coro"), mientras que `InstrumentType` los usa con mayúscula y tilde
+ * ("Órgano"). Comparar en crudo da `["organo"].includes('Órgano') === false`
+ * para todos los cantos, que es la razón por la que el instrumento no filtraba
+ * ni ordenaba nada. SongManager ya normalizaba así al leerlos.
+ */
+function normalizeInstrument(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .trim();
+}
+
 export function songMatchesInstrument(song: Song, instrument?: InstrumentType): boolean {
   if (!instrument) return true;
 
@@ -26,7 +43,8 @@ export function songMatchesInstrument(song: Song, instrument?: InstrumentType): 
   // Sin instrumentos marcados = sirve para todos.
   if (list.length === 0) return true;
 
-  return list.includes(instrument);
+  const target = normalizeInstrument(instrument);
+  return list.some((i) => normalizeInstrument(i) === target);
 }
 
 /**

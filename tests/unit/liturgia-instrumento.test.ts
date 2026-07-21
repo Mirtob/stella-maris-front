@@ -47,6 +47,19 @@ check('Aleluya Triple en la Vigilia → NO se oculta', isAlleluiaTitleInLent('Al
 check("'Aleluya Triple' → momento aleluya", categoryToMoment('Aleluya Triple'), 'aleluya');
 check('con fecha de Cuaresma el título SÍ calificaría', isAlleluiaTitleInLent('Aleluya Triple', d('2026-03-30')), true);
 
+console.log('\n== Instrumento: FORMATO REAL de la BD (minúscula, sin tilde) ==');
+// La columna `instruments` guarda "organo"/"guitarra"/"coro"; InstrumentType usa
+// "Órgano"/"Guitarra". Comparar en crudo daba 0 coincidencias en TODO el catálogo.
+const sReal = (instruments: any) =>
+  ({ id: 'x', title: 't', category: 'Entrada', youtubeId: '', duration: '', instruments }) as any;
+
+check('["organo"] + Órgano → SÍ', songMatchesInstrument(sReal(['organo']), 'Órgano'), true);
+check('["organo"] + Guitarra → NO', songMatchesInstrument(sReal(['organo']), 'Guitarra'), false);
+check('["coro","guitarra","organo"] + Guitarra → SÍ', songMatchesInstrument(sReal(['coro', 'guitarra', 'organo']), 'Guitarra'), true);
+check('["coro","guitarra","organo"] + Órgano → SÍ', songMatchesInstrument(sReal(['coro', 'guitarra', 'organo']), 'Órgano'), true);
+check('["ÓRGANO"] (mayúsc. con tilde) + Órgano → SÍ', songMatchesInstrument(sReal(['ÓRGANO']), 'Órgano'), true);
+check('[" Organo "] (espacios) + Órgano → SÍ', songMatchesInstrument(sReal([' Organo ']), 'Órgano'), true);
+
 console.log('\n== Instrumento: los casos que estaban rotos ==');
 const s = (id: string, title: string, instruments?: any, version?: any) =>
   ({ id, title, category: 'Entrada', youtubeId: '', duration: '', instruments, version }) as any;

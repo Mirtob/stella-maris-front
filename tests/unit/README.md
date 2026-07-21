@@ -28,8 +28,20 @@ lo esperado y lo obtenido.
 | Momento canónico | El rótulo nuevo sigue mapeando al momento `aleluya` de la BD |
 | Exclusión en Cuaresma | Oculta títulos con "aleluya"/"alleluia" (sin tildes, cualquier caja) solo dentro de Cuaresma |
 | **Vigilia Pascual** | El **Aleluya Triple NO se oculta**: el Sábado Santo ya no es Cuaresma |
+| Instrumento — formato real | La BD guarda `"organo"`/`"guitarra"` en minúscula y sin tilde; `InstrumentType` usa `"Órgano"`. La comparación normaliza ambos lados |
 | Instrumento | Los dos falsos negativos históricos (array con varios instrumentos, y arreglo vacío = "sirve para todos") |
 | Orden por instrumento | Compatibles primero, orden estable, sin ocultar nada |
+
+## Cuidado con los datos de prueba
+
+La primera versión de esta suite usaba `instruments: ['Órgano']` — bien escrito,
+con tilde y mayúscula. Pasaba en verde mientras en producción **ningún** canto
+coincidía, porque la BD guarda `["organo"]`. Los tests validaban un formato que no
+existe en la base.
+
+Por eso hay un bloque dedicado al **formato real** (minúscula sin tilde, mayúsculas,
+espacios sobrantes). Si tocas la comparación de instrumentos, contrástala además
+contra el catálogo real: `select title, mass_moment, instruments from songs`.
 
 ## Detalle litúrgico que conviene no "corregir"
 
