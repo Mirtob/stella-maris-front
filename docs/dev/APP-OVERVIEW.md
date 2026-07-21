@@ -1,291 +1,179 @@
-# Stella Maris - Cantoral Litúrgico Católico
+# Stella Maris — Visión general de la aplicación
 
-Una aplicación móvil moderna para coros católicos que funciona como una plataforma completa de gestión de cantorales litúrgicos, similar a Spotify pero enfocada en música sacra.
-
-## 🌟 Características Principales
-
-### Para el Pueblo Fiel
-- **Cantorales Publicados**: Acceso a cantorales organizados por fecha litúrgica
-- **Guía Litúrgica**: Ordinario completo de la Misa con indicaciones posturales
-- **Reproductor de Cantos**: Audio y partituras desde YouTube
-- **Calendario Litúrgico**: Consulta de fechas y tiempos litúrgicos
-- **Banco de Partituras**: Biblioteca completa de partituras
-
-### Para Coros
-- **Creación de Cantorales**: Arma cantorales completos organizados por partes de la Misa
-- **Selección de Instrumento**: Preferencia entre Coro a capella, Guitarra u Órgano
-- **Publicación Directa**: Publica cantorales para que los vea tu parroquia
-- **Mis Cantorales**: Gestiona todos tus cantorales guardados
-- **Cursos**: Accede a formación en Teoría Musical, Liturgia e Instrumentos
-
-### Para Administradores
-- **Panel de Control**: Gestión completa del sistema
-- **Gestión de Cantos**: Agrega y administra el catálogo de cantos
-- **Gestión de Parroquias**: Administra parroquias y usuarios
-- **Moderación**: Control de contenido publicado
-
-## 🎨 Diseño y Experiencia de Usuario
-
-### Paleta de Colores Católica
-- **Fondos**: Tonos ocres claros (#FEF3C7, #FED7AA) para legibilidad óptima
-- **Encabezados y Botones**: Azul rey con gradientes (#1E3A8A → #1E40AF)
-- **Textos**: Alto contraste para máxima accesibilidad
-- **Modo Oscuro**: Paleta de azules elegantes que mantiene la identidad visual
-
-### Iconografía Litúrgica
-Cada parte de la Misa tiene su icono distintivo:
-- Entrada: ⛪ Iglesia
-- Kyrie: ✝️ Cruz
-- Gloria: 🕊️ Paloma (Espíritu Santo)
-- Salmo: 📖 Libro abierto
-- Aleluya: 🙏 Manos en oración
-- Post Evangelio: 💫 Estrella
-- Ofertorio: 🍇 Racimo de uvas
-- Santo: 👑 Corona
-- Cordero de Dios: 🐑 Cordero
-- Comunión: 🕊️ Paloma
-- Salida: ⛪ Iglesia
-
-### Logo Stella Maris
-- Estrella mariana de 8 puntas animada
-- Simbolismo católico tradicional
-- Animaciones sutiles y profesionales
-- Presente en todas las pantallas clave
-
-## 📱 Organización por Partes de la Misa
-
-Los cantos están organizados siguiendo el orden litúrgico:
-
-1. **Ritos Iniciales**
-   - Entrada
-   - Kyrie
-   - Gloria
-
-2. **Liturgia de la Palabra**
-   - Salmo Responsorial
-   - Aleluya
-   - Post Evangelio (después de la homilía)
-
-3. **Liturgia Eucarística**
-   - Ofertorio
-   - Santo
-   - Cordero de Dios
-
-4. **Rito de Comunión**
-   - Comunión
-   - Padre Nuestro
-   - Credo
-
-5. **Ritos de Conclusión**
-   - Salida
-
-## 🎵 Características Especiales
-
-### Misas Completas
-Al seleccionar una parte de una Misa completa (Kyrie, Gloria, Santo, Cordero de Dios), el sistema agrega automáticamente todas las partes de esa Misa al cantoral.
-
-### Versiones Instrumentales
-Cada canto puede tener múltiples versiones:
-- **👥 Coro a capella**: Sin acompañamiento instrumental
-- **🎶 Guitarra**: Versión con guitarra
-- **🎹 Órgano**: Versión con órgano
-
-El sistema prioriza automáticamente la versión según la preferencia del usuario.
-
-### Integración con YouTube
-- Audio en streaming desde YouTube
-- Acceso a partituras alojadas en canales oficiales
-- Reproductor integrado en la aplicación
-
-### Indicaciones Posturales
-Los cantorales publicados incluyen el ordinario completo con indicaciones:
-- 🧍 De pie
-- 💺 Sentado  
-- 🧎 De rodillas
-
-Especialmente útil para niños y personas mayores.
-
-## 🎓 Sistema de Cursos
-
-### Teoría Musical
-- Pentagrama y claves
-- Notas musicales
-- Figuras rítmicas
-- Intervalos
-- Escalas y tonalidades
-- Armadura
-- Tempo y matices
-
-### Liturgia
-- Estructura de la Misa
-- Tiempos litúrgicos
-- Colores litúrgicos
-- Solemnidades importantes
-- Ministerios litúrgicos
-
-### Instrumentos Musicales
-- Canto coral
-- Guitarra litúrgica
-- Órgano
-- Otros instrumentos
-
-## 🎭 Roles de Usuario
-
-### Pueblo Fiel
-- Ver cantorales publicados
-- Acceder al banco de partituras
-- Consultar calendario litúrgico
-- Tomar cursos de formación
-- Ver historial de cantorales
-
-### Coro
-- Todo lo del Pueblo Fiel +
-- Crear y gestionar cantorales
-- Publicar cantorales
-- Seleccionar instrumento preferido
-- Organizar por parroquia
-
-### Administrador
-- Todo lo anterior +
-- Gestionar catálogo de cantos
-- Administrar parroquias
-- Gestionar usuarios
-- Panel de control completo
-
-## 🌈 Modo Oscuro
-
-El sistema incluye soporte completo para modo oscuro con:
-- Paleta de azules elegantes
-- Transiciones suaves
-- Conservación de la identidad visual
-- Mejor para uso nocturno o en ambientes oscuros
-
-## ♿ Accesibilidad
-
-### Características de Accesibilidad
-- **Alto Contraste**: Textos blancos sobre fondos oscuros
-- **Tamaños Táctiles**: Botones mínimo 44x44px para móvil
-- **ARIA Labels**: Etiquetas descriptivas para lectores de pantalla
-- **Focus Visible**: Indicadores claros de foco en teclado
-- **Reduced Motion**: Respeta preferencias de animación reducida
-- **Tipografía**: Tamaño base 18px para legibilidad óptima
-
-## 🔧 Componentes UX/UI Mejorados
-
-### Estados Vacíos
-Ilustraciones animadas y mensajes claros cuando no hay contenido.
-
-### Estados de Carga
-- Spinner personalizado con logo
-- Skeletons para carga progresiva
-- Transiciones suaves
-
-### Microinteracciones
-- Hover effects en todos los botones
-- Animaciones de entrada escalonadas
-- Feedback visual inmediato
-- Transiciones fluidas entre estados
-
-### Scrollbars Personalizados
-- Diseño elegante acorde a la marca
-- Colores litúrgicos
-- Suaves y sutiles
-
-## 📊 Paleta Litúrgica
-
-El sistema reconoce y aplica colores según el calendario litúrgico:
-
-- **Verde**: Tiempo Ordinario
-- **Morado**: Adviento y Cuaresma
-- **Blanco**: Navidad, Pascua, solemnidades
-- **Rojo**: Pentecostés, mártires
-- **Rosa**: 3er Domingo de Adviento, 4to de Cuaresma
-
-## 🚀 Listo para Producción
-
-El código está optimizado y listo para integración con backend:
-
-### Características de Producción
-- ✅ Componentes modulares y reutilizables
-- ✅ TypeScript para type safety
-- ✅ Estados y props claramente definidos
-- ✅ Diseño responsive mobile-first
-- ✅ Performance optimizado
-- ✅ Accesibilidad AAA
-- ✅ Dark mode completo
-- ✅ Animaciones profesionales
-- ✅ Loading states y error handling
-- ✅ SEO-friendly
-
-### Próximos Pasos para Backend
-1. **Autenticación**: Integrar Google OAuth real
-2. **Base de Datos**: Configurar Supabase o Firebase
-3. **API de Cantos**: Endpoints para CRUD de cantos
-4. **Almacenamiento**: YouTube API para videos y partituras
-5. **Notificaciones**: Alertas de solemnidades importantes
-6. **Analytics**: Seguimiento de uso y métricas
-
-## 🎯 Casos de Uso
-
-### Domingo en Misa
-1. El coro publica el cantoral el sábado por la noche
-2. Los fieles abren la app y ven el cantoral del día
-3. Durante la Misa, siguen los cantos y el ordinario
-4. Las indicaciones posturales ayudan a participar activamente
-
-### Preparación Coral
-1. El director musical crea un nuevo cantoral
-2. Busca cantos por categoría (Entrada, Comunión, etc.)
-3. Filtra por su instrumento (Guitarra)
-4. El sistema prioriza versiones con guitarra
-5. Publica para su parroquia
-
-### Formación Litúrgica
-1. Usuario accede a Cursos
-2. Toma el curso de Liturgia
-3. Aprende sobre tiempos litúrgicos
-4. Comprende mejor la estructura de la Misa
-5. Participa más activamente en las celebraciones
-
-## 📖 Datos Mock Incluidos
-
-La aplicación incluye datos de demostración completos:
-- 100+ cantos organizados por categorías
-- 20+ misas completas con sus partes
-- Calendario litúrgico 2024-2025
-- 10 cantorales publicados de ejemplo
-- 3 cursos completos con contenido
-
-## 🎨 Tecnologías y Herramientas
-
-- **React 18**: Framework principal
-- **TypeScript**: Type safety
-- **Tailwind CSS v4**: Estilos utility-first
-- **Lucide React**: Iconografía moderna
-- **Motion**: Animaciones profesionales
-- **Sonner**: Toast notifications
-- **Context API**: Gestión de estado global
-
-## 💡 Mejores Prácticas Implementadas
-
-### Código Limpio
-- Componentes pequeños y enfocados
-- Custom hooks para lógica reutilizable
-- Separación de concerns clara
-- Nombres descriptivos y consistentes
-
-### Performance
-- Lazy loading de componentes
-- Memoización donde es necesario
-- Optimización de re-renders
-- Assets optimizados
-
-### Mantenibilidad
-- Estructura de carpetas clara
-- Tipado completo con TypeScript
-- Documentación inline
-- Código autodescriptivo
+> **Documento de producto/técnico.** Describe **qué es y qué hace** la app en su estado actual.
+> Para el **estado del proyecto** (infraestructura, riesgos, pendientes) manda
+> [`docs/INFORME-FINAL.md`](../INFORME-FINAL.md). Para los **flujos por perfil**, ver
+> [`CASOS_DE_USO.md`](CASOS_DE_USO.md).
+>
+> - **Última actualización:** 2026-07-21
+> - **Producción:** https://stella-maris-front.vercel.app/
 
 ---
 
-**Stella Maris** - Guiando a la comunidad católica en la liturgia musical 🌟⛪🎵
+## 1. Qué es
+
+**Stella Maris** es una **PWA** (aplicación web instalable, sin tienda de aplicaciones) para coros
+católicos y sus comunidades. Funciona como un "Spotify litúrgico":
+
+- los **coros** arman y publican el **cantoral** de cada Misa,
+- el **Pueblo fiel** lo sigue con letra, audio, PDF y el ordinario de la Misa,
+- y todo se apoya en el **calendario litúrgico** real (celebración, ciclo A/B/C, color, tiempo).
+
+No es un prototipo: está **en producción**, con backend, autenticación y datos reales.
+
+---
+
+## 2. Stack
+
+| Capa | Tecnología |
+|---|---|
+| Frontend | React 18 + TypeScript + **Vite** (PWA) |
+| Estilos | Tailwind CSS · iconos `lucide-react` |
+| Estado | Context API + hooks propios |
+| Backend | Funciones serverless en `api/*` desplegadas en **Vercel** (11 endpoints + 1 cron) |
+| BD / Auth / Storage | **Supabase** (Postgres + RLS + RPC + Storage + Auth) — 38 migraciones SQL |
+| PDF | `jspdf` (generación) + `pdfjs-dist` (render de partituras de Drive) |
+| Otros | `qrcode`, `web-push` (VAPID), `@sentry/react`, `googleapis` |
+
+**Tamaño:** ~184 archivos `.ts/.tsx`, ~35.000 líneas.
+
+**Integraciones externas:** Google OAuth (login), YouTube Data API (catálogo por canal, vía proxy
+`/api/youtube`), Google Drive (partituras y media), Gemini (sugerencias IA), Resend (correos de
+recuperación), Sentry (errores), Web Push.
+
+> Detalle: [`ARQUITECTURA.md`](ARQUITECTURA.md) · [`DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md) ·
+> [`API_SPECIFICATION.md`](API_SPECIFICATION.md).
+
+### Endpoints serverless (`api/`)
+
+`admin-users` · `delete-account` · `notify-cantoral` · `pdf` · `push-subscribe` · `push-test` ·
+`recover-password` · `sheets` · `suggest` · `youtube` · `cron/celebration-reminders`
+
+### Notas de arquitectura que sorprenden
+
+- **No hay service worker de aplicación.** `sw.js` está **desactivado a propósito**; el offline se
+  resuelve por **Cache Storage** en `offlineCache.ts`. `push-sw.js` existe y es **solo para push**.
+- El **salmo del libro** se sirve como **imagen WebP**, no como PDF: JBIG2 + CSP rompían pdf.js.
+- Las **claves sensibles** (service-role, Resend, Gemini, YouTube) son **server-only**; el bundle no
+  las contiene.
+
+---
+
+## 3. Roles y permisos
+
+Un usuario tiene un **rol permanente** (perfil) y un **rol de sesión** (`activeRole`): al entrar
+confirma "cómo participa hoy". Un miembro de Coro puede actuar como **Pueblo fiel** sin perder su
+rol. Los **roles solo los cambia el administrador principal** (validado en UI y por trigger en BD).
+
+### Qué ve cada rol en el menú
+
+| Sección | Pueblo fiel | Coro | Admin |
+|---|:--:|:--:|:--:|
+| Inicio | ✅ | ✅ (constructor) | ✅ |
+| Cantorales Publicados | ✅ | ✅ | ✅ |
+| Calendario Litúrgico | ✅ | ✅ | ✅ |
+| Mis Cantos (favoritos) | ✅ | ✅ | ✅ |
+| Cursos | ✅ | ✅ | ✅ |
+| Historial de Cantorales | — | ✅ | ✅ |
+| Banco de Partituras | — | ✅ | ✅ |
+| Mis Cantorales | — | ✅ | — |
+| Panel Admin | — | — | ✅ |
+| **Modo Atril** | — | ✅ | — |
+
+> El Admin opera de forma **global** (CRUD sobre todas las parroquias) y por eso no usa el
+> conmutador de parroquia activa.
+
+---
+
+## 4. Módulos
+
+### 4.1 Cantorales
+Constructor por partes de la Misa según el tiempo litúrgico · **aviso de canto repetido** respecto de
+la semana anterior · **clonar** un cantoral anterior ("usar como base") · publicación **multi-parroquia**
+· **revisión litúrgica** no bloqueante (Gloria/Aleluya en Cuaresma, canto no litúrgico, secuencias) ·
+**QR** por cantoral y QR permanente de parroquia · editar/eliminar publicados de la parroquia propia ·
+vigencia hasta las **23:59 del día de la Misa**.
+
+**Tipo de Misa:** del día · **I Vísperas** (sábado tarde = domingo) · **II Vísperas**.
+
+**Dos PDF distintos:**
+- **Folleto del Pueblo:** solo letra, decorado, impuesto como **cuadernillo carta**.
+- **Full Score del Coro:** letra con acordes + partituras incrustadas (desde el Historial).
+
+### 4.2 Multi-parroquia y capillas
+Una **capilla se comporta como parroquia** para selección y publicación (cantoral y público propios).
+Etiqueta canónica: `"Parroquia - Diócesis · Capilla"`. El usuario puede pertenecer a varias
+parroquias y conmutar sin cerrar sesión.
+
+### 4.3 Calendario litúrgico
+Celebración, **ciclo A/B/C**, color y tiempo litúrgico. **Celebraciones personalizadas persistidas**
+(`custom_liturgical_dates`): las del Admin son globales, las del Coro son por parroquia.
+
+### 4.4 Cantos y partituras
+Catálogo importado del canal de YouTube · **letra con formato** (negrita/cursiva/subrayado/centrado)
+· **acordes en cifrado latino** con toggle latino/americano y **transpositor** con ortografía por
+armadura (Sib, no La#) · **canto multi-parte** (`extra_moments`) · partituras en Drive organizadas
+por momento → canto → **PDF por voz** · **favoritos** ("Mis Cantos").
+
+**Salmo responsorial del libro:** imagen de la página del libro según celebración y ciclo. El Coro ve
+la partitura; el Pueblo fiel, la antífona.
+
+### 4.5 Ordinario de la Misa
+Letra y partitura por rol · **toggle Español/Latín** · **indicaciones posturales** (de pie / sentado /
+de rodillas) · variantes (Triduo, Exequias, Ordenación) · aspersión pascual · partituras resueltas
+por **carpeta de Drive** (una carpeta por Misa, un PDF por parte).
+
+### 4.6 Modo Atril (solo Coro)
+Todo el repertorio de la Misa como **documento continuo**: zoom global, **transpositor por canto**,
+notación latino/americano, **autoscroll**, **metrónomo** (BPM, tap tempo, pulso visual), **modo
+concentración**, **impresión** fiel a lo que se ve, y panel de repertorio para saltar entre cantos.
+
+### 4.7 Autenticación
+**Google OAuth** y **usuario + clave** (email sintético, para quien no quiere usar correo), con
+cambio de clave, email de respaldo y **recuperación self-service** por Resend. **Eliminación de
+cuenta** autoservicio.
+
+### 4.8 Notificaciones
+**Web Push (VAPID)**: recordatorios de celebraciones (cron diario) y aviso de **nuevo cantoral** al
+publicar; para el Coro, recordatorio semanal de "publica el cantoral". Se activan **por dispositivo**
+en Ajustes, con envío de prueba. Además, campana de novedades **dentro** de la app.
+
+### 4.9 Cursos — Camino de formación
+**Año 1** en cápsulas semanales con **video embebido** (suma vistas al canal), **quiz** por cápsula,
+**progreso y racha**, y **certificado** al completar. Ranking tras flag `SHOW_RANKING`.
+
+### 4.10 Panel Admin
+CRUD completo de **Usuarios / Cantos / Capillas / Parroquias**, sincronización del canal de YouTube,
+migración de catálogo, editor de quizzes y resultados de encuesta.
+
+### 4.11 Transversales
+Tutorial en vivo (tours por rol + tips contextuales, reiniciable) · modo oscuro · offline por Cache
+Storage · directorio de contacto de coros · pantalla pública `/demo` con encuesta de prelanzamiento.
+
+---
+
+## 5. Momentos de la Misa (canónicos)
+
+Valores de `MassMoment` (columna `mass_moment`), en orden litúrgico:
+
+`entrada` · `rito_aspersion` · `kyrie` · `gloria` · `salmo` · `aleluya` · `post_evangelio` ·
+`respuesta_oracion_universal` · `ofertorio` · `santo` · `aclamacion_consagracion` · `amen_doxologia` ·
+`padre_nuestro` · `tuyo_es_el_reino` · `cordero` · `comunion` · `final` · `exposicion` ·
+`no-liturgico`
+
+**Tiempos litúrgicos** (`LiturgicalSeason`): `adviento` · `navidad` · `tiempo-ordinario` ·
+`cuaresma` · `semana-santa` · `pascua` · `pentecostes` · `corpus-christi`. Un canto puede pertenecer
+a varios; arreglo vacío = válido para todos.
+
+---
+
+## 6. Diseño
+
+- **Paleta:** fondos ocres claros, encabezados y botones en azul rey con gradiente, alto contraste.
+  **Modo oscuro** completo en azules.
+- **Colores litúrgicos** aplicados desde el calendario: verde (ordinario), morado (Adviento y
+  Cuaresma), blanco (Navidad, Pascua, solemnidades), rojo (Pentecostés, mártires), rosa (3.º de
+  Adviento, 4.º de Cuaresma).
+- **Accesibilidad:** objetivos táctiles ≥44 px, ARIA labels, foco visible, `prefers-reduced-motion`,
+  tipografía base grande (pensada para uso en el templo y para adultos mayores).
+- **Mobile-first**, con navegación inferior por rol y menú lateral.

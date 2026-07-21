@@ -4,8 +4,8 @@
 > algo relevante (módulo, infraestructura, plan de pruebas), se edita aquí y se anota en
 > la **Bitácora de cambios** al final.
 >
-> - **Versión:** 1.3
-> - **Última actualización:** 2026-07-13
+> - **Versión:** 1.5
+> - **Última actualización:** 2026-07-21
 > - **Estado del proyecto:** módulos maduros para producción · **freeze ~31-jul-2026** → luego QA final
 > - **App en producción:** https://stella-maris-front.vercel.app/
 
@@ -170,3 +170,4 @@ Insumos de apoyo:
 | 2026-07-10 | 1.2 | Informe Presupuestario: **proyección de ingresos del canal de YouTube** (3 escenarios), recuperación de la inversión y modelo de reinversión. |
 | 2026-07-13 | 1.3 | Proyección del canal como **hoja de cálculo editable** (`scripts/build-proyeccion-xlsx.py` → `.xlsx` con fórmulas). |
 | 2026-07-20 | 1.4 | **Preparación del freeze:** §8 plan de pruebas consolidado (front+back, features nuevas) y auditoría de migraciones al día (favoritos, cursos, contacto del coro, encuesta). |
+| 2026-07-21 | 1.5 | **Documentación de producto al día para el freeze:** manuales de Coro y Pueblo fiel reescritos (Atril, Mis Cantos, salmo del libro, folleto cuadernillo, push, login usuario/clave, vespertina) y **PDF regenerados**; `dev/APP-OVERVIEW.md` reescrito (era del prototipo Figma: hablaba de datos mock y de "integrar Supabase" como pendiente); `dev/CASOS_DE_USO.md` reescrito como documento de flujos por perfil, verificado contra el código. Hallazgo: la regla "solo Comunión admite varios cantos" **ya no rige** y estaba documentada como vigente. |

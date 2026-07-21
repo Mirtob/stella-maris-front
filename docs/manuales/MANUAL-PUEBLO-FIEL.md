@@ -5,6 +5,7 @@ parroquia: ver las letras, escucharlos cuando quieras y enterarte cuando hay un 
 
 > App: **https://stella-maris-front.vercel.app/**
 > (Funciona en el celular como una app y también en el navegador del computador.)
+> Última actualización de este manual: **21-jul-2026**
 
 ---
 
@@ -45,15 +46,26 @@ una app más, con su ícono en la pantalla de inicio.
 
 ## 2. Primer ingreso
 
-1. Abre la app y toca **Iniciar sesión con Google**.
-2. Elige tu cuenta de Google.
-3. Completa tu perfil: elige el rol **"Pueblo fiel"** y tu **parroquia**.
+Puedes entrar de **dos formas**:
+
+- **Iniciar sesión con Google** y elegir tu cuenta.
+- **Entrar con usuario y clave**, si prefieres no usar correo. Te las entrega el encargado de tu
+  parroquia. Si olvidas la clave, usa **"¿Olvidaste tu clave?"**.
+
+Luego:
+
+1. Completa tu perfil: elige el rol **"Pueblo fiel"** y tu **parroquia**.
    - Si tu parroquia tiene **capillas**, podrás elegir **"Toda la parroquia"** o una **capilla**
      específica (por ejemplo, la capilla a la que sueles ir a Misa).
-4. ¡Listo! Verás la pantalla principal.
+2. ¡Listo! Verás la pantalla principal.
 
 > **Cada vez que entres** podrás confirmar cómo participas hoy (rol y parroquia/capilla). Así, si
-> un día vas a otra capilla, puedes elegirla sin cambiar tu perfil.
+> un día vas a otra capilla, puedes elegirla sin cambiar tu perfil. Si perteneces a varias
+> parroquias, también puedes cambiarla **sin cerrar sesión**: toca el nombre de la parroquia en el
+> menú lateral.
+
+> **Tutorial en vivo:** la primera vez la app te acompaña con un recorrido guiado. Puedes volver a
+> verlo cuando quieras con el botón 🎓 del menú lateral.
 
 ---
 
@@ -75,9 +87,13 @@ Al abrir un cantoral verás varias opciones:
 | Botón | Para qué sirve |
 |---|---|
 | **🎧 Escuchar cantos** | Reproduce **todos los cantos de la Misa** seguidos (modo radio). |
-| **Ver Ordinario** | Muestra las partes fijas de la Misa (Santo, Cordero, etc.). |
-| **Ver Cantos** | Despliega la **letra** de cada canto, ordenada por parte de la Misa. |
-| **Descargar Cantoral PDF** | Guarda las letras en tu teléfono para seguir la Misa sin internet. |
+| **Ver Ordinario** | Muestra las partes fijas de la Misa (Santo, Cordero, etc.), con las posturas. |
+| **Ver Cantos** | Abre el cantoral completo como un **documento continuo** para seguir la Misa. |
+| **Compartir (QR)** | Muestra el código QR de esa Misa para pasárselo a otra persona. |
+| **Descargar Cantoral PDF** | Guarda el **folleto** en tu teléfono para seguir la Misa sin internet. |
+
+> El **folleto PDF** viene decorado y armado como **cuadernillo tamaño carta**: si lo imprimes y lo
+> doblas por la mitad, queda como un librito listo para repartir en la parroquia.
 
 ---
 
@@ -100,37 +116,74 @@ Controles del reproductor:
 
 ---
 
-## 6. 🔔 Notificaciones
+## 6. ❤️ Mis Cantos (tus favoritos)
 
-Cuando el coro de tu parroquia **publica un cantoral nuevo**, te llega un aviso dentro de la app:
-
-- Aparece un **mensaje** con el botón **"🎧 Escuchar cantos"**.
-- Arriba a la derecha verás la **campana 🔔** con un número: son los cantorales nuevos sin ver.
-  Tócala para ver la lista y abrir el que quieras.
-
-> El aviso llega **mientras tienes la app abierta**. Al volver a entrar, la campana te muestra los
-> que se publicaron mientras no estabas.
+Junto a cada canto verás un **corazón**. Tócalo y ese canto queda guardado en **"Mis Cantos"**, tu
+lista personal, disponible en el menú lateral. Sirve para juntar los cantos que más rezas o que
+quieres volver a escuchar, sin tener que buscar en qué Misa estaban.
 
 ---
 
-## 7. Abrir un cantoral desde un código QR
+## 7. 🔔 Notificaciones
+
+Hay **dos formas** de enterarte de que hay cantoral nuevo:
+
+**Dentro de la app.** Aparece un mensaje con el botón **"🎧 Escuchar cantos"**, y arriba a la derecha
+la **campana 🔔** con un número: son los cantorales nuevos sin ver. Tócala para ver la lista.
+
+**En tu celular, aunque la app esté cerrada.** Actívalas en **Ajustes → Notificaciones**. Desde ahí
+puedes además **enviarte una notificación de prueba** para confirmar que llegan bien. Recibirás aviso
+del **cantoral nuevo** de tu parroquia y recordatorios de las **celebraciones importantes** que se
+acercan.
+
+> **iPhone:** necesitas **iOS 16.4 o superior** y tener la app agregada a la pantalla de inicio (§1).
+
+---
+
+## 8. Abrir un cantoral desde un código QR
 
 Si en tu parroquia comparten un **código QR** del cantoral (en una pantalla o impreso), apúntale con
 la cámara del teléfono: se abrirá directamente el cantoral de esa Misa, **sin necesidad de buscarlo**
 (incluso te invita a instalar la app).
 
+Muchas parroquias tienen además un **QR permanente** pegado en la entrada: ese te lleva siempre al
+cantoral vigente del día.
+
 ---
 
-## 8. Otros detalles
+## 9. El Ordinario y el Salmo
+
+En **Ver Ordinario** están las partes fijas de la Misa (Kyrie, Gloria, Santo, Cordero, Padre Nuestro,
+Credo) con:
+
+- **Indicaciones posturales**: 🧍 de pie, 💺 sentado, 🧎 de rodillas. Muy útil para niños y para quien
+  recién se está familiarizando con la Misa.
+- **Español o Latín**: un botón cambia el idioma del ordinario, por si tu parroquia canta en latín.
+
+El **salmo responsorial** del día aparece con su **antífona**, la que responde la asamblea.
+
+---
+
+## 10. Calendario Litúrgico y Cursos
+
+- **📅 Calendario Litúrgico:** consulta las celebraciones, sus colores y los tiempos litúrgicos.
+- **🎓 Cursos:** el **Camino de formación**, con cápsulas breves en video sobre liturgia y música
+  sacra, con preguntas al final y seguimiento de tu progreso. Abierto a todos.
+
+---
+
+## 11. Otros detalles
 
 - **🌙 Modo oscuro:** el botón de arriba a la derecha cambia entre claro y oscuro. Tu preferencia se
   recuerda.
-- **Cambiar de parroquia/capilla:** cierra sesión y vuelve a entrar; podrás elegir otra al confirmar
-  cómo participas hoy.
+- **Cambiar de parroquia/capilla:** toca el nombre de la parroquia en el menú lateral (o vuelve a
+  elegirla al iniciar sesión).
+- **⚙️ Ajustes:** datos personales, parroquia activa, cambiar clave, notificaciones, volver a ver el
+  tutorial y **eliminar tu cuenta** si así lo decides.
 
 ---
 
-## 9. Preguntas frecuentes
+## 12. Preguntas frecuentes
 
 **No veo ninguna Misa / cantoral.**
 Puede que el coro de tu parroquia aún no haya publicado cantorales para las próximas dos semanas, o
@@ -146,4 +199,14 @@ encargado del canal.
 
 **¿Necesito internet?**
 Para escuchar los cantos y ver novedades, sí. Las letras de los cantorales que abriste recientemente
-y sus PDF descargados pueden quedar disponibles aunque la señal sea mala dentro del templo.
+y sus PDF descargados pueden quedar disponibles aunque la señal sea mala dentro del templo. Si
+sabes que la señal es mala, **descarga el folleto PDF antes de entrar**.
+
+**No me llegan las notificaciones al celular.**
+Revisa que las activaste en *Ajustes → Notificaciones* **en ese dispositivo** (se activan uno por
+uno) y que el navegador tiene permiso para notificar. En iPhone, además, la app debe estar agregada
+a la pantalla de inicio y el sistema ser iOS 16.4 o superior.
+
+**No veo el Historial ni el Banco de Partituras.**
+Son herramientas del **Coro**. Como Pueblo fiel ves los cantorales publicados de tu parroquia, el
+calendario, Mis Cantos y los Cursos.

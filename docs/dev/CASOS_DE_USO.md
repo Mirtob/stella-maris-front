@@ -1,660 +1,334 @@
-# 📖 Casos de Uso y Flujos - Stella Maris
+# 📖 Casos de Uso y Flujos — Stella Maris
 
-## 📋 Tabla de Contenidos
-
-1. [Casos de Uso por Rol](#casos-de-uso-por-rol)
-2. [Flujos de Usuario](#flujos-de-usuario)
-3. [Reglas de Negocio](#reglas-de-negocio)
-4. [Escenarios de Edge Cases](#escenarios-de-edge-cases)
-
----
-
-## 👤 Casos de Uso por Rol
-
-### 🎤 Coro
-
-#### CU-01: Registro y Primera Configuración
-
-**Actor:** Coro (nuevo usuario)
-
-**Precondiciones:** 
-- Usuario tiene cuenta de Google
-- No ha usado la aplicación antes
-
-**Flujo Principal:**
-1. Usuario accede a la aplicación
-2. Sistema muestra pantalla de Login
-3. Usuario hace click en "Continuar con Google"
-4. Sistema redirige a Google OAuth
-5. Usuario autoriza la aplicación
-6. Google redirige de vuelta con token
-7. Sistema detecta que es un usuario nuevo
-8. Sistema muestra ProfileSetup
-9. Usuario selecciona rol "Coro"
-10. Sistema muestra selector de instrumento
-11. Usuario selecciona instrumento (Coro/Guitarra/Órgano)
-12. Usuario ingresa nombre de parroquia
-13. Usuario hace click en "Continuar"
-14. Sistema crea perfil en base de datos
-15. Sistema muestra ChoirView con instrumento configurado
-
-**Postcondiciones:**
-- Perfil de usuario creado en `user_profiles`
-- Usuario autenticado y en ChoirView
-- Instrumento preferido guardado
-
-**Variantes:**
-- 12a. Usuario no ingresa parroquia → Sistema permite continuar sin parroquia
+> **Documento de producto.** Describe **cómo se usa** la app: flujos por perfil, reglas de negocio y
+> casos límite. Es la contraparte narrativa de la matriz de pruebas por rol
+> ([`entrega/PLAN-DE-PRUEBAS-FINAL.md`](../entrega/PLAN-DE-PRUEBAS-FINAL.md) §5–§7), de donde se
+> derivan varios de estos casos.
+>
+> Para **qué es la app y qué módulos tiene**: [`APP-OVERVIEW.md`](APP-OVERVIEW.md).
+> Para el **estado del proyecto**: [`../INFORME-FINAL.md`](../INFORME-FINAL.md).
+>
+> - **Última actualización:** 2026-07-21 (verificado contra el código, no solo contra el doc previo)
 
 ---
 
-#### CU-02: Crear Cantoral para Misa Dominical
+## 📋 Tabla de contenidos
 
-**Actor:** Coro
-
-**Precondiciones:**
-- Usuario autenticado como Coro
-- Existen cantos en la base de datos
-
-**Flujo Principal:**
-1. Coro accede a ChoirView
-2. Sistema muestra categorías litúrgicas vacías
-3. Coro hace click en "Entrada 🚪"
-4. Sistema muestra buscador de cantos de Entrada
-5. Sistema filtra cantos mostrando primero los del instrumento preferido
-6. Coro busca "Juntos como hermanos"
-7. Sistema muestra resultados
-8. Coro hace click en "Agregar"
-9. Sistema agrega canto al cantoral
-10. Sistema muestra check verde en el canto
-11. Sistema actualiza vista previa del cantoral
-12. Coro repite pasos 3-11 para Kyrie
-13. Sistema agrega Kyrie automáticamente
-14. Sistema agrega Santo automáticamente
-15. Sistema agrega Cordero de Dios automáticamente
-16. Sistema muestra diálogo "¿Agregar Gloria?"
-17. Coro hace click en "Sí, agregar Gloria"
-18. Sistema agrega Gloria al cantoral
-19. Coro continúa agregando: Salmo, Aleluya, Post Evangelio, Ofertorio, Comunión (2 cantos), Salida
-20. Coro hace click en "Publicar Cantoral"
-21. Sistema muestra modal de publicación
-22. Coro ingresa:
-    - Fecha: 26/01/2025
-    - Fecha litúrgica: "3er Domingo del Tiempo Ordinario"
-    - Hora de misa: "10:00 AM"
-23. Coro hace click en "Publicar"
-24. Sistema valida datos
-25. Sistema crea registro en `published_cantorals`
-26. Sistema crea relaciones en `cantoral_songs`
-27. Sistema muestra toast de éxito
-28. Sistema limpia el cantoral actual
-
-**Postcondiciones:**
-- Cantoral publicado en base de datos
-- Pueblo fiel puede ver el cantoral
-- Cantoral aparece en historial del coro
-
-**Variantes:**
-- 17a. Coro hace click en "No, gracias" → Gloria NO se agrega
-- 22a. Fecha es pasada → Sistema muestra warning pero permite continuar
-- 24a. Datos inválidos → Sistema muestra error y no publica
+1. [Perfiles y permisos](#1-perfiles-y-permisos)
+2. [Casos de uso — Coro](#2-casos-de-uso--coro)
+3. [Casos de uso — Pueblo fiel](#3-casos-de-uso--pueblo-fiel)
+4. [Casos de uso — Admin](#4-casos-de-uso--admin)
+5. [Flujo completo: un domingo en la parroquia](#5-flujo-completo-un-domingo-en-la-parroquia)
+6. [Reglas de negocio](#6-reglas-de-negocio)
+7. [Casos límite](#7-casos-límite)
 
 ---
 
-#### CU-03: Reemplazar Canto en Cantoral
+## 1. Perfiles y permisos
 
-**Actor:** Coro
+Tres roles: **Pueblo fiel**, **Coro**, **Admin**.
 
-**Precondiciones:**
-- Coro tiene cantoral en proceso
-- Cantoral ya tiene un canto de Entrada
+Cada usuario tiene un **rol permanente** (su perfil) y un **rol de sesión** (`activeRole`): al
+entrar confirma "cómo participa hoy". Un miembro del Coro puede actuar como Pueblo fiel en otra
+parroquia sin perder su rol. **Solo el administrador principal cambia roles** (validado en la UI y
+por trigger en base de datos).
 
-**Flujo Principal:**
-1. Coro decide cambiar el canto de Entrada
-2. Coro hace click en "Entrada 🚪"
-3. Sistema muestra buscador con el canto actual marcado
-4. Coro busca otro canto
-5. Coro hace click en "Agregar" en el nuevo canto
-6. Sistema remueve automáticamente el canto anterior de Entrada
-7. Sistema agrega el nuevo canto
-8. Sistema muestra toast: "Canto de Entrada actualizado"
-9. Sistema actualiza vista previa del cantoral
-
-**Postcondiciones:**
-- Solo hay un canto de Entrada en el cantoral
-- Vista previa muestra el nuevo canto
-
-**Regla de negocio:** Solo Comunión permite múltiples cantos
+| Capacidad | Pueblo fiel | Coro | Admin |
+|---|:--:|:--:|:--:|
+| Ver cantorales publicados de su parroquia | ✅ | ✅ | ✅ |
+| Escuchar cantos, ver ordinario, descargar folleto | ✅ | ✅ | ✅ |
+| Compartir cantoral por QR | ✅ | ✅ | ✅ |
+| Mis Cantos (favoritos), Calendario, Cursos | ✅ | ✅ | ✅ |
+| Armar y publicar cantorales | — | ✅ | ✅ |
+| Editar / eliminar publicados **de su parroquia** | — | ✅ | ✅ |
+| Historial global + clonar cantoral | — | ✅ | ✅ |
+| Banco de Partituras · Full Score con acordes | — | ✅ | ✅ |
+| **Modo Atril** | — | ✅ | — |
+| Panel Admin (CRUD global) | — | — | ✅ |
 
 ---
 
-#### CU-04: Agregar Múltiples Cantos de Comunión
+## 2. Casos de uso — Coro
 
-**Actor:** Coro
+### CU-01 · Registro y primera configuración
 
-**Precondiciones:**
-- Coro tiene cantoral en proceso
+1. Ingresa con **Google** o con **usuario + clave**.
+2. Completa perfil: rol **Coro**, **instrumento(s)** (Guitarra / Órgano), **parroquia(s)**.
+3. Confirma la sesión: rol activo + parroquia (y **capilla**, si aplica).
+4. La app lanza el **tour guiado** del rol Coro (repetible desde el menú 🎓).
 
-**Flujo Principal:**
-1. Coro hace click en "Comunión 🍷"
-2. Sistema muestra buscador de cantos de Comunión
-3. Coro hace click en "Agregar" en "Pescador de Hombres"
-4. Sistema agrega canto al cantoral
-5. Coro hace click en "Agregar" en "Pan de Vida"
-6. Sistema agrega segundo canto SIN remover el primero
-7. Sistema actualiza vista previa mostrando ambos cantos
-8. Coro hace click en "Agregar" en "Vine a Alabarte"
-9. Sistema agrega tercer canto
-10. Vista previa muestra 3 cantos de Comunión en orden
-
-**Postcondiciones:**
-- Cantoral tiene múltiples cantos de Comunión
-- Todos los cantos se conservan
-
-**Regla de negocio:** Comunión es la única categoría que permite múltiples cantos
+> Si pertenece a varias parroquias, puede conmutar **sin cerrar sesión** desde el menú lateral.
 
 ---
 
-### 👨‍👩‍👧‍👦 Pueblo Fiel
+### CU-02 · Armar y publicar el cantoral dominical
 
-#### CU-05: Ver Cantorales Publicados
+**Precondición:** sesión como Coro con parroquia activa.
 
-**Actor:** Pueblo Fiel
+1. **Datos de la Misa primero:** fecha, hora (combobox de media hora) y **Tipo de Misa**:
+   *del día* · *I Vísperas (sábado tarde → domingo)* · *II Vísperas*.
+   La app resuelve **celebración**, **ciclo A/B/C** y **color litúrgico**.
+   - Si la fecha no tiene celebración → **"Agregar solemnidad"** (queda **persistida**).
+2. Elige el **instrumento** de esta Misa (ordena el catálogo).
+3. La app presenta los **momentos** de la Misa según el tiempo litúrgico (en Cuaresma, "Aleluya"
+   pasa a ser "Aclamación al Evangelio").
+4. Agrega un canto por momento. Al agregar dispara diálogos asistentes (ver RN-02/03/04).
+5. El **salmo del libro** se carga solo según celebración y ciclo; en el constructor se edita la
+   **antífona** (la partitura aparece en Modo Atril).
+6. Revisa las **sugerencias litúrgicas** de la temporada.
+7. **Publicar Cantoral · N cantos** → **revisión litúrgica** (avisos no bloqueantes) → confirmar.
+   - Opcional: **publicación multi-parroquia** con fecha/horario por parroquia.
 
-**Precondiciones:**
-- Usuario autenticado como Pueblo Fiel
-- Existen cantorales publicados
-
-**Flujo Principal:**
-1. Usuario accede a PublishedCantorals
-2. Sistema carga cantorales de todas las parroquias
-3. Sistema muestra lista ordenada por fecha (más reciente primero)
-4. Usuario ve cantorales con:
-   - Nombre de parroquia
-   - Fecha de la misa
-   - Fecha litúrgica
-   - Hora de misa
-   - Nombre del coro
-5. Usuario hace click en un cantoral
-6. Sistema muestra detalle completo del cantoral
-7. Sistema muestra ordinario de la misa con indicaciones posturales:
-   - "🚶 DE PIE - Entrada"
-   - "🧎 DE RODILLAS - Kyrie"
-   - "🚶 DE PIE - Gloria"
-   - etc.
-8. Usuario puede ver todos los cantos con sus detalles
-
-**Postcondiciones:**
-- Usuario puede consultar cantoral en cualquier momento
-- Usuario sabe cuándo ponerse de pie/sentarse/arrodillarse
+**Postcondición:** cantoral visible para el Pueblo fiel · **QR** generado · **push** enviado a la
+parroquia · disponible en Publicados e Historial.
 
 ---
 
-#### CU-06: Reproducir Canto y Ver Partitura
+### CU-03 · Reutilizar un cantoral anterior (clonar)
 
-**Actor:** Pueblo Fiel
+1. **Historial** → buscar por Año/Mes o por País/Diócesis/Parroquia/Capilla (archivo **global**:
+   incluye otras parroquias).
+2. **"Usar como base"** → los cantos se precargan en el constructor.
+3. Ajustar y publicar (CU-02).
 
-**Precondiciones:**
-- Usuario está viendo un cantoral
-- Canto tiene YouTube ID y partitura
-
-**Flujo Principal:**
-1. Usuario hace click en "Ver Detalles" de un canto
-2. Sistema abre SongPlayer
-3. Sistema muestra:
-   - Título del canto
-   - Autor
-   - Categoría litúrgica
-   - Reproductor de YouTube embebido
-4. Usuario hace click en Play en el video
-5. Video comienza a reproducirse
-6. Usuario hace click en "Ver Partitura"
-7. Sistema muestra PDF de la partitura
-8. Usuario puede hacer zoom in/out
-9. Usuario puede descargar PDF
-10. Usuario puede imprimir PDF
-
-**Postcondiciones:**
-- Usuario aprendió el canto
-- Usuario tiene partitura para practicar
-
-**Variantes:**
-- 6a. Canto no tiene partitura → Botón "Ver Partitura" está deshabilitado
+> Disponible **solo desde el Historial**: los cantorales publicados tienen vigencia corta.
 
 ---
 
-#### CU-07: Filtrar Cantorales por Parroquia
+### CU-04 · Dirigir la Misa con el Modo Atril
 
-**Actor:** Pueblo Fiel
-
-**Precondiciones:**
-- Existen cantorales de múltiples parroquias
-
-**Flujo Principal:**
-1. Usuario está en PublishedCantorals
-2. Usuario hace click en filtro de parroquia
-3. Sistema muestra lista de parroquias disponibles
-4. Usuario selecciona "Parroquia San Juan"
-5. Sistema filtra cantorales mostrando solo los de esa parroquia
-6. Usuario ve solo cantorales relevantes
-7. Usuario hace click en "Limpiar filtros"
-8. Sistema muestra todos los cantorales nuevamente
-
-**Postcondiciones:**
-- Usuario ve solo cantorales de su parroquia
+1. Abrir un cantoral publicado → **🎼 Modo Atril** (exclusivo del Coro).
+2. Todo el repertorio se presenta como **documento continuo** (letra con acordes y/o partituras).
+3. Durante la Misa: **zoom**, **transpositor por canto**, notación **latino/americano**,
+   **autoscroll**, **metrónomo** (BPM ±, deslizador, tap tempo, pulso visual), **modo
+   concentración** (ESC para salir), panel de **repertorio** para saltar de canto.
+4. **🖨️ Imprimir** genera un PDF vertical **tal cual se ve**, conservando transposiciones y notación.
 
 ---
 
-### 🔧 Admin
+### CU-05 · Corregir un cantoral ya publicado
 
-#### CU-08: Agregar Nuevo Canto a la Biblioteca
-
-**Actor:** Admin
-
-**Precondiciones:**
-- Usuario autenticado como Admin
-- Tiene YouTube ID del canto
-- (Opcional) Tiene partitura en PDF
-
-**Flujo Principal:**
-1. Admin accede a AdminDashboard
-2. Admin hace click en "Agregar Canto"
-3. Sistema muestra formulario
-4. Admin completa:
-   - Título: "Ave María"
-   - Autor: "Franz Schubert"
-   - Categoría: "Comunión"
-   - YouTube URL: "https://www.youtube.com/watch?v=abc12345678"
-   - Duración: "4:30"
-   - Versión: "Órgano"
-5. Sistema extrae YouTube ID automáticamente
-6. Sistema valida que el ID es válido (11 caracteres)
-7. Admin hace click en "Subir Partitura"
-8. Admin selecciona archivo PDF
-9. Sistema valida que es PDF y < 10MB
-10. Admin hace click en "Guardar Canto"
-11. Sistema sube PDF a Storage
-12. Sistema obtiene URL pública del PDF
-13. Sistema crea registro en tabla `songs`
-14. Sistema muestra toast de éxito
-15. Canto aparece en la biblioteca
-
-**Postcondiciones:**
-- Canto disponible para todos los coros
-- Partitura accesible públicamente
-
-**Variantes:**
-- 9a. Archivo no es PDF → Sistema muestra error
-- 9b. Archivo > 10MB → Sistema muestra error
-- 6a. YouTube ID inválido → Sistema muestra error
+En **Cantorales Publicados**, sobre los de la **parroquia activa**: **Editar** (cambiar cantos,
+fecha u horario) o **Eliminar** (con confirmación). Evita republicar y confundir a los fieles.
 
 ---
 
-#### CU-09: Crear Misa Completa (Ordinario)
+### CU-06 · Publicar la ficha de contacto del coro
 
-**Actor:** Admin
-
-**Precondiciones:**
-- Admin tiene acceso a AdminDashboard
-- Tiene URLs de YouTube para Kyrie, Gloria, Santo, Cordero
-
-**Flujo Principal:**
-1. Admin decide agregar "Misa de la Alegría"
-2. Admin agrega Kyrie:
-   - Título: "Kyrie Eleison"
-   - Categoría: "Kyrie"
-   - Nombre de Misa: "Misa de la Alegría"
-   - Versión: "Guitarra"
-   - YouTube ID: "abc123..."
-3. Admin agrega Gloria:
-   - Título: "Gloria a Dios"
-   - Categoría: "Gloria"
-   - Nombre de Misa: "Misa de la Alegría"
-   - Versión: "Guitarra"
-   - YouTube ID: "def456..."
-4. Admin agrega Santo:
-   - Título: "Santo es el Señor"
-   - Categoría: "Santo"
-   - Nombre de Misa: "Misa de la Alegría"
-   - Versión: "Guitarra"
-   - YouTube ID: "ghi789..."
-5. Admin agrega Cordero de Dios:
-   - Título: "Cordero de Dios"
-   - Categoría: "Cordero de Dios"
-   - Nombre de Misa: "Misa de la Alegría"
-   - Versión: "Guitarra"
-   - YouTube ID: "jkl012..."
-6. Sistema agrupa automáticamente estos cantos por `mass_name`
-7. Cuando un coro agregue el Kyrie, se agregarán automáticamente Santo y Cordero
-
-**Postcondiciones:**
-- Misa completa disponible
-- Coros pueden agregar ordinario completo de una vez
-
-**Regla de negocio:** `mass_name` debe ser idéntico en todos los cantos del ordinario
+Perfil Coro → **Datos de contacto del coro**: nombre, parroquia, correo, teléfono/WhatsApp y notas
+(redes, horarios de ensayo). Alimenta el **directorio de coros**.
 
 ---
 
-## 🔄 Flujos de Usuario
+## 3. Casos de uso — Pueblo fiel
 
-### Flujo Completo: Domingo en la Parroquia
+### CU-07 · Instalar la app y primer ingreso
+
+1. Abrir el enlace en **Safari** (iPhone) o **Chrome** (Android) → *Agregar a pantalla de inicio* /
+   *Instalar app*.
+2. Ingresar con **Google** o **usuario + clave**.
+3. Perfil: rol **Pueblo fiel** + **parroquia** (o **capilla**).
+
+> Para recibir push en iPhone: **iOS ≥ 16.4** y app instalada en pantalla de inicio.
+
+---
+
+### CU-08 · Seguir la Misa del domingo
+
+1. Pantalla principal → cantorales de las **próximas 2 semanas** (fecha, celebración, punto de color
+   litúrgico). Las Misas vespertinas aparecen bajo el **sábado** con badge 🕯️ y la celebración del
+   **domingo**.
+2. Tocar la fecha → elegir **horario**.
+3. Opciones del cantoral:
+   - **🎧 Escuchar cantos** — modo radio, todos en orden.
+   - **Ver Cantos** — letra **sin acordes**, documento continuo, con controles de **tamaño de letra y
+     contraste** (persistidos).
+   - **Ver Ordinario** — partes fijas + **posturas** (de pie / sentado / de rodillas) + toggle
+     **Español/Latín**.
+   - **Descargar Cantoral PDF** — folleto decorado en **cuadernillo carta**.
+   - **Compartir (QR)**.
+4. El **salmo responsorial** se muestra con su **antífona** (sin partitura — esa es del Coro).
+
+---
+
+### CU-09 · Enterarse de un cantoral nuevo
+
+- **Push al dispositivo** (aunque la app esté cerrada), si lo activó en *Ajustes → Notificaciones*
+  (se activa **por dispositivo**; hay envío de prueba).
+- **Campana 🔔** dentro de la app, con contador de cantorales sin ver.
+
+---
+
+### CU-10 · Abrir un cantoral por QR
+
+Apuntar la cámara al QR impreso o proyectado → se abre el cantoral exacto por **deep link**, sin
+buscar. Existe además un **QR permanente de parroquia** que lleva siempre al cantoral vigente.
+
+---
+
+### CU-11 · Guardar cantos favoritos
+
+El **corazón** junto a cualquier canto (radio, ordinario, listados) lo agrega a **"Mis Cantos"**,
+lista personal accesible desde el menú y reproducible.
+
+---
+
+## 4. Casos de uso — Admin
+
+### CU-12 · Alimentar el catálogo desde YouTube
+
+Panel Admin → **Sincronizar canal**: importa los videos del canal oficial como cantos (vía proxy
+`/api/youtube`; la API key nunca viaja al navegador). Luego se editan momento, tiempo litúrgico,
+letra y acordes.
+
+### CU-13 · Gestionar cantos
+
+CRUD completo: crear, editar, **aprobar/rechazar**, borrar. El toggle **"no litúrgico"** define
+`is_liturgical` y `mass_moment='no-liturgico'` de forma acoplada. Un canto puede servir en **varios
+momentos** (`extra_moments`, con chips de multi-selección y ★ para el principal).
+
+### CU-14 · Gestionar comunidad
+
+CRUD de **Usuarios** (incluye crear cuentas usuario/clave y resetear claves), **Capillas** y
+**Parroquias** (`custom_parishes`). El Admin opera **globalmente**, sin parroquia activa.
+
+### CU-15 · Actuar como Coro o Pueblo fiel
+
+El Admin puede tomar cualquiera de los dos roles en sesión para verificar lo que ve cada perfil.
+
+---
+
+## 5. Flujo completo: un domingo en la parroquia
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    SEMANA ANTES DE LA MISA                      │
-└─────────────────────────────────────────────────────────────────┘
+JUEVES
+├─ Push automático al Coro: "publica el cantoral" (cron semanal)
+└─ Coro entra, elige fecha/hora/tipo de Misa
 
-LUNES - Coro planifica
-├─ Coro inicia sesión
-├─ Revisa calendario litúrgico (3er Domingo del Tiempo Ordinario)
-├─ Busca cantos apropiados por categoría
-├─ Arma cantoral completo
-├─ Revisa vista previa
-└─ Publica cantoral para el domingo 10:00 AM
+VIERNES — SÁBADO
+├─ Coro arma el cantoral (o clona uno del Historial)
+├─ Avisos: canto repetido la semana pasada / revisión litúrgica
+├─ Publica  ─────────────► push al Pueblo fiel + QR generado
+└─ Descarga el Full Score (acordes + partituras) para los músicos
 
-MARTES - Pueblo Fiel prepara
-├─ Fiel inicia sesión
-├─ Filtra por su parroquia
-├─ Ve cantoral publicado para el domingo
-├─ Reproduce "Pescador de Hombres" (Comunión)
-├─ Descarga partitura para practicar
-└─ Guarda cantoral en favoritos
+SÁBADO TARDE (si hay vespertina)
+└─ Publicada como "I Vísperas": aparece bajo el sábado con la celebración del domingo
 
-MIÉRCOLES - Admin agrega canto nuevo
-├─ Admin descubre nuevo canto en YouTube
-├─ Agrega a la biblioteca con partitura
-└─ Notifica al coro (fuera del sistema)
+DOMINGO — ANTES DE LA MISA
+├─ Fieles abren la app (o escanean el QR de la entrada)
+├─ Practican con "Escuchar cantos"
+└─ Se imprime el folleto en cuadernillo para repartir
 
-JUEVES - Coro actualiza cantoral
-├─ Coro ve nuevo canto disponible
-├─ Reemplaza canto de Ofertorio
-├─ Cantoral se actualiza automáticamente
-└─ Pueblo Fiel ve el cambio
+DOMINGO — DURANTE LA MISA
+├─ Coro: Modo Atril (partituras + acordes + autoscroll + metrónomo)
+├─ Fieles: "Ver Cantos" y "Ver Ordinario" con posturas
+└─ Sin señal: el folleto PDF descargado y la caché offline responden
 
-┌─────────────────────────────────────────────────────────────────┐
-│                    DOMINGO - DÍA DE LA MISA                     │
-└─────────────────────────────────────────────────────────────────┘
+DOMINGO 23:59
+└─ El cantoral deja de estar vigente → pasa a Archivo e Historial
 
-09:30 AM - Fieles llegan temprano
-├─ Abren app en sus celulares
-├─ Ven cantoral del día
-├─ Revisan indicaciones posturales
-└─ Practican un poco antes de la misa
-
-10:00 AM - Misa comienza
-├─ ENTRADA: Fieles cantan "Juntos como Hermanos" (viendo letra en app)
-├─ KYRIE: 🧎 De rodillas, cantan Kyrie
-├─ GLORIA: 🚶 De pie, cantan Gloria
-├─ SALMO: 🪑 Sentados, escuchan salmo
-├─ ALELUYA: 🚶 De pie, cantan Aleluya
-├─ OFERTORIO: 🪑 Sentados, cantan canto de ofertorio
-├─ SANTO: 🚶 De pie, cantan Santo
-├─ CORDERO: 🧎 De rodillas, cantan Cordero de Dios
-├─ COMUNIÓN: Cantan "Pescador de Hombres" y "Pan de Vida"
-└─ SALIDA: 🚶 De pie, cantan canto de despedida
-
-11:00 AM - Post-Misa
-├─ Fieles comparten que cantaron mejor
-├─ Algunos descargan partituras para ensayar
-└─ Coro recibe felicitaciones
-
-LUNES SIGUIENTE
-├─ Coro comienza a planificar próxima misa
-└─ Ciclo se repite
+LUNES
+└─ El ciclo se repite
 ```
 
 ---
 
-## ⚖️ Reglas de Negocio
+## 6. Reglas de negocio
 
-### RN-01: Restricción de Cantos por Categoría
+### RN-01 · Vigencia del cantoral
+Un cantoral está **vigente hasta las 23:59 del día de su Misa**. Después pasa al **Archivo** y al
+**Historial**; el Pueblo fiel deja de verlo en su pantalla principal (solo muestra las próximas 2
+semanas), pero el Coro lo consulta siempre.
 
-**Regla:** Solo la categoría "Comunión" permite múltiples cantos. Todas las demás categorías solo permiten UN CANTO.
+### RN-02 · Kyrie arrastra el resto del ordinario
+Al agregar un **Kyrie**, la app ofrece agregar el **Santo** y el **Cordero** de la **misma Misa**,
+para mantener coherencia musical dentro del ordinario.
 
-**Razón Litúrgica:** 
-- Durante la Comunión, puede haber varios cantos seguidos mientras los fieles comulgan
-- Las demás partes de la misa tienen un momento específico
+### RN-03 · Gloria es opcional y estacional
+Al agregar el Kyrie se **pregunta** si se incluye el **Gloria**: no se canta en Adviento ni
+Cuaresma, sí en Navidad, Pascua, domingos y solemnidades. Decide el usuario; la app no bloquea.
 
-**Implementación:**
-```typescript
-if (category !== 'Comunión') {
-  // Remover cantos existentes de esta categoría
-  const existing = cantoral.filter(s => s.category === category);
-  existing.forEach(s => onRemoveFromCantoral(s.id));
-}
-```
+### RN-04 · Aleluya en Cuaresma
+Del Miércoles de Ceniza al Viernes Santo, el momento "Aleluya" se presenta como **"Aclamación al
+Evangelio"**. Si se publica un Aleluya en Cuaresma, la **revisión litúrgica** lo advierte sin
+impedir la publicación.
 
----
+### RN-05 · Aspersión pascual
+En tiempo pascual la app pregunta si el rito penitencial es **Kyrie** o **Aspersión**, y cambia el
+momento correspondiente.
 
-### RN-02: Kyrie Agrega Automáticamente Santo y Cordero
+### RN-06 · El instrumento ordena el catálogo
+Los cantos que coinciden con el **instrumento preferido** de la sesión aparecen primero.
 
-**Regla:** Al agregar un Kyrie, se agregan automáticamente el Santo y Cordero de Dios de la misma misa.
+### RN-07 · Aviso de canto repetido
+Al agregar un canto usado **la semana anterior**, la app advierte e indica en qué momento se usó. En
+**Adviento y Cuaresma** sugiere además moverlo a otro momento. **Excluye el ordinario** (Kyrie,
+Gloria, Santo, Cordero), donde repetir es lo normal. Es un aviso, no un bloqueo.
 
-**Razón Litúrgica:**
-- Estos tres cantos forman parte del Ordinario de la Misa
-- Deben ser de la misma misa para mantener coherencia musical
+### RN-08 · Un cantoral por Misa
+No se permite duplicar la combinación **parroquia + fecha + hora**.
 
-**Implementación:**
-```typescript
-if (song.category === 'Kyrie' && song.massName) {
-  onAddToCantoral(song);
-  
-  const santo = findSong({ massName: song.massName, category: 'Santo' });
-  const cordero = findSong({ massName: song.massName, category: 'Cordero de Dios' });
-  
-  if (santo) onAddToCantoral(santo);
-  if (cordero) onAddToCantoral(cordero);
-}
-```
+### RN-09 · La capilla se comporta como parroquia
+Una capilla tiene **cantoral y público propios**. Etiqueta canónica:
+`"Parroquia - Diócesis · Capilla"`. Quien elige "Toda la parroquia" no ve los de las capillas y
+viceversa.
 
----
+### RN-10 · Los roles los cambia solo el administrador principal
+Aplicado en la UI **y** por trigger en base de datos.
 
-### RN-03: Gloria es Opcional
+### RN-11 · Revisión litúrgica: advierte, nunca bloquea
+Gloria/Aleluya en Cuaresma, canto no litúrgico en un momento de la Misa, secuencias faltantes en
+Pascua/Pentecostés. Todos son **avisos**: la decisión pastoral es del coro.
 
-**Regla:** Al agregar Kyrie, se pregunta al usuario si desea agregar también el Gloria.
-
-**Razón Litúrgica:**
-- El Gloria NO se canta en Adviento y Cuaresma
-- El Gloria SÍ se canta en Navidad, Pascua, Domingos y Solemnidades
-
-**Implementación:**
-- Se muestra un diálogo preguntando
-- El usuario decide según el tiempo litúrgico
+> #### ⚠️ Reglas derogadas
+> - **"Solo el momento Comunión admite varios cantos"** — **ya no rige**. Verificado en
+>   `src/App.tsx` (`handleAddToCantoral`): la única restricción es no repetir el mismo canto (por
+>   `id`); cualquier momento acepta varios. Documentado como regla activa hasta jul-2026 por error.
+> - **"Validación de cantos mínimos obligatorios"** — nunca se implementó como bloqueo; su rol lo
+>   cumple la revisión litúrgica (RN-11).
 
 ---
 
-### RN-04: Aleluya en Cuaresma
+## 7. Casos límite
 
-**Regla:** Durante la Cuaresma (Miércoles de Ceniza → Viernes Santo), el "Aleluya" se reemplaza por "Aclamación al Evangelio".
+### EC-01 · Un usuario cambia de rol
+El rol permanente lo cambia el **administrador principal**. Para actuar puntualmente con otro rol
+(p. ej. Coro que va a Misa a otra parroquia), se usa el **rol de sesión** al ingresar.
 
-**Razón Litúrgica:**
-- El Aleluya es un canto de alegría
-- Durante Cuaresma se omite por ser tiempo penitencial
+### EC-02 · Video de YouTube eliminado
+El canto queda sin reproducción. El fiel ve el error y avisa al coro o al encargado del canal, que
+resincroniza o corrige el canto en el Panel Admin.
 
-**Implementación:**
-```typescript
-function getGospelAcclamationName(date: Date): string {
-  return isLent(date) ? 'Aclamación al Evangelio' : 'Aleluya';
-}
-```
+### EC-03 · Fecha sin celebración en el calendario
+El constructor ofrece **"Agregar solemnidad"**. La celebración queda **persistida**
+(`custom_liturgical_dates`): global si la crea el Admin, por parroquia si la crea el Coro.
 
----
+### EC-04 · Misa vespertina del sábado
+Se publica como **I Vísperas**: aparece bajo el **sábado** con badge 🕯️ pero con la **celebración del
+domingo**. Evita el error clásico de publicarla con la celebración del sábado.
 
-### RN-05: Instrumento Preferido Filtra Resultados
+### EC-05 · Parroquia sin cantorales
+Estado vacío explícito. Causas típicas: el coro aún no publica, o el fiel eligió una
+parroquia/capilla distinta a la suya.
 
-**Regla:** Los cantos del instrumento preferido del coro aparecen primero en las búsquedas.
+### EC-06 · Varios coros en la misma parroquia
+Comparten el mismo espacio de cantorales; se distinguen por **fecha + horario** de Misa (RN-08).
+Si necesitan separación real, la vía es la **capilla** (RN-09).
 
-**Razón Práctica:**
-- Facilita que el coro encuentre cantos compatibles con su instrumentación
+### EC-07 · Sin conexión dentro del templo
+Las letras de cantorales abiertos recientemente y los PDF descargados quedan disponibles vía **Cache
+Storage** (`offlineCache.ts`). **No hay service worker de aplicación** — `sw.js` está desactivado a
+propósito. Recomendación al usuario: descargar el folleto antes de entrar.
 
-**Implementación:**
-```typescript
-const sorted = songs.sort((a, b) => {
-  if (a.version === preferredInstrument && b.version !== preferredInstrument) return -1;
-  if (a.version !== preferredInstrument && b.version === preferredInstrument) return 1;
-  return a.title.localeCompare(b.title);
-});
-```
+### EC-08 · El Full Score tarda en generarse
+Es esperable: la app descarga cada partitura desde Drive para incrustarla. El folleto del Pueblo
+(solo letra) es inmediato.
 
----
+### EC-09 · Salmo del libro no disponible para una celebración
+Se muestra "salmo del libro **pendiente**": la celebración todavía no está en el índice. Lo resuelve
+el Admin agregándola.
 
-### RN-06: Cantoral Debe Tener Cantos Mínimos
-
-**Regla (sugerida):** Un cantoral debe tener al menos los cantos esenciales:
-- Entrada
-- Kyrie o Gloria
-- Santo
-- Cordero de Dios
-- Comunión
-- Salida
-
-**Razón Litúrgica:**
-- Estos son los momentos principales de la misa
-- Sin ellos, el cantoral está incompleto
-
-**Implementación (futura):**
-```typescript
-function validateCantoral(cantoral: Song[]): string[] {
-  const errors = [];
-  const categories = cantoral.map(s => s.category);
-  
-  if (!categories.includes('Entrada')) errors.push('Falta canto de Entrada');
-  if (!categories.includes('Santo')) errors.push('Falta Santo');
-  if (!categories.includes('Cordero de Dios')) errors.push('Falta Cordero de Dios');
-  if (!categories.includes('Comunión')) errors.push('Falta canto de Comunión');
-  
-  return errors;
-}
-```
-
----
-
-## ⚠️ Escenarios de Edge Cases
-
-### EC-01: Usuario Cambia de Rol
-
-**Escenario:** Un usuario era Pueblo Fiel y ahora es miembro del coro.
-
-**Solución:**
-1. Usuario va a Settings
-2. Usuario solicita cambio de rol a Admin (fuera del sistema)
-3. Admin actualiza rol en base de datos
-4. Usuario cierra sesión y vuelve a iniciar
-5. Sistema carga nuevo rol
-6. Usuario ahora ve ChoirView
-
----
-
-### EC-02: Video de YouTube Eliminado
-
-**Escenario:** Un canto tiene un YouTube ID pero el video fue eliminado.
-
-**Comportamiento Actual:**
-- El iframe de YouTube muestra mensaje de error automáticamente
-
-**Mejora Futura:**
-- Admin puede actualizar YouTube ID
-- Sistema detecta videos no disponibles
-
----
-
-### EC-03: Cantoral para Fecha Pasada
-
-**Escenario:** Coro intenta publicar cantoral para una fecha que ya pasó.
-
-**Comportamiento:**
-- Sistema permite la publicación
-- Muestra warning: "Esta fecha ya pasó"
-- Útil para archivar cantorales históricos
-
----
-
-### EC-04: Dos Cantos con Mismo Nombre de Misa
-
-**Escenario:** Admin agrega "Kyrie" de "Misa Criolla" con versión "Guitarra" y "Órgano".
-
-**Comportamiento:**
-- Al agregar Kyrie (Guitarra), se agrega Santo y Cordero (Guitarra)
-- Al agregar Kyrie (Órgano), se reemplaza todo por versión Órgano
-- Mantiene coherencia instrumental
-
----
-
-### EC-05: Parroquia Sin Cantorales
-
-**Escenario:** Pueblo Fiel de parroquia nueva que no tiene cantorales publicados.
-
-**Comportamiento:**
-- Sistema muestra mensaje: "No hay cantorales publicados para tu parroquia"
-- Sugiere ver cantorales de otras parroquias
-- Sugiere contactar al coro de su parroquia
-
----
-
-### EC-06: Cuaresma en Transición
-
-**Escenario:** Coro crea cantoral para Domingo de Ramos (último domingo de Cuaresma).
-
-**Comportamiento:**
-- Sistema detecta que es Cuaresma
-- Muestra "Aclamación al Evangelio" en lugar de "Aleluya"
-- Muestra aviso morado explicando
-
----
-
-### EC-07: Múltiples Coros en Misma Parroquia
-
-**Escenario:** Parroquia tiene Coro de 10 AM y Coro de 18:00.
-
-**Solución:**
-- Cada coro publica cantorales con horarios diferentes
-- Pueblo Fiel filtra por hora de misa
-- Cada cantoral indica claramente la hora
-
----
-
-### EC-08: Cantoral Muy Largo (Misa Solemne)
-
-**Escenario:** Misa de Navidad con 15+ cantos.
-
-**Comportamiento:**
-- Sistema permite agregar todos los cantos necesarios
-- Vista previa usa scroll
-- Performance optimizada con lazy loading
-
----
-
-### EC-09: Partitura Demasiado Grande
-
-**Escenario:** Admin intenta subir partitura de 50 MB.
-
-**Comportamiento:**
-- Sistema rechaza archivo
-- Muestra error: "Archivo muy grande, máximo 10 MB"
-- Sugiere comprimir PDF
-
----
-
-### EC-10: Usuario Sin Conexión a Internet
-
-**Escenario:** Fiel quiere ver cantoral pero no tiene internet en la iglesia.
-
-**Solución Futura:**
-- Implementar PWA con service workers
-- Cachear cantorales más recientes
-- Permitir acceso offline
-
----
-
-## 🎯 Conclusión
-
-Esta documentación cubre:
-
-✅ **Todos los casos de uso principales** por rol  
-✅ **Flujos completos** de principio a fin  
-✅ **Reglas de negocio litúrgicas** implementadas  
-✅ **Escenarios edge cases** contemplados  
-
-**Para desarrolladores:** Usar estos casos de uso como guía para testing y validación.
-
-**Para product owners:** Usar estos flujos para demos y capacitación de usuarios.
+### EC-10 · Push que no llega
+Se activan **por dispositivo**. Causas: permiso del navegador denegado, o iPhone con iOS < 16.4 o sin
+la app en pantalla de inicio. *Ajustes → Notificaciones* incluye **envío de prueba** para
+diagnosticar.
