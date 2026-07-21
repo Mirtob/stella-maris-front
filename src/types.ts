@@ -85,6 +85,11 @@ export interface Song {
   author?: string;
   version?: 'Coro' | 'Guitarra' | 'Órgano';
   instrument?: 'Coro' | 'Guitarra' | 'Órgano'; // Alias de version para compatibilidad
+  /** Instrumentos con los que sirve este canto (columna `instruments` de la BD).
+   *  Vacío o ausente = sirve para TODOS los instrumentos (así lo trata SongManager).
+   *  `version` es solo el primero de esta lista; para decidir compatibilidad usar
+   *  siempre este arreglo vía `songMatchesInstrument()`. */
+  instruments?: Array<'Coro' | 'Guitarra' | 'Órgano'>;
   massName?: string; // Para agrupar Kyrie, Gloria, Santo, Cordero de la misma misa
   tags?: string[]; // Tags de YouTube para sugerencias según tiempo litúrgico
   thumbnailUrl?: string; // URL del thumbnail del video de YouTube

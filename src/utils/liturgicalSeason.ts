@@ -141,3 +141,37 @@ export function getGospelAcclamationName(date: Date = new Date()): string {
 export function getGospelAcclamationIcon(date: Date = new Date()): string {
   return isLent(date) ? '📿' : '🎺';
 }
+
+/**
+ * Rótulo de la categoría "Aleluya" para la fecha de la Misa.
+ *
+ * En Cuaresma la tarjeta del constructor se llama "Aclamación al Evangelio",
+ * pero el canto sigue perteneciendo al momento `aleluya` de la BD: esto cambia
+ * SOLO lo que se muestra. Para buscar cantos hay que seguir comparando por
+ * momento (ver `categoryToMoment`, que ya mapea ambos rótulos a 'aleluya').
+ *
+ * Ojo: pásale SIEMPRE la fecha de la Misa que se está armando, no la de hoy.
+ */
+export function displayCategoryForDate(category: string, massDate: Date): string {
+  if (category === 'Aleluya' && isLent(massDate)) return 'Aclamación al Evangelio';
+  return category;
+}
+
+/**
+ * ¿Hay que ocultar este canto por ser un "Aleluya" en Cuaresma?
+ *
+ * Durante la Cuaresma se omite el Aleluya, así que los cantos cuyo título lo
+ * anuncia no deben ofrecerse. Es un filtro por TÍTULO y por tanto frágil (depende
+ * de cómo esté escrito en el catálogo); actúa como red de seguridad sobre el
+ * filtro por temporada, que es el mecanismo principal y usa datos limpios.
+ *
+ * No aplica a "Aleluya Triple" de la Vigilia Pascual, que ya no es Cuaresma.
+ */
+export function isAlleluiaTitleInLent(title: string, massDate: Date): boolean {
+  if (!isLent(massDate)) return false;
+  const normalized = title
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
+  return normalized.includes('aleluya') || normalized.includes('alleluia');
+}

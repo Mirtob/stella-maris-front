@@ -9,7 +9,10 @@ import { matchesSearch } from '../../utils/textSearch';
 import { AddGloriaDialog } from '../cantoral/AddGloriaDialog';
 import { AddPadreNuestroDialog, PadreNuestroLanguage } from '../cantoral/AddPadreNuestroDialog';
 import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji } from '../../utils/specialLiturgicalDays';
-import { getCurrentLiturgicalSeason } from '../../utils/liturgicalSeason';
+import { getCurrentLiturgicalSeason, isAlleluiaTitleInLent } from '../../utils/liturgicalSeason';
+import { categoryToMoment } from '../../utils/category';
+import { sortByInstrument } from '../../utils/instrument';
+import { parseYmdLocal } from '../../utils/dateLocal';
 import { isOrdinary } from '../../utils/ordinary';
 import { resolveOrdinarySheetMusic } from '../../utils/ordinarySheetMusic';
 import { previousUseOf, type PreviousUsage, type UsageOccurrence } from '../../utils/previousUsage';
@@ -29,6 +32,10 @@ interface CategorySearchProps {
   preferredInstrument?: InstrumentType;
   /** Uso de cantos en el cantoral anterior (la "semana pasada"), para avisar repeticiones. */
   previousUsage?: PreviousUsage | null;
+  /** Fecha de la Misa que se está armando (YYYY-MM-DD). El tiempo litúrgico y el
+   *  rótulo del Aleluya se calculan contra ESTA fecha, no contra la de hoy: un
+   *  cantoral de Cuaresma armado en julio debe comportarse como Cuaresma. */
+  massDate?: string;
 }
 
 export function CategorySearch({ 
@@ -43,6 +50,7 @@ export function CategorySearch({
   onPlaySong,
   preferredInstrument,
   previousUsage,
+  massDate,
 }: CategorySearchProps) {
   const { songs } = useSongs();
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,8 +64,15 @@ export function CategorySearch({
   // Canto que ya se usó en el cantoral anterior: se pide confirmación antes de agregarlo.
   const [pendingRepeat, setPendingRepeat] = useState<{ song: Song; occ: UsageOccurrence[]; title: string } | null>(null);
 
-  // Obtener el tiempo litúrgico actual
-  const currentSeason = getCurrentLiturgicalSeason();
+  // Tiempo litúrgico de la FECHA DE LA MISA (no de hoy): el coro suele armar el
+  // cantoral con días o semanas de anticipación, y a veces cruzando de tiempo.
+  const massDateObj = massDate ? parseYmdLocal(massDate) : new Date();
+  const currentSeason = getCurrentLiturgicalSeason(massDateObj);
+
+  // El momento canónico es lo que identifica a la categoría. Necesario porque en
+  // Cuaresma la tarjeta se rotula "Aclamación al Evangelio" pero los cantos siguen
+  // guardados en el momento 'aleluya'.
+  const categoryMoment = categoryToMoment(category);
 
   // **FUNCIÓN AUXILIAR**: Verificar si un canto está en el cantoral
   const isInCantoral = (songId: string) => {
@@ -70,13 +85,32 @@ export function CategorySearch({
 
   // Un canto pertenece a una categoría si es su parte principal O una de las
   // partes adicionales donde también sirve (recommendedCategories).
-  const songInCategory = (song: Song, cat: string) =>
-    song.category === cat || (song.recommendedCategories?.includes(cat) ?? false);
+  // La comparación cae al MOMENTO cuando los rótulos difieren pero designan la
+  // misma parte de la Misa ('Aclamación al Evangelio' ≡ 'Aleluya' ≡ 'aleluya').
+  const songInCategory = (song: Song, cat: string) => {
+    if (song.category === cat) return true;
+    if (song.recommendedCategories?.includes(cat)) return true;
+    const moment = categoryToMoment(cat);
+    if (song.massMoment === moment) return true;
+    return song.extraMoments?.includes(moment) ?? false;
+  };
+
+  // En Cuaresma se omite el Aleluya: no ofrecer cantos que lo anuncian en el título.
+  //
+  // Excepción: el "Aleluya Triple" de la Vigilia Pascual es precisamente el canto
+  // que devuelve el Aleluya tras la Cuaresma, así que nunca se filtra. Hace falta
+  // pedirlo explícitamente porque el coro puede tener aún la fecha del Sábado Santo
+  // sin fijar (o una de Cuaresma) cuando elige la celebración de la Vigilia.
+  const isEasterVigilAlleluia = category === 'Aleluya Triple';
+  const hiddenByLent = (song: Song) =>
+    categoryMoment === 'aleluya'
+    && !isEasterVigilAlleluia
+    && isAlleluiaTitleInLent(song.title, massDateObj);
 
   // **SUGERENCIAS LITÚRGICAS**: Filtrar cantos por categoría Y tiempo litúrgico
   const getSuggestedSongs = (): Song[] => {
-    // Obtener todos los cantos de esta categoría
-    const categorySongs = songs.filter(song => songInCategory(song, category));
+    // Obtener todos los cantos de esta categoría (sin los Aleluyas si es Cuaresma)
+    const categorySongs = songs.filter(song => songInCategory(song, category) && !hiddenByLent(song));
 
     // Filtrar por tiempo litúrgico
     const suggestedSongs = categorySongs.filter(song => {
@@ -105,32 +139,22 @@ export function CategorySearch({
     
     // Excluir cantos que ya están en el cantoral
     const availableSongs = suggestedSongs.filter(song => !isInCantoral(song.id));
-    
-    // Ordenar por instrumento preferido si está definido
-    if (preferredInstrument) {
-      availableSongs.sort((a, b) => {
-        const aMatch = a.version === preferredInstrument ? 1 : 0;
-        const bMatch = b.version === preferredInstrument ? 1 : 0;
-        return bMatch - aMatch;
-      });
-    }
-    
+
+    // Los compatibles con el instrumento del coro, primero
+    const ordered = sortByInstrument(availableSongs, preferredInstrument);
+
     // Retornar solo los primeros 3 como sugerencias
-    return availableSongs.slice(0, 3);
+    return ordered.slice(0, 3);
   };
 
   const suggestedSongs = getSuggestedSongs();
 
-  let categorySongs = songs.filter(song => songInCategory(song, category));
-
-  // Sort by preferred instrument if available
-  if (preferredInstrument) {
-    categorySongs = categorySongs.sort((a, b) => {
-      const aMatch = a.version === preferredInstrument ? 1 : 0;
-      const bMatch = b.version === preferredInstrument ? 1 : 0;
-      return bMatch - aMatch;
-    });
-  }
+  // Listado completo de la categoría, sin los Aleluyas si la Misa cae en Cuaresma
+  // y con los cantos del instrumento del coro arriba.
+  const categorySongs = sortByInstrument(
+    songs.filter(song => songInCategory(song, category) && !hiddenByLent(song)),
+    preferredInstrument,
+  );
   
   // Búsqueda insensible a acentos: "comunion" encuentra "Comunión",
   // "tu reino" encuentra "Tú Reinarás", etc.

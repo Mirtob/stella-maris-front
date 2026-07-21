@@ -17,8 +17,8 @@ import { resolvePsalm } from '../../data/psalmIndex';
 import { AddSolemnityModal } from '../liturgy/AddSolemnityModal';
 import { addCustomLiturgicalDate, toLiturgicalDate } from '../../services/liturgicalDates';
 import { computeUsage, resolveAnnualTarget } from '../../utils/previousUsage';
-import { getTodayLocal, formatYmdForDisplay } from '../../utils/dateLocal';
-import { getGospelAcclamationName, getGospelAcclamationIcon, getCurrentLiturgicalSeason } from '../../utils/liturgicalSeason';
+import { getTodayLocal, formatYmdForDisplay, parseYmdLocal } from '../../utils/dateLocal';
+import { getGospelAcclamationName, getGospelAcclamationIcon, getCurrentLiturgicalSeason, displayCategoryForDate } from '../../utils/liturgicalSeason';
 import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji, getBuildableCelebrations, SpecialLiturgicalDay } from '../../utils/specialLiturgicalDays';
 import { useSongs } from '../../hooks/useSongs';
 
@@ -77,6 +77,10 @@ export function ChoirView({
   // Fecha de la Misa para la que se arma el cantoral: fija la celebración/ciclo desde el
   // inicio (para cargar el salmo del libro) y pre-llena la fecha al publicar.
   const [massDate, setMassDate] = useState(getTodayLocal());
+  // Todo lo litúrgico (tiempo, rótulo del Aleluya, aspersión) se decide contra la
+  // fecha de la MISA, no contra la de hoy: el cantoral se arma con anticipación y
+  // puede cruzar de un tiempo litúrgico a otro.
+  const massDateObj = useMemo(() => parseYmdLocal(massDate), [massDate]);
   const [massTime, setMassTime] = useState('10:00');
   const [massType, setMassType] = useState<MassType>('dia');
   // Antífona del salmo (editable): por defecto la del índice de la celebración; el coro
@@ -113,7 +117,7 @@ export function ChoirView({
   // Tip contextual del constructor (F4): 1ª vez que se abre una categoría.
   const [showConstructorTip, setShowConstructorTip] = useState(false);
   const { songs: allSongs } = useSongs();
-  const currentSeason = getCurrentLiturgicalSeason();
+  const currentSeason = getCurrentLiturgicalSeason(massDateObj);
 
   // Celebraciones que se pueden armar ahora. En Cuaresma/Semana Santa surgen los
   // oficios del Triduo para prepararlos con anticipación. El constructor se
@@ -150,14 +154,48 @@ export function ChoirView({
     || selectedCelebration === 'DomingoResurreccion'
     || selectedCelebration === 'VigiliaPascual';
 
-  // Obtener el nombre dinámico del Aleluya (cambia en Cuaresma)
-  const gospelAcclamationName = getGospelAcclamationName();
-  const gospelAcclamationIcon = getGospelAcclamationIcon();
+  // Nombre dinámico del Aleluya: "Aclamación al Evangelio" si la Misa cae en Cuaresma.
+  const gospelAcclamationName = getGospelAcclamationName(massDateObj);
+  const gospelAcclamationIcon = getGospelAcclamationIcon(massDateObj);
 
   // Día litúrgico especial = la celebración elegida en el constructor.
   const specialDayName = getSpecialDayName(specialDay);
   const specialDayEmoji = getSpecialDayEmoji(specialDay);
   const categoryConfig = getCategoriesForSpecialDay(specialDay);
+
+  // ── Vigilia Pascual: número de lecturas del Antiguo Testamento ──────────────
+  // El Misal prevé 7 lecturas del AT, pero por razones pastorales se pueden
+  // reducir (el mínimo son 3, y siempre debe leerse la del Éxodo). El coro elige
+  // cuántas se harán y el constructor muestra solo esos salmos.
+  const isVigil = specialDay === 'VigiliaPascual';
+  const [atReadings, setAtReadings] = useState(7);
+
+  const visibleCategories = useMemo(() => {
+    if (!isVigil) return categoryConfig.categories;
+    return categoryConfig.categories.filter((cat) => {
+      const m = /^Salmo AT (\d+)$/.exec(cat);
+      return m ? Number(m[1]) <= atReadings : true;
+    });
+  }, [isVigil, categoryConfig.categories, atReadings]);
+
+  // Al reducir el número de lecturas, sacar del cantoral los cantos de los salmos
+  // que dejan de mostrarse: si se quedaran, irían al cantoral publicado sin tener
+  // una tarjeta donde verlos ni editarlos.
+  const handleChangeAtReadings = (n: number) => {
+    const dropped = cantoral.filter((s) => {
+      const m = /^Salmo AT (\d+)$/.exec(s.category);
+      return m ? Number(m[1]) > n : false;
+    });
+    dropped.forEach((s) => onRemoveFromCantoral(s.id));
+    setAtReadings(n);
+    if (dropped.length > 0) {
+      toast.info(
+        dropped.length === 1
+          ? 'Se quitó 1 canto de las lecturas eliminadas'
+          : `Se quitaron ${dropped.length} cantos de las lecturas eliminadas`,
+      );
+    }
+  };
 
   // Celebración y ciclo (A/B/C) derivados de la fecha de la Misa, para el salmo del libro.
   // `celebTick` fuerza recomputar tras agregar una celebración custom.
@@ -184,7 +222,7 @@ export function ChoirView({
     setSelectedInstrumentForMass(instrument);
     setShowInstrumentModal(false);
     toast.success(`Instrumento seleccionado: ${instrument}`, {
-      description: 'Los cantos se filtrarán para este instrumento'
+      description: 'Los cantos para este instrumento aparecerán primero'
     });
   };
 
@@ -451,14 +489,55 @@ export function ChoirView({
           </div>
         )}
 
+        {/* Vigilia Pascual — número de lecturas del Antiguo Testamento */}
+        {isVigil && (
+          <div className="mt-6 bg-indigo-100/60 dark:bg-indigo-900/30 backdrop-blur-sm border-2 border-indigo-400/50 dark:border-indigo-600/50 rounded-xl p-4 transition-colors">
+            <div className="flex gap-3">
+              <div className="text-2xl">📖</div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-bold text-indigo-950 dark:text-indigo-100 mb-1">
+                  Lecturas del Antiguo Testamento
+                </h3>
+                <p className="text-sm text-indigo-900 dark:text-indigo-200 mb-3">
+                  El Misal prevé 7 lecturas con su salmo. Por razones pastorales se pueden reducir;
+                  la del Éxodo (paso del Mar Rojo) nunca se omite.
+                </p>
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Número de lecturas del Antiguo Testamento">
+                  {[3, 4, 5, 6, 7].map((n) => {
+                    const active = n === atReadings;
+                    return (
+                      <button
+                        key={n}
+                        onClick={() => handleChangeAtReadings(n)}
+                        aria-pressed={active}
+                        className={`min-w-[3rem] px-4 py-2.5 rounded-xl font-bold text-base border-2 transition-all active:scale-95 ${
+                          active
+                            ? 'bg-gradient-to-br from-brand to-brand-strong text-white border-brand-border shadow-lg'
+                            : 'bg-white/70 dark:bg-white/10 text-indigo-950 dark:text-indigo-100 border-indigo-300/60 dark:border-indigo-600/40 hover:bg-white'
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Category Searches - DINÁMICAS según el día litúrgico */}
         <div className="mt-8 space-y-6" data-tour="coro-categorias">
-          {categoryConfig.categories.map((rawCategory) => {
+          {visibleCategories.map((rawCategory) => {
             // En Pascua, el Kyrie puede convertirse en el Rito de Aspersión según
             // lo que elija el coro (se le pregunta al tocar el Kyrie).
-            const category = (isEaster && rawCategory === 'Kyrie' && penitentialChoice === 'aspersion')
+            const afterPenitential = (isEaster && rawCategory === 'Kyrie' && penitentialChoice === 'aspersion')
               ? 'Rito de Aspersión'
               : rawCategory;
+            // En Cuaresma el Aleluya se omite y la tarjeta pasa a llamarse
+            // "Aclamación al Evangelio". Solo cambia el rótulo: el canto sigue
+            // perteneciendo al momento 'aleluya' de la BD.
+            const category = displayCategoryForDate(afterPenitential, massDateObj);
             // Obtener el ícono según la categoría
             const getCategoryIcon = (cat: string): string => {
               const icons: Record<string, string> = {
@@ -531,6 +610,7 @@ export function ChoirView({
                 onPlaySong={onPlaySong}
                 preferredInstrument={preferredInstrument}
                 previousUsage={previousUsage}
+                massDate={massDate}
               />
             );
           })}
