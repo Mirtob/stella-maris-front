@@ -48,16 +48,14 @@ export function songMatchesInstrument(song: Song, instrument?: InstrumentType): 
 }
 
 /**
- * Ordena dejando primero los cantos compatibles con el instrumento, conservando
- * el orden relativo dentro de cada grupo (orden estable). No oculta nada: el
- * catálogo aún es pequeño y filtrar duro dejaría momentos sin ningún canto.
+ * Deja SOLO los cantos que sirven para el instrumento elegido en esta Misa.
+ *
+ * Es un filtro duro, a propósito: el coro que toca con guitarra no debe ver
+ * versiones de órgano. Un momento puede quedar sin cantos y eso es correcto —
+ * significa que aún no se ha grabado esa versión. Quien consuma esta función
+ * debe distinguir en la UI "no hay para tu instrumento" de "no hay nada".
  */
-export function sortByInstrument(songs: Song[], instrument?: InstrumentType): Song[] {
+export function filterByInstrument(songs: Song[], instrument?: InstrumentType): Song[] {
   if (!instrument) return songs;
-  const matching: Song[] = [];
-  const rest: Song[] = [];
-  for (const s of songs) {
-    (songMatchesInstrument(s, instrument) ? matching : rest).push(s);
-  }
-  return [...matching, ...rest];
+  return songs.filter((s) => songMatchesInstrument(s, instrument));
 }

@@ -1,5 +1,5 @@
 import { isLent, displayCategoryForDate, isAlleluiaTitleInLent, getCurrentLiturgicalSeason } from '../../src/utils/liturgicalSeason';
-import { songMatchesInstrument, sortByInstrument } from '../../src/utils/instrument';
+import { songMatchesInstrument, filterByInstrument } from '../../src/utils/instrument';
 import { categoryToMoment } from '../../src/utils/category';
 
 let pass = 0, fail = 0;
@@ -79,17 +79,24 @@ check('fallback a version cuando no hay array',
 check('sin instrumento elegido → todo sirve',
   songMatchesInstrument(s('7', 'g', ['Guitarra']), undefined), true);
 
-console.log('\n== Orden: compatibles primero, estable ==');
+console.log('\n== Filtro duro: solo el instrumento elegido ==');
+// Valores en el formato REAL de la BD (minúscula, sin tilde).
 const lista = [
-  s('g1', 'Guitarra 1', ['Guitarra']),
-  s('o1', 'Órgano 1', ['Órgano']),
+  s('g1', 'Guitarra 1', ['guitarra']),
+  s('o1', 'Organo 1', ['organo']),
   s('t1', 'Todos 1', []),
-  s('g2', 'Guitarra 2', ['Guitarra']),
-  s('o2', 'Órgano 2', ['Coro', 'Órgano']),
+  s('g2', 'Ambos', ['coro', 'guitarra', 'organo']),
+  s('o2', 'Coro y organo', ['coro', 'organo']),
 ];
-check('con Órgano', sortByInstrument(lista, 'Órgano').map((x: any) => x.id), ['o1', 't1', 'o2', 'g1', 'g2']);
-check('con Guitarra', sortByInstrument(lista, 'Guitarra').map((x: any) => x.id), ['g1', 't1', 'g2', 'o1', 'o2']);
-check('sin preferencia → intacto', sortByInstrument(lista, undefined).map((x: any) => x.id), ['g1', 'o1', 't1', 'g2', 'o2']);
+check('con Guitarra', filterByInstrument(lista, 'Guitarra').map((x: any) => x.id), ['g1', 't1', 'g2']);
+check('con Órgano', filterByInstrument(lista, 'Órgano').map((x: any) => x.id), ['o1', 't1', 'g2', 'o2']);
+check('sin preferencia → intacto', filterByInstrument(lista, undefined).map((x: any) => x.id), ['g1', 'o1', 't1', 'g2', 'o2']);
+
+// El catálogo tal como está hoy: los 21 cantos marcados solo ["organo"]. Un coro
+// de guitarra debe ver CERO hasta que se publiquen esas versiones.
+const soloOrgano = Array.from({ length: 21 }, (_, i) => s('c' + i, 'Canto ' + i, ['organo']));
+check('catálogo solo-órgano + Guitarra → 0', filterByInstrument(soloOrgano, 'Guitarra').length, 0);
+check('catálogo solo-órgano + Órgano → 21', filterByInstrument(soloOrgano, 'Órgano').length, 21);
 
 console.log('\n== Tiempo litúrgico por fecha de la Misa ==');
 check('2026-03-01 → Cuaresma', getCurrentLiturgicalSeason(d('2026-03-01')), 'Cuaresma');

@@ -222,7 +222,7 @@ export function ChoirView({
     setSelectedInstrumentForMass(instrument);
     setShowInstrumentModal(false);
     toast.success(`Instrumento seleccionado: ${instrument}`, {
-      description: 'Los cantos para este instrumento aparecerán primero'
+      description: 'Solo verás cantos con esta versión'
     });
   };
 
@@ -431,6 +431,7 @@ export function ChoirView({
             onAddToCantoral={onAddToCantoral}
             onPlaySong={onPlaySong}
             cantoral={cantoral}
+            preferredInstrument={preferredInstrument}
           />
         </div>
 
@@ -445,7 +446,7 @@ export function ChoirView({
               <div>
                 <h3 className="text-lg font-bold text-brand-ink mb-1">Instrumento: {preferredInstrument}</h3>
                 <p className="text-base text-brand-ink-soft">
-                  Los cantos con {preferredInstrument} aparecen primero en las búsquedas
+                  Solo se muestran cantos con versión de {preferredInstrument}
                 </p>
               </div>
             </div>

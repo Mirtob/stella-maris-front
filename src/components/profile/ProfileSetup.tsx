@@ -241,7 +241,7 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
               <div className="flex gap-3">
                 <div className="text-3xl">🎵</div>
                 <p className="text-sm sm:text-base text-brand-ink-soft leading-relaxed">
-                  Los cantos para el instrumento que elijas en cada Misa aparecerán primero
+                  En cada Misa verás solo los cantos del instrumento que elijas
                 </p>
               </div>
             </div>

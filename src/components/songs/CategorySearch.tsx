@@ -11,7 +11,7 @@ import { AddPadreNuestroDialog, PadreNuestroLanguage } from '../cantoral/AddPadr
 import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji } from '../../utils/specialLiturgicalDays';
 import { getCurrentLiturgicalSeason, isAlleluiaTitleInLent } from '../../utils/liturgicalSeason';
 import { categoryToMoment } from '../../utils/category';
-import { sortByInstrument } from '../../utils/instrument';
+import { filterByInstrument } from '../../utils/instrument';
 import { parseYmdLocal } from '../../utils/dateLocal';
 import { isOrdinary } from '../../utils/ordinary';
 import { resolveOrdinarySheetMusic } from '../../utils/ordinarySheetMusic';
@@ -140,21 +140,33 @@ export function CategorySearch({
     // Excluir cantos que ya están en el cantoral
     const availableSongs = suggestedSongs.filter(song => !isInCantoral(song.id));
 
-    // Los compatibles con el instrumento del coro, primero
-    const ordered = sortByInstrument(availableSongs, preferredInstrument);
+    // Solo los del instrumento con el que se toca esta Misa
+    const forInstrument = filterByInstrument(availableSongs, preferredInstrument);
 
     // Retornar solo los primeros 3 como sugerencias
-    return ordered.slice(0, 3);
+    return forInstrument.slice(0, 3);
   };
 
   const suggestedSongs = getSuggestedSongs();
 
-  // Listado completo de la categoría, sin los Aleluyas si la Misa cae en Cuaresma
-  // y con los cantos del instrumento del coro arriba.
-  const categorySongs = sortByInstrument(
-    songs.filter(song => songInCategory(song, category) && !hiddenByLent(song)),
-    preferredInstrument,
+  // Catálogo reducido al instrumento de esta Misa. Todo lo que ofrezca o agregue
+  // este componente debe salir de aquí — incluidos los automatismos (Santo/Cordero
+  // del Kyrie, Padre Nuestro), que si no colarían versiones que el coro no toca.
+  const instrumentSongs = filterByInstrument(songs, preferredInstrument);
+
+  // Cantos de esta categoría, sin los Aleluyas si la Misa cae en Cuaresma. Antes
+  // de aplicar el instrumento: sirve para distinguir "no hay nada en el catálogo"
+  // de "hay, pero no para tu instrumento".
+  const categorySongsAnyInstrument = songs.filter(
+    song => songInCategory(song, category) && !hiddenByLent(song),
   );
+
+  // Listado que ve el coro: SOLO su instrumento.
+  const categorySongs = filterByInstrument(categorySongsAnyInstrument, preferredInstrument);
+
+  // Hay repertorio en este momento, pero nada grabado para el instrumento elegido.
+  const emptyForInstrument =
+    categorySongs.length === 0 && categorySongsAnyInstrument.length > 0;
   
   // Búsqueda insensible a acentos: "comunion" encuentra "Comunión",
   // "tu reino" encuentra "Tú Reinarás", etc.
@@ -221,8 +233,8 @@ export function CategorySearch({
       const sameMisa = (s: Song) => !!s.massName && normMisa(s.massName) === normMisa(song.massName);
 
       const findMassPart = (cat: string): Song | null =>
-        songs.find(s => sameMisa(s) && songInCategory(s, cat) && s.version === song.version)
-        ?? songs.find(s => sameMisa(s) && songInCategory(s, cat))
+        instrumentSongs.find(s => sameMisa(s) && songInCategory(s, cat) && s.version === song.version)
+        ?? instrumentSongs.find(s => sameMisa(s) && songInCategory(s, cat))
         ?? null;
 
       const santo = findMassPart('Santo');
@@ -281,7 +293,7 @@ export function CategorySearch({
   const findCatalogPadreNuestro = (language: PadreNuestroLanguage): Song | undefined => {
     const isLatin = language === 'la';
     const isLatinSong = (s: Song) => /\bpater\b|latin|gregor/.test(haystack(s));
-    const candidates = songs.filter(
+    const candidates = instrumentSongs.filter(
       s => songInCategory(s, 'Padre Nuestro') || /padre nuestro|pater noster/.test(haystack(s)),
     );
     return candidates.find(s => (isLatin ? isLatinSong(s) : !isLatinSong(s))) ?? candidates[0];
@@ -586,7 +598,18 @@ export function CategorySearch({
                     Si la categoría entera no tiene cantos disponibles, el problema no
                     es el filtro de búsqueda — el catálogo está vacío y hay que
                     sincronizar con YouTube primero. */}
-                {categorySongs.length === 0 ? (
+                {emptyForInstrument ? (
+                  <>
+                    <p className="text-xl font-bold text-brand-ink-soft mb-2">
+                      Todavía no hay versión para {preferredInstrument}
+                    </p>
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      Este momento tiene {categorySongsAnyInstrument.length}{' '}
+                      {categorySongsAnyInstrument.length === 1 ? 'canto grabado' : 'cantos grabados'} con
+                      otra versión. Cuando se publique la de {preferredInstrument} aparecerá aquí.
+                    </p>
+                  </>
+                ) : categorySongs.length === 0 ? (
                   <>
                     <p className="text-xl font-bold text-brand-ink-soft mb-2">
                       Aún no hay cantos sincronizados
@@ -716,7 +739,7 @@ export function CategorySearch({
       {showGloriaDialog && (
         <AddGloriaDialog
           suggestion={pendingGloria}
-          gloriaSongs={songs.filter(s => songInCategory(s, 'Gloria'))}
+          gloriaSongs={instrumentSongs.filter(s => songInCategory(s, 'Gloria'))}
           massName={pendingKyrie?.massName}
           onSelect={handleSelectGloria}
           onSkip={handleSkipGloria}

@@ -30,7 +30,7 @@ lo esperado y lo obtenido.
 | **Vigilia Pascual** | El **Aleluya Triple NO se oculta**: el Sábado Santo ya no es Cuaresma |
 | Instrumento — formato real | La BD guarda `"organo"`/`"guitarra"` en minúscula y sin tilde; `InstrumentType` usa `"Órgano"`. La comparación normaliza ambos lados |
 | Instrumento | Los dos falsos negativos históricos (array con varios instrumentos, y arreglo vacío = "sirve para todos") |
-| Orden por instrumento | Compatibles primero, orden estable, sin ocultar nada |
+| Filtro por instrumento | Solo se ven los cantos del instrumento elegido; un momento puede quedar en cero y es correcto |
 
 ## Cuidado con los datos de prueba
 

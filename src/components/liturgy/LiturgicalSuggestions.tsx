@@ -1,25 +1,31 @@
 import { useState, useEffect } from 'react';
 import { Sparkles, ChevronLeft, ChevronRight, Play, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { Song } from '../../types';
+import { Song, InstrumentType } from '../../types';
 import { useSongs } from '../../hooks/useSongs';
 import { getCurrentLiturgicalSeason } from '../../utils/liturgicalSeason';
 import { matchesSearch } from '../../utils/textSearch';
+import { filterByInstrument } from '../../utils/instrument';
 
 interface LiturgicalSuggestionsProps {
   onAddToCantoral?: (song: Song) => void;
   onPlaySong?: (song: Song) => void;
   cantoral?: Song[];
+  /** Instrumento de esta Misa. Sin él, el carrusel sugeriría cantos de versiones
+   *  que el coro no puede tocar (y que el constructor sí oculta). */
+  preferredInstrument?: InstrumentType;
 }
 
-export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = [] }: LiturgicalSuggestionsProps) {
+export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = [], preferredInstrument }: LiturgicalSuggestionsProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [autoScroll, setAutoScroll] = useState(true);
 
   // Catálogo real desde Supabase (mismo origen que CategorySearch).
   // Antes usaba mockSongs, lo que armaba 'cantorales aparte' con cantos
   // que no existían en el canal real.
-  const { songs: realSongs } = useSongs();
+  const { songs: allSongs } = useSongs();
+  // Mismo criterio que el constructor: solo cantos del instrumento elegido.
+  const realSongs = filterByInstrument(allSongs, preferredInstrument);
 
   /**
    * Si el canto es un Kyrie con massName (ej. "Misa de los Ángeles"),
