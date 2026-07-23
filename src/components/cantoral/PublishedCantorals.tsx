@@ -41,10 +41,11 @@ const PUEBLO_FIEL_WINDOW_DAYS = 14;
 const secondaryActionBtn =
   'bg-white/80 dark:bg-white/10 text-brand-ink border-2 border-blue-200/70 dark:border-white/15 py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-sm sm:text-base font-bold shadow-sm hover:shadow-md leading-tight text-center';
 
-// Estilo de las acciones de GESTIÓN (nivel 3): más pequeñas y atenuadas, para que no
-// compitan con las de uso diario. Solo Coro/Admin las ven.
-const manageActionBtn =
-  'bg-white/60 dark:bg-white/5 text-blue-900 dark:text-blue-100 border border-blue-200/70 dark:border-white/10 py-2.5 px-3 rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-all text-sm font-bold';
+// Estilo de las acciones de GESTIÓN (nivel 3): botones SOLO ícono, cuadrados y
+// atenuados, en una sola fila. Objetivo táctil de 44px (w-11 h-11). Solo Coro/Admin
+// las ven. Al no tener texto, cada botón lleva aria-label + title.
+const iconManageBtn =
+  'w-11 h-11 flex-shrink-0 bg-white/60 dark:bg-white/5 text-blue-900 dark:text-blue-100 border border-blue-200/70 dark:border-white/10 rounded-lg flex items-center justify-center active:scale-95 transition-all';
 
 export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onListen, userRole, userInstrument, userParishName, onEdit, onClone, onDelete, onShare }: PublishedCantoralsProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -303,33 +304,39 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
           </div>
 
           {/* Nivel 3 — gestión (solo Coro/Admin, sobre los cantorales de la parroquia
-              activa). Fila atenuada y separada: son acciones ocasionales, no deben competir
-              con las de uso diario. Eliminar conserva el color de peligro. */}
+              activa). Fila de íconos, atenuada y alineada a la derecha: son acciones
+              ocasionales que no deben competir con las de uso diario. Eliminar conserva
+              el color de peligro. Sin texto → aria-label + title en cada botón. */}
           {canManage && (onEdit || onDelete || onClone) && (
-            <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-white/40 dark:border-white/20">
+            <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-white/40 dark:border-white/20">
               {onEdit && (
-                <button onClick={() => onEdit(cantoral.id)} className={manageActionBtn}>
-                  <Edit2 className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
-                  Editar
+                <button
+                  onClick={() => onEdit(cantoral.id)}
+                  aria-label="Editar cantoral"
+                  title="Editar"
+                  className={iconManageBtn}
+                >
+                  <Edit2 className="w-5 h-5" strokeWidth={2.5} />
                 </button>
               )}
               {onClone && (
                 <button
                   onClick={() => onClone(cantoral)}
-                  className={manageActionBtn}
-                  title="Copiar estos cantos a una Misa nueva"
+                  aria-label="Usar como base para una Misa nueva"
+                  title="Usar como base"
+                  className={iconManageBtn}
                 >
-                  <Copy className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
-                  Usar como base
+                  <Copy className="w-5 h-5" strokeWidth={2.5} />
                 </button>
               )}
               {onDelete && (
                 <button
                   onClick={() => setPendingDeleteId(cantoral.id)}
-                  className={`${manageActionBtn} col-span-2 text-red-700 dark:text-red-300 border-red-200/80 dark:border-red-800/60`}
+                  aria-label="Eliminar cantoral"
+                  title="Eliminar"
+                  className={`${iconManageBtn} text-red-700 dark:text-red-300 border-red-200/80 dark:border-red-800/60`}
                 >
-                  <Trash2 className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
-                  Eliminar
+                  <Trash2 className="w-5 h-5" strokeWidth={2.5} />
                 </button>
               )}
             </div>
