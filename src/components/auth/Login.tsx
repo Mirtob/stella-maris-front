@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { loginWithGoogle } from '../../services/googleAuth';
 import { signInWithUsernamePassword } from '../../services/supabaseClient';
 import { ForgotPassword } from './ForgotPassword';
-import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
+import logoStellaMaris from 'figma:asset/logo-stella-maris.webp';
 
 interface LoginProps {
   onGoogleLogin: () => void;

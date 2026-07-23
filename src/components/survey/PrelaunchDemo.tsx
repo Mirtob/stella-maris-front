@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Radio, BookOpen, Music, FileX, Check, PartyPopper } from 'lucide-react';
-import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
+import logoStellaMaris from 'figma:asset/logo-stella-maris.webp';
 import { PublishedCantoral } from '../../types';
 import { getCantoralById } from '../../services/cantorals';
 import { PlaylistPlayer } from '../songs/PlaylistPlayer';

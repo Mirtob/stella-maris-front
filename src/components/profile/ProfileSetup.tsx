@@ -3,7 +3,7 @@ import { Cross, Music, Users, ShieldCheck, Church } from 'lucide-react';
 import { UserRole, InstrumentType } from '../../types';
 import { ParishPicker } from './ParishPicker';
 import { isCurrentUserAdmin } from '../../services/admin';
-import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
+import logoStellaMaris from 'figma:asset/logo-stella-maris.webp';
 
 interface ProfileSetupProps {
   onComplete: (role: UserRole, instruments?: InstrumentType[], parishes?: string[]) => void;

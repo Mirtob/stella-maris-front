@@ -2,7 +2,7 @@ import { X, Home, BookOpen, GraduationCap, ShieldCheck, Music, LogOut, User, Set
 import { useEffect, useState } from 'react';
 import { UserProfile, UserRole } from '../../types';
 import { IconButton } from '../common/IconButton';
-import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
+import logoStellaMaris from 'figma:asset/logo-stella-maris.webp';
 
 interface SidebarProps {
   isOpen: boolean;

@@ -35,6 +35,17 @@ interface PublishedCantoralsProps {
 // Pueblo fiel solo ve hasta 2 semanas adelante en el dashboard.
 const PUEBLO_FIEL_WINDOW_DAYS = 14;
 
+// Estilo de las acciones SECUNDARIAS de la tarjeta (nivel 2): tarjeta clara con ícono
+// de color. Recede frente a la acción primaria a todo color, pero mantiene el objetivo
+// táctil (py-3 ≈ 44px) y el alto contraste del texto.
+const secondaryActionBtn =
+  'bg-white/80 dark:bg-white/10 text-brand-ink border-2 border-blue-200/70 dark:border-white/15 py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-sm sm:text-base font-bold shadow-sm hover:shadow-md leading-tight text-center';
+
+// Estilo de las acciones de GESTIÓN (nivel 3): más pequeñas y atenuadas, para que no
+// compitan con las de uso diario. Solo Coro/Admin las ven.
+const manageActionBtn =
+  'bg-white/60 dark:bg-white/5 text-blue-900 dark:text-blue-100 border border-blue-200/70 dark:border-white/10 py-2.5 px-3 rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-all text-sm font-bold';
+
 export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onListen, userRole, userInstrument, userParishName, onEdit, onClone, onDelete, onShare }: PublishedCantoralsProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewingOrdinary, setViewingOrdinary] = useState<string | null>(null);
@@ -218,17 +229,20 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
           </div>
         </div>
 
-        {/* Botones de acción */}
+        {/* Botones de acción — jerarquía en 3 niveles para bajar la carga visual:
+            (1) PRIMARIA: la acción estrella, a todo color y ancho completo.
+            (2) SECUNDARIAS: tarjetas claras con ícono de color (recede frente a la
+                primaria pero siguen siendo objetivos táctiles ≥44px).
+            (3) GESTIÓN: fila separada y atenuada (solo Coro/Admin). */}
         <div className="p-4 bg-white/40 dark:bg-white/10 backdrop-blur-sm border-b border-white/30 transition-colors">
-          {/* Mismo acomodo en celular y tablet: 2 por fila (las de fila completa
-              llevan col-span-2). Íconos flex-shrink-0 y texto que ajusta para que
-              no se desborde aunque queden angostos en móvil. */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Nivel 1 — acción primaria (loud). Pueblo fiel: Escuchar; el Coro además
+              tiene el Modo Atril como su herramienta en vivo. */}
+          <div className="space-y-3">
             {onListen && (
               <button
                 onClick={() => onListen(cantoral)}
                 data-tour="pf-escuchar"
-                className="bg-gradient-to-br from-rose-600 to-red-700 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-rose-800 col-span-2"
+                className="w-full bg-gradient-to-br from-rose-600 to-red-700 text-white py-3.5 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-rose-800"
               >
                 <Headphones className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
                 Escuchar cantos
@@ -240,77 +254,82 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
             {userRole === 'Coro' && (
               <button
                 onClick={() => setAtrilCantoral(cantoral)}
-                className="bg-gradient-to-br from-slate-700 to-slate-900 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-slate-600 col-span-2"
+                className="w-full bg-gradient-to-br from-slate-700 to-slate-900 text-white py-3.5 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-slate-600"
               >
                 <MusicIcon className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
                 Modo Atril
               </button>
             )}
+          </div>
+
+          {/* Nivel 2 — acciones secundarias (calmas): fondo claro + ícono de color.
+              Ver Ordinario · Lista de cantos (vistazo rápido) · Leer la letra (pantalla
+              continua). Nombres por INTENCIÓN para no confundir las dos vistas de letra. */}
+          <div className="grid grid-cols-2 gap-3 mt-4">
             <button
               onClick={() => setViewingOrdinary(cantoral.id)}
-              className="bg-gradient-to-br from-brand to-brand-strong text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-sm sm:text-base font-bold shadow-lg border-2 border-brand-border leading-tight text-center"
+              className={secondaryActionBtn}
             >
-              <BookText className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
+              <BookText className="w-5 h-5 flex-shrink-0 text-brand" strokeWidth={2.5} />
               Ver Ordinario
             </button>
             <button
               onClick={() => setExpandedId(isExpandedCantoral ? null : cantoral.id)}
               data-tour="pf-ver-cantos"
-              className="bg-gradient-to-br from-green-600 to-green-700 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-sm sm:text-base font-bold shadow-lg border-2 border-green-800 leading-tight text-center"
+              className={secondaryActionBtn}
             >
-              <BookOpen className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
-              {isExpandedCantoral ? 'Ocultar' : 'Ver'} Cantos
+              <BookOpen className="w-5 h-5 flex-shrink-0 text-green-700 dark:text-green-400" strokeWidth={2.5} />
+              {isExpandedCantoral ? 'Ocultar lista' : 'Lista de cantos'}
             </button>
             {/* Cantoral (letra): en pantalla se abre como PDF CONTINUO para seguir la Misa
                 en vivo; desde el visor, "Imprimir folleto" da la versión cuadernillo. */}
             <button
               onClick={() => setPdfCantoral(cantoral)}
-              className="bg-gradient-to-br from-purple-600 to-purple-700 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-purple-800 col-span-2"
+              className={`${secondaryActionBtn} col-span-2`}
             >
-              <FileText className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
-              Seguir los cantos (letra)
+              <FileText className="w-5 h-5 flex-shrink-0 text-purple-700 dark:text-purple-400" strokeWidth={2.5} />
+              Leer la letra
             </button>
+            {/* Compartir (QR) — disponible para todos los perfiles, incluido Pueblo fiel. */}
+            {onShare && (
+              <button
+                onClick={() => onShare(cantoral)}
+                className={`${secondaryActionBtn} col-span-2`}
+              >
+                <QrCode className="w-5 h-5 flex-shrink-0 text-brand" strokeWidth={2.5} />
+                Compartir (QR)
+              </button>
+            )}
           </div>
 
-          {/* Compartir (QR) — disponible para todos los perfiles, incluido Pueblo fiel.
-              Editar/Eliminar — solo Coro/Admin, sobre los cantorales de la parroquia activa. */}
-          {(onShare || (canManage && (onEdit || onDelete || onClone))) && (
-            <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-white/40 dark:border-white/20">
-              {onShare && (
-                <button
-                  onClick={() => onShare(cantoral)}
-                  className="col-span-2 bg-gradient-to-br from-green-600 to-green-700 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-green-800"
-                >
-                  <QrCode className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
-                  Compartir (QR)
-                </button>
-              )}
-              {canManage && onEdit && (
-                <button
-                  onClick={() => onEdit(cantoral.id)}
-                  className="bg-gradient-to-br from-blue-700 to-blue-900 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-brand-border"
-                >
-                  <Edit2 className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
+          {/* Nivel 3 — gestión (solo Coro/Admin, sobre los cantorales de la parroquia
+              activa). Fila atenuada y separada: son acciones ocasionales, no deben competir
+              con las de uso diario. Eliminar conserva el color de peligro. */}
+          {canManage && (onEdit || onDelete || onClone) && (
+            <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-white/40 dark:border-white/20">
+              {onEdit && (
+                <button onClick={() => onEdit(cantoral.id)} className={manageActionBtn}>
+                  <Edit2 className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
                   Editar
                 </button>
               )}
-              {canManage && onDelete && (
-                <button
-                  onClick={() => setPendingDeleteId(cantoral.id)}
-                  className="bg-gradient-to-br from-red-600 to-red-700 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-red-800"
-                >
-                  <Trash2 className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
-                  Eliminar
-                </button>
-              )}
-              {canManage && onClone && (
+              {onClone && (
                 <button
                   onClick={() => onClone(cantoral)}
-                  className="col-span-2 bg-gradient-to-br from-amber-500 to-amber-600 text-white py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-amber-700"
+                  className={manageActionBtn}
                   title="Copiar estos cantos a una Misa nueva"
                 >
-                  <Copy className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
+                  <Copy className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
                   Usar como base
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  onClick={() => setPendingDeleteId(cantoral.id)}
+                  className={`${manageActionBtn} col-span-2 text-red-700 dark:text-red-300 border-red-200/80 dark:border-red-800/60`}
+                >
+                  <Trash2 className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
+                  Eliminar
                 </button>
               )}
             </div>
@@ -372,7 +391,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
 
   // Renderiza una lista agrupada por fecha (Pueblo fiel y "Esta semana" del Coro)
   const renderDateGroups = (list: PublishedCantoral[]) => (
-    <div className="space-y-3">
+    <div className="space-y-5">
       {groupByDate(list).map(([date, cantoralsOnDate]) => {
         const isExpanded = expandedDate === date;
         const hasMultipleMasses = cantoralsOnDate.length > 1;
@@ -437,7 +456,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
   // ── Empty / loading state ──────────────────────────────────────────────────
   if (allVisible.length === 0) {
     return (
-      <div className="w-full max-w-md md:max-w-2xl mx-auto min-h-screen p-3 sm:p-4 md:p-6 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
+      <div className="w-full max-w-md md:max-w-2xl mx-auto min-h-screen p-4 sm:p-5 md:p-6 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
         <div className="pt-8">
           <div className="text-center mb-3">
             <div className="flex items-center justify-center mb-4">
@@ -520,7 +539,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
   const isCoro = userRole !== 'Pueblo fiel';
 
   return (
-    <div className="w-full max-w-md md:max-w-2xl mx-auto min-h-screen p-3 sm:p-4 md:p-6 pb-24 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
+    <div className="w-full max-w-md md:max-w-2xl mx-auto min-h-screen p-4 sm:p-5 md:p-6 pb-24 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
       {/* Modo Atril de un cantoral publicado (solo Coro). Overlay a pantalla completa. */}
       {atrilCantoral && userRole === 'Coro' && (
         <AtrilMode

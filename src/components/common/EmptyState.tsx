@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
+import logoStellaMaris from 'figma:asset/logo-stella-maris.webp';
 
 interface EmptyStateProps {
   /** Emoji como ícono (compatibilidad). Si pasas `Icon`, se usa ese en su lugar. */

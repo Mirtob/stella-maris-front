@@ -1,6 +1,6 @@
 import { Menu } from 'lucide-react';
 import { getCurrentLiturgicalColor, getLiturgicalGradient } from '../../utils/liturgicalColors';
-import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
+import logoStellaMaris from 'figma:asset/logo-stella-maris.webp';
 
 interface HeaderProps {
   onMenuClick: () => void;

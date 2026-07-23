@@ -372,6 +372,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
                   </div>
                   <button
                     onClick={() => setSelectedSong(null)}
+                    aria-label="Cerrar"
                     className="p-2 hover:bg-white/20 rounded-xl transition-colors"
                   >
                     <X className="w-8 h-8" strokeWidth={2.5} />

@@ -338,6 +338,22 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
   // Liberar el object URL del preview al desmontar / al cambiar.
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
+  // Cerrar con Escape (accesibilidad). Solo cuando el modal principal es la capa
+  // visible (sin sub-modales ni vista previa encima) y no se está publicando —
+  // cerrar a media publicación dejaría al usuario sin ver el QR.
+  useEffect(() => {
+    const topLayerOpen = showDownloadPDFModal || showAddSolemnityModal || showPostPublishModal || !!previewBlob;
+    if (topLayerOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isPublishing) {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => document.removeEventListener('keydown', onKeyDown, true);
+  }, [showDownloadPDFModal, showAddSolemnityModal, showPostPublishModal, previewBlob, isPublishing, onClose]);
+
   // Opciones de celebración litúrgica para un año dado (+ solemnidades custom).
   const liturgicalOptions = (year: number) => [
     ...getLiturgicalDateNames(year),
@@ -385,6 +401,9 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
             }}
           />
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="publish-modal-title"
             className="relative bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900 dark:to-orange-900 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col border-4 border-brand-border transition-colors overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
@@ -393,10 +412,11 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <Send className="w-10 h-10" strokeWidth={2.5} />
-                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold">Publicar Cantoral</h2>
+                  <h2 id="publish-modal-title" className="text-lg sm:text-xl md:text-2xl font-bold">Publicar Cantoral</h2>
                 </div>
                 <button
                   onClick={onClose}
+                  aria-label="Cerrar"
                   className="p-2 hover:bg-white/20 rounded-xl transition-colors"
                 >
                   <X className="w-8 h-8" strokeWidth={2.5} />

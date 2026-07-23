@@ -13,7 +13,7 @@ interface PrivacyPolicyProps {
  */
 export function PrivacyPolicy({ onBack }: PrivacyPolicyProps) {
   return (
-    <div className="w-full max-w-md md:max-w-3xl mx-auto min-h-screen p-3 sm:p-6 pb-24 bg-gradient-to-br from-amber-50 via-amber-50 to-orange-50 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950 transition-colors">
+    <div className="w-full max-w-md md:max-w-3xl mx-auto min-h-screen p-4 sm:p-6 pb-24 bg-gradient-to-br from-amber-50 via-amber-50 to-orange-50 dark:from-slate-900 dark:via-slate-900 dark:to-blue-950 transition-colors">
       <div className="pt-12 sm:pt-16">
         <button
           onClick={onBack}

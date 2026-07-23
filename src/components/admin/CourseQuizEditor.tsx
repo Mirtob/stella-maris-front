@@ -80,7 +80,7 @@ export function CourseQuizEditor({ onBack }: { onBack: () => void }) {
   const cap = selectedId ? findCapsule(selectedId) : undefined;
 
   return (
-    <div className="w-full max-w-md md:max-w-2xl mx-auto min-h-screen p-3 sm:p-4 md:p-6 pb-24 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
+    <div className="w-full max-w-md md:max-w-2xl mx-auto min-h-screen p-4 sm:p-5 md:p-6 pb-24 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
       <div className="pt-16">
         <button onClick={onBack} className="flex items-center gap-2 text-brand font-bold mb-6 active:opacity-70"><ArrowLeft className="w-5 h-5" /> Volver al Panel</button>
         <h1 className="text-2xl font-bold text-brand-ink mb-1">Editar quizzes de Cursos</h1>
