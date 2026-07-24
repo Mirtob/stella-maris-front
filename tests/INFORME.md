@@ -57,6 +57,12 @@
 |---|---|---|---|---|
 | **H1** | **P3** (robustez) | `api/suggest.ts` | POST sin cuerpo → `req.body` es `undefined`; desestructurarlo lanzaba excepción no capturada → **500 FUNCTION_INVOCATION_FAILED** en vez de 400 limpio. Sin impacto de seguridad (crashea antes de tocar Gemini; la app real siempre manda body). Fix `(req.body ?? {})` (commit `e2e18d4`), **desplegado y verificado en prod: POST sin body → 400**. | ✅ **Cerrado** |
 
+### §2.2 — Auditoría de migraciones (SQL Editor de Supabase)
+
+Ejecutado el bloque de `docs/entrega/AUDITORIA-MIGRACIONES.md` en el SQL Editor (proyecto `szoaiiipglebpewwzfgh`).
+
+**Resultado: ✅ 56/56 `OK`, ningún `❌ FALTA`.** La BD de producción está completamente al día (38 migraciones aplicadas). Verificados en verde los puntos que rompen en silencio si faltan: `storage insert → private.is_cantoral_pdf_owner` (fix 42883), `push_subscriptions` con RLS activa y **sin** policies, CHECK de `mass_moment` con partes nuevas, `public.is_cantoral_pdf_owner` ausente + esquema `private` presente, índice único de Misa, y todas las tablas/columnas/funciones/policies de las features nuevas (celebraciones persistidas, favoritos, cursos, contacto del coro, encuesta). **Cierra el bloque backend del plan.**
+
 **Notas:**
 - Estos chequeos son de **backend/config/pre-login**; el rediseño de la tarjeta de cantoral y la densidad móvil (commit `e13427e`) viven en pantallas **autenticadas** → se validan en la **matriz por rol en dispositivo** (§5–§7), aún pendiente.
 - `axe-core` no está en `package.json`; se instaló con `npm install --no-save` solo para la corrida.
