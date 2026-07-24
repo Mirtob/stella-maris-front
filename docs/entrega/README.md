@@ -2,8 +2,10 @@
 
 Carpeta con los documentos de cierre y traspaso. Orden sugerido de lectura:
 
-1. **[INFORME-FINAL-STAKEHOLDERS.md](INFORME-FINAL-STAKEHOLDERS.md)** — informe de
-   entrega a los stakeholders (qué se entregó, estado, costos, riesgos, roadmap). *Borrador a completar.*
+1. **[INFORME-FINAL-STAKEHOLDERS.md](INFORME-FINAL-STAKEHOLDERS.md)** — informe de entrega a los
+   stakeholders (qué se entregó, estado + QA, cómo operar desde cualquier equipo/teléfono, costos,
+   riesgos, mapa de documentación y **hoja de ruta de versiones anuales con valor estimado**).
+   *Terminado; faltan solo las métricas de uso operativas (§5).*
 2. **[PLAN-DE-PRUEBAS-FINAL.md](PLAN-DE-PRUEBAS-FINAL.md)** — plan de pruebas detallado
    (backend + frontend) para validar antes del cierre.
 3. **[BACKUP-Y-RESTAURACION.md](BACKUP-Y-RESTAURACION.md)** — respaldo local (este PC) y
