@@ -169,7 +169,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'GEMINI_API_KEY no configurada en Vercel' });
   }
 
-  const { songs, season, date, specialDay } = req.body as {
+  // Guard: sin cuerpo (POST vacío), req.body es undefined y desestructurarlo lanzaba
+  // una excepción no capturada → 500 FUNCTION_INVOCATION_FAILED. Con `?? {}` cae al
+  // 400 "No hay cantos disponibles" de más abajo, como cualquier otro body inválido.
+  const { songs, season, date, specialDay } = (req.body ?? {}) as {
     songs: Song[];
     season: string;
     date: string;

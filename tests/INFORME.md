@@ -11,6 +11,59 @@
 
 ---
 
+## Corrida 2026-07-23 — Arranque del QA de freeze (bloque automatizado)
+
+| Campo | Valor |
+|---|---|
+| **Commit** | `e13427e` (feat ux: jerarquía de acciones, modal accesible, densidad móvil, íconos CRUD) |
+| **Entorno** | Producción — `https://stella-maris-front.vercel.app/` + Supabase `szoaiiipglebpewwzfgh` |
+| **Ejecutado por** | Claude Code (automatizado) |
+| **Alcance** | Todo lo automatizable desde el entorno de desarrollo. **Pendiente manual:** SQL Editor (§2.2), endpoints con sesión/CRON (§2.3 parcial), matriz por rol en dispositivo (§3–§7, §10), tour/offline/wakelock en device (§8.1–§8.2). |
+| **Resultado** | ✅ **Bloque automatizado APROBADO** — 0 fallos |
+
+### Resultados
+
+| Bloque del plan | Comando / método | Resultado |
+|---|---|---|
+| **§2.1** Suite integrada (RLS/RPC/Storage/CORS) | `node tests/integration/run-all.mjs` | ✅ **17/17 PASS**, 0 FAIL |
+| **§2.4** Rate limiting | `node tests/stress/rate-limit.mjs` | ✅ 20×200 · 15×429 · **0×5xx** · headers `X-RateLimit-*` presentes |
+| **§8.2** PWA / manifest / íconos (iOS+Android emulado) | `node tests/pwa/check-prod.mjs` | ✅ 18 OK · 1 WARN (offline SW, **intencional**) · 0 FAIL |
+| **§8.3** Claves fuera del bundle | `grep AIza / service-role / re_ / VAPID` en `build/` | ✅ 0 coincidencias |
+| **§8.3** Headers de seguridad + CSP | `curl -I` a producción | ✅ CSP, HSTS (2 años+preload), X-Frame DENY, nosniff, Referrer/Permissions-Policy; **`wasm-unsafe-eval` sí, `unsafe-eval` no** |
+| **§8.5** Accesibilidad (axe-core) | `node tests/qa/axe-audit.mjs` (3 pantallas pre-login) | ✅ **0 violaciones** (28/23/22 passes; incompletes = contraste manual) |
+| **§8.5** Responsive + tap targets <44px | `node tests/qa/visual-tour.mjs` (iPhone13/Pixel7/desktop) | ✅ **0 hallazgos** P0–P3 (sin errores JS, sin CLS, sin targets <44px) |
+| **Build** | `npm run build` | ✅ Verde (~11–15 s) |
+
+### §2.3 — Funciones serverless (casos de acceso anónimo / validación, vía `curl`)
+
+| Endpoint | Caso | Esperado | Observado | Estado |
+|---|---|---|---|---|
+| `/api/admin-users` | POST sin token | 401 | 401 | ✅ |
+| `/api/admin-users` | GET (método incorrecto) | — | 405 | ✅ (guard de método) |
+| `/api/notify-cantoral` | POST sin sesión | 401 | 401 | ✅ |
+| `/api/delete-account` | POST sin sesión | 401/403 | 401 | ✅ |
+| `/api/cron/celebration-reminders` | sin `CRON_SECRET` | 401 | 401 | ✅ |
+| `/api/push-subscribe` | body inválido | 400 | 400 | ✅ |
+| `/api/pdf?id=hack` | id inválido | 400 | 400 | ✅ |
+| `/api/youtube?endpoint=search` | proxy del canal (key server-side) | 200 | 200 | ✅ |
+| `/api/youtube?endpoint=hackentry` | endpoint no permitido | 400 | 400 | ✅ |
+| `/api/suggest` | POST con body `{}` | 400 | 400 | ✅ |
+| `/api/suggest` | GET (método incorrecto) | 405 | 405 | ✅ |
+| **`/api/suggest`** | **POST sin cuerpo** | 400 | **500 `FUNCTION_INVOCATION_FAILED`** | ❌ **Hallazgo H1** |
+
+### Hallazgos de esta corrida
+
+| ID | Sev. | Componente | Descripción | Estado |
+|---|---|---|---|---|
+| **H1** | **P3** (robustez) | `api/suggest.ts` | POST sin cuerpo → `req.body` es `undefined`; desestructurarlo lanzaba excepción no capturada → **500 FUNCTION_INVOCATION_FAILED** en vez de 400 limpio. Sin impacto de seguridad (crashea antes de tocar Gemini; la app real siempre manda body). **Fix aplicado** (`(req.body ?? {})`, commit local) → **pendiente commit+push+re-verificación en prod**. | 🟡 Corregido, sin desplegar |
+
+**Notas:**
+- Estos chequeos son de **backend/config/pre-login**; el rediseño de la tarjeta de cantoral y la densidad móvil (commit `e13427e`) viven en pantallas **autenticadas** → se validan en la **matriz por rol en dispositivo** (§5–§7), aún pendiente.
+- `axe-core` no está en `package.json`; se instaló con `npm install --no-save` solo para la corrida.
+- Sin hallazgos nuevos. La auditoría de junio (`tests/INFORME-QA-FRONTEND.md`) sobre landmarks/h1/region ya está resuelta (axe = 0 violaciones).
+
+---
+
 ## Corrida 2026-06-20 — Smoke headless contra producción (feature: Misa vespertina)
 
 | Campo | Valor |

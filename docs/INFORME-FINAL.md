@@ -4,9 +4,9 @@
 > algo relevante (módulo, infraestructura, plan de pruebas), se edita aquí y se anota en
 > la **Bitácora de cambios** al final.
 >
-> - **Versión:** 1.5
-> - **Última actualización:** 2026-07-21
-> - **Estado del proyecto:** módulos maduros para producción · **freeze ~31-jul-2026** → luego QA final
+> - **Versión:** 1.6
+> - **Última actualización:** 2026-07-23
+> - **Estado del proyecto:** **FREEZE ACTIVO desde 2026-07-23** (adelantado desde ~31-jul) · **QA final EN EJECUCIÓN**
 > - **App en producción:** https://stella-maris-front.vercel.app/
 
 ---
@@ -38,8 +38,8 @@ y al día (ver §8).
 | Notificaciones push (celebraciones, nuevo cantoral, cron jueves 10:00 CL) | ✅ Operativo |
 | Cursos (formación) + quizzes + video embebido | ✅ Operativo |
 | Panel Admin (CRUD completo) | ✅ Operativo |
-| **Freeze de funcionalidades** | ⏳ ~31-jul-2026 |
-| **QA final** | ⏳ Post-freeze (ver §8) |
+| **Freeze de funcionalidades** | ✅ **ACTIVO desde 2026-07-23** (adelantado) |
+| **QA final** | 🔄 **En ejecución** — bloque automatizado ✅ (§8); matriz manual por rol pendiente |
 
 ---
 
@@ -171,3 +171,4 @@ Insumos de apoyo:
 | 2026-07-13 | 1.3 | Proyección del canal como **hoja de cálculo editable** (`scripts/build-proyeccion-xlsx.py` → `.xlsx` con fórmulas). |
 | 2026-07-20 | 1.4 | **Preparación del freeze:** §8 plan de pruebas consolidado (front+back, features nuevas) y auditoría de migraciones al día (favoritos, cursos, contacto del coro, encuesta). |
 | 2026-07-21 | 1.5 | **Documentación de producto al día para el freeze:** manuales de Coro y Pueblo fiel reescritos (Atril, Mis Cantos, salmo del libro, folleto cuadernillo, push, login usuario/clave, vespertina) y **PDF regenerados**; `dev/APP-OVERVIEW.md` reescrito (era del prototipo Figma: hablaba de datos mock y de "integrar Supabase" como pendiente); `dev/CASOS_DE_USO.md` reescrito como documento de flujos por perfil, verificado contra el código. Hallazgo: la regla "solo Comunión admite varios cantos" **ya no rige** y estaba documentada como vigente; **confirmado como comportamiento intencional** — cualquier momento admite varios cantos (RN-12), no es una regresión. |
+| 2026-07-23 | 1.6 | **Freeze adelantado a 2026-07-23 y arranque del QA final.** Mejoras UX previas al freeze (jerarquía de acciones en la tarjeta de cantoral, modal accesible, densidad móvil, íconos CRUD, logo WebP). **Bloque automatizado del plan ejecutado y en verde** (integración 17/17, rate limit, PWA, headers/CSP, bundle sin secretos, axe 0 violaciones, tap targets OK) — detalle en `tests/INFORME.md`. **1 hallazgo P3 corregido:** `/api/suggest` con POST sin cuerpo devolvía 500 (`FUNCTION_INVOCATION_FAILED`) → guard `(req.body ?? {})`. **Pendiente:** auditoría de migraciones (SQL Editor) + matriz manual por rol en dispositivo. |
