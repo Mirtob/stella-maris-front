@@ -55,7 +55,7 @@
 
 | ID | Sev. | Componente | Descripción | Estado |
 |---|---|---|---|---|
-| **H1** | **P3** (robustez) | `api/suggest.ts` | POST sin cuerpo → `req.body` es `undefined`; desestructurarlo lanzaba excepción no capturada → **500 FUNCTION_INVOCATION_FAILED** en vez de 400 limpio. Sin impacto de seguridad (crashea antes de tocar Gemini; la app real siempre manda body). **Fix aplicado** (`(req.body ?? {})`, commit local) → **pendiente commit+push+re-verificación en prod**. | 🟡 Corregido, sin desplegar |
+| **H1** | **P3** (robustez) | `api/suggest.ts` | POST sin cuerpo → `req.body` es `undefined`; desestructurarlo lanzaba excepción no capturada → **500 FUNCTION_INVOCATION_FAILED** en vez de 400 limpio. Sin impacto de seguridad (crashea antes de tocar Gemini; la app real siempre manda body). Fix `(req.body ?? {})` (commit `e2e18d4`), **desplegado y verificado en prod: POST sin body → 400**. | ✅ **Cerrado** |
 
 **Notas:**
 - Estos chequeos son de **backend/config/pre-login**; el rediseño de la tarjeta de cantoral y la densidad móvil (commit `e13427e`) viven en pantallas **autenticadas** → se validan en la **matriz por rol en dispositivo** (§5–§7), aún pendiente.
