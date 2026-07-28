@@ -26,9 +26,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
   html,body{width:1748px;height:2480px}
   body{
     font-family:Georgia,'Times New Roman',serif; color:#0f2350;
-    background:
-      radial-gradient(120% 80% at 50% -8%, #dfe9ff 0%, transparent 52%),
-      linear-gradient(180deg,#f7f3e8 0%, #efe7d3 100%);
+    background:#ffffff;
     display:flex; flex-direction:column; align-items:center; text-align:center;
     padding:120px 130px 90px;
   }
