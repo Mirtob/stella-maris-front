@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { X, KeyRound, Mail, Loader, Check } from 'lucide-react';
+import { X, KeyRound, Mail, Loader, Check, User } from 'lucide-react';
 import { toast } from 'sonner';
-import { requestPasswordReset, confirmPasswordReset } from '../../services/passwordRecovery';
+import { requestPasswordReset, confirmPasswordReset, recoverUsername } from '../../services/passwordRecovery';
 
 interface ForgotPasswordProps {
   onClose: () => void;
 }
 
 export function ForgotPassword({ onClose }: ForgotPasswordProps) {
+  // Dos flujos: recuperar la CLAVE (con usuario) o el USUARIO (con el correo de respaldo).
+  const [flow, setFlow] = useState<'password' | 'username'>('password');
   const [step, setStep] = useState<'request' | 'code' | 'done'>('request');
   const [username, setUsername] = useState('');
   const [needsEmail, setNeedsEmail] = useState(false);
@@ -16,6 +18,9 @@ export function ForgotPassword({ onClose }: ForgotPasswordProps) {
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // Flujo "usuario olvidado": correo ingresado y estado de envío.
+  const [recoverEmail, setRecoverEmail] = useState('');
+  const [usernameSent, setUsernameSent] = useState(false);
 
   const handleRequest = async () => {
     const u = username.trim().toLowerCase();
@@ -45,6 +50,17 @@ export function ForgotPassword({ onClose }: ForgotPasswordProps) {
     setStep('done');
   };
 
+  const handleRecoverUsername = async () => {
+    const e = recoverEmail.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) { toast.error('Escribe un correo válido'); return; }
+    setSubmitting(true);
+    const r = await recoverUsername(e);
+    setSubmitting(false);
+    if (!r.ok) { toast.error('No se pudo procesar', { description: r.error }); return; }
+    // Respuesta genérica (no revela si el correo existe): siempre confirmamos el envío.
+    setUsernameSent(true);
+  };
+
   const inputCls = 'w-full px-4 py-3 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium';
 
   return (
@@ -54,7 +70,7 @@ export function ForgotPassword({ onClose }: ForgotPasswordProps) {
         <div className="bg-gradient-to-br from-brand to-brand-strong text-white p-5 flex items-center justify-between border-b-4 border-brand-border">
           <div className="flex items-center gap-3 min-w-0">
             <KeyRound className="w-7 h-7 flex-shrink-0" strokeWidth={2.5} />
-            <h2 className="text-xl font-bold min-w-0">Recuperar clave</h2>
+            <h2 className="text-xl font-bold min-w-0">Recuperar acceso</h2>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-xl transition-colors flex-shrink-0">
             <X className="w-6 h-6" strokeWidth={2.5} />
@@ -62,7 +78,7 @@ export function ForgotPassword({ onClose }: ForgotPasswordProps) {
         </div>
 
         <div className="p-6">
-          {step === 'request' && (
+          {flow === 'password' && step === 'request' && (
             <>
               <p className="text-base text-gray-700 dark:text-gray-200 mb-4">
                 Escribe tu usuario. Te enviaremos un código a tu correo de recuperación.
@@ -82,10 +98,59 @@ export function ForgotPassword({ onClose }: ForgotPasswordProps) {
                 {submitting ? <Loader className="w-5 h-5 animate-spin" /> : <Mail className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />}
                 {submitting ? 'Enviando...' : 'Enviar código'}
               </button>
+              <button
+                onClick={() => setFlow('username')}
+                className="w-full mt-3 text-sm font-bold text-blue-700 dark:text-blue-300 hover:underline flex items-center justify-center gap-1.5"
+              >
+                <User className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
+                ¿Olvidaste tu usuario?
+              </button>
             </>
           )}
 
-          {step === 'code' && (
+          {/* Flujo: recuperar el USUARIO olvidado con el correo de respaldo */}
+          {flow === 'username' && !usernameSent && (
+            <>
+              <p className="text-base text-gray-700 dark:text-gray-200 mb-4">
+                Escribe el <strong>correo de respaldo</strong> que registraste. Si hay una cuenta
+                asociada, te enviaremos tu nombre de usuario a ese correo.
+              </p>
+              <label className="text-base text-gray-600 dark:text-gray-300 mb-1 block">Correo de respaldo</label>
+              <div className="relative mb-4">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                <input value={recoverEmail} onChange={(e) => setRecoverEmail(e.target.value)} type="email" autoCapitalize="none" placeholder="tucorreo@ejemplo.com" className={`${inputCls} pl-10`} />
+              </div>
+              <button onClick={handleRecoverUsername} disabled={submitting} className="w-full bg-gradient-to-br from-blue-700 to-blue-900 text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all font-bold disabled:opacity-50">
+                {submitting ? <Loader className="w-5 h-5 animate-spin" /> : <User className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />}
+                {submitting ? 'Enviando...' : 'Enviar mi usuario'}
+              </button>
+              <button
+                onClick={() => setFlow('password')}
+                className="w-full mt-3 text-sm font-bold text-blue-700 dark:text-blue-300 hover:underline flex items-center justify-center gap-1.5"
+              >
+                <KeyRound className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
+                ¿Olvidaste tu clave?
+              </button>
+            </>
+          )}
+
+          {flow === 'username' && usernameSent && (
+            <div className="text-center py-4">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Mail className="w-9 h-9 text-green-600" strokeWidth={2.5} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Revisa tu correo</h3>
+              <p className="text-base text-gray-700 dark:text-gray-200 mb-4">
+                Si <strong>{recoverEmail.trim()}</strong> está asociado a una cuenta, te enviamos tu
+                nombre de usuario. Revisa también la carpeta de spam.
+              </p>
+              <button onClick={onClose} className="w-full bg-gradient-to-br from-blue-700 to-blue-900 text-white py-3 px-4 rounded-xl font-bold active:scale-95 transition-all">
+                Entendido
+              </button>
+            </div>
+          )}
+
+          {flow === 'password' && step === 'code' && (
             <>
               <p className="text-base text-gray-700 dark:text-gray-200 mb-4">
                 Enviamos un código de 6 dígitos a <strong>{maskedTo}</strong>. Escríbelo y elige tu nueva clave.
@@ -104,7 +169,7 @@ export function ForgotPassword({ onClose }: ForgotPasswordProps) {
             </>
           )}
 
-          {step === 'done' && (
+          {flow === 'password' && step === 'done' && (
             <div className="text-center py-4">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Check className="w-9 h-9 text-green-600" strokeWidth={3} />

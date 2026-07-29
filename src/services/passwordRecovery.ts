@@ -23,3 +23,12 @@ export function requestPasswordReset(username: string, email?: string) {
 export function confirmPasswordReset(username: string, code: string, password: string) {
   return call('confirm', { username, code, password });
 }
+
+/**
+ * Recuperar el USUARIO olvidado a partir del correo de respaldo. Por privacidad la
+ * respuesta es genérica (no revela si el correo existe); el nombre se envía SOLO al
+ * correo. Devuelve ok también cuando no hay coincidencias.
+ */
+export function recoverUsername(email: string) {
+  return call('find-username', { email });
+}

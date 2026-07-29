@@ -48,6 +48,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const svc = { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': 'application/json' };
   const body = typeof req.body === 'string' ? safeParse(req.body) : (req.body || {});
   const action = body.action;
+
+  // ── Recuperar USUARIO olvidado a partir del correo de respaldo ──────────────
+  // El usuario no recuerda su nombre; con su correo de respaldo le enviamos el/los
+  // usuario(s) asociado(s). Privacidad: respuesta SIEMPRE genérica (no revela si el
+  // correo existe) y el nombre viaja SOLO al correo, nunca en la respuesta HTTP.
+  if (action === 'find-username') {
+    const emailIn = String(body.email || '').trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailIn)) {
+      return res.status(400).json({ error: 'Correo inválido' });
+    }
+    try {
+      const q = `${URL}/rest/v1/user_profiles?recovery_email=ilike.${encodeURIComponent(emailIn)}&select=email,name`;
+      const pr = await fetch(q, { headers: svc });
+      const rows: any[] = pr.ok ? await pr.json() : [];
+      // El nombre de usuario es la parte local del email sintético de auth.
+      const usernames = rows
+        .map((r) => String(r.email || ''))
+        .filter((e) => e.toLowerCase().endsWith(`@${USERNAME_EMAIL_DOMAIN}`))
+        .map((e) => e.split('@')[0]);
+
+      if (usernames.length > 0 && RESEND_KEY) {
+        const lista = usernames.map((u) => `• ${u}`).join('\n');
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${RESEND_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from: RESEND_FROM,
+            to: [emailIn],
+            subject: 'Tu usuario en Stella Maris',
+            text: `Nos pediste recordar tu nombre de usuario.\n\n${usernames.length === 1 ? 'Tu usuario es:' : 'Tus usuarios son:'}\n${lista}\n\nInicia sesión con tu usuario y tu clave. Si olvidaste la clave, usa "¿Olvidaste tu clave?".\n\nSi no fuiste tú, ignora este correo.`,
+          }),
+        }).catch(() => undefined);
+      }
+      // Respuesta genérica siempre (no filtra existencia del correo).
+      return res.status(200).json({ ok: true });
+    } catch (e: any) {
+      return res.status(500).json({ error: e?.message || 'Error del servidor' });
+    }
+  }
+
   const username = String(body.username || '').trim().toLowerCase();
   if (!username) return res.status(400).json({ error: 'Falta el usuario' });
   const email = `${username}@${USERNAME_EMAIL_DOMAIN}`;
