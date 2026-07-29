@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { LogIn, User, Lock, Church, Loader } from 'lucide-react';
+import { LogIn, User, Lock, Church, Loader, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { loginWithGoogle } from '../../services/googleAuth';
-import { signInWithUsernamePassword } from '../../services/supabaseClient';
+import { signInWithUsernamePassword, signUpUsernameAccount } from '../../services/supabaseClient';
 import { ForgotPassword } from './ForgotPassword';
 import logoStellaMaris from 'figma:asset/logo-stella-maris.webp';
 
@@ -10,11 +10,26 @@ interface LoginProps {
   onGoogleLogin: () => void;
 }
 
+// Vista del bloque usuario/clave: cerrado, entrar (login) o crear cuenta (registro).
+type UserMode = 'closed' | 'login' | 'signup';
+
+// Validación del nombre de usuario (coincide con el endpoint /api/signup-username).
+const USERNAME_RE = /^[a-z0-9._-]{3,30}$/;
+
+/** Regla de clave: mínimo 4 caracteres, con al menos una letra y un número. */
+function passwordProblem(pw: string): string | null {
+  if (pw.length < 4) return 'La clave debe tener al menos 4 caracteres.';
+  if (!/[a-zA-Z]/.test(pw)) return 'La clave debe incluir al menos una letra.';
+  if (!/[0-9]/.test(pw)) return 'La clave debe incluir al menos un número.';
+  return null;
+}
+
 export function Login({ onGoogleLogin }: LoginProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [showUserForm, setShowUserForm] = useState(false);
+  const [userMode, setUserMode] = useState<UserMode>('closed');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
 
@@ -51,6 +66,53 @@ export function Login({ onGoogleLogin }: LoginProps) {
       window.location.reload();
     } catch (err: any) {
       toast.error(err?.message || 'No se pudo iniciar sesión');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Registro autoservicio: valida en el cliente, crea la cuenta por el endpoint
+  // (server-side, con la cuenta ya confirmada) y luego inicia sesión con las mismas
+  // credenciales → recarga y sigue el flujo normal (elige rol y parroquia en el setup).
+  const handleUserSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const u = username.trim().toLowerCase();
+    if (!USERNAME_RE.test(u)) {
+      toast.error('Usuario inválido', {
+        description: '3 a 30 caracteres: letras, números, punto, guion o guion bajo. Sin espacios ni tildes.',
+      });
+      return;
+    }
+    const pwErr = passwordProblem(password);
+    if (pwErr) {
+      toast.error(pwErr);
+      return;
+    }
+    if (password !== confirmPassword) {
+      toast.error('Las claves no coinciden');
+      return;
+    }
+    try {
+      setSubmitting(true);
+      const result = await signUpUsernameAccount(u, password);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      // Cuenta creada (ya confirmada) → iniciar sesión de inmediato.
+      const { error } = await signInWithUsernamePassword(u, password);
+      if (error) {
+        // La cuenta existe pero el login falló (raro): guiar a iniciar sesión.
+        toast.success('¡Cuenta creada!', { description: 'Ahora inicia sesión con tu usuario y clave.' });
+        setUserMode('login');
+        setPassword('');
+        setConfirmPassword('');
+        return;
+      }
+      toast.success('¡Bienvenido a Stella Maris! 🎵');
+      window.location.reload();
+    } catch (err: any) {
+      toast.error(err?.message || 'No se pudo crear la cuenta');
     } finally {
       setSubmitting(false);
     }
@@ -139,18 +201,30 @@ export function Login({ onGoogleLogin }: LoginProps) {
           </div>
 
           {/* Login alternativo: usuario + clave (para quienes no quieren usar correo).
-              Las cuentas las entrega la parroquia/administrador. */}
+              Se puede iniciar sesión o CREAR una cuenta nueva (autoservicio). */}
           <div className="mt-4 pt-3 border-t border-white/15">
-            {!showUserForm ? (
-              <button
-                type="button"
-                onClick={() => setShowUserForm(true)}
-                className="w-full flex items-center justify-center gap-2 text-sm font-bold text-blue-100 hover:text-white py-2 transition-colors"
-              >
-                <User className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
-                Entrar con usuario y clave
-              </button>
-            ) : (
+            {userMode === 'closed' && (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setUserMode('login')}
+                  className="w-full flex items-center justify-center gap-2 text-sm font-bold text-blue-100 hover:text-white py-2 transition-colors"
+                >
+                  <User className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
+                  Entrar con usuario y clave
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserMode('signup')}
+                  className="w-full flex items-center justify-center gap-2 text-sm font-bold text-amber-300 hover:text-amber-200 py-1 transition-colors"
+                >
+                  <UserPlus className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
+                  Crear una cuenta nueva
+                </button>
+              </div>
+            )}
+
+            {userMode === 'login' && (
               <form onSubmit={handleUserLogin} className="space-y-3">
                 <div>
                   <label htmlFor="login-user" className="sr-only">Usuario</label>
@@ -190,12 +264,94 @@ export function Login({ onGoogleLogin }: LoginProps) {
                   {submitting ? <Loader className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />}
                   {submitting ? 'Entrando...' : 'Entrar'}
                 </button>
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgot(true)}
+                    className="text-xs text-white/80 hover:text-white underline"
+                  >
+                    ¿Olvidaste tu clave?
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setUserMode('signup'); setPassword(''); }}
+                    className="text-xs font-bold text-amber-300 hover:text-amber-200 underline"
+                  >
+                    Crear una cuenta
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {userMode === 'signup' && (
+              <form onSubmit={handleUserSignup} className="space-y-3">
+                <p className="text-xs text-white/85 text-center">
+                  Crea tu cuenta para entrar sin correo. Elige un usuario y una clave.
+                </p>
+                <div>
+                  <label htmlFor="signup-user" className="sr-only">Usuario nuevo</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-900/60 pointer-events-none" />
+                    <input
+                      id="signup-user"
+                      type="text"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      autoComplete="username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="Elige un usuario"
+                      className="w-full pl-10 pr-3 py-3 rounded-xl text-base text-blue-950 bg-white border-2 border-blue-200 focus:outline-none focus:border-blue-500 font-medium"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="signup-pass" className="sr-only">Clave</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-900/60 pointer-events-none" />
+                    <input
+                      id="signup-pass"
+                      type="password"
+                      autoComplete="new-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Crea una clave"
+                      className="w-full pl-10 pr-3 py-3 rounded-xl text-base text-blue-950 bg-white border-2 border-blue-200 focus:outline-none focus:border-blue-500 font-medium"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="signup-pass2" className="sr-only">Repetir clave</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-900/60 pointer-events-none" />
+                    <input
+                      id="signup-pass2"
+                      type="password"
+                      autoComplete="new-password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Repite la clave"
+                      className="w-full pl-10 pr-3 py-3 rounded-xl text-base text-blue-950 bg-white border-2 border-blue-200 focus:outline-none focus:border-blue-500 font-medium"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-blue-100/90 leading-snug">
+                  La clave debe tener al menos <strong>4 caracteres</strong>, con al menos <strong>una letra</strong> y <strong>un número</strong>.
+                </p>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-blue-950 py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? <Loader className="w-5 h-5 animate-spin" /> : <UserPlus className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />}
+                  {submitting ? 'Creando cuenta...' : 'Crear cuenta y entrar'}
+                </button>
                 <button
                   type="button"
-                  onClick={() => setShowForgot(true)}
-                  className="w-full text-xs text-white/80 hover:text-white text-center underline"
+                  onClick={() => { setUserMode('login'); setConfirmPassword(''); }}
+                  className="w-full text-xs text-white/85 hover:text-white text-center underline"
                 >
-                  ¿Olvidaste tu clave?
+                  ¿Ya tienes cuenta? Inicia sesión
                 </button>
               </form>
             )}

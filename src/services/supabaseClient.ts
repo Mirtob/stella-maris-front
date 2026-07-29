@@ -55,6 +55,34 @@ export async function signInWithUsernamePassword(username: string, password: str
   });
 }
 
+/**
+ * Registro AUTOSERVICIO de una cuenta usuario/clave (para quien no usa Google).
+ * Va por el endpoint serverless /api/signup-username, que crea la cuenta con la
+ * service-role y `email_confirm: true` (un signUp desde el cliente quedaría sin
+ * confirmar y no podría entrar). No inicia sesión: el llamador hace login después.
+ *
+ * Devuelve `{ ok: true }` o `{ ok: false, error }` con un mensaje humano
+ * (nombre ya en uso, clave débil, etc.).
+ */
+export async function signUpUsernameAccount(
+  username: string,
+  password: string,
+  name?: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const r = await fetch('/api/signup-username', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: username.trim().toLowerCase(), password, name }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) return { ok: false, error: data?.error || 'No se pudo crear la cuenta.' };
+    return { ok: true };
+  } catch {
+    return { ok: false, error: 'Sin conexión. Revisa tu red e inténtalo de nuevo.' };
+  }
+}
+
 /** Cambia la contraseña del usuario actual. Requiere sesión activa. */
 export async function changePassword(newPassword: string) {
   return supabaseClient.auth.updateUser({ password: newPassword });
