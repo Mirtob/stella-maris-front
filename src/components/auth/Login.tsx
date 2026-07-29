@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LogIn, User, Lock, Church, Loader, UserPlus } from 'lucide-react';
+import { LogIn, User, Lock, Church, Loader, UserPlus, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { loginWithGoogle } from '../../services/googleAuth';
 import { signInWithUsernamePassword, signUpUsernameAccount } from '../../services/supabaseClient';
@@ -16,12 +16,21 @@ type UserMode = 'closed' | 'login' | 'signup';
 // Validación del nombre de usuario (coincide con el endpoint /api/signup-username).
 const USERNAME_RE = /^[a-z0-9._-]{3,30}$/;
 
-/** Regla de clave: mínimo 4 caracteres, con al menos una letra y un número. */
+// Longitud mínima de clave. Debe coincidir con MIN_PASSWORD_LENGTH del endpoint.
+// Verificado: Supabase acepta 4 caracteres (crear + login), así que se usa el mínimo pedido.
+const MIN_PASSWORD_LENGTH = 4;
+
+/** Regla de clave: longitud mínima, con al menos una letra y un número. */
 function passwordProblem(pw: string): string | null {
-  if (pw.length < 4) return 'La clave debe tener al menos 4 caracteres.';
+  if (pw.length < MIN_PASSWORD_LENGTH) return `La clave debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`;
   if (!/[a-zA-Z]/.test(pw)) return 'La clave debe incluir al menos una letra.';
   if (!/[0-9]/.test(pw)) return 'La clave debe incluir al menos un número.';
   return null;
+}
+
+/** Valida un correo simple (opcional, para recuperación). */
+function isValidEmail(s: string): boolean {
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s);
 }
 
 export function Login({ onGoogleLogin }: LoginProps) {
@@ -30,6 +39,7 @@ export function Login({ onGoogleLogin }: LoginProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [recoveryEmail, setRecoveryEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
 
@@ -92,9 +102,16 @@ export function Login({ onGoogleLogin }: LoginProps) {
       toast.error('Las claves no coinciden');
       return;
     }
+    const emailBackup = recoveryEmail.trim();
+    if (emailBackup && !isValidEmail(emailBackup)) {
+      toast.error('El correo de respaldo no es válido', {
+        description: 'Revísalo o déjalo en blanco (puedes agregarlo después).',
+      });
+      return;
+    }
     try {
       setSubmitting(true);
-      const result = await signUpUsernameAccount(u, password);
+      const result = await signUpUsernameAccount(u, password, { email: emailBackup || undefined });
       if (!result.ok) {
         toast.error(result.error);
         return;
@@ -315,7 +332,7 @@ export function Login({ onGoogleLogin }: LoginProps) {
                       autoComplete="new-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Crea una clave"
+                      placeholder="Crea una clave (ej. Coro2026)"
                       className="w-full pl-10 pr-3 py-3 rounded-xl text-base text-blue-950 bg-white border-2 border-blue-200 focus:outline-none focus:border-blue-500 font-medium"
                     />
                   </div>
@@ -335,9 +352,37 @@ export function Login({ onGoogleLogin }: LoginProps) {
                     />
                   </div>
                 </div>
-                <p className="text-xs text-blue-100/90 leading-snug">
-                  La clave debe tener al menos <strong>4 caracteres</strong>, con al menos <strong>una letra</strong> y <strong>un número</strong>.
-                </p>
+                <div className="bg-white/10 border border-white/20 rounded-xl px-3 py-2">
+                  <p className="text-xs text-blue-100/90 leading-snug">
+                    La clave debe tener al menos <strong>4 caracteres</strong>, con al menos <strong>una letra</strong> y <strong>un número</strong>.
+                  </p>
+                  <p className="text-xs text-amber-200/90 leading-snug mt-1">
+                    Ejemplo válido: <strong>Coro2026</strong> · <strong>musica12</strong>
+                  </p>
+                </div>
+
+                {/* Correo de respaldo OPCIONAL: habilita la auto-recuperación de clave. */}
+                <div>
+                  <label htmlFor="signup-email" className="sr-only">Correo de respaldo (opcional)</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-900/60 pointer-events-none" />
+                    <input
+                      id="signup-email"
+                      type="email"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      autoComplete="email"
+                      value={recoveryEmail}
+                      onChange={(e) => setRecoveryEmail(e.target.value)}
+                      placeholder="Correo de respaldo (opcional)"
+                      className="w-full pl-10 pr-3 py-3 rounded-xl text-base text-blue-950 bg-white border-2 border-blue-200 focus:outline-none focus:border-blue-500 font-medium"
+                    />
+                  </div>
+                  <p className="text-xs text-blue-100/80 leading-snug mt-1">
+                    Te recomendamos dejar tu correo: si olvidas tu <strong>clave</strong> o tu <strong>usuario</strong>, podrás recuperar el acceso tú mismo.
+                  </p>
+                </div>
+
                 <button
                   type="submit"
                   disabled={submitting}

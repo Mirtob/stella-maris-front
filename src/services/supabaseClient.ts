@@ -67,13 +67,18 @@ export async function signInWithUsernamePassword(username: string, password: str
 export async function signUpUsernameAccount(
   username: string,
   password: string,
-  name?: string,
+  opts?: { name?: string; email?: string },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const r = await fetch('/api/signup-username', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: username.trim().toLowerCase(), password, name }),
+      body: JSON.stringify({
+        username: username.trim().toLowerCase(),
+        password,
+        name: opts?.name,
+        email: opts?.email?.trim() || undefined,
+      }),
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) return { ok: false, error: data?.error || 'No se pudo crear la cuenta.' };

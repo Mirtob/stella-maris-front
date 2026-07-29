@@ -104,12 +104,22 @@ async function rateLimit(req: VercelRequest, res: VercelResponse, endpoint: stri
   return true;
 }
 
-// ── Validación de clave: mínimo 4 caracteres, con al menos una letra y un número ──
+// Longitud mínima de clave. Verificado contra producción: GoTrue acepta 4 caracteres
+// al crear vía admin API y el login funciona, así que se respeta el mínimo pedido (4).
+// Debe coincidir con MIN_PASSWORD_LENGTH del frontend (Login.tsx).
+const MIN_PASSWORD_LENGTH = 4;
+
+// ── Validación de clave: longitud mínima + al menos una letra y un número ──
 function passwordProblem(pw: string): string | null {
-  if (pw.length < 4) return 'La clave debe tener al menos 4 caracteres.';
+  if (pw.length < MIN_PASSWORD_LENGTH) return `La clave debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`;
   if (!/[a-zA-Z]/.test(pw)) return 'La clave debe incluir al menos una letra.';
   if (!/[0-9]/.test(pw)) return 'La clave debe incluir al menos un número.';
   return null;
+}
+
+/** Valida un correo simple (opcional, para recuperación). */
+function isEmail(s: string): boolean {
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s);
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -129,12 +139,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const username = String(body.username || '').trim().toLowerCase();
   const password = String(body.password || '');
   const name = body.name ? String(body.name).trim().slice(0, 80) : undefined;
+  // Correo de respaldo OPCIONAL para auto-recuperación de clave (recovery_email).
+  const recoveryEmail = String(body.email || '').trim();
 
   if (!/^[a-z0-9._-]{3,30}$/.test(username)) {
     return res.status(400).json({ error: 'Usuario inválido: 3 a 30 caracteres (letras, números, . _ -), sin espacios ni tildes.' });
   }
   const pwErr = passwordProblem(password);
   if (pwErr) return res.status(400).json({ error: pwErr });
+  if (recoveryEmail && !isEmail(recoveryEmail)) {
+    return res.status(400).json({ error: 'El correo de respaldo no es válido.' });
+  }
 
   const email = `${username}@${USERNAME_EMAIL_DOMAIN}`;
   const svcHeaders = { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': 'application/json' };
@@ -167,10 +182,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // "incompleto" → setup). Mismo comportamiento que el alta del admin.
     const newUserId = data?.id;
     if (newUserId) {
+      const profile: Record<string, unknown> = { id: newUserId, email, name: name ?? null, role: 'Pueblo fiel' };
+      if (recoveryEmail) profile.recovery_email = recoveryEmail;
       await fetch(`${SUPABASE_URL}/rest/v1/user_profiles`, {
         method: 'POST',
         headers: { ...svcHeaders, Prefer: 'return=minimal' },
-        body: JSON.stringify({ id: newUserId, email, name: name ?? null, role: 'Pueblo fiel' }),
+        body: JSON.stringify(profile),
       }).catch(() => undefined); // no es fatal: se crea en el primer login si falla
     }
 
