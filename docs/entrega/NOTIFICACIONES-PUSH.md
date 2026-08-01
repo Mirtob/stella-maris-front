@@ -6,9 +6,10 @@ Avisos al teléfono aunque la app esté cerrada:
 
 ## Puesta en marcha (una sola vez)
 
-### 1. Migración
-Aplicar en Supabase (SQL Editor): `supabase/migrations/20260702_push_subscriptions.sql`
-(tabla `push_subscriptions` con RLS; solo el service role accede).
+### 1. Migraciones
+Aplicar en Supabase (SQL Editor), ambas con RLS y **sin policies** (solo el service role accede):
+- `supabase/migrations/20260702_push_subscriptions.sql` — tabla `push_subscriptions`.
+- `supabase/migrations/20260731_cron_runs.sql` — tabla `cron_runs` (bitácora de corridas del cron).
 
 ### 2. Variables de entorno en Vercel (Project Settings → Environment Variables)
 | Variable | Valor | Notas |
@@ -23,7 +24,38 @@ Aplicar en Supabase (SQL Editor): `supabase/migrations/20260702_push_subscriptio
 Para regenerar las claves: `node -e "console.log(require('web-push').generateVAPIDKeys())"`.
 
 ### 3. Redeploy
-El `vercel.json` ya trae el cron diario (`/api/cron/celebration-reminders`, 12:00 UTC ≈ 08:00 Chile).
+El `vercel.json` ya trae el cron diario (`/api/cron/celebration-reminders`, **14:00 UTC** = 10:00 de Chile
+en invierno, 11:00 en verano — los crons de Vercel son solo en UTC y Chile cambia de horario).
+El recordatorio "publica el cantoral" del domingo cae en la corrida del **jueves** (domingo − 3).
+
+> ⚠️ El plan es **Hobby**: los crons se disparan *dentro de la hora* pedida (no al minuto) y
+> Vercel no guarda logs ni historial de corridas. Por eso existe la bitácora (abajo).
+
+## Diagnóstico: "no me llegó el aviso"
+
+`GET /api/cron/celebration-reminders?dry=1` recorre **exactamente la misma lógica sin enviar
+nada** y responde a quién le habría llegado y por qué. Añade `&date=YYYY-MM-DD` para
+reconstruir otro día (p. ej. un jueves pasado); la simulación de fecha **solo** se acepta
+junto a `dry=1`, para que nadie dispare avisos de una fecha arbitraria.
+
+```bash
+curl -H "x-vercel-cron: 1" \
+  "https://stella-maris-front.vercel.app/api/cron/celebration-reminders?dry=1&date=2026-07-30"
+```
+
+Qué mirar en la respuesta:
+
+| Campo | Para qué sirve |
+|---|---|
+| `ultimasCorridas` | Bitácora real (tabla `cron_runs`). **Si falta el día, el cron no se disparó.** |
+| `wouldSend` | Cuántos avisos habrían salido en esa fecha |
+| `preview` | El texto exacto del aviso |
+| `suscripciones.detalle` | Cada dispositivo: rol, parroquias, `updated_at`, endpoint enmascarado |
+| `coroDetail[].skipped` | Por qué se descartó cada parroquia (`ya publicado`, `sin celebración ese día`…) |
+
+Si un dispositivo **no aparece** en `suscripciones.detalle`, el problema es la suscripción
+(se perdió o nunca se activó), no el cron: basta abrir la app —`syncPushParishes` la recrea
+sola si el permiso sigue concedido— o activarla en Ajustes → Notificaciones.
 
 ## Cómo lo activa el usuario
 Ajustes → **Notificaciones** → "Activar notificaciones" (pide permiso del navegador).
