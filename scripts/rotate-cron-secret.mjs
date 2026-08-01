@@ -53,8 +53,20 @@ for (const env of ENVS) {
   console.log(`   + subido a ${env}`);
 }
 
-console.log('\n3) Redeploy a producción (las funciones leen las env vars en el build)…');
-run(['vercel', '--prod', '--yes'], { stdio: ['pipe', 'inherit', 'inherit'] });
+// Redeploy del despliegue de producción ACTUAL, no `vercel --prod`: este proyecto
+// despliega desde GitHub, y `vercel --prod` subiría el directorio local (con lo que
+// tengas sin commitear). `redeploy` reconstruye el mismo commit con las env vars nuevas.
+console.log('\n3) Redeploy de producción (las funciones leen las env vars en el build)…');
+const current = run(['vercel', 'ls', '--prod'])
+  .split('\n').map((l) => l.trim()).filter((l) => l.startsWith('https://'))[0];
+if (!current) {
+  console.error('   ✗ No pude identificar el despliegue de producción actual.');
+  console.error('     Redespliega a mano (Vercel → Deployments → ⋯ → Redeploy) y vuelve a correr');
+  console.error('     la verificación; hasta entonces el endpoint sigue validando el secreto VIEJO.');
+  process.exit(1);
+}
+console.log(`   redesplegando ${current}`);
+run(['vercel', 'redeploy', current, '--yes'], { stdio: ['pipe', 'inherit', 'inherit'] });
 
 console.log('\n4) Verificando contra producción…');
 if (oldSecret) {
