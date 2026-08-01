@@ -17,7 +17,7 @@ Aplicar en Supabase (SQL Editor), ambas con RLS y **sin policies** (solo el serv
 | `VAPID_PRIVATE_KEY` | `BdP_Q5tCS9buvjEEjBqGycKQ8x4q5GwawOb72QtSCDs` | **Secreta.** Debe corresponder a la pública. |
 | `VITE_VAPID_PUBLIC_KEY` | `BD6iyTq35EL0rH1goWKY4FEjvAjpUpxO-XSY9qFFaKHh9qBOeUeMSiKhFuUO8ZwZHOsUwM5T3F4NmvJSzv1ViSg` | No secreta (ya va como fallback en el cliente). Opcional. |
 | `VAPID_SUBJECT` | `mailto:gustavus.tobar@gmail.com` | Opcional (tiene default). |
-| `CRON_SECRET` | (una cadena aleatoria) | Recomendado: Vercel lo inyecta al cron como `Authorization: Bearer`. |
+| `CRON_SECRET` | (una cadena aleatoria) | **Obligatoria.** Vercel la inyecta al cron como `Authorization: Bearer`. Sin ella el endpoint queda abierto (ver abajo). Generar con `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`. |
 
 > `SUPABASE_SERVICE_ROLE_KEY` y `VITE_SUPABASE_*` ya están configuradas (las usan las otras funciones).
 
@@ -39,9 +39,16 @@ reconstruir otro día (p. ej. un jueves pasado); la simulación de fecha **solo*
 junto a `dry=1`, para que nadie dispare avisos de una fecha arbitraria.
 
 ```bash
-curl -H "x-vercel-cron: 1" \
+curl -H "Authorization: Bearer $CRON_SECRET" \
   "https://stella-maris-front.vercel.app/api/cron/celebration-reminders?dry=1&date=2026-07-30"
 ```
+
+> 🔐 **El endpoint exige el Bearer** cuando `CRON_SECRET` está configurada (desde el
+> 31-jul-2026). La cabecera `x-vercel-cron` **ya no basta**: la puede mandar cualquiera y no
+> la valida nadie, así que antes permitía disparar los avisos y —peor— leer este mismo
+> diagnóstico, que expone parroquias, roles y endpoints de los suscriptores. Solo se acepta
+> como fallback mientras NO exista el secreto. Vercel inyecta el Bearer por su cuenta en las
+> llamadas del cron, así que la corrida programada sigue funcionando sin tocar `vercel.json`.
 
 Qué mirar en la respuesta:
 
