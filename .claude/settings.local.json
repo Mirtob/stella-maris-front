@@ -22,7 +22,8 @@
       "Bash(npm run *)",
       "PowerShell(npx vercel --version 2>&1 | Select-Object -Last 3; \"EXIT:$LASTEXITCODE\")",
       "Read(//c/Users/gusta/Downloads/**)",
-      "PowerShell(git *)"
+      "PowerShell(git *)",
+      "Bash(git commit *)"
     ]
   }
 }

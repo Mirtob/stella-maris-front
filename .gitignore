@@ -46,3 +46,6 @@ scripts/.*.tmp.html
 
 # Entorno virtual de Python (solo herramientas locales, p. ej. openpyxl)
 .venv/
+
+# Vinculo local con el proyecto de Vercel (IDs de proyecto/organizacion)
+.vercel/
