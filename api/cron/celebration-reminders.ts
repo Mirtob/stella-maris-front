@@ -700,6 +700,37 @@ const maskEndpoint = (ep: string) => {
   return `${host}/…${ep.slice(-8)}`;
 };
 
+/**
+ * Deja constancia de la corrida en `cron_runs` (migración 20260731_cron_runs).
+ * En Hobby no hay retención de logs ni historial de crons, así que sin esto no se
+ * puede saber si el cron corrió un día dado. NUNCA debe tumbar la corrida: si el
+ * registro falla, se ignora — el trabajo real ya se hizo.
+ */
+/** Cuántas suscripciones vivas había al correr (contexto para leer los envíos). */
+async function countSubs(): Promise<number | null> {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?select=id&limit=1`, {
+      headers: { ...svcHeaders, Prefer: 'count=exact' },
+    });
+    const n = Number((r.headers.get('content-range') || '').split('/')[1]); // "0-0/4"
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+async function logRun(row: Record<string, unknown>): Promise<void> {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/cron_runs`, {
+      method: 'POST',
+      headers: { ...svcHeaders, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ job: 'celebration-reminders', ...row }),
+    });
+  } catch {
+    /* la bitácora es best-effort */
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const CRON_SECRET = (process.env.CRON_SECRET || '').trim();
   const isVercelCron = !!req.headers['x-vercel-cron'];
@@ -722,6 +753,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const topicCeleb = `topics=cs.${encodeURIComponent('{celebrations}')}`;
   let generalSent = 0;
   let coroSent = 0;
+  let courseSent = 0;
+  const startedAt = Date.now();
 
   // En dry-run contamos destinatarios y guardamos el aviso que se habría mandado.
   const preview: { to: number; title: string; body: string }[] = [];
@@ -809,7 +842,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // ── 3) CÁPSULA DE LA SEMANA (lunes) → formación (Cursos) ──
     // Solo se envía cuando ya HAY videos: se activa con la env var COURSE_WEEKLY_ENABLED.
     // Un único aviso semanal a todos los suscriptores; abre directo el módulo Cursos.
-    let courseSent = 0;
     const courseOn = /^(1|true|yes|on)$/i.test((process.env.COURSE_WEEKLY_ENABLED || '').trim());
     const isMonday = new Date(`${today}T12:00:00Z`).getUTCDay() === 1;
     if (courseOn && isMonday) {
@@ -822,7 +854,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    if (!dry) return res.status(200).json({ ok: true, date: today, generalSent, coroSent, courseSent });
+    if (!dry) {
+      // La bitácora es lo único que permite responder después "¿corrió el jueves?".
+      await logRun({
+        logical_date: today,
+        general_sent: generalSent,
+        coro_sent: coroSent,
+        course_sent: courseSent,
+        subs_total: await countSubs(),
+        duration_ms: Date.now() - startedAt,
+        ok: true,
+      });
+      return res.status(200).json({ ok: true, date: today, generalSent, coroSent, courseSent });
+    }
 
     // Radiografía completa de las suscripciones: si aquí no aparece el dispositivo,
     // el problema es la suscripción (se perdió/expiró), no el cron.
@@ -835,11 +879,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const byRole: Record<string, number> = {};
     for (const r of rows) byRole[r.role ?? '(sin rol)'] = (byRole[r.role ?? '(sin rol)'] ?? 0) + 1;
 
+    // Bitácora: si aquí falta el jueves, el cron no se disparó ese día.
+    const runsRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/cron_runs?select=ran_at,logical_date,general_sent,coro_sent,course_sent,subs_total,duration_ms,ok,error&order=ran_at.desc&limit=20`,
+      { headers: svcHeaders },
+    );
+    const ultimasCorridas = runsRes.ok
+      ? await runsRes.json()
+      : { error: `no se pudo leer cron_runs (HTTP ${runsRes.status}) — ¿falta aplicar la migración 20260731_cron_runs?` };
+
     return res.status(200).json({
       ok: true,
       dryRun: true,
       date: today,
       simulated: useSim,
+      ultimasCorridas,
       wouldSend: { generalSent, coroSent, courseSent },
       preview,
       celebraciones: { target3, vigil, base: base3, custom: custom3 },
@@ -858,6 +912,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       coroDetail,
     });
   } catch (e: any) {
+    // Una corrida que revienta a mitad también deja rastro: sin esto, un fallo se ve
+    // igual que un cron que nunca se disparó.
+    if (!dry) {
+      await logRun({
+        logical_date: today,
+        general_sent: generalSent,
+        coro_sent: coroSent,
+        course_sent: courseSent,
+        duration_ms: Date.now() - startedAt,
+        ok: false,
+        error: String(e?.message || e).slice(0, 500),
+      });
+    }
     return res.status(500).json({ error: e?.message || 'Error del servidor' });
   }
 }
