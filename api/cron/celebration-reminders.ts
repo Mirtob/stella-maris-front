@@ -731,11 +731,29 @@ async function logRun(row: Record<string, unknown>): Promise<void> {
   }
 }
 
+/**
+ * Compara el header Authorization con el secreto en tiempo constante. Dynamic import
+ * de `node:crypto` por la misma razón que web-push: en este setup de Vercel los imports
+ * top-level fuera de tipos han roto la función al cargar más de una vez.
+ */
+async function bearerMatches(header: string, secret: string): Promise<boolean> {
+  const expected = `Bearer ${secret}`;
+  if (header.length !== expected.length) return false; // timingSafeEqual exige igual largo
+  const { timingSafeEqual } = await import('node:crypto');
+  return timingSafeEqual(Buffer.from(header), Buffer.from(expected));
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Con CRON_SECRET configurado el Bearer es OBLIGATORIO. La cabecera `x-vercel-cron` la
+  // puede mandar cualquiera —no la valida nadie— así que solo sirve de fallback mientras
+  // no haya secreto. Vercel inyecta `Authorization: Bearer $CRON_SECRET` por su cuenta en
+  // las llamadas del cron en cuanto la env var existe, así que la corrida programada sigue
+  // funcionando sin tocar vercel.json.
   const CRON_SECRET = (process.env.CRON_SECRET || '').trim();
-  const isVercelCron = !!req.headers['x-vercel-cron'];
-  const authOk = CRON_SECRET && req.headers.authorization === `Bearer ${CRON_SECRET}`;
-  if (!isVercelCron && !authOk) return res.status(401).json({ error: 'No autorizado' });
+  const authHeader = (req.headers.authorization as string) || '';
+  const authOk = !!CRON_SECRET && (await bearerMatches(authHeader, CRON_SECRET));
+  const headerOk = !CRON_SECRET && !!req.headers['x-vercel-cron'];
+  if (!authOk && !headerOk) return res.status(401).json({ error: 'No autorizado' });
 
   if (!SUPABASE_URL || !SERVICE) return res.status(500).json({ error: 'Config incompleta' });
   if (!VAPID_PRIVATE) return res.status(200).json({ ok: true, skipped: 'push no configurado (VAPID)' });
