@@ -179,6 +179,12 @@ export async function disablePush(): Promise<void> {
 /**
  * Si el dispositivo ya estaba suscrito, actualiza sus parroquias en el servidor (p. ej.
  * al iniciar sesión o cambiar de parroquia). No pide permiso ni suscribe de nuevo.
+ *
+ * Además REPARA la suscripción si el navegador la perdió. Los push services rotan o
+ * invalidan endpoints cada cierto tiempo; cuando eso pasa, el servidor borra la fila al
+ * recibir 404/410 y el dispositivo dejaba de recibir avisos PARA SIEMPRE, en silencio
+ * (esta función salía sin hacer nada al no encontrar suscripción). Como el permiso ya
+ * está concedido, volver a suscribir no le pregunta nada al usuario.
  */
 export async function syncPushParishes(parishes: string[], role?: string): Promise<void> {
   if (!pushSupported()) return;
@@ -187,10 +193,25 @@ export async function syncPushParishes(parishes: string[], role?: string): Promi
   } catch {
     return;
   }
+  // El permiso se revocó desde los ajustes del navegador: limpiamos la marca para que el
+  // banner vuelva a ofrecer la activación en vez de reintentar en vano cada vez.
+  if (Notification.permission !== 'granted') {
+    try { localStorage.removeItem(LOCAL_FLAG); } catch { /* modo privado */ }
+    return;
+  }
   try {
-    const reg = await getRegistration();
-    const sub = reg ? await reg.pushManager.getSubscription() : null;
-    if (!sub) return;
+    let reg = await getRegistration();
+    if (!reg) {
+      reg = await navigator.serviceWorker.register(SW_URL);
+      await navigator.serviceWorker.ready;
+    }
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC),
+      });
+    }
     await callSubscribeApi({ action: 'subscribe', subscription: subToRow(sub), parishes, topics: TOPICS, role });
   } catch {
     /* silencioso: es una sincronización de fondo */

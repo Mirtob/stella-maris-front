@@ -694,6 +694,12 @@ function digestBody(items: string[], max = 3): string {
   return `${items.slice(0, max).join(' · ')} y ${items.length - max} más`;
 }
 
+/** Endpoint sin la parte secreta: sirve para distinguir dispositivos en el diagnóstico. */
+const maskEndpoint = (ep: string) => {
+  const host = ep.replace(/^https?:\/\//, '').split('/')[0];
+  return `${host}/…${ep.slice(-8)}`;
+};
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const CRON_SECRET = (process.env.CRON_SECRET || '').trim();
   const isVercelCron = !!req.headers['x-vercel-cron'];
@@ -703,10 +709,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!SUPABASE_URL || !SERVICE) return res.status(500).json({ error: 'Config incompleta' });
   if (!VAPID_PRIVATE) return res.status(200).json({ ok: true, skipped: 'push no configurado (VAPID)' });
 
-  const today = todayInSantiago();
+  // ── MODO DIAGNÓSTICO (?dry=1) ──────────────────────────────────────────────
+  // Recorre exactamente la misma lógica pero NO envía nada: responde a quién le
+  // habría llegado y por qué. `?date=YYYY-MM-DD` simula otro día (p. ej. para
+  // reconstruir la corrida de un jueves pasado) y SOLO se acepta junto con dry=1,
+  // para que nadie pueda disparar avisos de una fecha arbitraria.
+  const dry = /^(1|true|yes|on)$/i.test(String(req.query?.dry ?? ''));
+  const simDate = String(req.query?.date ?? '');
+  const useSim = dry && /^\d{4}-\d{2}-\d{2}$/.test(simDate);
+
+  const today = useSim ? simDate : todayInSantiago();
   const topicCeleb = `topics=cs.${encodeURIComponent('{celebrations}')}`;
   let generalSent = 0;
   let coroSent = 0;
+
+  // En dry-run contamos destinatarios y guardamos el aviso que se habría mandado.
+  const preview: { to: number; title: string; body: string }[] = [];
+  const deliver = async (subs: { endpoint: string; p256dh: string; auth: string }[], payload: any): Promise<number> => {
+    if (!dry) return sendToSubs(subs, payload);
+    if (subs.length > 0) preview.push({ to: subs.length, title: payload.title, body: payload.body });
+    return subs.length;
+  };
 
   try {
     // ── 1) DIGEST de celebraciones próximas (7 y 1 día) → topic 'celebrations' ──
@@ -728,7 +751,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .filter((it) => it.scope === 'global' || (sub.parishes || []).includes(it.scope))
           .filter((it) => (seen.has(it.name) ? false : (seen.add(it.name), true)));
         if (mine.length === 0) continue;
-        generalSent += await sendToSubs([{ endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth }], {
+        generalSent += await deliver([{ endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth }], {
           title: mine.length === 1 ? 'Celebración próxima ✝️' : 'Celebraciones próximas ✝️',
           body: digestBody(mine.map((it) => `${it.name} (${leadLabel(it.lead)})`)),
           url: '/',
@@ -750,20 +773,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const cr = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?role=in.(Coro,Admin)&select=endpoint,p256dh,auth,parishes`, { headers: svcHeaders });
     const coroSubs: { endpoint: string; p256dh: string; auth: string; parishes: string[] }[] = cr.ok ? await cr.json() : [];
 
+    // Diagnóstico: por qué cada suscriptor Coro/Admin recibe o no el aviso.
+    const coroDetail: { device: string; parishes: string[]; pending: string[]; skipped: string }[] = [];
+
     for (const sub of coroSubs) {
       const parishes = Array.from(new Set(sub.parishes || []));
       const pending: string[] = [];
+      const skipped: string[] = [];
       for (const parish of parishes) {
         const rel = [
           ...base3,
           ...custom3.filter((c) => c.scope === 'global' || c.scope === parish).map((c) => c.name),
         ];
-        if (rel.length === 0) continue;
-        if (await parishHasCantoral(parish, [target3, vigil])) continue; // ya publicaron
+        if (rel.length === 0) { skipped.push(`${parish}: sin celebración ese día`); continue; }
+        if (await parishHasCantoral(parish, [target3, vigil])) { skipped.push(`${parish}: ya publicado`); continue; }
         pending.push(parishes.length > 1 ? `${parish}: ${rel[0]}` : rel[0]);
       }
+      if (dry) {
+        coroDetail.push({
+          device: maskEndpoint(sub.endpoint),
+          parishes,
+          pending,
+          skipped: parishes.length === 0 ? 'suscripción sin parroquias' : skipped.join(' | '),
+        });
+      }
       if (pending.length === 0) continue;
-      coroSent += await sendToSubs([{ endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth }], {
+      coroSent += await deliver([{ endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth }], {
         title: 'Publica el cantoral 🎼',
         body: `${digestBody(pending)} — en 3 días`,
         url: '/', // el Coro llega a su pantalla principal (constructor del cantoral)
@@ -779,7 +814,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const isMonday = new Date(`${today}T12:00:00Z`).getUTCDay() === 1;
     if (courseOn && isMonday) {
       const allSubs = await querySubs(''); // querySubs arma ?select=...&<filtro>; vacío = todos
-      courseSent = await sendToSubs(allSubs, {
+      courseSent = await deliver(allSubs, {
         title: '🎓 Lunes de formación',
         body: 'Tu cápsula de la semana te espera: 5 minutos para crecer como músico católico.',
         url: '/?goto=cursos',
@@ -787,7 +822,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    return res.status(200).json({ ok: true, date: today, generalSent, coroSent, courseSent });
+    if (!dry) return res.status(200).json({ ok: true, date: today, generalSent, coroSent, courseSent });
+
+    // Radiografía completa de las suscripciones: si aquí no aparece el dispositivo,
+    // el problema es la suscripción (se perdió/expiró), no el cron.
+    const all = await fetch(
+      `${SUPABASE_URL}/rest/v1/push_subscriptions?select=endpoint,role,parishes,topics,updated_at`,
+      { headers: svcHeaders },
+    );
+    const rows: { endpoint: string; role: string | null; parishes: string[]; topics: string[]; updated_at: string }[] =
+      all.ok ? await all.json() : [];
+    const byRole: Record<string, number> = {};
+    for (const r of rows) byRole[r.role ?? '(sin rol)'] = (byRole[r.role ?? '(sin rol)'] ?? 0) + 1;
+
+    return res.status(200).json({
+      ok: true,
+      dryRun: true,
+      date: today,
+      simulated: useSim,
+      wouldSend: { generalSent, coroSent, courseSent },
+      preview,
+      celebraciones: { target3, vigil, base: base3, custom: custom3 },
+      suscripciones: {
+        total: rows.length,
+        porRol: byRole,
+        sinParroquias: rows.filter((r) => !(r.parishes || []).length).length,
+        detalle: rows.map((r) => ({
+          device: maskEndpoint(r.endpoint),
+          role: r.role,
+          parishes: r.parishes,
+          topics: r.topics,
+          updated_at: r.updated_at,
+        })),
+      },
+      coroDetail,
+    });
   } catch (e: any) {
     return res.status(500).json({ error: e?.message || 'Error del servidor' });
   }
