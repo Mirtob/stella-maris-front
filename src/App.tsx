@@ -486,7 +486,17 @@ function AppContent() {
 
     async function initializeAuth() {
       const storedSession = await getStoredSession();
-      const storedProfile = getStoredUserProfile();
+      // El perfil de localStorage puede ser de OTRA cuenta: cerrar sesión NO lo borra
+      // a propósito (así se recuerda el rol de la sesión anterior, ver lastSessionRole).
+      // Si no corresponde a la sesión activa hay que descartarlo: si no, quien crea una
+      // cuenta nueva en un navegador ya usado hereda rol, parroquia e incluso el id del
+      // usuario anterior, se salta el alta de perfil y termina escribiendo sobre la
+      // ficha ajena. Comparar por id es lo único fiable (el email de las cuentas
+      // usuario/clave es sintético).
+      const savedProfile = getStoredUserProfile();
+      const storedProfile = savedProfile && storedSession && savedProfile.id !== storedSession.user.id
+        ? null
+        : savedProfile;
 
       // Enlace permanente de parroquia: resuelve al cantoral vigente (vista Pueblo fiel),
       // sin exigir login. Si hay perfil guardado lo seteamos para "Abrir en la app".
