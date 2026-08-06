@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { UserRole } from '../../types';
 import { buildChapelParish, formatActiveParishLabel } from '../../utils/parish';
+import { ParishPicker } from './ParishPicker';
 
 interface SelectActiveParishDialogProps {
   parishes: string[];
@@ -36,6 +37,8 @@ export function SelectActiveParishDialog({
 }: SelectActiveParishDialogProps) {
   const [chosenRole, setChosenRole] = useState<UserRole | null>(null);
   const [chosenParish, setChosenParish] = useState<string | null>(null);
+  // Paso "voy de visita": buscador de CUALQUIER parroquia, no solo las del perfil.
+  const [visiting, setVisiting] = useState(false);
 
   // Render a small "Último uso" badge when this option matches the previous session
   const LastUseBadge = () => (
@@ -62,6 +65,13 @@ export function SelectActiveParishDialog({
       setChosenRole(role);
       return;
     }
+    // Pueblo fiel con una sola parroquia: igual mostramos el paso, porque ahí vive la
+    // opción de ir a otra parroquia de visita (p. ej. la Misa Crismal en la catedral).
+    // Sin esto, quien tiene una sola parroquia entraba directo y nunca podía elegir otra.
+    if (role === 'Pueblo fiel') {
+      setChosenRole(role);
+      return;
+    }
     // Una sola parroquia: si tiene capillas, pasar al paso de capilla; si no, confirmar.
     const only = effectiveParishes[0] ?? '';
     if (only && chapelsOf(only).length > 0) {
@@ -70,6 +80,17 @@ export function SelectActiveParishDialog({
     } else {
       onSelect(only, role);
     }
+  };
+
+  /**
+   * Visita: se entra como Pueblo fiel a una parroquia que NO es del perfil. Solo
+   * afecta a la sesión (activeParishName); no se agrega a las parroquias permanentes.
+   * Reservado al rol Pueblo fiel a propósito: "ser Coro de" una parroquia habilita
+   * publicar y editar sus cantorales, así que ese rol sigue atado a las propias.
+   */
+  const handleVisitSelect = (next: string[]) => {
+    const parish = next[next.length - 1];
+    if (parish) onSelect(parish, 'Pueblo fiel');
   };
 
   // En el paso de parroquia: si la elegida tiene capillas, avanzar al paso de capilla.
@@ -93,7 +114,10 @@ export function SelectActiveParishDialog({
         <div className="mb-7 text-center">
           <div className="text-5xl mb-3">✝️</div>
           <h2 className="text-xl sm:text-2xl font-bold text-brand-ink">
-            {!chosenRole ? '¿Cómo participas hoy?' : chosenParish ? '¿A cuál capilla vas?' : '¿A cuál parroquia vas?'}
+            {!chosenRole ? '¿Cómo participas hoy?'
+              : chosenParish ? '¿A cuál capilla vas?'
+              : visiting ? '¿A cuál parroquia vas de visita?'
+              : '¿A cuál parroquia vas?'}
           </h2>
           {!chosenRole && (
             <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
@@ -178,8 +202,10 @@ export function SelectActiveParishDialog({
           </div>
         )}
 
-        {/* ── Step 2: Parish selection (multi-parish only) ───────────────── */}
-        {chosenRole && multiParish && !chosenParish && (
+        {/* ── Step 2: Parish selection ───────────────────────────────────
+            Se muestra con varias parroquias, y SIEMPRE para Pueblo fiel (ahí está
+            la opción de ir de visita a otra parroquia). */}
+        {chosenRole && (multiParish || chosenRole === 'Pueblo fiel') && !chosenParish && !visiting && (
           <div className="mb-4">
             <button
               onClick={() => setChosenRole(null)}
@@ -215,6 +241,44 @@ export function SelectActiveParishDialog({
                     </button>
                   );
                 })}
+            </div>
+
+            {/* Visita a otra parroquia: un coro parroquial que va, por ejemplo, a la
+                Misa Crismal en la catedral. Solo para esta sesión. */}
+            {chosenRole === 'Pueblo fiel' && (
+              <button
+                onClick={() => setVisiting(true)}
+                className="w-full mt-3 bg-white/40 dark:bg-white/5 border-2 border-dashed border-blue-300 dark:border-blue-600 p-4 rounded-2xl text-left hover:bg-white/70 dark:hover:bg-white/15 active:scale-95 transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl flex-shrink-0">🧭</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-brand-ink-soft">Voy a otra parroquia</p>
+                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                      Una Misa fuera de la tuya (Crismal, un viaje, una visita)
+                    </p>
+                  </div>
+                  <span className="text-blue-500 dark:text-blue-400 text-lg">→</span>
+                </div>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ── Paso de VISITA: buscar cualquier parroquia (o capilla) ──────── */}
+        {chosenRole === 'Pueblo fiel' && visiting && (
+          <div className="mb-4">
+            <button
+              onClick={() => setVisiting(false)}
+              className="flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 mb-3 hover:opacity-70 transition-opacity"
+            >
+              ← Volver a mis parroquias
+            </button>
+            <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+              Entrarás como <strong>Pueblo fiel</strong> solo por esta sesión. Tus parroquias no cambian.
+            </p>
+            <div className="max-h-72 overflow-y-auto">
+              <ParishPicker selected={[]} onChange={handleVisitSelect} />
             </div>
           </div>
         )}
