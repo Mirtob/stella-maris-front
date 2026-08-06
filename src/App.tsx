@@ -96,6 +96,7 @@ import { listCustomLiturgicalDates, toLiturgicalDate } from './services/liturgic
 import { setPersistedCustomDates } from './utils/liturgicalCalendar';
 import { syncPushParishes } from './services/push';
 import { PrelaunchDemo } from './components/survey/PrelaunchDemo';
+import { readSignupPrefs, clearSignupPrefs } from './config/signupPrefs';
 import { getTodayLocal, addDaysLocal, isWithinInclusive } from './utils/dateLocal';
 import { massTypeBadge } from './utils/massType';
 import { generateCantoralPDF } from './utils/cantoralPDFGenerator';
@@ -294,6 +295,9 @@ function AppContent() {
   const [publishedBatch, setPublishedBatch] = useState<PublishedCantoral[] | null>(null);
   // Server-authoritative admin check (vs. trusting the role saved in localStorage)
   const [isVerifiedAdmin, setIsVerifiedAdmin] = useState(false);
+  // Rol/instrumento que eligió en el formulario de registro, traídos por localStorage
+  // (entre medio hay un reload). Se lee una vez y se descarta al completar el alta.
+  const [signupPrefs] = useState(() => readSignupPrefs());
   // Q17 — flag para mostrar skeleton mientras Supabase responde con la lista
   const [loadingCantorals, setLoadingCantorals] = useState(true);
   // F2 — Vista pendiente cuando el coro intenta abandonar un draft de cantoral.
@@ -682,6 +686,8 @@ function AppContent() {
     };
     setUserProfile(profile);
     saveUserProfile(profile);
+    // El alta terminó: la marca del registro ya cumplió su función.
+    clearSignupPrefs();
     // Persistir el perfil en Supabase para que el admin pueda verlo en
     // ProfileManager. Fire-and-forget; el flujo local sigue igual aunque falle.
     upsertCurrentUserProfile(profile).catch(() => undefined);
@@ -1054,6 +1060,9 @@ function AppContent() {
     <ProfileSetup
       onComplete={handleProfileSetup}
       userEmail={userProfile?.email}
+      // Rol/instrumento elegidos recién en el formulario de registro: no se repreguntan.
+      initialRole={signupPrefs?.role}
+      initialInstruments={signupPrefs?.instruments}
       onShowTerms={() => setRoute({ screen: 'terms', returnTo: { screen: 'profile-setup' } })}
       onShowPrivacy={() => setRoute({ screen: 'privacy', returnTo: { screen: 'profile-setup' } })}
     />

@@ -122,12 +122,17 @@ function isEmail(s: string): boolean {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s);
 }
 
+const USERNAME_RE = /^[a-z0-9._-]{3,30}$/;
+
+// Roles que puede AUTO-asignarse quien se registra. 'Admin' queda fuera a propósito:
+// el rol se valida aquí y no solo en la UI, o cualquiera podría mandar role:'Admin'
+// por POST y prearmarse un perfil de administrador.
+const SELF_ROLES = ['Coro', 'Pueblo fiel'];
+const INSTRUMENTS = ['Guitarra', 'Órgano'];
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!applyCors(req, res)) return; // preflight
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método no permitido' });
-
-  // Rate limit: 5 registros por IP cada 15 minutos.
-  if (!(await rateLimit(req, res, 'signup', 5, 15 * 60_000))) return;
 
   const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || '').trim();
   const SERVICE = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
@@ -137,13 +142,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const body = typeof req.body === 'string' ? safeParse(req.body) : (req.body || {});
   const username = String(body.username || '').trim().toLowerCase();
+  const svcHeadersBase = { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Content-Type': 'application/json' };
+
+  // ── ¿El nombre de usuario está libre? ────────────────────────────────────
+  // Aviso EN VIVO mientras el usuario escribe, para que no descubra el choque
+  // recién al enviar el formulario. Límite propio y más holgado que el registro
+  // (se llama una vez por nombre tecleado), pero límite al fin: la consulta
+  // permite sondear qué usuarios existen.
+  if (body.action === 'check') {
+    if (!(await rateLimit(req, res, 'signup-check', 40, 15 * 60_000))) return;
+    if (!USERNAME_RE.test(username)) return res.status(200).json({ ok: true, valid: false });
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_profiles?email=eq.${encodeURIComponent(`${username}@${USERNAME_EMAIL_DOMAIN}`)}&select=id&limit=1`,
+      { headers: svcHeadersBase },
+    );
+    // Si la consulta falla no inventamos un veredicto: `available: null` = "no sé",
+    // y la UI no muestra nada. La palabra final la tiene igual la creación (409).
+    if (!r.ok) return res.status(200).json({ ok: true, valid: true, available: null });
+    const rows = await r.json();
+    return res.status(200).json({ ok: true, valid: true, available: !(Array.isArray(rows) && rows.length > 0) });
+  }
+
+  // Rate limit: 5 registros por IP cada 15 minutos.
+  if (!(await rateLimit(req, res, 'signup', 5, 15 * 60_000))) return;
+
   const password = String(body.password || '');
   const name = body.name ? String(body.name).trim().slice(0, 80) : undefined;
   // Correo de respaldo OPCIONAL para auto-recuperación de clave (recovery_email).
   const recoveryEmail = String(body.email || '').trim();
 
-  if (!/^[a-z0-9._-]{3,30}$/.test(username)) {
+  // Rol e instrumentos elegidos en el propio formulario de registro.
+  const role = String(body.role || '');
+  const instruments: string[] = Array.isArray(body.instruments)
+    ? body.instruments.map((i: unknown) => String(i)).filter((i) => INSTRUMENTS.includes(i))
+    : [];
+
+  if (!USERNAME_RE.test(username)) {
     return res.status(400).json({ error: 'Usuario inválido: 3 a 30 caracteres (letras, números, . _ -), sin espacios ni tildes.' });
+  }
+  if (!SELF_ROLES.includes(role)) {
+    return res.status(400).json({ error: 'Elige si participas en el coro o como pueblo fiel.' });
+  }
+  if (role === 'Coro' && instruments.length === 0) {
+    return res.status(400).json({ error: 'Elige al menos un instrumento (guitarra u órgano).' });
   }
   const pwErr = passwordProblem(password);
   if (pwErr) return res.status(400).json({ error: pwErr });
@@ -177,12 +218,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: msg });
     }
 
-    // Pre-armar user_profiles (rol por defecto Pueblo fiel) para que la cuenta exista
-    // de inmediato; el usuario elige rol y parroquia en su primer ingreso (perfil
-    // "incompleto" → setup). Mismo comportamiento que el alta del admin.
+    // Pre-armar user_profiles con el rol e instrumentos que eligió en el formulario.
+    // Queda sin parroquia a propósito: el perfil sigue "incompleto", así que en el
+    // primer ingreso cae al setup, que ahora solo le pide la parroquia (y el
+    // consentimiento legal) sin repetirle el rol.
     const newUserId = data?.id;
     if (newUserId) {
-      const profile: Record<string, unknown> = { id: newUserId, email, name: name ?? null, role: 'Pueblo fiel' };
+      const profile: Record<string, unknown> = { id: newUserId, email, name: name ?? null, role };
+      if (role === 'Coro' && instruments.length > 0) profile.instruments = instruments;
       if (recoveryEmail) profile.recovery_email = recoveryEmail;
       await fetch(`${SUPABASE_URL}/rest/v1/user_profiles`, {
         method: 'POST',

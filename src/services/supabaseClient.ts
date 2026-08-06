@@ -67,7 +67,7 @@ export async function signInWithUsernamePassword(username: string, password: str
 export async function signUpUsernameAccount(
   username: string,
   password: string,
-  opts?: { name?: string; email?: string },
+  opts?: { name?: string; email?: string; role?: string; instruments?: string[] },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const r = await fetch('/api/signup-username', {
@@ -78,6 +78,8 @@ export async function signUpUsernameAccount(
         password,
         name: opts?.name,
         email: opts?.email?.trim() || undefined,
+        role: opts?.role,
+        instruments: opts?.instruments,
       }),
     });
     const data = await r.json().catch(() => ({}));
@@ -85,6 +87,28 @@ export async function signUpUsernameAccount(
     return { ok: true };
   } catch {
     return { ok: false, error: 'Sin conexión. Revisa tu red e inténtalo de nuevo.' };
+  }
+}
+
+/**
+ * ¿Está libre ese nombre de usuario? Solo para avisar EN VIVO mientras escribe.
+ * `available: null` = no se pudo determinar (red o consulta caída) → no mostrar nada.
+ * La comprobación definitiva la hace la creación de la cuenta, que devuelve 409.
+ */
+export async function checkUsernameAvailable(
+  username: string,
+): Promise<{ valid: boolean; available: boolean | null }> {
+  try {
+    const r = await fetch('/api/signup-username', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'check', username: username.trim().toLowerCase() }),
+    });
+    if (!r.ok) return { valid: true, available: null };
+    const data = await r.json().catch(() => ({}));
+    return { valid: data?.valid !== false, available: data?.available ?? null };
+  } catch {
+    return { valid: true, available: null };
   }
 }
 

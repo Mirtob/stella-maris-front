@@ -10,9 +10,19 @@ interface ProfileSetupProps {
   userEmail?: string;
   onShowTerms?: () => void;
   onShowPrivacy?: () => void;
+  /**
+   * Rol e instrumento ya elegidos en el formulario de registro. Cuando vienen, esta
+   * pantalla NO los vuelve a preguntar y queda reducida a parroquia + consentimiento.
+   * Las cuentas creadas por el admin no los traen (su rol es un default, no una
+   * elección del usuario), así que a ésas se les sigue preguntando todo.
+   */
+  initialRole?: UserRole;
+  initialInstruments?: InstrumentType[];
 }
 
-export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy }: ProfileSetupProps) {
+export function ProfileSetup({
+  onComplete, userEmail, onShowTerms, onShowPrivacy, initialRole, initialInstruments,
+}: ProfileSetupProps) {
   // Aceptación legal — Ley 19.628. Sin esto no se puede continuar.
   const [acceptedLegal, setAcceptedLegal] = useState(false);
   // Admin eligibility is decided server-side via the `is_admin()` Supabase RPC
@@ -23,8 +33,10 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
   useEffect(() => {
     isCurrentUserAdmin().then(setIsAdminAllowed);
   }, [userEmail]);
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
-  const [selectedInstruments, setSelectedInstruments] = useState<InstrumentType[]>([]);
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(initialRole ?? null);
+  const [selectedInstruments, setSelectedInstruments] = useState<InstrumentType[]>(initialInstruments ?? []);
+  // Ya vino todo lo que se pregunta arriba → esta pantalla solo pide la parroquia.
+  const preselected = !!initialRole;
   // Parroquias en formato canónico "<Nombre> - <Diócesis>" (lo que emite ParishPicker).
   const [selectedParishes, setSelectedParishes] = useState<string[]>([]);
 
@@ -99,7 +111,19 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
           </p>
         </div>
 
+        {/* Rol ya elegido en el registro: se muestra como resumen, no se vuelve a preguntar. */}
+        {preselected && (
+          <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl shadow-xl p-3 sm:p-4 border-2 border-white/40 dark:border-white/20 mb-4 sm:mb-6">
+            <p className="text-brand-ink text-base sm:text-lg">
+              Te registraste como <strong>{initialRole}</strong>
+              {initialRole === 'Coro' && (initialInstruments?.length ?? 0) > 0
+                && <> ({initialInstruments!.join(' y ')})</>}. Solo falta indicar tu parroquia.
+            </p>
+          </div>
+        )}
+
         {/* Role Selection */}
+        {!preselected && (
         <div className="space-y-5 mb-4 sm:mb-6">
           <button
             onClick={() => setSelectedRole('Coro')}
@@ -160,6 +184,7 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
           </button>
           )}
         </div>
+        )}
 
         {/* Parish Selection - For Coro and Pueblo fiel */}
         {(selectedRole === 'Coro' || selectedRole === 'Pueblo fiel') && (
@@ -194,8 +219,8 @@ export function ProfileSetup({ onComplete, userEmail, onShowTerms, onShowPrivacy
           </div>
         )}
 
-        {/* Choir Specific Options */}
-        {selectedRole === 'Coro' && (
+        {/* Choir Specific Options — el instrumento ya vino del registro si `preselected`. */}
+        {selectedRole === 'Coro' && !preselected && (
           <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl shadow-xl p-3 sm:p-4 border-2 border-white/40 dark:border-white/20 mb-4 sm:mb-6 transition-colors">
             <div className="flex items-center gap-4 mb-6">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-brand to-brand-strong rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-brand-border">
