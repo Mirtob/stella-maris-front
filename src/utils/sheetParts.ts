@@ -2,21 +2,29 @@
  * Deducción de la VOZ o INSTRUMENTO al que corresponde cada PDF de una carpeta de
  * canto en Drive.
  *
- * Los coros escriben las partituras en MuseScore, que al "exportar partes" genera un
- * archivo por voz/instrumento con el nombre `<Obra>-<Parte>.pdf`, más el full score
- * con el nombre de la obra a secas. De ahí se puede deducir la parte sin pedirle a
- * nadie que la escriba a mano.
+ * Ajustado a cómo exporta MuseScore 4 de verdad (verificado sobre una carpeta real):
  *
- * Criterio: reconocer lo habitual (SATB + instrumentos) y, ante lo desconocido,
- * NO inventar — se conserva el texto tal cual (así "Bombardino 2" o "Viola da gamba"
- * siguen siendo etiquetas útiles aunque no estén en ninguna lista).
+ *   Ave Maria Arcadelt.pdf                      → partitura general (full score)
+ *   Ave Maria Arcadelt-Soprano.pdf              → Soprano
+ *   Ave Maria Arcadelt-Alto.pdf                 → Alto
+ *   Ave Maria Arcadelt-Trompeta_en_Sib_1.pdf    → Trompeta en Sib 1
+ *   Ave Maria Arcadelt.mp3 / .mscz              → se ignoran (no son PDF)
+ *
+ * Reglas:
+ *  - El nombre de la obra se descuenta como PREFIJO COMÚN de la carpeta, así funciona
+ *    sin saber cómo se llama la obra ni depender de un separador fijo.
+ *  - La etiqueta que se MUESTRA es la que escribió el músico, solo aseada (MuseScore
+ *    pone guiones bajos donde hay espacios). No se renombra: si el archivo dice "Alto"
+ *    la app dice "Alto", no "Contralto".
+ *  - Las equivalencias existen solo para BUSCAR: quien tenga "Contralto" en su perfil
+ *    encuentra igual el archivo "Alto".
  */
 
 /** Etiqueta de la partitura general: la que ve quien no tiene voz asignada. */
 export const FULL_SCORE = 'Full Score';
 
 export interface SongSheet {
-  /** Voz o instrumento, ya normalizado ('Soprano', 'Trompeta', 'Full Score'…). */
+  /** Voz o instrumento tal como lo nombró el músico ('Soprano', 'Trompeta en Sib 1'). */
   part: string;
   /** Id del archivo en Drive. */
   fileId: string;
@@ -33,46 +41,49 @@ const norm = (s: string) =>
     .trim();
 
 /**
- * Sinónimos → etiqueta canónica. Se comparan como PALABRAS dentro del texto restante,
- * no como subcadenas, para que "sopranos" no case pero "alto" tampoco se dispare
- * dentro de "contralto" por accidente (el orden de la lista resuelve ese caso: se
- * prueba primero 'contralto').
+ * Equivalencias SOLO PARA BUSCAR. No renombran nada: sirven para que la voz del perfil
+ * encuentre el archivo aunque el músico lo haya nombrado con el otro término.
  */
-const PART_SYNONYMS: [canonical: string, synonyms: string[]][] = [
-  // Voces (SATB y variantes habituales en partituras corales).
-  ['Soprano', ['soprano', 'sopranos', 'sopran', 'tiple', 's']],
-  ['Contralto', ['contralto', 'contraltos', 'alto', 'altos', 'a']],
-  ['Tenor', ['tenor', 'tenores', 't']],
-  ['Bajo', ['bajo', 'bajos', 'bass', 'baritono', 'barítono', 'b']],
-  // Teclado y cuerda pulsada.
-  ['Órgano', ['organo', 'organ', 'organo manual']],
-  ['Piano', ['piano']],
-  ['Guitarra', ['guitarra', 'guitar']],
-  // Viento — los que el usuario nombró y sus vecinos naturales.
-  ['Flauta', ['flauta', 'flute', 'flauta traversa']],
-  ['Trompeta', ['trompeta', 'trumpet']],
-  ['Trombón', ['trombon', 'trombone']],
-  ['Bombardino', ['bombardino', 'euphonium', 'eufonio']],
-  ['Corno', ['corno', 'trompa', 'horn']],
-  ['Clarinete', ['clarinete', 'clarinet']],
-  ['Saxofón', ['saxofon', 'saxo', 'sax']],
-  // Cuerda frotada.
-  ['Violín', ['violin']],
-  ['Viola', ['viola']],
-  ['Violonchelo', ['violonchelo', 'violoncello', 'cello', 'chelo']],
-  ['Contrabajo', ['contrabajo', 'contrabass']],
-];
-
-/** Textos que identifican la partitura general. */
-const FULL_SCORE_WORDS = [
-  'full score', 'fullscore', 'score', 'partitura', 'partitura general',
-  'general', 'completa', 'todas las voces', 'coro', 'satb',
+const EQUIVALENTS: string[][] = [
+  ['contralto', 'alto'],
+  ['bajo', 'bass', 'baritono'],
+  ['soprano', 'tiple'],
+  ['organo', 'organ'],
+  ['trombon', 'trombone'],
+  ['bombardino', 'euphonium', 'eufonio'],
+  ['trompeta', 'trumpet'],
+  ['corno', 'trompa', 'horn'],
+  ['violonchelo', 'violoncello', 'cello', 'chelo'],
+  ['saxofon', 'saxo', 'sax'],
 ];
 
 /**
- * Quita del nombre del archivo la parte común a todos (el nombre de la obra), que es
- * lo que MuseScore antepone. Se calcula como el prefijo compartido por los archivos
- * de la carpeta: así funciona sin saber cómo se llama la obra.
+ * Si alguien no tiene partitura propia, a qué otra parte recurrir ANTES del full score.
+ * El organista lee la línea de soprano (la melodía) cuando la obra no trae una parte de
+ * órgano escrita: es lo que hace en la práctica, y es más útil que la partitura general
+ * con todas las voces apiladas.
+ */
+const PART_FALLBACKS: Record<string, string[]> = {
+  organo: ['soprano'],
+  piano: ['organo', 'soprano'],
+};
+
+/** Textos que identifican la partitura general cuando el archivo no se llama como la obra. */
+const FULL_SCORE_WORDS = [
+  'full score', 'fullscore', 'score', 'partitura', 'partitura general',
+  'general', 'completa', 'todas las voces', 'satb',
+];
+
+/** Todos los términos equivalentes a uno dado (incluido él mismo). */
+function synonymsOf(term: string): string[] {
+  const t = norm(term);
+  const row = EQUIVALENTS.find(g => g.includes(t));
+  return row ? row : [t];
+}
+
+/**
+ * Quita el nombre de la obra, que MuseScore antepone a cada parte. Se calcula como el
+ * prefijo compartido por los archivos de la carpeta.
  */
 function commonPrefix(names: string[]): string {
   if (names.length < 2) return '';
@@ -87,44 +98,22 @@ function commonPrefix(names: string[]): string {
   return prefix.replace(/[\s\-_.]+$/, '');
 }
 
-/** Deduce la parte de UN archivo, ya descontado el nombre de la obra. */
-function partFromRemainder(remainder: string, fullName: string): string {
-  const rest = norm(remainder);
-
-  // Sin resto (el archivo se llama igual que la obra) → es el full score.
-  if (!rest) return FULL_SCORE;
-  if (FULL_SCORE_WORDS.some(w => rest === w || rest.startsWith(`${w} `) || rest.endsWith(` ${w}`))) {
-    return FULL_SCORE;
-  }
-
-  const words = rest.split(' ').filter(Boolean);
-  for (const [canonical, synonyms] of PART_SYNONYMS) {
-    // Coincidencia por palabra completa; las abreviaturas de una letra (S/A/T/B)
-    // solo valen si el resto es EXACTAMENTE esa letra, o se dispararían por todo.
-    const hit = synonyms.some(syn =>
-      syn.length === 1 ? rest === syn : words.includes(syn) || rest === syn);
-    if (hit) {
-      // Solo se normaliza cuando el resto es la voz (con un número opcional de
-      // refuerzo). Si hay más palabras, se respeta el texto original: colapsar
-      // "Viola da gamba" a "Viola" o "Trompeta en Sib" a "Trompeta" sería inventar
-      // una parte que el músico no escribió. Igual se encuentran al buscar, porque
-      // sheetForPart() también compara por prefijo.
-      const extra = words.filter(w => !synonyms.includes(w) && !/^[12345]$/.test(w));
-      if (extra.length > 0) break;
-      const num = rest.match(/\b([12345])\b/);
-      return num ? `${canonical} ${num[1]}` : canonical;
-    }
-  }
-
-  // Desconocido: se respeta lo que escribió el músico, con la inicial en mayúscula.
-  const raw = remainder.replace(/^[\s\-_.]+/, '').replace(/\.pdf$/i, '').trim();
-  return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : fullName.replace(/\.pdf$/i, '');
+/**
+ * Asea la etiqueta para mostrarla: MuseScore escribe los espacios como guiones bajos
+ * ("Trompeta_en_Sib_1"), y el separador con la obra queda al inicio ("-Alto").
+ */
+function cleanLabel(raw: string): string {
+  return raw
+    .replace(/^[\s\-_.]+/, '')
+    .replace(/_+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**
  * Convierte los PDF de una carpeta de Drive en la lista de partituras del canto.
- * Devuelve el full score primero y el resto en orden coral (SATB) y luego alfabético,
- * que es como los espera ver un músico.
+ * Ignora todo lo que no sea PDF (MuseScore deja .mp3 y .mscz en la misma carpeta).
+ * Devuelve el full score primero y el resto en orden coral (SATB) y luego alfabético.
  */
 export function detectSheets(files: { id: string; name: string }[]): SongSheet[] {
   const pdfs = files.filter(f => /\.pdf$/i.test(f.name));
@@ -134,39 +123,46 @@ export function detectSheets(files: { id: string; name: string }[]): SongSheet[]
   const sheets: SongSheet[] = pdfs.map((f) => {
     const stem = f.name.replace(/\.pdf$/i, '');
     const remainder = base && stem.startsWith(base) ? stem.slice(base.length) : stem;
-    return { part: partFromRemainder(remainder, f.name), fileId: f.id, fileName: f.name };
+    const label = cleanLabel(remainder);
+    const isFull = !label || FULL_SCORE_WORDS.includes(norm(label));
+    return { part: isFull ? FULL_SCORE : label, fileId: f.id, fileName: f.name };
   });
 
   // Un único PDF en la carpeta es, por definición, la partitura del canto.
   if (sheets.length === 1) return [{ ...sheets[0], part: FULL_SCORE }];
 
-  const ORDER = ['Soprano', 'Contralto', 'Tenor', 'Bajo'];
+  const ORDER = ['soprano', 'contralto', 'alto', 'tenor', 'bajo'];
   const rank = (p: string) => {
     if (p === FULL_SCORE) return -1;
-    const i = ORDER.findIndex(o => p.startsWith(o));
+    const n = norm(p);
+    const i = ORDER.findIndex(o => n.startsWith(o));
     return i === -1 ? 100 : i;
   };
   return sheets.sort((a, b) => (rank(a.part) - rank(b.part)) || a.part.localeCompare(b.part));
 }
 
 /**
- * Partes que se ofrecen en los selectores (perfil y Modo Atril). Es solo una ayuda
- * para no tener que escribir: la voz es TEXTO LIBRE, así que quien toque algo que no
- * esté aquí puede escribirlo y funcionará igual, porque la detección tampoco fuerza
- * las partituras a una lista cerrada.
+ * Partes que se ofrecen en los selectores (perfil y Modo Atril). Es solo una ayuda para
+ * no tener que escribir: la voz es TEXTO LIBRE, así que quien toque algo que no esté
+ * aquí puede escribirlo y funcionará igual.
  */
 export const COMMON_PARTS = [
-  'Soprano', 'Contralto', 'Tenor', 'Bajo',
+  'Soprano', 'Alto', 'Tenor', 'Bajo',
   'Órgano', 'Piano', 'Guitarra',
   'Flauta', 'Trompeta', 'Trombón', 'Bombardino', 'Corno', 'Clarinete', 'Saxofón',
   'Violín', 'Viola', 'Violonchelo', 'Contrabajo',
 ];
 
-/** ¿Hay una partitura propia para esa voz en este canto? */
-export function hasPartSheet(sheets: SongSheet[] | undefined, part?: string): boolean {
-  if (!sheets?.length || !part) return false;
-  const found = sheetForPart(sheets, part);
-  return !!found && found.part !== FULL_SCORE;
+/**
+ * Voz efectiva de una persona: la que fijó en su perfil o, si no fijó ninguna, la que
+ * implica su instrumento. Un organista que nunca tocó Ajustes debe leer igualmente la
+ * parte de órgano (y, por PART_FALLBACKS, la de soprano si la obra no la trae) en vez
+ * del full score con todas las voces apiladas.
+ */
+export function effectiveVoicePart(voicePart?: string, instrument?: string): string | undefined {
+  if (voicePart) return voicePart;
+  if (instrument && norm(instrument) === 'organo') return 'Órgano';
+  return undefined;
 }
 
 /** La partitura por defecto: el full score si existe, si no la primera. */
@@ -174,19 +170,45 @@ export function defaultSheet(sheets: SongSheet[]): SongSheet | undefined {
   return sheets.find(s => s.part === FULL_SCORE) ?? sheets[0];
 }
 
+/** Busca una partitura cuyo nombre empiece por alguno de esos términos. */
+function findByTerms(sheets: SongSheet[], terms: string[]): SongSheet | undefined {
+  for (const t of terms) {
+    const exact = sheets.find(s => norm(s.part) === t);
+    if (exact) return exact;
+  }
+  // Prefijo: "Trompeta" debe encontrar "Trompeta en Sib 1"; "Soprano", "Soprano 2".
+  for (const t of terms) {
+    const loose = sheets.find(s => norm(s.part).startsWith(t));
+    if (loose) return loose;
+  }
+  return undefined;
+}
+
 /**
- * La partitura que le toca a alguien: la de su voz/instrumento si existe, y si no
- * el full score. Nunca devuelve `undefined` habiendo partituras: es preferible ver
- * la general que no ver nada.
+ * La partitura que le toca a alguien. En orden: su parte (o un sinónimo), luego el
+ * respaldo definido para ella (el organista lee soprano si no hay parte de órgano) y,
+ * como último recurso, el full score. Nunca devuelve `undefined` habiendo partituras:
+ * es preferible ver la general que no ver nada.
  */
 export function sheetForPart(sheets: SongSheet[], part?: string): SongSheet | undefined {
   if (!sheets.length) return undefined;
   if (part) {
-    const exact = sheets.find(s => norm(s.part) === norm(part));
-    if (exact) return exact;
-    // "Soprano" debe encontrar "Soprano 1" si no hay un "Soprano" a secas.
-    const loose = sheets.find(s => norm(s.part).startsWith(norm(part)));
-    if (loose) return loose;
+    const own = findByTerms(sheets, synonymsOf(part));
+    if (own) return own;
+    for (const fb of PART_FALLBACKS[norm(part)] ?? []) {
+      const alt = findByTerms(sheets, synonymsOf(fb));
+      if (alt) return alt;
+    }
   }
   return defaultSheet(sheets);
+}
+
+/**
+ * ¿Esta persona tiene una partitura PROPIA en este canto (no la general)? Cuenta también
+ * el respaldo: el organista que termina leyendo la de soprano sí debe ver partitura.
+ */
+export function hasPartSheet(sheets: SongSheet[] | undefined, part?: string): boolean {
+  if (!sheets?.length || !part) return false;
+  const found = sheetForPart(sheets, part);
+  return !!found && found.part !== FULL_SCORE;
 }

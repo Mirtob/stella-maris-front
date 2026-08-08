@@ -97,6 +97,7 @@ import { setPersistedCustomDates } from './utils/liturgicalCalendar';
 import { syncPushParishes } from './services/push';
 import { PrelaunchDemo } from './components/survey/PrelaunchDemo';
 import { readSignupPrefs, clearSignupPrefs } from './config/signupPrefs';
+import { effectiveVoicePart } from './utils/sheetParts';
 import { getTodayLocal, addDaysLocal, isWithinInclusive } from './utils/dateLocal';
 import { massTypeBadge } from './utils/massType';
 import { generateCantoralPDF } from './utils/cantoralPDFGenerator';
@@ -1151,7 +1152,7 @@ function AppContent() {
           song={route.song}
           onBack={handleBackFromPlayer}
           userInstrument={userProfile?.instrument}
-          userVoicePart={userProfile?.voicePart}
+          userVoicePart={effectiveVoicePart(userProfile?.voicePart, userProfile?.instrument)}
           userRole={userProfile?.role}
           userId={userProfile?.id}
         />
@@ -1373,7 +1374,7 @@ function renderView(p: ViewProps): JSX.Element | null {
         return (
           <ChoirView
             preferredInstrument={p.userProfile.instrument || 'Guitarra'}
-            userVoicePart={p.userProfile.voicePart}
+            userVoicePart={effectiveVoicePart(p.userProfile.voicePart, p.userProfile.instrument)}
             userInstruments={p.userProfile.instruments}
             parishName={p.activeParishName}
             parishes={p.userProfile.parishes}
@@ -1397,7 +1398,7 @@ function renderView(p: ViewProps): JSX.Element | null {
             onListen={p.onListen}
             userRole={p.effectiveRole}
             userInstrument={p.userProfile.instrument}
-            userVoicePart={p.userProfile.voicePart}
+            userVoicePart={effectiveVoicePart(p.userProfile.voicePart, p.userProfile.instrument)}
             userParishName={p.activeParishName}
             // El Pueblo fiel puede compartir el QR (no editar/eliminar).
             onShare={p.onShareCantoral}
@@ -1500,7 +1501,7 @@ function renderView(p: ViewProps): JSX.Element | null {
             onDeleteCantoral={p.onDeleteCantoral}
             onClone={p.onCloneCantoral}
             isAdmin={p.isVerifiedAdmin}
-            userVoicePart={p.userProfile.voicePart}
+            userVoicePart={effectiveVoicePart(p.userProfile.voicePart, p.userProfile.instrument)}
             defaultParish={p.userProfile.activeParishName || p.userProfile.parishName}
             managedParishes={Array.from(new Set([
               ...(p.userProfile.parishes ?? []),
