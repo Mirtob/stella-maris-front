@@ -124,7 +124,8 @@ const FOLDER_MIME = 'application/vnd.google-apps.folder';
 const MAX_FOLDERS = 200;
 const MAX_FILES = 3000;
 
-interface SheetFile { id: string; name: string; mimeType: string; path?: string }
+interface SheetFile { id: string; name: string; mimeType: string; path?: string; parentId?: string }
+interface SheetFolder { id: string; name: string; path: string }
 
 /** Lista TODOS los hijos directos de una carpeta, paginando hasta agotar. */
 async function listFolderChildren(folderId: string, apiKey: string): Promise<any[]> {
@@ -152,8 +153,12 @@ async function listFolderChildren(folderId: string, apiKey: string): Promise<any
  * todos los archivos NO-carpeta encontrados, con su ruta relativa en `path`.
  * Protegido contra ciclos (set `seen`) y con cotas MAX_FOLDERS / MAX_FILES.
  */
-async function walkDrive(rootId: string, apiKey: string): Promise<SheetFile[]> {
+async function walkDrive(rootId: string, apiKey: string): Promise<{ files: SheetFile[]; folders: SheetFolder[] }> {
   const files: SheetFile[] = [];
+  // Las carpetas se devuelven aparte: la ficha del canto enlaza UNA carpeta (la del
+  // canto polifónico) y de ahí deduce sus voces. Sin esto habría que adivinar la
+  // carpeta por la ruta de los archivos, que se rompe al renombrarla.
+  const folders: SheetFolder[] = [];
   const queue: { id: string; path: string }[] = [{ id: rootId, path: '' }];
   const seen = new Set<string>();
   let foldersVisited = 0;
@@ -168,14 +173,20 @@ async function walkDrive(rootId: string, apiKey: string): Promise<SheetFile[]> {
     for (const child of children) {
       if (child.mimeType === FOLDER_MIME) {
         const childPath = path ? `${path}/${child.name}` : child.name;
-        if (!seen.has(child.id)) queue.push({ id: child.id, path: childPath });
+        if (!seen.has(child.id)) {
+          queue.push({ id: child.id, path: childPath });
+          folders.push({ id: child.id, name: child.name, path: childPath });
+        }
       } else {
-        files.push({ id: child.id, name: child.name, mimeType: child.mimeType, path: path || undefined });
+        files.push({
+          id: child.id, name: child.name, mimeType: child.mimeType,
+          path: path || undefined, parentId: id,
+        });
         if (files.length >= MAX_FILES) break;
       }
     }
   }
-  return files;
+  return { files, folders };
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -187,9 +198,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const files = await walkDrive(FOLDER_ID, API_KEY);
+    const { files, folders } = await walkDrive(FOLDER_ID, API_KEY);
     res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600');
-    return res.status(200).json({ files });
+    // `files` se mantiene tal cual por compatibilidad con el selector existente.
+    return res.status(200).json({ files, folders });
   } catch (err: any) {
     console.error('sheets list error:', err?.message);
     return res.status(500).json({ error: 'No se pudo listar partituras' });

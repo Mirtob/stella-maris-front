@@ -8,6 +8,7 @@ import { getSupabaseClient } from '../../services/supabaseClient';
 import { extractVideoId, formatDuration } from '../../services/youtube';
 import { matchesSearch } from '../../utils/textSearch';
 import { ConfirmDialog } from '../common/ConfirmDialog';
+import { detectSheets, defaultSheet, FULL_SCORE, type SongSheet } from '../../utils/sheetParts';
 
 const MOMENT_OPTIONS: { value: MassMoment; label: string }[] = [
   { value: 'entrada', label: 'Entrada' },
@@ -72,6 +73,8 @@ export function SongManager() {
     driveFileId: '', duration: '', originalKey: '', massName: '', lyrics: '',
     seasons: [] as string[], instruments: [] as InstrumentType[],
     isLiturgical: true, nonLiturgicalCategory: '' as string,
+    // Polifonía: carpeta del canto en Drive + partituras por voz detectadas en ella.
+    driveFolderId: '', sheets: [] as SongSheet[],
   };
   type SongForm = typeof emptyForm;
   // Deriva los chips de versión desde lo guardado en BD (minúsculas/sin acento).
@@ -133,7 +136,10 @@ export function SongManager() {
   // Partituras disponibles en la carpeta de Drive (para elegir sin buscar el ID a mano).
   // `path` = carpeta relativa (p. ej. "Entrada" o "Entrada/Vienen con Alegría"), para
   // agrupar el selector por momento de la Misa y por canto (subcarpeta polifónica).
-  const [sheets, setSheets] = useState<{ id: string; name: string; path?: string }[]>([]);
+  const [sheets, setSheets] = useState<{ id: string; name: string; path?: string; parentId?: string }[]>([]);
+  // Carpetas de Drive: una por canto polifónico. Enlazando la CARPETA (y no cada PDF)
+  // las voces se deducen solas, que es como las exporta MuseScore.
+  const [folders, setFolders] = useState<{ id: string; name: string; path: string }[]>([]);
   const [loadingSheets, setLoadingSheets] = useState(false);
 
   // Cargar la lista de partituras de Drive al abrir el editor o el alta (una vez).
@@ -142,9 +148,15 @@ export function SongManager() {
     setLoadingSheets(true);
     fetch('/api/sheets')
       .then(r => (r.ok ? r.json() : { files: [] }))
-      .then(d => setSheets((d.files || [])
-        .filter((x: any) => (x.mimeType || '').includes('pdf'))
-        .map((x: any) => ({ id: x.id, name: x.name, path: x.path as string | undefined }))))
+      .then(d => {
+        setSheets((d.files || [])
+          .filter((x: any) => (x.mimeType || '').includes('pdf'))
+          .map((x: any) => ({
+            id: x.id, name: x.name,
+            path: x.path as string | undefined, parentId: x.parentId as string | undefined,
+          })));
+        setFolders((d.folders || []).map((x: any) => ({ id: x.id, name: x.name, path: x.path })));
+      })
       .catch(() => { /* sin red: queda el campo manual */ })
       .finally(() => setLoadingSheets(false));
   }, [editSong, showAdd, sheets.length, loadingSheets]);
@@ -205,6 +217,75 @@ export function SongManager() {
           ))}
         </optgroup>
       ));
+  };
+
+
+  /**
+   * Bloque "partituras por voz": se enlaza la CARPETA del canto en Drive y de ahí se
+   * deducen las voces por el nombre de cada PDF (ver utils/sheetParts). Al detectar se
+   * fija además `driveFileId` al full score, para que todo lo que ya usa una sola
+   * partitura (cuadernillo, Modo Atril, ordinario) siga funcionando sin cambios.
+   */
+  const renderVoicesBlock = (form: SongForm, setForm: Dispatch<SetStateAction<SongForm>>) => {
+    const detect = (folderId: string) => {
+      const inFolder = sheets.filter(s => s.parentId === folderId);
+      const found = detectSheets(inFolder);
+      const full = defaultSheet(found);
+      setForm(prev => ({
+        ...prev,
+        driveFolderId: folderId,
+        sheets: found,
+        // Solo se pisa la partitura principal si se detectó alguna.
+        driveFileId: full ? full.fileId : prev.driveFileId,
+      }));
+      if (folderId && found.length === 0) {
+        toast.warning('Esa carpeta no tiene PDF', { description: 'Sube las partituras a Drive y vuelve a elegirla.' });
+      }
+    };
+    return (
+      <div className="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl p-3">
+        <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">
+          Partituras por voz <span className="text-gray-400">(polifonía — opcional)</span>
+        </label>
+        <select
+          value={form.driveFolderId}
+          onChange={(e) => detect(e.target.value)}
+          className="w-full px-4 py-2.5 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium"
+        >
+          <option value="">— Sin carpeta (canto a una voz) —</option>
+          {folders.map(fo => (
+            <option key={fo.id} value={fo.id}>{fo.path}</option>
+          ))}
+        </select>
+
+        {form.sheets.length > 0 ? (
+          <>
+            <ul className="mt-2 space-y-1">
+              {form.sheets.map(sh => (
+                <li key={sh.fileId} className="flex items-baseline gap-2 text-sm">
+                  <span className={`font-bold ${sh.part === FULL_SCORE ? 'text-green-700' : 'text-gray-700 dark:text-gray-200'}`}>
+                    {sh.part === FULL_SCORE ? '★ ' : ''}{sh.part}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{sh.fileName}</span>
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={() => detect(form.driveFolderId)}
+              className="mt-2 text-xs text-blue-600 hover:underline"
+            >
+              Volver a detectar (si agregaste una voz en Drive)
+            </button>
+          </>
+        ) : (
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Elige la carpeta del canto y se detectarán solas las voces e instrumentos.
+            La marcada con ★ es la que ve quien no tiene voz asignada.
+          </p>
+        )}
+      </div>
+    );
   };
 
   const load = useCallback(async () => {
@@ -286,6 +367,8 @@ export function SongManager() {
       moments: realMoments.length ? realMoments : (['entrada'] as MassMoment[]),
       youtubeId: song.youtubeId || '',
       driveFileId: song.driveFileId || '',
+      driveFolderId: song.driveFolderId || '',
+      sheets: song.sheets ?? [],
       duration: song.duration || '',
       originalKey: song.originalKey || '',
       massName: song.massName || '',
@@ -312,6 +395,8 @@ export function SongManager() {
       instruments: f.instruments.length ? f.instruments : undefined,
       youtubeId: f.youtubeId.trim() || undefined,
       driveFileId: f.driveFileId.trim() || undefined,
+      driveFolderId: f.driveFolderId.trim() || null,
+      sheets: f.sheets,
       duration: f.duration.trim() || undefined,
       originalKey: f.originalKey.trim() || undefined,
       massName: f.massName.trim() || undefined,
@@ -376,6 +461,8 @@ export function SongManager() {
       instruments: na.instruments.length ? na.instruments : undefined,
       youtubeId: na.youtubeId.trim() || undefined,
       driveFileId: na.driveFileId.trim() || undefined,
+      driveFolderId: na.driveFolderId.trim() || null,
+      sheets: na.sheets,
       author: na.author.trim() || undefined,
       artist: na.artist.trim() || undefined,
       originalKey: na.originalKey.trim() || undefined,
@@ -692,6 +779,8 @@ export function SongManager() {
                 />
               </div>
 
+              {renderVoicesBlock(f, setF)}
+
               {f.isLiturgical && (
               <div>
                 <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">
@@ -904,6 +993,8 @@ export function SongManager() {
                   className="w-full mt-2 px-4 py-2 rounded-xl text-sm text-gray-700 bg-gray-50 border-2 border-gray-200 focus:outline-none focus:border-blue-500"
                 />
               </div>
+
+              {renderVoicesBlock(na, setNa)}
 
               {na.isLiturgical && (
               <div>

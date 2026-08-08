@@ -23,6 +23,10 @@ export interface SongInput {
   liturgicalSeasons?: LiturgicalSeason[];
   instruments?: InstrumentType[];
   driveFileId?: string;
+  /** Carpeta del canto en Drive (polifonía): de ahí salen las partituras por voz. */
+  driveFolderId?: string | null;
+  /** Partituras por voz/instrumento detectadas en esa carpeta. */
+  sheets?: { part: string; fileId: string; fileName: string }[];
   artist?: string;
   author?: string;
   originalKey?: string;
@@ -64,6 +68,10 @@ function rowToSong(row: Record<string, unknown>): Song {
     sheetMusicUrl:         row.drive_file_id
                              ? `https://drive.google.com/file/d/${row.drive_file_id}/view`
                              : undefined,
+    // Polifonía: carpeta del canto en Drive + una partitura por voz/instrumento.
+    // Vacío en los cantos a una voz, que siguen usando solo `driveFileId`.
+    driveFolderId:         row.drive_folder_id as string | undefined,
+    sheets:                (row.sheets as Song['sheets']) ?? [],
     artist:                row.artist as string | undefined,
     author:                row.author as string | undefined,
     originalKey:           row.original_key as string | undefined,
@@ -88,6 +96,8 @@ function songInputToRow(input: SongInput): Record<string, unknown> {
     liturgical_seasons:    input.liturgicalSeasons ?? [],
     instruments:           input.instruments?.map(normalizeInstrument) ?? ['coro', 'guitarra', 'organo'],
     drive_file_id:         input.driveFileId ?? null,
+    drive_folder_id:       input.driveFolderId ?? null,
+    sheets:                input.sheets ?? [],
     artist:                input.artist ?? null,
     author:                input.author ?? null,
     original_key:          input.originalKey ?? null,
@@ -202,6 +212,8 @@ export async function updateSong(
     if (input.liturgicalSeasons !== undefined)row.liturgical_seasons     = input.liturgicalSeasons;
     if (input.instruments !== undefined)      row.instruments            = input.instruments.map(normalizeInstrument);
     if (input.driveFileId !== undefined)      row.drive_file_id          = input.driveFileId;
+    if (input.driveFolderId !== undefined)    row.drive_folder_id        = input.driveFolderId;
+    if (input.sheets !== undefined)           row.sheets                 = input.sheets;
     if (input.artist !== undefined)           row.artist                 = input.artist;
     if (input.author !== undefined)           row.author                 = input.author;
     if (input.originalKey !== undefined)      row.original_key           = input.originalKey;

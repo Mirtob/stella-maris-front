@@ -80,6 +80,11 @@ export interface Song {
   youtubeId: string;
   videoUrl?: string; // URL completa del video de YouTube
   sheetMusicUrl?: string;
+  /** Carpeta del canto en Drive con un PDF por voz/instrumento (polifonía). */
+  driveFolderId?: string;
+  /** Partituras por voz detectadas en esa carpeta. Vacío en cantos a una voz,
+   *  que siguen usando solo `sheetMusicUrl`. Ver utils/sheetParts.ts. */
+  sheets?: { part: string; fileId: string; fileName: string }[];
   duration: string;
   artist?: string;
   author?: string;
