@@ -150,9 +150,29 @@ export function SongManager() {
   }, [editSong, showAdd, sheets.length, loadingSheets]);
 
   // Opciones del selector de partitura AGRUPADAS por momento (1.er nivel de carpeta) y,
-  // dentro, por canto (subcarpeta polifónica). Se prioriza arriba la carpeta del momento
-  // del canto que se está editando, para encontrar su partitura más rápido.
+  // dentro, por lo que venga debajo (tiempo litúrgico y/o canto polifónico). Se prioriza
+  // arriba la carpeta del momento del canto que se está editando.
+  //
+  // El nombre de la carpeta de Drive se compara SIN acentos ni mayúsculas, y con algunos
+  // alias: en Drive las carpetas se llaman "Comunion" (sin tilde) y "Salida", mientras la
+  // app rotula "Comunión" y "Final / Salida". Con comparación literal esos dos momentos
+  // caían al fondo, entre las carpetas desconocidas, y perdían el atajo de "el momento
+  // del canto, primero". Ojo: NO conviene renombrar la carpeta a "Final / Salida" en
+  // Drive, porque la barra es el separador de `path` y partiría la ruta en dos.
   const sheetOptions = (currentMoment?: MassMoment) => {
+    const folderKey = (s: string) =>
+      s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+    // Alias carpeta-de-Drive → etiqueta de la app, para los que no coinciden textualmente.
+    const FOLDER_ALIASES: Record<string, string> = {
+      salida: 'Final / Salida',
+      final: 'Final / Salida',
+      misas: 'Kyrie', // las partes del ordinario viven bajo "Misas/<nombre de la Misa>"
+    };
+    const labelByKey = new Map(MOMENT_OPTIONS.map(o => [folderKey(o.label), o.label]));
+    /** Etiqueta de momento que le corresponde a una carpeta, o la propia carpeta. */
+    const toMomentLabel = (folder: string) =>
+      labelByKey.get(folderKey(folder)) ?? FOLDER_ALIASES[folderKey(folder)] ?? folder;
+
     const momentLabels = MOMENT_OPTIONS.map(o => o.label);
     const currentLabel = MOMENT_OPTIONS.find(o => o.value === currentMoment)?.label;
     const NO_FOLDER = '(Sin carpeta)';
@@ -160,7 +180,7 @@ export function SongManager() {
     const groups = new Map<string, { id: string; label: string }[]>();
     for (const s of sheets) {
       const segs = (s.path || '').split('/').map(x => x.trim()).filter(Boolean);
-      const moment = segs[0] || NO_FOLDER;
+      const moment = segs[0] ? toMomentLabel(segs[0]) : NO_FOLDER;
       const sub = segs.slice(1).join(' / ');
       const clean = s.name.replace(/\.pdf$/i, '');
       const label = sub ? `${sub} — ${clean}` : clean;
