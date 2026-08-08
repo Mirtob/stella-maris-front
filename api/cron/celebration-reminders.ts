@@ -706,6 +706,31 @@ const maskEndpoint = (ep: string) => {
  * puede saber si el cron corrió un día dado. NUNCA debe tumbar la corrida: si el
  * registro falla, se ignora — el trabajo real ya se hizo.
  */
+/**
+ * ¿Ya hubo hoy una corrida EXITOSA? Permite tener DOS disparadores —el cron de Vercel
+ * y el workflow de GitHub Actions— sin que los avisos salgan por duplicado: el primero
+ * que llegue hace el trabajo y el segundo se retira. Hacen falta los dos porque ninguno
+ * es fiable por separado (Hobby se saltó 2 de 7 días; los schedules de Actions también
+ * se retrasan o se pierden bajo carga).
+ *
+ * Solo cuentan las exitosas: si la primera reventó a mitad, la segunda debe reintentar.
+ * Si la consulta falla asumimos que NO corrió: es preferible un aviso repetido —y los
+ * tags son estables, así que el nuevo reemplaza al anterior— a quedarse sin avisar.
+ */
+async function alreadyRanToday(date: string): Promise<boolean> {
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/cron_runs?job=eq.celebration-reminders&logical_date=eq.${date}&ok=is.true&select=id&limit=1`,
+      { headers: svcHeaders },
+    );
+    if (!r.ok) return false;
+    const rows = await r.json();
+    return Array.isArray(rows) && rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 /** Cuántas suscripciones vivas había al correr (contexto para leer los envíos). */
 async function countSubs(): Promise<number | null> {
   try {
@@ -773,6 +798,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let coroSent = 0;
   let courseSent = 0;
   const startedAt = Date.now();
+
+  // Doble disparador (Vercel + GitHub Actions): el segundo en llegar no reenvía.
+  // No aplica al dry-run, que no envía nada y debe poder consultarse siempre.
+  if (!dry && (await alreadyRanToday(today))) {
+    return res.status(200).json({ ok: true, date: today, skipped: 'ya se envió hoy' });
+  }
 
   // En dry-run contamos destinatarios y guardamos el aviso que se habría mandado.
   const preview: { to: number; title: string; body: string }[] = [];

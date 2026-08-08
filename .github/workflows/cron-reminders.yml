@@ -1,0 +1,62 @@
+# Respaldo del cron de Vercel para los recordatorios push.
+#
+# Por qué existe: el plan de Vercel es Hobby y sus crons son "best effort". La bitácora
+# (tabla cron_runs) mostró que se saltó 2 de 7 días — entre ellos el jueves 6-ago-2026,
+# que era justo el del aviso "publica el cantoral" del domingo siguiente.
+#
+# No REEMPLAZA al cron de Vercel: lo respalda. Los schedules de GitHub Actions también
+# se retrasan o se pierden bajo carga, así que ninguno de los dos es fiable por sí solo.
+# El endpoint es idempotente por día (ver alreadyRanToday): el primero que llega envía y
+# el segundo se retira, así que tenerlos duplicados no manda avisos repetidos.
+#
+# Horarios en UTC (GitHub Actions no admite otra zona). El cron de Vercel apunta a las
+# 14:00; estos dos van después, para dejarle el primer intento y cubrir si no aparece.
+#
+# Requiere el secreto CRON_SECRET del repo (Settings → Secrets → Actions), con el mismo
+# valor que la variable CRON_SECRET de Vercel. Si se rota una, hay que rotar la otra.
+
+name: Recordatorios push (respaldo del cron)
+
+on:
+  schedule:
+    - cron: '30 14 * * *'   # 10:30 en Chile (invierno) — 30 min después de Vercel
+    - cron: '30 15 * * *'   # segundo intento, por si el primero se pierde
+  workflow_dispatch:         # permite dispararlo a mano desde la pestaña Actions
+
+# Si una corrida quedó colgada, que la nueva no se encime.
+concurrency:
+  group: cron-reminders
+  cancel-in-progress: false
+
+jobs:
+  disparar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Llamar al endpoint de recordatorios
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_SECRET}" ]; then
+            echo "::error::Falta el secreto CRON_SECRET del repositorio."
+            exit 1
+          fi
+          code=$(curl -sS -o respuesta.json -w '%{http_code}' -m 60 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "https://stella-maris-front.vercel.app/api/cron/celebration-reminders")
+          echo "HTTP ${code}"
+          cat respuesta.json; echo
+          # 401 = el secreto no coincide con el de Vercel (¿se rotó uno solo?).
+          if [ "${code}" = "401" ]; then
+            echo "::error::401: el CRON_SECRET del repo no coincide con el de Vercel."
+            exit 1
+          fi
+          if [ "${code}" != "200" ]; then
+            echo "::error::El endpoint respondió ${code}."
+            exit 1
+          fi
+          # "skipped" no es un fallo: significa que el cron de Vercel ya hizo el trabajo.
+          if grep -q '"skipped"' respuesta.json; then
+            echo "Vercel ya habia enviado hoy; este respaldo no hizo falta."
+          fi
