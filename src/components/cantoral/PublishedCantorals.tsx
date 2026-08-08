@@ -21,6 +21,8 @@ interface PublishedCantoralsProps {
   onListen?: (cantoral: PublishedCantoral) => void; // Abrir reproductor "modo radio"
   userRole?: 'Coro' | 'Pueblo fiel' | 'Admin';
   userInstrument?: 'Guitarra' | 'Órgano'; // Para mostrar acordes/partitura según corresponda
+  /** Voz del corista, para elegir su partitura en cantos polifonicos. */
+  userVoicePart?: string;
   userParishName?: string; // Parroquia del usuario para filtrar
   /** Editar un cantoral publicado (solo Coro/Admin). */
   onEdit?: (cantoralId: string) => void;
@@ -47,7 +49,7 @@ const secondaryActionBtn =
 const iconManageBtn =
   'w-11 h-11 flex-shrink-0 bg-white/60 dark:bg-white/5 text-blue-900 dark:text-blue-100 border border-blue-200/70 dark:border-white/10 rounded-lg flex items-center justify-center active:scale-95 transition-all';
 
-export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onListen, userRole, userInstrument, userParishName, onEdit, onClone, onDelete, onShare }: PublishedCantoralsProps) {
+export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onListen, userRole, userInstrument, userVoicePart, userParishName, onEdit, onClone, onDelete, onShare }: PublishedCantoralsProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewingOrdinary, setViewingOrdinary] = useState<string | null>(null);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
@@ -553,6 +555,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
           songs={atrilCantoral.songs}
           userRole="Coro"
           userInstrument={userInstrument}
+          userVoicePart={userVoicePart}
           onClose={() => setAtrilCantoral(null)}
         />
       )}

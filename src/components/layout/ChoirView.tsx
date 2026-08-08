@@ -24,6 +24,8 @@ import { useSongs } from '../../hooks/useSongs';
 
 interface ChoirViewProps {
   preferredInstrument: InstrumentType;
+  /** Voz del corista, para elegir su partitura en cantos polifonicos. */
+  userVoicePart?: string;
   userInstruments?: InstrumentType[]; // Array de todos los instrumentos que el usuario puede usar
   parishName: string;
   parishes?: string[]; // Conjunto completo de parroquias del coro (para publicar a varias)
@@ -50,6 +52,7 @@ const MASS_TIME_OPTIONS: string[] = (() => {
 
 export function ChoirView({
   preferredInstrument,
+  userVoicePart,
   userInstruments,
   parishName,
   parishes,
@@ -675,6 +678,7 @@ export function ChoirView({
           songs={psalmSong && !cantoral.some((s) => s.category === 'Salmo') ? [...cantoral, psalmSong] : cantoral}
           userRole="Coro"
           userInstrument={selectedInstrumentForMass}
+          userVoicePart={userVoicePart}
           onClose={() => setShowAtril(false)}
         />
       )}

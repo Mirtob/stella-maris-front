@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, ZoomIn, ZoomOut, ChevronUp, ChevronDown, RotateCcw, Play, Pause, Maximize2, Minimize2, Music, List, Printer, Loader, Timer, Minus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Song, UserRole, InstrumentType } from '../../types';
 import { transposeContent, getTransposedKey, keyPrefersFlats, formatTransposition, getChordNotation, setChordNotation, type ChordNotation } from '../../utils/chordTranspose';
+import { sheetForPart, hasPartSheet, FULL_SCORE } from '../../utils/sheetParts';
 import { LyricsWithChords } from '../songs/LyricsWithChords';
 import { LyricsOnly } from '../songs/LyricsOnly';
 import { useWakeLock } from '../../hooks/useWakeLock';
@@ -20,6 +21,8 @@ import { FavoriteButton } from '../songs/FavoriteButton';
 interface AtrilModeProps {
   songs: Song[];
   userRole?: UserRole;
+  /** Voz/instrumento del corista, para elegir su partitura en cantos polifónicos. */
+  userVoicePart?: string;
   userInstrument?: InstrumentType;
   onClose: () => void;
 }
@@ -36,8 +39,19 @@ type ContentMode = 'score' | 'chords' | 'lyrics';
  * La transposición es POR CANTO; la notación (latino/americano) y el zoom son globales.
  * La pantalla se mantiene encendida (useWakeLock).
  */
-export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilModeProps) {
+export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onClose }: AtrilModeProps) {
   useWakeLock(true);
+
+  // Voz efectiva: la del perfil, pero se puede cambiar aquí mismo para este ensayo
+  // (el que hoy dobla en trompeta no debería tener que ir a Ajustes).
+  const [voicePart, setVoicePart] = useState<string>(userVoicePart || '');
+  // Partes disponibles en ESTE cantoral: no tiene sentido ofrecer "Bombardino" si
+  // ninguno de los cantos de hoy lo trae.
+  const partsInCantoral = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of songs) for (const sh of s.sheets ?? []) if (sh.part !== FULL_SCORE) set.add(sh.part);
+    return Array.from(set).sort();
+  }, [songs]);
 
   const [transpositions, setTranspositions] = useState<Record<number, number>>({});
   const [fontScale, setFontScale] = useState(1.3);
@@ -69,6 +83,9 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
   /** Qué mostrar de cada canto según rol + instrumento. */
   const modeFor = (s: Song): ContentMode => {
     if (isPuebloFiel) return isOrdinary(s) && s.sheetMusicUrl ? 'score' : 'lyrics';
+    // Polifonía: quien tiene voz asignada y el canto trae SU partitura, ve la partitura
+    // aunque no sea organista — es justamente para lo que la subió el coro.
+    if (hasPartSheet(s.sheets, voicePart)) return 'score';
     if (isOrgano) return s.sheetMusicUrl ? 'score' : 'chords';
     return 'chords'; // Guitarra u otro instrumento del coro
   };
@@ -76,7 +93,11 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
   const setTransposition = (i: number, v: number) =>
     setTranspositions(prev => ({ ...prev, [i]: ((v % 12) + 12) % 12 }));
 
-  const instrumentLabel = isPuebloFiel ? 'Letra' : isOrgano ? 'Órgano · Partituras' : 'Guitarra · Acordes';
+  const instrumentLabel = isPuebloFiel
+    ? 'Letra'
+    : voicePart
+      ? `${voicePart} · Partituras`
+      : isOrgano ? 'Órgano · Partituras' : 'Guitarra · Acordes';
 
   const zoomIn = () => {
     setFontScale(s => Math.min(3, +(s + 0.15).toFixed(2)));
@@ -205,6 +226,27 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
           </div>
         )}
 
+        {/* Cambio rápido de voz: solo si algún canto de HOY trae partituras por voz.
+            No toca el perfil — es para el que dobla en otra parte esta vez. */}
+        {!isPuebloFiel && partsInCantoral.length > 0 && (
+          <select
+            value={voicePart}
+            onChange={(e) => setVoicePart(e.target.value)}
+            aria-label="Voz o instrumento"
+            className="flex-shrink-0 bg-white/10 border border-white/25 rounded-lg px-2 py-1.5 text-sm font-bold text-white focus:outline-none focus:border-amber-400"
+          >
+            <option value="" className="text-black">Partitura general</option>
+            {partsInCantoral.map(p => (
+              <option key={p} value={p} className="text-black">{p}</option>
+            ))}
+            {/* La voz del perfil puede no estar en el cantoral de hoy: se ofrece igual
+                para poder volver a ella sin salir del Atril. */}
+            {voicePart && !partsInCantoral.includes(voicePart) && (
+              <option value={voicePart} className="text-black">{voicePart}</option>
+            )}
+          </select>
+        )}
+
         {/* Zoom global (letra y partitura) */}
         <button onClick={zoomOut} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label="Reducir"><ZoomOut className="w-6 h-6" strokeWidth={2.5} /></button>
         <button data-tour="atril-zoom" onClick={zoomIn} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label="Agrandar"><ZoomIn className="w-6 h-6" strokeWidth={2.5} /></button>
@@ -276,7 +318,13 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
               // Salmo del libro: se muestra la página del PDF del libro (coro) + antífona.
               const isPsalm = s.psalmPage != null && !!s.psalmBookId;
               const mode = modeFor(s);
-              const proxy = mode === 'score' ? getDrivePdfProxyUrl(s.sheetMusicUrl) : null;
+              // Partitura que le toca a esta persona: la de su voz si el canto la trae,
+              // y si no el full score (sheetForPart nunca deja sin partitura).
+              const mySheet = sheetForPart(s.sheets ?? [], voicePart);
+              const scoreUrl = mySheet
+                ? `https://drive.google.com/file/d/${mySheet.fileId}/view`
+                : s.sheetMusicUrl;
+              const proxy = mode === 'score' ? getDrivePdfProxyUrl(scoreUrl) : null;
               const showScore = mode === 'score' && !!proxy;
               // Respaldo si se pedía partitura pero no hay proxy válido.
               const fallbackChords = mode === 'score' && !proxy && hasChords;
@@ -337,7 +385,7 @@ export function AtrilMode({ songs, userRole, userInstrument, onClose }: AtrilMod
                         )}
                       </>
                     ) : showScore ? (
-                      <PdfPages proxyUrl={proxy!} driveViewUrl={s.sheetMusicUrl!} title={s.title} zoom={pdfZoom} />
+                      <PdfPages proxyUrl={proxy!} driveViewUrl={scoreUrl!} title={s.title} zoom={pdfZoom} />
                     ) : lyrics ? (
                       <div style={{ zoom: fontScale } as any}>
                         {showChordsHere ? <LyricsWithChords lyrics={lyrics} /> : <LyricsOnly lyrics={lyrics} applyReadingPrefs={false} />}

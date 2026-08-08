@@ -149,6 +149,26 @@ export function detectSheets(files: { id: string; name: string }[]): SongSheet[]
   return sheets.sort((a, b) => (rank(a.part) - rank(b.part)) || a.part.localeCompare(b.part));
 }
 
+/**
+ * Partes que se ofrecen en los selectores (perfil y Modo Atril). Es solo una ayuda
+ * para no tener que escribir: la voz es TEXTO LIBRE, así que quien toque algo que no
+ * esté aquí puede escribirlo y funcionará igual, porque la detección tampoco fuerza
+ * las partituras a una lista cerrada.
+ */
+export const COMMON_PARTS = [
+  'Soprano', 'Contralto', 'Tenor', 'Bajo',
+  'Órgano', 'Piano', 'Guitarra',
+  'Flauta', 'Trompeta', 'Trombón', 'Bombardino', 'Corno', 'Clarinete', 'Saxofón',
+  'Violín', 'Viola', 'Violonchelo', 'Contrabajo',
+];
+
+/** ¿Hay una partitura propia para esa voz en este canto? */
+export function hasPartSheet(sheets: SongSheet[] | undefined, part?: string): boolean {
+  if (!sheets?.length || !part) return false;
+  const found = sheetForPart(sheets, part);
+  return !!found && found.part !== FULL_SCORE;
+}
+
 /** La partitura por defecto: el full score si existe, si no la primera. */
 export function defaultSheet(sheets: SongSheet[]): SongSheet | undefined {
   return sheets.find(s => s.part === FULL_SCORE) ?? sheets[0];

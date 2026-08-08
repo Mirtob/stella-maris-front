@@ -9,6 +9,7 @@ interface UserProfileRow {
   name: string | null;
   role: 'Coro' | 'Pueblo fiel' | 'Admin';
   instruments: string[] | null;
+  voice_part: string | null;
   parishes: string[] | null;
   parish_name: string | null;
   photo_url: string | null;
@@ -25,6 +26,7 @@ function rowToProfile(row: UserProfileRow): UserProfile & { createdAt?: string; 
     name: row.name ?? row.email,
     role: row.role,
     instruments: (row.instruments ?? []) as any,
+    voicePart: (row.voice_part ?? undefined) as any,
     instrument: ((row.instruments ?? [])[0] ?? undefined) as any,
     parishes: row.parishes ?? undefined,
     parishName: row.parish_name ?? undefined,
@@ -48,6 +50,7 @@ export async function upsertCurrentUserProfile(profile: UserProfile): Promise<{ 
       name: profile.name,
       role: profile.role,
       instruments: profile.instruments ?? null,
+      voice_part: profile.voicePart ?? null,
       parishes: profile.parishes ?? null,
       parish_name: profile.parishName ?? null,
       photo_url: profile.photoUrl ?? null,
@@ -104,13 +107,14 @@ export async function listUserProfiles(): Promise<(UserProfile & { createdAt?: s
  */
 export async function adminUpdateUserProfile(
   id: string,
-  fields: { name?: string; instruments?: string[]; parishes?: string[]; parishName?: string }
+  fields: { name?: string; instruments?: string[]; parishes?: string[]; parishName?: string; voicePart?: string | null }
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const sb = getSupabaseClient();
     const row: Record<string, unknown> = {};
     if (fields.name !== undefined) row.name = fields.name;
     if (fields.instruments !== undefined) row.instruments = fields.instruments;
+    if (fields.voicePart !== undefined)   row.voice_part  = fields.voicePart;
     if (fields.parishes !== undefined) row.parishes = fields.parishes;
     if (fields.parishName !== undefined) row.parish_name = fields.parishName;
     if (Object.keys(row).length === 0) return { ok: true };

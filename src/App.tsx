@@ -1151,6 +1151,7 @@ function AppContent() {
           song={route.song}
           onBack={handleBackFromPlayer}
           userInstrument={userProfile?.instrument}
+          userVoicePart={userProfile?.voicePart}
           userRole={userProfile?.role}
           userId={userProfile?.id}
         />
@@ -1372,6 +1373,7 @@ function renderView(p: ViewProps): JSX.Element | null {
         return (
           <ChoirView
             preferredInstrument={p.userProfile.instrument || 'Guitarra'}
+            userVoicePart={p.userProfile.voicePart}
             userInstruments={p.userProfile.instruments}
             parishName={p.activeParishName}
             parishes={p.userProfile.parishes}
@@ -1395,6 +1397,7 @@ function renderView(p: ViewProps): JSX.Element | null {
             onListen={p.onListen}
             userRole={p.effectiveRole}
             userInstrument={p.userProfile.instrument}
+            userVoicePart={p.userProfile.voicePart}
             userParishName={p.activeParishName}
             // El Pueblo fiel puede compartir el QR (no editar/eliminar).
             onShare={p.onShareCantoral}

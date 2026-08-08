@@ -33,9 +33,11 @@ interface CantoralWithOrdinaryProps {
   onPlaySong: (song: Song) => void;
   userRole?: UserRole;
   userInstrument?: InstrumentType;
+  /** Voz del corista, para elegir su partitura en cantos polifonicos. */
+  userVoicePart?: string;
 }
 
-export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, userInstrument }: CantoralWithOrdinaryProps) {
+export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, userInstrument, userVoicePart }: CantoralWithOrdinaryProps) {
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [showAtril, setShowAtril] = useState(false);
@@ -347,6 +349,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
           songs={cantoral.songs}
           userRole={userRole}
           userInstrument={userInstrument}
+          userVoicePart={userVoicePart}
           onClose={() => setShowAtril(false)}
         />
       )}

@@ -7,6 +7,7 @@ import { changePassword, isUsernameAccount } from '../../services/supabaseClient
 import { resetAllTutorials } from '../tour/tours';
 import { ParishPicker } from './ParishPicker';
 import { PushNotificationsCard } from './PushNotificationsCard';
+import { COMMON_PARTS } from '../../utils/sheetParts';
 import { ChoirContactCard } from './ChoirContactCard';
 import { deleteMyAccount } from '../../services/account';
 import { signOutOnly } from '../../services/googleAuth';
@@ -32,6 +33,9 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
   const initialActive = userProfile.activeParishName || userProfile.parishName || '';
   const [activeParish, setActiveParish] = useState(initialActive);
   const [instrument, setInstrument] = useState<InstrumentType>(userProfile.instrument || 'Guitarra');
+  // Voz/instrumento para la polifonía: decide QUÉ partitura se le muestra a esta
+  // persona cuando el canto trae un PDF por voz. Texto libre (ver utils/sheetParts).
+  const [voicePart, setVoicePart] = useState<string>(userProfile.voicePart || '');
   const [recoveryEmail, setRecoveryEmail] = useState(userProfile.recoveryEmail ?? '');
   const [recoverySaving, setRecoverySaving] = useState(false);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
@@ -151,6 +155,7 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
     // Only update instrument for choir members
     if (canChangeInstrument) {
       updates.instrument = instrument;
+      updates.voicePart = voicePart.trim() || undefined;
     }
 
     onSave(updates);
@@ -560,6 +565,40 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
                   </div>
                 </button>
               ))}
+            </div>
+
+            {/* Voz para los cantos polifónicos: si el canto trae un PDF por voz, se
+                muestra la de esta persona en vez del full score. */}
+            <div className="mt-5 border-t-2 border-gray-100 pt-5">
+              <label className="text-base text-gray-600 mb-2 block">
+                ¿Qué voz cantas o qué instrumento tocas en la polifonía?
+              </label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {COMMON_PARTS.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setVoicePart(voicePart === p ? '' : p)}
+                    className={`px-3 py-1.5 rounded-lg border-2 text-sm font-bold transition-all ${
+                      voicePart === p
+                        ? 'bg-blue-600 text-white border-blue-700'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+              <input
+                value={voicePart}
+                onChange={(e) => setVoicePart(e.target.value)}
+                placeholder="…o escríbela (p. ej. Trompeta en Sib, Soprano 2)"
+                className="w-full px-4 py-2 rounded-xl text-sm text-gray-700 bg-gray-50 border-2 border-gray-200 focus:outline-none focus:border-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Si el canto tiene partitura para tu voz, verás la tuya en el Modo Atril.
+                Si no la tiene —o dejas esto vacío— verás la partitura general.
+              </p>
             </div>
 
             <div className="mt-4 bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
