@@ -940,17 +940,35 @@ function AppContent() {
    *  los ids en una sola llamada → el backend agrupa por parroquia y envía UN aviso por
    *  parroquia (evita saturar al publicar varios de una vez, p. ej. Semana Santa). */
   const notifyNewCantorals = async (cs: PublishedCantoral[]) => {
+    // El aviso NO puede tumbar la publicación (que ya ocurrió), pero tampoco debe
+    // fallar en silencio: antes cualquier error se perdía en un catch vacío y el coro
+    // creía haber avisado. Ahora, si había suscriptores y no salió, se dice.
+    const warn = (description: string) =>
+      toast.warning('El cantoral se publicó, pero el aviso no salió', { description });
     try {
       const { data } = await getSupabaseClient().auth.getSession();
       const token = data.session?.access_token;
-      if (!token) return;
-      await fetch('/api/notify-cantoral', {
+      if (!token) {
+        warn('Tu sesión expiró. Vuelve a entrar y publica de nuevo para que llegue el aviso.');
+        return;
+      }
+      const r = await fetch('/api/notify-cantoral', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ cantoralIds: cs.map(c => c.id) }),
       });
+      const result = await r.json().catch(() => ({} as any));
+      if (!r.ok) {
+        warn(result?.error || 'No se pudo enviar la notificación push.');
+        return;
+      }
+      // subs = suscriptores de esa parroquia. 0 es normal (nadie las activó todavía);
+      // lo anómalo es que hubiera destinatarios y no saliera ninguno.
+      if ((result?.subs ?? 0) > 0 && (result?.sent ?? 0) === 0) {
+        warn('Nadie recibió la notificación. Revísalo en Ajustes → Notificaciones.');
+      }
     } catch {
-      /* aviso best-effort: no afecta la publicación */
+      warn('Sin conexión al enviar el aviso. El cantoral sí quedó publicado.');
     }
   };
 

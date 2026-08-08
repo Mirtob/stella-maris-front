@@ -21,6 +21,26 @@ const svcHeaders = { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Conte
 
 function safeParse(s: string): any { try { return JSON.parse(s); } catch { return {}; } }
 
+/**
+ * Deja constancia del envío en `cron_runs` (job = 'notify-cantoral'). Sin esto, cuando
+ * alguien dice "publiqué y no me llegó" no hay forma de distinguir entre: la app nunca
+ * llamó, no había suscriptores para esa parroquia, el push service rechazó, o llegó y
+ * el teléfono no lo mostró. Reutiliza la tabla del cron (migración 20260731_cron_runs)
+ * a propósito: mismo tipo de dato y una migración menos que aplicar a mano.
+ * Best-effort: si el registro falla, el aviso ya se envió y eso es lo que importa.
+ */
+async function logRun(row: Record<string, unknown>): Promise<void> {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/cron_runs`, {
+      method: 'POST',
+      headers: { ...svcHeaders, Prefer: 'return=minimal' },
+      body: JSON.stringify({ job: 'notify-cantoral', ...row }),
+    });
+  } catch {
+    /* la bitácora es best-effort */
+  }
+}
+
 async function isAuthenticated(token: string): Promise<boolean> {
   try {
     const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: ANON, Authorization: `Bearer ${token}` } });
@@ -72,15 +92,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     .filter(Boolean);
   if (ids.length === 0) return res.status(400).json({ error: 'Falta cantoralId(s)' });
 
+  const startedAt = Date.now();
+
   try {
     const r = await fetch(
       `${SUPABASE_URL}/rest/v1/published_cantorals?id=in.(${encodeURIComponent(ids.join(','))})&select=id,parish_name,liturgical_date,mass_time,date,status`,
       { headers: svcHeaders },
     );
-    if (!r.ok) return res.status(400).json({ error: 'No se pudo leer los cantorales' });
+    if (!r.ok) {
+      await logRun({ ok: false, error: 'No se pudo leer los cantorales', duration_ms: Date.now() - startedAt });
+      return res.status(400).json({ error: 'No se pudo leer los cantorales' });
+    }
     const rows = await r.json();
     const published = (Array.isArray(rows) ? rows : []).filter((c: any) => c.status === 'published' && c.parish_name);
-    if (published.length === 0) return res.status(200).json({ ok: true, sent: 0 });
+    if (published.length === 0) {
+      // Caso silencioso: los ids no existen, no están 'published' o no traen parroquia.
+      await logRun({
+        ok: false,
+        error: `ids sin cantoral publicado: ${ids.join(',').slice(0, 200)}`,
+        duration_ms: Date.now() - startedAt,
+      });
+      return res.status(200).json({ ok: true, sent: 0, subs: 0 });
+    }
 
     // Agrupar por parroquia → UN aviso por parroquia.
     const byParish = new Map<string, any[]>();
@@ -91,6 +124,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     let totalSent = 0;
+    let totalSubs = 0;
+    let totalFailed = 0;
     for (const [parish, items] of byParish) {
       // Más próximo primero (para el modo radio y el resumen).
       items.sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
@@ -103,6 +138,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         { headers: svcHeaders },
       );
       const subs = sr.ok ? await sr.json() : [];
+      totalSubs += Array.isArray(subs) ? subs.length : 0;
 
       const detail = [nearest.liturgical_date, nearest.mass_time].filter(Boolean).join(' · ');
       const payload = items.length === 1
@@ -117,9 +153,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         tag: `cantoral-${parish}`,
       });
       totalSent += result.sent;
+      totalFailed += result.failed;
     }
-    return res.status(200).json({ ok: true, sent: totalSent, parishes: byParish.size });
+
+    // `subs_total` = suscriptores que CALZABAN con la parroquia. Distinguirlo de
+    // `sent` es lo que separa "no había a quién avisar" de "había y falló".
+    await logRun({
+      logical_date: published[0]?.date ?? null,
+      coro_sent: totalSent,
+      subs_total: totalSubs,
+      duration_ms: Date.now() - startedAt,
+      ok: totalFailed === 0,
+      error: totalFailed > 0 ? `${totalFailed} envío(s) rechazado(s) por el push service` : null,
+    });
+
+    return res.status(200).json({ ok: true, sent: totalSent, subs: totalSubs, parishes: byParish.size });
   } catch (e: any) {
+    await logRun({ ok: false, error: String(e?.message || e).slice(0, 500), duration_ms: Date.now() - startedAt });
     return res.status(500).json({ error: e?.message || 'Error del servidor' });
   }
 }
