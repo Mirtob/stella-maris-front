@@ -6,7 +6,12 @@
  *   # 1) Ver qué haría, sin tocar nada (por defecto):
  *   node scripts/crear-estructura-drive.mjs
  *
- *   # 2) Crearlo de verdad:
+ *   # 2) Crearlo de verdad — PowerShell (Windows):
+ *   $env:DRIVE_TOKEN = "ya29.a0..."
+ *   node scripts/crear-estructura-drive.mjs --apply
+ *   Remove-Item Env:DRIVE_TOKEN        # limpiar al terminar
+ *
+ *   # 2-bis) Lo mismo en bash / Git Bash:
  *   DRIVE_TOKEN="ya29.a0..." node scripts/crear-estructura-drive.mjs --apply
  *
  * Opciones:
