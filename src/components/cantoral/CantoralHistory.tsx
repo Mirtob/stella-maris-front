@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { History, Calendar, Church, ChevronDown, ChevronUp, Play, Clock, Trash2, Filter, Download, Loader, Search, Copy } from 'lucide-react';
 import { PublishedCantoral, Song } from '../../types';
-import { generateChoirBooklet } from '../../utils/atrilBookletPDF';
+import { generateChoirBooklet, voicesInCantoral } from '../../utils/atrilBookletPDF';
 import { listCantorals, listCantoralYears } from '../../services/cantorals';
 import { americanCountries } from '../../data/countries';
 import { splitActiveParish } from '../../utils/parish';
@@ -23,6 +23,8 @@ interface CantoralHistoryProps {
   managedParishes?: string[];
   /** Parroquia/capilla de uso: el Historial arranca filtrado aquí. */
   defaultParish?: string;
+  /** Voz del corista: preselecciona su parte al descargar el cuadernillo. */
+  userVoicePart?: string;
 }
 
 // Diócesis → País (el string del cantoral es "Parroquia - Diócesis · Capilla", sin país;
@@ -46,7 +48,7 @@ function metaOf(parishName?: string | null) {
   return { parishFull, chapel: chapel || '', parish, diocese, country };
 }
 
-export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, onClone, isAdmin, managedParishes, defaultParish }: CantoralHistoryProps) {
+export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, onClone, isAdmin, managedParishes, defaultParish, userVoicePart}: CantoralHistoryProps) {
   // Borrar solo se permite en cantorales gestionables (los de la propia parroquia; el
   // admin puede todos). Refleja lo que hace la RLS.
   const managedSet = new Set(managedParishes ?? []);
@@ -100,20 +102,26 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, onClo
 
   // Descarga el folleto del Coro con letras, acordes y las partituras embebidas
   // (intercaladas por canto). Puede tardar: baja cada partitura vía el proxy.
+  // Voz elegida para el cuadernillo, por cantoral. Arranca en la del perfil: lo normal
+  // es que cada corista imprima siempre su misma parte.
+  const [bookletVoice, setBookletVoice] = useState<Record<string, string>>({});
+
   const handleDownload = async (cantoral: PublishedCantoral) => {
     if (downloadingId) return;
     setDownloadingId(cantoral.id);
     try {
       // PDF del coro en formato LIBRO (cuadernillo): letra con acordes + partitura
       // por canto, carta horizontal. Se abre para imprimir (o descarga si el popup falla).
-      const { url } = await generateChoirBooklet(cantoral.songs);
+      const voice = bookletVoice[cantoral.id] ?? userVoicePart ?? '';
+      const { url } = await generateChoirBooklet(cantoral.songs, voice || undefined);
       const w = window.open(url, '_blank');
       if (!w) {
         const a = document.createElement('a');
-        a.href = url; a.download = 'cantoral-coro-cuadernillo.pdf';
+        const slug = voice ? `-${voice.toLowerCase().replace(/\s+/g, '-')}` : '';
+        a.href = url; a.download = `cantoral-coro-cuadernillo${slug}.pdf`;
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
       }
-      toast.success('Cuadernillo del coro listo', {
+      toast.success(voice ? `Cuadernillo de ${voice} listo` : 'Cuadernillo del coro listo', {
         description: 'Imprime a doble faz y dobla al medio. Si no calzan, cambia el volteo a "borde corto".'
       });
     } catch (error) {
@@ -557,6 +565,26 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, onClo
                               <Trash2 className="w-6 h-6" strokeWidth={2.5} />
                               Eliminar del Historial
                             </button>
+                          )}
+
+                          {/* Voz del cuadernillo: solo si este cantoral trae partituras
+                              por voz. Si no, el botón baja el Full Score como siempre. */}
+                          {voicesInCantoral(cantoral.songs).length > 0 && (
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block font-bold">
+                                Partitura del cuadernillo
+                              </label>
+                              <select
+                                value={bookletVoice[cantoral.id] ?? userVoicePart ?? ''}
+                                onChange={(e) => setBookletVoice(prev => ({ ...prev, [cantoral.id]: e.target.value }))}
+                                className="w-full px-4 py-3 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-green-500 font-medium mb-2"
+                              >
+                                <option value="">Partitura general (Full Score)</option>
+                                {voicesInCantoral(cantoral.songs).map(v => (
+                                  <option key={v} value={v}>{v}</option>
+                                ))}
+                              </select>
+                            </div>
                           )}
 
                           {/* Download PDF Button */}

@@ -1500,6 +1500,7 @@ function renderView(p: ViewProps): JSX.Element | null {
             onDeleteCantoral={p.onDeleteCantoral}
             onClone={p.onCloneCantoral}
             isAdmin={p.isVerifiedAdmin}
+            userVoicePart={p.userProfile.voicePart}
             defaultParish={p.userProfile.activeParishName || p.userProfile.parishName}
             managedParishes={Array.from(new Set([
               ...(p.userProfile.parishes ?? []),

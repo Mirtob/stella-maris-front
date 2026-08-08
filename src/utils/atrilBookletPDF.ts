@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { Song, InstrumentType, UserRole } from '../types';
+import { sheetForPart, FULL_SCORE } from './sheetParts';
 import { getDrivePdfProxyUrl } from './driveProxy';
 import { sortByMassOrder, isOrdinary } from './ordinary';
 import { transposeContent, getChordNotation, getTransposedKey, keyPrefersFlats, type ChordNotation } from './chordTranspose';
@@ -407,19 +408,37 @@ export async function generateAtrilPrintable(opts: AtrilPrintOptions): Promise<{
   return { blob, url: URL.createObjectURL(blob) };
 }
 
-/** Cuadernillo del CORO (Full Score): por cada canto, su letra con acordes seguida de
- *  su partitura (si tiene), en orden de Misa y en formato libro. */
-export async function generateChoirBooklet(songs: Song[]): Promise<{ blob: Blob; url: string }> {
+/** Cuadernillo del CORO: por cada canto, su letra con acordes seguida de su partitura
+ *  (si tiene), en orden de Misa y en formato libro.
+ *
+ *  `voicePart` elige QUÉ partitura se incrusta en los cantos polifónicos: la de esa voz
+ *  si el canto la trae, y si no el full score (sheetForPart no deja a nadie sin hoja).
+ *  Sin `voicePart` sale el full score de siempre, que es lo que quiere el director.
+ *  Así cada corista imprime SU cuadernillo con su parte, del mismo cantoral. */
+export async function generateChoirBooklet(
+  songs: Song[],
+  voicePart?: string,
+): Promise<{ blob: Blob; url: string }> {
   const ordered = sortByMassOrder(songs);
   const notation = getChordNotation();
   const images: string[] = [];
   for (const song of ordered) {
     // 1) Letra con acordes del canto.
     images.push(...(await renderPdfToImages({ data: buildLyricsBuffer([song], { withChords: true, notation }) })));
-    // 2) Partitura del canto (si tiene), justo después.
-    const proxy = song.sheetMusicUrl ? getDrivePdfProxyUrl(song.sheetMusicUrl) : null;
+    // 2) Partitura del canto (si tiene), justo después. Para el que canta una voz
+    //    concreta, la suya; el resto de cantos (a una voz) no cambian.
+    const mine = sheetForPart(song.sheets ?? [], voicePart);
+    const url = mine ? `https://drive.google.com/file/d/${mine.fileId}/view` : song.sheetMusicUrl;
+    const proxy = url ? getDrivePdfProxyUrl(url) : null;
     if (proxy) images.push(...(await renderPdfToImages({ url: proxy })));
   }
   const blob = imposeBooklet(images);
   return { blob, url: URL.createObjectURL(blob) };
+}
+
+/** Voces presentes en un cantoral (para ofrecer solo las que existen hoy). */
+export function voicesInCantoral(songs: Song[]): string[] {
+  const set = new Set<string>();
+  for (const s of songs) for (const sh of s.sheets ?? []) if (sh.part !== FULL_SCORE) set.add(sh.part);
+  return Array.from(set).sort();
 }
