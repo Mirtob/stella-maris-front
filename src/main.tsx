@@ -4,6 +4,7 @@ import App from "./App";
 import "./index.css";
 import { initSentry } from "./services/sentry";
 import { CACHE_NAME as OFFLINE_CACHE } from "./services/offlineCache";
+import { reportDisplayMode } from "./services/push";
 
 // Inicializar Sentry ANTES de renderizar la app.
 // Si VITE_SENTRY_DSN no está configurada, queda inactivo silenciosamente.
@@ -42,6 +43,10 @@ async function cleanupAndRender() {
       // ignorar errores — la app carga igual
     }
   }
+
+  // Avisar al push-sw si esta ventana es la app INSTALADA, para que al tocar una
+  // notificación abra la PWA y no una pestaña del navegador.
+  reportDisplayMode();
 
   // Renderizar la app normalmente envuelta en Sentry ErrorBoundary
   // para capturar cualquier crash de React sin pantalla blanca.

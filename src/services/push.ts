@@ -77,6 +77,35 @@ async function getRegistration(): Promise<ServiceWorkerRegistration | undefined>
   return (await navigator.serviceWorker.getRegistration(SW_URL)) ?? undefined;
 }
 
+/**
+ * Le dice al service worker si esta ventana corre como app INSTALADA (standalone).
+ * Sin esto, al tocar una notificación el SW no puede distinguir la PWA de una pestaña
+ * del navegador y termina enfocando la que encuentre primero — mandando a la web a
+ * quien tiene la app instalada. Se llama al arrancar y ante cada cambio de display-mode
+ * (instalar la PWA, o abrirla desde el ícono, no recargan necesariamente la página).
+ */
+export function reportDisplayMode(): void {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+
+  const send = async () => {
+    try {
+      const reg = await getRegistration();
+      const sw = reg?.active ?? navigator.serviceWorker.controller;
+      sw?.postMessage({ type: 'CLIENT_MODE', standalone: isStandalone() });
+    } catch {
+      /* informativo: si falla, el SW cae en openWindow(), que igual abre la app */
+    }
+  };
+
+  void send();
+  // El modo puede cambiar sin recargar (p. ej. al instalar la PWA desde la pestaña).
+  try {
+    window.matchMedia?.('(display-mode: standalone)').addEventListener('change', () => void send());
+  } catch {
+    /* navegadores sin addEventListener en MediaQueryList */
+  }
+}
+
 /** ¿El dispositivo ya está suscrito a push en este navegador? */
 export async function isPushEnabled(): Promise<boolean> {
   if (!pushSupported()) return false;
