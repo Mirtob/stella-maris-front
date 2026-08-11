@@ -79,6 +79,13 @@ export interface Song {
   category: string;
   youtubeId: string;
   videoUrl?: string; // URL completa del video de YouTube
+  /** Video de la versión con ÓRGANO. Cada canto se graba dos veces (órgano y
+   *  guitarra) y cada usuario ve la de SU instrumento. Vacío = no grabada aún,
+   *  se cae a `youtubeId`. Nunca leer estos campos a mano: usar
+   *  `pickSongVideo()` de utils/songVideo.ts, que aplica el respaldo. */
+  youtubeIdOrgano?: string;
+  /** Video de la versión con GUITARRA. Ver `youtubeIdOrgano`. */
+  youtubeIdGuitarra?: string;
   sheetMusicUrl?: string;
   /** Carpeta del canto en Drive con un PDF por voz/instrumento (polifonía). */
   driveFolderId?: string;

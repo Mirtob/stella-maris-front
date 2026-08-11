@@ -20,6 +20,7 @@ import { transposeContent, getTransposedKey, keyPrefersFlats, formatTranspositio
 import { LyricsWithChords } from './LyricsWithChords';
 import { LyricsOnly } from './LyricsOnly';
 import { FavoriteButton } from './FavoriteButton';
+import { pickSongVideo, videoVersionLabel } from '../../utils/songVideo';
 
 interface SongPlayerProps {
   song: Song;
@@ -40,6 +41,11 @@ export function SongPlayer({ song, onBack, userInstrument, userRole, userId }: S
   
   const colors = getCategoryColors(song.category);
   const headerGradient = getCategoryHeaderGradient(song.category);
+
+  // El canto está grabado en versión órgano y versión guitarra: se reproduce la
+  // del instrumento del usuario. Si esa aún no existe, se cae a la otra y se
+  // avisa, para que nadie ensaye creyendo que es su acompañamiento.
+  const video = pickSongVideo(song, userInstrument);
 
   // ✅ Pueblo Fiel: Solo letra sin acordes (no puede transponer)
   // ✅ Coro con Guitarra: Letra con acordes + transposición
@@ -162,18 +168,25 @@ export function SongPlayer({ song, onBack, userInstrument, userRole, userId }: S
             asegura que los controles del player tengan tap target usable. */}
         <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden mb-6 border-2 border-white/40 dark:border-white/20 transition-colors">
           <div className="aspect-video bg-black min-h-[200px]">
-            <iframe
-              width="100%"
-              height="100%"
-              src={`https://www.youtube-nocookie.com/embed/${song.youtubeId}?rel=0&playsinline=1`}
-              title={song.title}
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-              allowFullScreen
-              className="w-full h-full"
-            ></iframe>
+            {video ? (
+              <iframe
+                width="100%"
+                height="100%"
+                src={`https://www.youtube-nocookie.com/embed/${video.videoId}?rel=0&playsinline=1`}
+                title={`${song.title} — ${videoVersionLabel(video.version)}`}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                allowFullScreen
+                className="w-full h-full"
+              ></iframe>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center text-center text-white/80 p-6 gap-2">
+                <Music className="w-10 h-10" strokeWidth={2} />
+                <p className="text-base font-bold">Este canto aún no tiene video</p>
+              </div>
+            )}
           </div>
-          
+
           {/* Player Info */}
           <div className="p-5 bg-white/40 dark:bg-white/10 backdrop-blur-sm transition-colors">
             <div className="flex items-center justify-between mb-3">
@@ -181,7 +194,27 @@ export function SongPlayer({ song, onBack, userInstrument, userRole, userId }: S
                 <div className="text-sm text-blue-900 dark:text-blue-200 mb-1">Duración</div>
                 <div className="text-2xl font-bold text-brand-ink">{song.duration}</div>
               </div>
+              {/* Qué versión se está viendo: el canto se graba con órgano y con
+                  guitarra, y el instrumento del perfil elige cuál suena. */}
+              {video && (
+                <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-bold border-2 ${
+                  video.isFallback
+                    ? 'bg-amber-100 text-amber-900 border-amber-400'
+                    : 'bg-white/60 dark:bg-white/10 text-brand-ink border-white/60 dark:border-white/20'
+                }`}>
+                  {videoVersionLabel(video.version)}
+                </span>
+              )}
             </div>
+
+            {video?.isFallback && (
+              <div className="mb-3 bg-amber-50 dark:bg-amber-900/30 border-2 border-amber-300 dark:border-amber-700 rounded-xl p-3">
+                <p className="text-sm text-amber-900 dark:text-amber-100">
+                  ⚠️ Todavía no se graba la versión para <strong>{userInstrument}</strong> de este
+                  canto. Estás viendo la {videoVersionLabel(video.version).replace(/^\S+\s/, '').toLowerCase()}.
+                </p>
+              </div>
+            )}
 
             {/* Botones de acción */}
             <div className={`grid ${userRole === 'Pueblo fiel' ? 'grid-cols-1' : 'grid-cols-2'} gap-3`}>

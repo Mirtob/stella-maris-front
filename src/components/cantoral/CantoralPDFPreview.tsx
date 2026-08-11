@@ -6,6 +6,7 @@ import { stripLyricsFormatting } from '../../utils/lyricsFormat';
 import { DEFAULT_GARLAND_ID } from '../../data/garlands';
 import { DEFAULT_PDF_FONT, DEFAULT_PDF_SIZE } from '../../data/pdfStyle';
 import { getTodayLocal } from '../../utils/dateLocal';
+import { hasAnyVideo } from '../../utils/songVideo';
 import { toast } from 'sonner';
 
 interface CantoralPDFPreviewProps {
@@ -226,7 +227,7 @@ export function CantoralPDFPreview({
 
                     {/* Enlaces */}
                     <div className="flex gap-3 text-xs text-blue-600 dark:text-blue-400 mb-2">
-                      {song.videoUrl && (
+                      {hasAnyVideo(song) && (
                         <span className="flex items-center gap-1">
                           🎬 Video disponible
                         </span>

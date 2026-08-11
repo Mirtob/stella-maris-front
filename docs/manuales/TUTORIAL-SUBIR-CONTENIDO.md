@@ -134,6 +134,40 @@ liturgico: si
 | `liturgico` | No | `si` (default) o `no` |
 | `categoria_no_liturgica` | No | Solo si `liturgico: no` — Adoración, Procesión, Mariano, Reflexión, Evangelización, Otro |
 
+### Las dos versiones de un canto (órgano y guitarra)
+
+Cada canto se graba **dos veces**: una versión acompañada con **órgano** y otra con
+**guitarra**. La app le muestra a cada persona la versión del **instrumento que eligió
+en su perfil** (y, si el coro eligió otro instrumento para esa Misa en el constructor,
+manda ese). Nadie ensaya con el acompañamiento del otro instrumento.
+
+Es **un solo canto** con dos videos, no dos cantos: así la letra, la partitura, los
+favoritos y el historial no quedan partidos en dos fichas.
+
+Cómo cargarlas:
+
+1. Sube los dos videos a YouTube como siempre. En cada uno pon en la metadata
+   `version: Órgano` o `version: Guitarra` según corresponda.
+2. Sincroniza. Cada video entra con su grabación ya marcada como esa versión.
+3. Panel Admin → **Gestión de Cantos** → **Editar** el canto → bloque
+   **"Videos del canto"**: pega ahí la URL de la **otra** versión, para que las dos
+   queden en la misma ficha. (En el alta manual el bloque está en el mismo formulario,
+   y el botón **Traer** guarda el video en la versión que elijas con los chips
+   🎹 Órgano / 🎶 Guitarra / Única.)
+
+Se puede pegar la **URL completa** o solo el ID: la app se queda con el ID.
+
+En la lista de cantos, cada ficha muestra qué versiones tiene: 🎹 (órgano),
+🎶 (guitarra), 🎬 (video único).
+
+> **Re-sincronizar no borra la otra versión:** el video que se pegó a mano en la ficha
+> se conserva aunque vuelvas a sincronizar el canal (igual que la letra y la partitura).
+
+> **Si falta una versión:** mientras solo esté grabada una, todos ven la que existe,
+> con un aviso en pantalla de qué versión están viendo. El campo **"Video único /
+> general"** es para los cantos que tienen una sola grabación — es lo que tiene todo el
+> catálogo cargado hasta ahora, y sigue funcionando sin tocar nada.
+
 > **Acordes en la letra:** se escriben en **cifrado latino** (Do, Re, Mi, Fa, Sol, La, Si)
 > entre corchetes pegados a la sílaba, ej. `[Sol]Vienen con ale[Do]gría`. En la app, el
 > usuario puede ver los acordes en latino o americano (C, D, E…) y transponerlos.

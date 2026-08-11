@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { ArrowLeft, Play, Pause, SkipBack, SkipForward, Repeat, Music as MusicIcon, Radio } from 'lucide-react';
-import { PublishedCantoral, Song } from '../../types';
+import { InstrumentType, PublishedCantoral, Song } from '../../types';
 import { getCategoryColors } from '../../utils/colors';
 import { normalizeCategory } from '../../utils/category';
 import { FavoriteButton } from './FavoriteButton';
+import { pickVideoId } from '../../utils/songVideo';
 
 const CATEGORY_ORDER = [
   'Entrada', 'Kyrie', 'Gloria', 'Salmo', 'Aleluya', 'Post Evangelio',
@@ -32,18 +33,22 @@ function loadYouTubeApi(): Promise<any> {
 interface PlaylistPlayerProps {
   cantoral: PublishedCantoral;
   onBack: () => void;
+  /** Instrumento del usuario: elige la versión (órgano/guitarra) de cada canto.
+   *  Sin él (enlace compartido, demo) suena la versión general. */
+  userInstrument?: InstrumentType;
 }
 
-const isValidVideoId = (id?: string) => !!id && /^[a-zA-Z0-9_-]{11}$/.test(id);
-
-export function PlaylistPlayer({ cantoral, onBack }: PlaylistPlayerProps) {
-  // Pistas con video válido, en orden litúrgico.
+export function PlaylistPlayer({ cantoral, onBack, userInstrument }: PlaylistPlayerProps) {
+  // Pistas con video válido, en orden litúrgico. Cada pista lleva ya resuelto el
+  // video de la versión del usuario (órgano/guitarra), no el genérico.
   const rank = (c: string) => {
     const i = CATEGORY_ORDER.indexOf(normalizeCategory(c));
     return i === -1 ? 999 : i;
   };
-  const tracks: Song[] = [...cantoral.songs]
-    .filter((s) => isValidVideoId(s.youtubeId))
+  type Track = Song & { videoId: string };
+  const tracks: Track[] = [...cantoral.songs]
+    .map((s) => ({ ...s, videoId: pickVideoId(s, userInstrument) }))
+    .filter((s) => !!s.videoId)
     .sort((a, b) => rank(a.category) - rank(b.category));
 
   const playerRef = useRef<any>(null);
@@ -61,7 +66,7 @@ export function PlaylistPlayer({ cantoral, onBack }: PlaylistPlayerProps) {
     const t = tracksRef.current[i];
     if (!t || !playerRef.current?.loadVideoById) return;
     setCurrentIndex(i);
-    playerRef.current.loadVideoById(t.youtubeId);
+    playerRef.current.loadVideoById(t.videoId);
   }, []);
 
   useEffect(() => {
@@ -78,7 +83,7 @@ export function PlaylistPlayer({ cantoral, onBack }: PlaylistPlayerProps) {
       mountRef.current.appendChild(host);
       playerRef.current = new YT.Player(host, {
         host: 'https://www.youtube-nocookie.com',
-        videoId: tracks[0].youtubeId,
+        videoId: tracks[0].videoId,
         playerVars: { rel: 0, playsinline: 1, autoplay: 1, modestbranding: 1 },
         events: {
           onStateChange: (e: any) => {

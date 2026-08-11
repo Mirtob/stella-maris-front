@@ -235,7 +235,9 @@ type AppRoute =
   | { screen: 'callback' }
   | { screen: 'onboarding' }
   | { screen: 'profile-setup' }
-  | { screen: 'player'; song: Song; returnView: ViewState }
+  // `instrument`: versión (órgano/guitarra) con la que abrir el video. Solo viene
+  // cuando el coro eligió otro instrumento para ESTA Misa; si no, manda el del perfil.
+  | { screen: 'player'; song: Song; instrument?: InstrumentType; returnView: ViewState }
   | { screen: 'playlist'; cantoral: PublishedCantoral; returnView: ViewState }
   | { screen: 'settings'; returnView: ViewState }
   | { screen: 'cantoral-link'; cantoralId: string }
@@ -743,8 +745,8 @@ function AppContent() {
     setCantoral(prev => prev.filter(s => s.id !== songId));
   };
 
-  const handlePlaySong = (song: Song) => {
-    setRoute({ screen: 'player', song, returnView: currentView() });
+  const handlePlaySong = (song: Song, instrument?: InstrumentType) => {
+    setRoute({ screen: 'player', song, instrument, returnView: currentView() });
   };
 
   const handleBackFromPlayer = () => {
@@ -1151,7 +1153,9 @@ function AppContent() {
         <SongPlayer
           song={route.song}
           onBack={handleBackFromPlayer}
-          userInstrument={userProfile?.instrument}
+          // El instrumento con el que se toca hoy manda sobre el del perfil: decide
+          // qué versión del video (órgano/guitarra) se reproduce y cómo se ve la letra.
+          userInstrument={route.instrument ?? userProfile?.instrument}
           userVoicePart={effectiveVoicePart(userProfile?.voicePart, userProfile?.instrument)}
           userRole={userProfile?.role}
           userId={userProfile?.id}
@@ -1163,7 +1167,11 @@ function AppContent() {
   if (route.screen === 'playlist') {
     return (
       <Suspense fallback={<LoadingScreen />}>
-        <PlaylistPlayer cantoral={route.cantoral} onBack={handleBackFromPlaylist} />
+        <PlaylistPlayer
+          cantoral={route.cantoral}
+          onBack={handleBackFromPlaylist}
+          userInstrument={userProfile?.instrument}
+        />
       </Suspense>
     );
   }
@@ -1357,7 +1365,9 @@ interface ViewProps {
   editingCantoralId: string | null;
   onAddToCantoral: (song: Song) => void;
   onRemoveFromCantoral: (songId: string) => void;
-  onPlaySong: (song: Song) => void;
+  /** `instrument` opcional: versión del video a abrir cuando el coro toca hoy con
+   *  un instrumento distinto al principal de su perfil. */
+  onPlaySong: (song: Song, instrument?: InstrumentType) => void;
   onPublishCantoral: (cantorals: PublishedCantoral[]) => Promise<void>;
   navigate: (view: string) => void;
   onDeleteCantoral: (id: string) => Promise<void>;

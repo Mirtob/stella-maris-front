@@ -268,6 +268,11 @@ function videoToSong(video: any, sheets: DriveFile[] = []): Song | null {
     recommendedCategories: extraLabels.length ? extraLabels : undefined,
     extraMoments: extraLabels.map(categoryToMoment),
     youtubeId: videoId,
+    // Si el video declara con qué se acompaña (`version: Guitarra|Órgano`), se
+    // guarda también como el video de ESA versión. Al pegar después la otra
+    // grabación en la ficha del canto, cada corista ve la de su instrumento.
+    youtubeIdOrgano:   meta.version === 'Órgano'   ? videoId : undefined,
+    youtubeIdGuitarra: meta.version === 'Guitarra' ? videoId : undefined,
     duration: formatDuration(details.duration ?? ''),
     artist: 'Stella Maris',
     author: meta.autor,

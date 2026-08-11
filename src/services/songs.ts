@@ -17,7 +17,12 @@ export interface SongFilters {
 
 export interface SongInput {
   title: string;
-  youtubeId?: string;
+  /** Video único/general (`null` = borrar el que hubiera). */
+  youtubeId?: string | null;
+  /** Video de la versión con órgano (`null` = borrar el que hubiera). */
+  youtubeIdOrgano?: string | null;
+  /** Video de la versión con guitarra (`null` = borrar el que hubiera). */
+  youtubeIdGuitarra?: string | null;
   massMoment: MassMoment;
   extraMoments?: MassMoment[];
   liturgicalSeasons?: LiturgicalSeason[];
@@ -59,6 +64,10 @@ function rowToSong(row: Record<string, unknown>): Song {
     recommendedCategories: ((row.extra_moments as string[]) ?? []).map(m => normalizeCategory(m)),
     youtubeId:             (row.youtube_id as string) ?? '',
     videoUrl:              row.youtube_id ? `https://www.youtube.com/watch?v=${row.youtube_id}` : undefined,
+    // Un canto, dos grabaciones: el instrumento del usuario decide cuál se ve.
+    // Resolución (con respaldo) en utils/songVideo.ts — no leerlas sueltas.
+    youtubeIdOrgano:       (row.youtube_id_organo as string) ?? undefined,
+    youtubeIdGuitarra:     (row.youtube_id_guitarra as string) ?? undefined,
     liturgicalSeasons:     (row.liturgical_seasons as LiturgicalSeason[]) ?? [],
     liturgicalSeason:      ((row.liturgical_seasons as string[]) ?? [])[0], // backwards compat
     instruments:           (row.instruments as string[]) ?? [],
@@ -91,6 +100,8 @@ function songInputToRow(input: SongInput): Record<string, unknown> {
   return {
     title:                 input.title,
     youtube_id:            input.youtubeId ?? null,
+    youtube_id_organo:     input.youtubeIdOrgano ?? null,
+    youtube_id_guitarra:   input.youtubeIdGuitarra ?? null,
     mass_moment:           input.massMoment,
     extra_moments:         input.extraMoments ?? [],
     liturgical_seasons:    input.liturgicalSeasons ?? [],
@@ -207,6 +218,8 @@ export async function updateSong(
     const row: Record<string, unknown> = {};
     if (input.title !== undefined)            row.title                  = input.title;
     if (input.youtubeId !== undefined)        row.youtube_id             = input.youtubeId;
+    if (input.youtubeIdOrgano !== undefined)  row.youtube_id_organo      = input.youtubeIdOrgano;
+    if (input.youtubeIdGuitarra !== undefined)row.youtube_id_guitarra    = input.youtubeIdGuitarra;
     if (input.massMoment !== undefined)       row.mass_moment            = input.massMoment;
     if (input.extraMoments !== undefined)     row.extra_moments          = input.extraMoments;
     if (input.liturgicalSeasons !== undefined)row.liturgical_seasons     = input.liturgicalSeasons;

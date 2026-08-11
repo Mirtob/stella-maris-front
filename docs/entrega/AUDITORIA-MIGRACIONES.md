@@ -135,6 +135,10 @@ ORDER BY ok ASC, tipo, objeto;
 | `20260709_course_quizzes` | tabla `course_quizzes` | Quizzes de las cápsulas |
 | `20260709_course_videos` | tabla `course_videos` | Videos embebidos de las cápsulas |
 | **`20260714_song_favorites`** | tabla `song_favorites` (RLS por `auth.uid()`) | Favoritos "Mis cantos" |
+| `20260731_cron_runs` | tabla `cron_runs` | Bitácora de los cron de notificaciones |
+| `20260807_song_sheets` | `songs.drive_folder_id` + `songs.sheets` | Partituras por voz (polifonía) |
+| `20260807_user_voice_part` | `user_profiles.voice_part` | Voz del corista (Atril y cuadernillo por voz) |
+| **`20260810_song_video_by_instrument`** | `songs.youtube_id_organo` + `songs.youtube_id_guitarra` (+ CHECK de formato) | Video por versión: cada corista ve la grabación de SU instrumento |
 
 ## Notas de orden
 - Orden = alfabético por nombre de archivo (fecha). Aplica en ese orden.

@@ -33,7 +33,9 @@ interface ChoirViewProps {
   cantoral: Song[];
   onAddToCantoral: (song: Song) => void;
   onRemoveFromCantoral: (songId: string) => void;
-  onPlaySong: (song: Song) => void;
+  /** El 2.º argumento es el instrumento con el que se toca ESTA Misa: decide qué
+   *  versión del video (órgano/guitarra) se abre. */
+  onPlaySong: (song: Song, instrument?: InstrumentType) => void;
   onPublishCantoral: (cantorals: PublishedCantoral[]) => Promise<void> | void;
   /** Cantorales publicados de la parroquia (para avisar cantos repetidos al armar). */
   parishCantorals?: PublishedCantoral[];
@@ -69,6 +71,9 @@ export function ChoirView({
   const [showInstrumentModal, setShowInstrumentModal] = useState(false);
   const [selectedInstrumentForMass, setSelectedInstrumentForMass] = useState<InstrumentType>(preferredInstrument);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  // Un coro puede tocar hoy con guitarra aunque su perfil tenga el órgano primero:
+  // el video que se abra debe ser el de la versión que se va a tocar en esta Misa.
+  const playSongForThisMass = (song: Song) => onPlaySong(song, selectedInstrumentForMass);
   // Tiempo Pascual: en lugar del acto penitencial puede hacerse el rito de
   // aspersión (IGMR 51), que cambia el canto de ese momento (y omite el Kyrie).
   // 'null' = aún no se preguntó; al tocar el Kyrie en Pascua preguntamos.
@@ -442,7 +447,7 @@ export function ChoirView({
         <div className="mt-4" data-tour="coro-sugerencias">
           <LiturgicalSuggestions
             onAddToCantoral={onAddToCantoral}
-            onPlaySong={onPlaySong}
+            onPlaySong={playSongForThisMass}
             cantoral={cantoral}
             preferredInstrument={preferredInstrument}
           />
@@ -621,7 +626,7 @@ export function ChoirView({
                 onAddToCantoral={onAddToCantoral}
                 onRemoveFromCantoral={onRemoveFromCantoral}
                 cantoral={cantoral}
-                onPlaySong={onPlaySong}
+                onPlaySong={playSongForThisMass}
                 preferredInstrument={preferredInstrument}
                 previousUsage={previousUsage}
                 massDate={massDate}

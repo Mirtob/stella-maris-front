@@ -76,6 +76,12 @@ function songToRow(song: Song): Record<string, unknown> {
   return {
     title:                   song.title,
     youtube_id:              song.youtubeId || null,
+    // Si el video declara su versión en la metadata (`version:` del bloque
+    // STELLA_MARIS_META), queda además en la columna de esa versión: así el
+    // canto sincronizado ya dirige al organista y al guitarrista a su propia
+    // grabación. Ver utils/songVideo.ts.
+    youtube_id_organo:       song.youtubeIdOrgano   ?? null,
+    youtube_id_guitarra:     song.youtubeIdGuitarra ?? null,
     mass_moment:             mapMoment(song.category),
     extra_moments:           mapExtraMoments(song),
     liturgical_seasons:      (song.liturgicalSeasons && song.liturgicalSeasons.length)
@@ -119,6 +125,11 @@ function songToSyncRow(song: Song): Record<string, unknown> {
   delete row.approval_status;
   if (row.drive_file_id == null) delete row.drive_file_id;
   if (row.lyrics == null)        delete row.lyrics;
+  // Un video del canal declara UNA versión (la suya). La otra se pega a mano en la
+  // ficha del canto, así que no puede viajar en este row: mandarla como null la
+  // borraría en cada re-sincronización. Mismo criterio que la letra y la partitura.
+  if (row.youtube_id_organo == null)   delete row.youtube_id_organo;
+  if (row.youtube_id_guitarra == null) delete row.youtube_id_guitarra;
   return row;
 }
 

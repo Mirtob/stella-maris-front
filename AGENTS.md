@@ -157,7 +157,12 @@ interface Song {
   id: string;
   title: string;
   category: 'Entrada' | 'Kyrie' | 'Gloria' | 'Santo' | 'Cordero' | ... (13 Mass categories)
-  youtubeId: string;                    // 11-character YouTube video ID
+  youtubeId: string;                    // 11-character YouTube video ID (single/general recording)
+  youtubeIdOrgano?: string;             // Organ-accompanied recording
+  youtubeIdGuitarra?: string;           // Guitar-accompanied recording
+                                        // ↑ never read these directly: pickSongVideo()
+                                        //   (utils/songVideo.ts) picks the one matching
+                                        //   the user's instrument, with fallback
   sheetMusicUrl?: string;               // Link to sheet music
   isLiturgical: boolean;                // Liturgical vs non-liturgical chants
   nonLiturgicalCategory?: 'Adoración' | 'Procesión' | 'Mariano' | ...

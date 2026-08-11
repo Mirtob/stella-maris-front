@@ -5,8 +5,9 @@ import { toast } from 'sonner';
 import { Song, MassMoment, LiturgicalSeason, InstrumentType, LITURGICAL_SEASON_LABELS } from '../../types';
 import { listSongs, deleteSong, updateSong, approveSong, rejectSong, addSong } from '../../services/songs';
 import { getSupabaseClient } from '../../services/supabaseClient';
-import { extractVideoId, formatDuration } from '../../services/youtube';
+import { formatDuration } from '../../services/youtube';
 import { matchesSearch } from '../../utils/textSearch';
+import { toVideoId, pickSongVideo } from '../../utils/songVideo';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { detectSheets, defaultSheet, FULL_SCORE, type SongSheet } from '../../utils/sheetParts';
 
@@ -70,6 +71,8 @@ export function SongManager() {
   const INSTRUMENT_OPTIONS: InstrumentType[] = ['Guitarra', 'Órgano'];
   const emptyForm = {
     title: '', author: '', artist: '', moments: ['entrada'] as MassMoment[], youtubeId: '',
+    // Un canto, dos grabaciones: el usuario ve la de SU instrumento (ver utils/songVideo.ts).
+    youtubeIdOrgano: '', youtubeIdGuitarra: '',
     driveFileId: '', duration: '', originalKey: '', massName: '', lyrics: '',
     seasons: [] as string[], instruments: [] as InstrumentType[],
     isLiturgical: true, nonLiturgicalCategory: '' as string,
@@ -132,6 +135,8 @@ export function SongManager() {
     }));
   const [addingSong, setAddingSong] = useState(false);
   const [ytUrl, setYtUrl] = useState('');
+  // A qué versión del canto pertenece el video que se está trayendo de YouTube.
+  const [ytTarget, setYtTarget] = useState<'youtubeIdOrgano' | 'youtubeIdGuitarra' | 'youtubeId'>('youtubeIdOrgano');
   const [fetchingYt, setFetchingYt] = useState(false);
   // Partituras disponibles en la carpeta de Drive (para elegir sin buscar el ID a mano).
   // `path` = carpeta relativa (p. ej. "Entrada" o "Entrada/Vienen con Alegría"), para
@@ -226,6 +231,60 @@ export function SongManager() {
    * fija además `driveFileId` al full score, para que todo lo que ya usa una sola
    * partitura (cuadernillo, Modo Atril, ordinario) siga funcionando sin cambios.
    */
+  /**
+   * Videos del canto: uno por versión de acompañamiento.
+   *
+   * El mismo canto se graba con órgano y con guitarra, y cada usuario ve la
+   * versión de SU instrumento (el que eligió al iniciar sesión, o el elegido
+   * para esta Misa en el constructor). Se acepta pegar la URL completa: se
+   * guarda solo el ID. El campo "video único" es el respaldo cuando todavía hay
+   * una sola grabación — es lo que tiene el catálogo que ya está cargado.
+   */
+  const renderVideosBlock = (form: SongForm, setForm: Dispatch<SetStateAction<SongForm>>) => {
+    const field = (
+      key: 'youtubeIdOrgano' | 'youtubeIdGuitarra' | 'youtubeId',
+      label: string,
+      placeholder: string,
+    ) => {
+      const raw = form[key] as string;
+      const id = toVideoId(raw);
+      const invalid = raw.trim() !== '' && !id;
+      return (
+        <div key={key}>
+          <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">{label}</label>
+          <input
+            value={raw}
+            onChange={(e) => setForm(prev => ({ ...prev, [key]: e.target.value }))}
+            // Al salir del campo se normaliza a ID, para que lo guardado y lo
+            // que se ve en pantalla sean lo mismo.
+            onBlur={() => id && setForm(prev => ({ ...prev, [key]: id }))}
+            placeholder={placeholder}
+            className={`w-full px-4 py-2.5 rounded-xl text-base text-gray-900 bg-white border-2 focus:outline-none font-medium ${
+              invalid ? 'border-red-400 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
+            }`}
+          />
+          {invalid && (
+            <p className="text-xs text-red-600 mt-1">No parece una URL ni un ID de YouTube.</p>
+          )}
+        </div>
+      );
+    };
+    return (
+      <div className="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl p-3 space-y-3">
+        <div>
+          <label className="text-sm font-bold text-gray-700 dark:text-gray-200 block">Videos del canto</label>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Pega la URL (o el ID) de cada versión. Cada corista verá la del instrumento
+            que eligió al entrar; si falta la suya, se muestra la otra con un aviso.
+          </p>
+        </div>
+        {field('youtubeIdOrgano',   '🎹 Versión Órgano',   'https://youtube.com/watch?v=…')}
+        {field('youtubeIdGuitarra', '🎶 Versión Guitarra', 'https://youtube.com/watch?v=…')}
+        {field('youtubeId',         'Video único / general (si aún hay una sola grabación)', 'https://youtube.com/watch?v=…')}
+      </div>
+    );
+  };
+
   const renderVoicesBlock = (form: SongForm, setForm: Dispatch<SetStateAction<SongForm>>) => {
     const detect = (folderId: string) => {
       const inFolder = sheets.filter(s => s.parentId === folderId);
@@ -366,6 +425,8 @@ export function SongManager() {
       artist: song.artist || '',
       moments: realMoments.length ? realMoments : (['entrada'] as MassMoment[]),
       youtubeId: song.youtubeId || '',
+      youtubeIdOrgano: song.youtubeIdOrgano || '',
+      youtubeIdGuitarra: song.youtubeIdGuitarra || '',
       driveFileId: song.driveFileId || '',
       driveFolderId: song.driveFolderId || '',
       sheets: song.sheets ?? [],
@@ -380,9 +441,32 @@ export function SongManager() {
     });
   };
 
+  /**
+   * Videos a guardar. Se acepta URL o ID en cada campo y se guarda siempre el ID.
+   * Campo vacío → `null`: así se puede BORRAR un video mal pegado (en `updateSong`
+   * `undefined` significa "no tocar la columna", que dejaría el video viejo).
+   */
+  const videoPayload = (form: SongForm) => {
+    const clean = (raw: string) => (raw.trim() ? toVideoId(raw) : '');
+    return {
+      youtubeId:         clean(form.youtubeId) || null,
+      youtubeIdOrgano:   clean(form.youtubeIdOrgano) || null,
+      youtubeIdGuitarra: clean(form.youtubeIdGuitarra) || null,
+    };
+  };
+
+  /** Avisa si algún campo de video tiene texto que no es una URL/ID de YouTube. */
+  const videosAreValid = (form: SongForm): boolean => {
+    const bad = ([form.youtubeId, form.youtubeIdOrgano, form.youtubeIdGuitarra] as string[])
+      .some(raw => raw.trim() !== '' && !toVideoId(raw));
+    if (bad) toast.error('Revisa los videos: hay una URL o ID de YouTube que no es válido');
+    return !bad;
+  };
+
   const handleSaveSong = async () => {
     if (!editSong) return;
     if (!f.title.trim()) { toast.error('El título es obligatorio'); return; }
+    if (!videosAreValid(f)) return;
     setSavingSong(true);
     const mp = momentPayload(f);
     const r = await updateSong(editSong.id, {
@@ -393,7 +477,7 @@ export function SongManager() {
       extraMoments: mp.extraMoments,
       // Vacío = no tocar la versión guardada; con chips = fijar esa versión.
       instruments: f.instruments.length ? f.instruments : undefined,
-      youtubeId: f.youtubeId.trim() || undefined,
+      ...videoPayload(f),
       driveFileId: f.driveFileId.trim() || undefined,
       driveFolderId: f.driveFolderId.trim() || null,
       sheets: f.sheets,
@@ -420,9 +504,11 @@ export function SongManager() {
   };
 
   // Trae título/duración del video desde YouTube (sirve para cualquier canal público).
+  // El ID va al campo de la versión elegida en `ytTarget`: el canto se graba dos
+  // veces (órgano y guitarra) y cada una tiene su propio video.
   const handleFetchYt = async () => {
-    const id = extractVideoId(ytUrl.trim()) || ytUrl.trim();
-    if (!/^[a-zA-Z0-9_-]{11}$/.test(id)) {
+    const id = toVideoId(ytUrl);
+    if (!id) {
       toast.error('Pega una URL o ID de YouTube válido');
       return;
     }
@@ -434,7 +520,7 @@ export function SongManager() {
       if (!v) { toast.error('No se encontró el video (¿es público?)'); return; }
       setNa(prev => ({
         ...prev,
-        youtubeId: id,
+        [ytTarget]: id,
         title: prev.title || (v.snippet?.title ?? ''),
         duration: formatDuration(v.contentDetails?.duration ?? '') || prev.duration,
       }));
@@ -448,9 +534,7 @@ export function SongManager() {
 
   const handleAddSong = async () => {
     if (!na.title.trim()) { toast.error('El título es obligatorio'); return; }
-    if (na.youtubeId && !/^[a-zA-Z0-9_-]{11}$/.test(na.youtubeId.trim())) {
-      toast.error('El ID de YouTube no es válido'); return;
-    }
+    if (!videosAreValid(na)) return;
     setAddingSong(true);
     const mpAdd = momentPayload(na);
     const r = await addSong({
@@ -459,7 +543,7 @@ export function SongManager() {
       extraMoments: mpAdd.extraMoments,
       // Vacío = sirve para todas las versiones (default {coro,guitarra,organo}).
       instruments: na.instruments.length ? na.instruments : undefined,
-      youtubeId: na.youtubeId.trim() || undefined,
+      ...videoPayload(na),
       driveFileId: na.driveFileId.trim() || undefined,
       driveFolderId: na.driveFolderId.trim() || null,
       sheets: na.sheets,
@@ -617,12 +701,21 @@ export function SongManager() {
 
                 {/* Info Grid */}
                 <div className="grid grid-cols-3 gap-2 mb-3 bg-gray-50 dark:bg-slate-900 rounded-xl p-3 border border-gray-200 dark:border-slate-700">
+                  {/* Qué versiones están grabadas: el canto necesita el par
+                      órgano/guitarra para que cada corista vea la suya. */}
                   <div className="text-center min-w-0">
                     <Youtube className="w-5 h-5 text-red-600 mx-auto mb-1" />
-                    <div className="text-[10px] text-gray-600 dark:text-gray-400">YouTube</div>
-                    <div className="text-xs font-bold text-gray-800 dark:text-white truncate" title={song.youtubeId}>
-                      {song.youtubeId || '—'}
+                    <div className="text-[10px] text-gray-600 dark:text-gray-400">Videos</div>
+                    <div className="text-xs font-bold text-gray-800 dark:text-white truncate">
+                      {[
+                        song.youtubeIdOrgano   ? '🎹' : '',
+                        song.youtubeIdGuitarra ? '🎶' : '',
+                        song.youtubeId         ? '🎬' : '',
+                      ].filter(Boolean).join(' ') || '—'}
                     </div>
+                    {!pickSongVideo(song) && (
+                      <div className="text-[10px] text-amber-600 dark:text-amber-400">sin video</div>
+                    )}
                   </div>
                   <div className="text-center">
                     <div className="text-base mb-1">⏱️</div>
@@ -737,7 +830,6 @@ export function SongManager() {
                 ['Título', 'title'],
                 ['Autor', 'author'],
                 ['Artista / Intérprete', 'artist'],
-                ['ID de YouTube', 'youtubeId'],
                 ['Duración (ej. 3:45)', 'duration'],
                 ['Tonalidad (ej. Sol, Re m)', 'originalKey'],
                 ['Nombre de la Misa (agrupa Kyrie/Gloria/Santo/Cordero)', 'massName'],
@@ -778,6 +870,8 @@ export function SongManager() {
                   className="w-full mt-2 px-4 py-2 rounded-xl text-sm text-gray-700 bg-gray-50 border-2 border-gray-200 focus:outline-none focus:border-blue-500"
                 />
               </div>
+
+              {renderVideosBlock(f, setF)}
 
               {renderVoicesBlock(f, setF)}
 
@@ -951,8 +1045,30 @@ export function SongManager() {
                     Traer
                   </button>
                 </div>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <span className="text-xs font-bold text-blue-900 dark:text-blue-200">Es la versión:</span>
+                  {([
+                    ['youtubeIdOrgano', '🎹 Órgano'],
+                    ['youtubeIdGuitarra', '🎶 Guitarra'],
+                    ['youtubeId', 'Única / general'],
+                  ] as [typeof ytTarget, string][]).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setYtTarget(value)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 active:scale-95 transition-all ${
+                        ytTarget === value
+                          ? 'bg-blue-700 text-white border-brand-border'
+                          : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
                 <p className="text-xs text-blue-800 dark:text-blue-300 mt-1">
-                  Trae el título y la duración. Tú completas la metadata abajo (categoría, partitura, etc.).
+                  Trae el título y la duración, y guarda el video en la versión elegida.
+                  Repite pegando la otra grabación para completar el par órgano/guitarra.
                 </p>
               </div>
 
@@ -960,7 +1076,6 @@ export function SongManager() {
                 ['Título', 'title'],
                 ['Autor', 'author'],
                 ['Artista / Intérprete', 'artist'],
-                ['ID de YouTube', 'youtubeId'],
                 ['Duración (ej. 3:45)', 'duration'],
                 ['Tonalidad (ej. Sol, Re m)', 'originalKey'],
                 ['Nombre de la Misa (agrupa Kyrie/Gloria/Santo/Cordero)', 'massName'],
@@ -993,6 +1108,8 @@ export function SongManager() {
                   className="w-full mt-2 px-4 py-2 rounded-xl text-sm text-gray-700 bg-gray-50 border-2 border-gray-200 focus:outline-none focus:border-blue-500"
                 />
               </div>
+
+              {renderVideosBlock(na, setNa)}
 
               {renderVoicesBlock(na, setNa)}
 

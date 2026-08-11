@@ -3,6 +3,7 @@ import { Song, InstrumentType } from '../types';
 import { isOrdinary } from './ordinary';
 import { embedPartituraPages } from './embedPartitura';
 import { stripLyricsFormatting } from './lyricsFormat';
+import { pickVideoUrl } from './songVideo';
 
 type VoiceSelection = 'Soprano' | 'Contralto' | 'Tenor' | 'Bajo' | 'Full Score';
 
@@ -365,8 +366,10 @@ export const generateChoirCantoralPDF = async (
       pdf.setFontSize(8);
       pdf.setTextColor(59, 130, 246); // blue-500
       
-      if (song.videoUrl) {
-        const videoUrl = song.videoUrl.startsWith('http') ? song.videoUrl : `https://www.youtube.com/watch?v=${song.youtubeId}`;
+      // El enlace apunta a la versión del instrumento con el que toca este coro
+      // (el folleto ya se titula "Versión para Guitarra/Órgano" más arriba).
+      const videoUrl = pickVideoUrl(song, userInstruments[0]);
+      if (videoUrl) {
         pdf.textWithLink('🎬 Video', margin + 8, yPosition, {
           url: videoUrl
         });

@@ -6,6 +6,7 @@ import { getCantoralById } from '../../services/cantorals';
 import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
 import { PlaylistPlayer } from '../songs/PlaylistPlayer';
 import { LyricsOnly } from '../songs/LyricsOnly';
+import { hasAnyVideo } from '../../utils/songVideo';
 import {
   getDeferredInstallPrompt,
   promptInstall,
@@ -136,7 +137,7 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
 
   // Radio primero (notificación ?r=1): reproduce los videos del cantoral para generar
   // vistas en el canal; al volver, se muestra el cantoral. Solo si hay videos.
-  if (cantoral && showRadio && (cantoral.songs ?? []).some((s) => s.youtubeId)) {
+  if (cantoral && showRadio && (cantoral.songs ?? []).some(hasAnyVideo)) {
     return (
       <div className="fixed inset-0 z-50 bg-white dark:bg-slate-900">
         <PlaylistPlayer cantoral={cantoral} onBack={() => setShowRadio(false)} />
