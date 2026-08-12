@@ -14,10 +14,13 @@ node tests/output/unit.mjs
 
 npx esbuild tests/unit/video-por-instrumento.test.ts --bundle --platform=node --format=esm --outfile=tests/output/video-instrumento.mjs
 node tests/output/video-instrumento.mjs
+
+npx esbuild tests/unit/reporteria-cantos.test.ts --bundle --platform=node --format=esm --outfile=tests/output/reporteria.mjs
+node tests/output/reporteria.mjs
 ```
 
-Salida esperada: `TODO OK — 45 ok, 0 fallas` y `TODO OK — 37 ok, 0 fallas`. Si alguna
-falla, imprime el caso con lo esperado y lo obtenido.
+Salida esperada: `TODO OK — 45 ok, 0 fallas`, `TODO OK — 37 ok, 0 fallas` y
+`TODO OK — 70 ok, 0 fallas`. Si alguna falla, imprime el caso con lo esperado y lo obtenido.
 
 > Se usa `esbuild` (ya viene con Vite) porque el proyecto no tiene `tsc` instalado
 > y los módulos bajo prueba son TypeScript.
@@ -35,6 +38,7 @@ falla, imprime el caso con lo esperado y lo obtenido.
 | Instrumento | Los dos falsos negativos históricos (array con varios instrumentos, y arreglo vacío = "sirve para todos") |
 | Filtro por instrumento | Solo se ven los cantos del instrumento elegido; un momento puede quedar en cero y es correcto |
 | **Video por instrumento** (`video-por-instrumento`) | El organista ve la grabación con órgano y el guitarrista la de guitarra; el catálogo viejo (un solo `youtube_id`) no se queda sin video; si falta tu versión se usa la otra **marcada como respaldo** para que la pantalla avise; IDs a medio pegar se descartan; se acepta pegar la URL completa (watch, youtu.be, embed, shorts) |
+| **Reportería del catálogo** (`reporteria-cantos`) | La regla del **par órgano+guitarra** y su **excepción gregoriana** (con un video basta); un video "único" sin instrumento NO cuenta como par completo; los **acordes** se detectan solo en tokens que son acordes de verdad (`[Lam]`, `[Fa#m7]`) y no en acotaciones (`[Estribillo]`, `[bis]`, `[Coro]`); totales y desglose por clasificación; cruce con las **carpetas de Drive** (nombres sin tilde, `Final`→`Salida`, el `.mp3` de MuseScore no cuenta); CSV con `;` entrecomillado |
 
 ## Cuidado con los datos de prueba
 

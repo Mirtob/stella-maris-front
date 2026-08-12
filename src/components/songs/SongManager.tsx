@@ -1,5 +1,5 @@
-import { Music, Search, Trash2, FileText, Youtube, Loader, RefreshCw, Pencil, X, Check, Ban, Plus } from 'lucide-react';
-import { useState, useEffect, useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
+import { Music, Search, Trash2, FileText, Youtube, Loader, RefreshCw, Pencil, X, Check, Ban, Plus, ClipboardList } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo, useRef, type Dispatch, type SetStateAction } from 'react';
 import { LyricsToolbar } from './LyricsToolbar';
 import { toast } from 'sonner';
 import { Song, MassMoment, LiturgicalSeason, InstrumentType, LITURGICAL_SEASON_LABELS } from '../../types';
@@ -10,6 +10,8 @@ import { matchesSearch } from '../../utils/textSearch';
 import { toVideoId, pickSongVideo } from '../../utils/songVideo';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { detectSheets, defaultSheet, FULL_SCORE, type SongSheet } from '../../utils/sheetParts';
+import { SongReport } from '../admin/SongReport';
+import { buildSongReport } from '../../utils/songReport';
 
 const MOMENT_OPTIONS: { value: MassMoment; label: string }[] = [
   { value: 'entrada', label: 'Entrada' },
@@ -48,6 +50,8 @@ export function SongManager() {
   const [filterCategory, setFilterCategory] = useState<string>('Todos');
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const pendingDeleteSong = pendingDeleteId ? songs.find(s => s.id === pendingDeleteId) : null;
+  // Reportería: planilla de avance de la subida (videos por instrumento, partituras, acordes).
+  const [showReport, setShowReport] = useState(false);
 
   // Editar canto
   const [editSong, setEditSong] = useState<Song | null>(null);
@@ -597,6 +601,13 @@ export function SongManager() {
     }
   };
 
+  // Totales de la reportería: alimentan el resumen del pie y el badge del botón.
+  const reportTotals = useMemo(() => buildSongReport(songs).totals, [songs]);
+
+  if (showReport) {
+    return <SongReport songs={songs} loading={loading} onBack={() => setShowReport(false)} />;
+  }
+
   return (
     <div className="w-full max-w-md md:max-w-2xl mx-auto min-h-screen p-4 sm:p-5 md:p-6 pb-24 bg-gradient-to-br from-purple-50 via-blue-50 to-amber-50 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
       <div className="pt-16">
@@ -620,6 +631,21 @@ export function SongManager() {
         >
           <Plus className="w-5 h-5" strokeWidth={3} />
           Agregar canto manualmente
+        </button>
+
+        {/* Reportería: cuántos cantos hay por clasificación y qué falta subir */}
+        <button
+          onClick={() => setShowReport(true)}
+          disabled={loading}
+          className="w-full mb-3 py-3 bg-gradient-to-br from-green-700 to-emerald-900 text-white border-2 border-green-600 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+        >
+          <ClipboardList className="w-5 h-5" strokeWidth={2.5} />
+          Reportería y planilla
+          {!loading && reportTotals.pendientes > 0 && (
+            <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs">
+              {reportTotals.pendientes} por completar
+            </span>
+          )}
         </button>
 
         {/* Refresh */}
@@ -811,7 +837,21 @@ export function SongManager() {
                 </div>
                 <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">Con partitura</div>
               </div>
+              <div className="bg-purple-50 dark:bg-purple-900/30 rounded-xl p-3 border-2 border-purple-200 dark:border-purple-700">
+                <div className="text-xl sm:text-2xl font-bold text-purple-700 dark:text-purple-200">{reportTotals.organo}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">🎹 Versión órgano</div>
+              </div>
+              <div className="bg-amber-50 dark:bg-amber-900/30 rounded-xl p-3 border-2 border-amber-200 dark:border-amber-700">
+                <div className="text-xl sm:text-2xl font-bold text-amber-700 dark:text-amber-200">{reportTotals.guitarra}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">🎶 Versión guitarra</div>
+              </div>
             </div>
+            <button
+              onClick={() => setShowReport(true)}
+              className="mt-3 w-full py-2 text-sm font-bold text-green-800 dark:text-green-200 underline active:opacity-70"
+            >
+              Ver reportería completa ({reportTotals.completos}/{songs.length} con las dos versiones)
+            </button>
           </div>
         )}
       </div>

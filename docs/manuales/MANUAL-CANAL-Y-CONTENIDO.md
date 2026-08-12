@@ -180,6 +180,35 @@ La partitura (PDF o imagen) se sirve desde la carpeta de Drive de la app.
 
 ---
 
+## 5-bis. Reportería y planilla de subida 📋
+
+Dentro de **Gestión de Cantos**, el botón verde **"Reportería y planilla"** responde de un vistazo
+en qué va la carga del catálogo. No hay nada que llenar a mano: **la planilla se completa sola** a
+medida que subes cantos.
+
+**Qué muestra:**
+
+| Bloque | Qué responde |
+|---|---|
+| **Resumen** | Cuántos cantos hay, cuántos tienen **versión órgano**, cuántos **versión guitarra**, cuántos tienen **partitura** y cuántos tienen **letra con acordes**. |
+| **Avance del par** | Qué porcentaje del catálogo ya tiene **las dos versiones** grabadas. |
+| **Por clasificación** | Cantos por cada **carpeta de Drive** (Entrada, Ofertorio, Comunión, Salida…), con sus versiones, acordes y el número de **PDF que hay en esa carpeta**. Sirve para ver dónde falta material. |
+| **Planilla de subida** | Una fila por canto con ✓/— en órgano, guitarra, partitura y acordes, y el texto **"Falta: …"**. Se filtra por lo que falta y se **descarga en CSV** (se abre en Excel o Google Sheets). |
+
+**La regla que aplica:** en el canal debe estar **el mismo canto en los dos instrumentos**
+(órgano y guitarra). La **única excepción es el canto gregoriano**, que no lleva versión de
+guitarra: le basta una grabación.
+
+> ⚠️ Para que la reportería no te exija guitarra en un gregoriano, marca el canto con la etiqueta
+> **"Gregoriano"** en el editor (Gestión de Cantos → Editar → Temporada litúrgica).
+
+**Filtro "Video sin clasificar":** son los cantos que tienen video, pero puesto en el campo
+*"Video único / general"*, sin decir con qué instrumento se grabó. Ábrelos en **Editar** y mueve
+el enlace al campo **🎹 Versión Órgano** o **🎶 Versión Guitarra**; así cada corista ve la versión
+que le toca según el instrumento que eligió al entrar.
+
+---
+
 ## 6. Seguridad del canal de YouTube 🔐
 
 El canal es el activo más valioso. Recomendaciones:
@@ -210,6 +239,9 @@ El canal es el activo más valioso. Recomendaciones:
 - [ ] Letra después de `--- LETRA ---` (con acordes `[Am]` si aplica).
 - [ ] Partitura subida a Drive, compartida "con el enlace", e ID puesto en `partitura:`.
 - [ ] **Sincronizar YouTube** en la app y verificar que aparece en **Gestión de Cantos**.
+- [ ] Las **dos versiones** del canto (órgano y guitarra) en sus campos correspondientes —
+      salvo que sea **gregoriano**, que lleva una sola.
+- [ ] Revisar en **Reportería y planilla** que el canto quedó **sin "Falta: …"** (sección 5-bis).
 
 ---
 
