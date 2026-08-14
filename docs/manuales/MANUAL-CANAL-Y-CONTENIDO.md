@@ -67,7 +67,7 @@ etiquetas: Popular, Comunidad
 | `categoria` | **Sí** | Parte de la Misa: **Entrada, Kyrie, Gloria, Salmo, Aleluya, Post Evangelio, Ofertorio, Santo, Padre Nuestro, Cordero de Dios, Comunión, Salida**. *(Para cantos NO litúrgicos, ver abajo.)* |
 | `autor` | No | Nombre del autor/compositor. |
 | `version` | No | **Coro**, **Guitarra** u **Órgano** (default: Coro). Indica para qué instrumento es esta versión. |
-| `temporada` | No | **Adviento, Navidad, Cuaresma, Pascua, Ordinario**. Puedes poner varias separadas por coma. Si lo omites, sirve para todas las temporadas. |
+| `temporada` | No | Cualquier etiqueta del catálogo: **Adviento, Navidad, Cuaresma, Pascua, Ordinario, Domingo de Ramos, Funerales, Otros sacramentos, Fiestas patronales…** (lista completa y editable en la app, ver 5-ter). Puedes poner varias separadas por coma; **la primera es la principal**. Si lo omites, sirve para todas las temporadas. |
 | `tonalidad` | No | Tono original, ej. `G`, `Am`, `D`. |
 | `misa` | No | Nombre de la misa — **solo** para Kyrie/Gloria/Santo/Cordero que pertenecen a una misma misa (ej. "Misa de los Ángeles"). |
 | `partitura` | No | **ID del archivo de Drive** de la partitura (ver sección 3). |
@@ -250,6 +250,47 @@ guitarra: le basta una grabación.
 *"Video único / general"*, sin decir con qué instrumento se grabó. Ábrelos en **Editar** y mueve
 el enlace al campo **🎹 Versión Órgano** o **🎶 Versión Guitarra**; así cada corista ve la versión
 que le toca según el instrumento que eligió al entrar.
+
+---
+
+## 5-ter. Etiquetas de temporada litúrgica 🏷️
+
+En **Gestión de Cantos → Editar** (o **Agregar canto manualmente**), el bloque
+**"Temporada litúrgica"** funciona igual que las **Partes de la Misa**:
+
+- Puedes marcar **varias** etiquetas en un mismo canto.
+- **La primera que marcas es la principal (★)**: es la que la app muestra como *la* temporada
+  del canto en su ficha y en el buscador.
+- **Para cambiar la principal**, toca una etiqueta que ya esté marcada: sube a principal.
+  Tocar la principal la desmarca (y la siguiente pasa a serlo).
+- **Sin ninguna marcada = el canto sirve para todas las temporadas.**
+
+Además de los tiempos litúrgicos, el catálogo trae días y solemnidades (**Domingo de Ramos**,
+Jueves Santo, Vigilia Pascual, Cristo Rey…), celebraciones fuera del tiempo litúrgico
+(**Funerales**, **Otros sacramentos**, **Fiestas patronales**) y temáticas (Virgen María,
+Santos, Gregoriano, Secuencias).
+
+### Crear, renombrar y borrar etiquetas
+
+La lista ya no está fija en el código: se administra desde la app.
+
+| Acción | Cómo |
+|---|---|
+| **Crear** | Chip verde **"+ Nueva etiqueta"** al final de los chips: la crea y la deja marcada en el canto. |
+| **Renombrar** | **"Gestionar etiquetas"** → ✏️. Renombra la etiqueta **y también la corrige en todos los cantos que la tenían**. |
+| **Borrar** | **"Gestionar etiquetas"** → 🗑️. Te avisa cuántos cantos la usan. |
+| **Ver uso** | El gestor muestra bajo cada etiqueta cuántos cantos la tienen puesta. |
+
+> ⚠️ **Borrar no limpia los cantos.** Es a propósito: quitarla de decenas de cantos con un clic
+> sería difícil de deshacer. Los cantos que la tuvieran la conservan, y en su ficha aparece
+> marcada en ámbar como *"ya no está en el catálogo"*, desde donde puedes quitarla a mano.
+
+> Las etiquetas son **comunes a todo el catálogo**: un cambio aquí lo ven todas las parroquias.
+> Solo el administrador puede crear, renombrar o borrar.
+
+> **Si los botones ✏️ y 🗑️ aparecen apagados** y sale un aviso ámbar, es que falta aplicar la
+> migración `20260814_song_tags.sql` en Supabase. Mientras tanto la app funciona con la lista
+> por defecto; solo no se pueden administrar las etiquetas.
 
 ---
 

@@ -139,6 +139,7 @@ ORDER BY ok ASC, tipo, objeto;
 | `20260807_song_sheets` | `songs.drive_folder_id` + `songs.sheets` | Partituras por voz (polifonía) |
 | `20260807_user_voice_part` | `user_profiles.voice_part` | Voz del corista (Atril y cuadernillo por voz) |
 | **`20260810_song_video_by_instrument`** | `songs.youtube_id_organo` + `songs.youtube_id_guitarra` (+ CHECK de formato) | Video por versión: cada corista ve la grabación de SU instrumento |
+| **`20260814_song_tags`** | tabla `song_tags` + RLS (lectura pública, escritura admin) + semilla | Etiquetas de canto administrables desde la app. **Opcional para que la app funcione**: sin ella el editor usa la lista por defecto y solo se pierde crear/renombrar/borrar etiquetas |
 
 ## Notas de orden
 - Orden = alfabético por nombre de archivo (fecha). Aplica en ese orden.

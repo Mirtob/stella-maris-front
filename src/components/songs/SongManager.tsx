@@ -1,8 +1,12 @@
-import { Music, Search, Trash2, FileText, Youtube, Loader, RefreshCw, Pencil, X, Check, Ban, Plus, ClipboardList } from 'lucide-react';
+import { Music, Search, Trash2, FileText, Youtube, Loader, RefreshCw, Pencil, X, Check, Ban, Plus, ClipboardList, Tags } from 'lucide-react';
 import { useState, useEffect, useCallback, useMemo, useRef, type Dispatch, type SetStateAction } from 'react';
 import { LyricsToolbar } from './LyricsToolbar';
 import { toast } from 'sonner';
-import { Song, MassMoment, LiturgicalSeason, InstrumentType, LITURGICAL_SEASON_LABELS } from '../../types';
+import { Song, MassMoment, LiturgicalSeason, InstrumentType } from '../../types';
+import {
+  listSongTags, addSongTag, renameSongTag, deleteSongTag, findDuplicate, isPersistedTag,
+  defaultSongTagRows, type SongTag,
+} from '../../services/songTags';
 import { listSongs, deleteSong, updateSong, approveSong, rejectSong, addSong } from '../../services/songs';
 import { getSupabaseClient } from '../../services/supabaseClient';
 import { formatDuration } from '../../services/youtube';
@@ -57,19 +61,26 @@ export function SongManager() {
   const [editSong, setEditSong] = useState<Song | null>(null);
   const [savingSong, setSavingSong] = useState(false);
   const NON_LIT_OPTIONS = ['Adoración', 'Procesión', 'Mariano', 'Reflexión', 'Evangelización', 'Otro'] as const;
-  // Etiquetas para clasificar el canto: tiempos litúrgicos + temáticas. Se guardan
-  // como rótulos en `liturgical_seasons` (text[]), igual que los cantos sincronizados.
-  // Se pueden marcar varias por canto.
-  const SEASON_TAGS: string[] = [
-    ...Object.values(LITURGICAL_SEASON_LABELS),
-    // Solemnidades y días litúrgicos específicos
-    'Miércoles de Ceniza', 'Jueves Santo', 'Viernes Santo', 'Sábado Santo',
-    'Vigilia Pascual', 'Domingo de Resurrección', 'Ascensión del Señor',
-    'Espíritu Santo', 'Cristo Rey', 'Asunción de la Virgen',
-    'Inmaculada Concepción', 'Misa Crismal', 'Ordenaciones',
-    // Temáticas
-    'Sagrado Corazón', 'Virgen María', 'Santos', 'Gregoriano', 'Secuencias',
-  ];
+  // Etiquetas para clasificar el canto: tiempos litúrgicos, días concretos y
+  // temáticas. Se guardan como rótulos en `liturgical_seasons` (text[]), igual que
+  // los cantos sincronizados, y se pueden marcar varias por canto (la 1ª es la
+  // principal). El catálogo de etiquetas se administra desde esta misma pantalla
+  // (tabla `song_tags`); si la migración aún no está aplicada, el servicio
+  // devuelve la lista por defecto y todo sigue funcionando.
+  // Arranca con la lista por defecto (no vacía) para que el editor nunca aparezca
+  // sin etiquetas mientras la consulta viaja; al responder, se reemplaza.
+  const [tags, setTags] = useState<SongTag[]>(defaultSongTagRows);
+  const [loadingTags, setLoadingTags] = useState(false);
+  const [showTagManager, setShowTagManager] = useState(false);
+
+  const loadTags = useCallback(async () => {
+    setLoadingTags(true);
+    try {
+      setTags(await listSongTags());
+    } finally {
+      setLoadingTags(false);
+    }
+  }, []);
   // Versión / instrumento del canto. Vacío = sirve para todas las versiones
   // (en BD se guarda como {coro,guitarra,organo}); marcar una = es esa versión.
   const INSTRUMENT_OPTIONS: InstrumentType[] = ['Guitarra', 'Órgano'];
@@ -132,11 +143,18 @@ export function SongManager() {
   const naLyricsRef = useRef<HTMLTextAreaElement>(null);
   const fLyricsRef = useRef<HTMLTextAreaElement>(null);
   // Toggler de etiqueta genérico para cualquiera de los dos formularios (edición/alta).
+  // El ORDEN es significativo: la primera elegida es la principal (★), igual que en
+  // las partes de la Misa. `liturgical_seasons[0]` es lo que la app muestra como "la"
+  // temporada del canto en las fichas y el buscador.
   const toggleSeasonIn = (setForm: Dispatch<SetStateAction<SongForm>>, s: string) =>
     setForm(prev => ({
       ...prev,
       seasons: prev.seasons.includes(s) ? prev.seasons.filter(x => x !== s) : [...prev.seasons, s],
     }));
+
+  /** Asciende una etiqueta ya marcada a principal, sin tener que desmarcar todas. */
+  const makePrimarySeason = (setForm: Dispatch<SetStateAction<SongForm>>, s: string) =>
+    setForm(prev => ({ ...prev, seasons: [s, ...prev.seasons.filter(x => x !== s)] }));
   const [addingSong, setAddingSong] = useState(false);
   const [ytUrl, setYtUrl] = useState('');
   // A qué versión del canto pertenece el video que se está trayendo de YouTube.
@@ -289,6 +307,104 @@ export function SongManager() {
     );
   };
 
+  /**
+   * Bloque "Temporada litúrgica": chips multi-selección con principal (★), igual
+   * que las partes de la Misa. Lo comparten el editor y el alta manual.
+   *
+   * Los chips salen del catálogo administrable (`song_tags`) UNIDO a las etiquetas
+   * que ya tenga el canto: si alguien borró del catálogo una etiqueta que un canto
+   * todavía usa, tiene que seguir viéndose para poder quitársela. Sin esa unión
+   * quedaría pegada al canto y sin forma de sacarla desde la app.
+   */
+  const renderSeasonsBlock = (form: SongForm, setForm: Dispatch<SetStateAction<SongForm>>) => {
+    const catalog = tags.map(t => t.label);
+    const orphans = form.seasons.filter(s => !catalog.includes(s));
+    const options = [...catalog, ...orphans];
+
+    const createTag = async () => {
+      const raw = window.prompt('Nombre de la nueva etiqueta (ej. "Fiestas patronales"):');
+      if (raw === null) return;
+      const label = raw.trim();
+      if (!label) return;
+      const dupe = findDuplicate(tags, label);
+      if (dupe) {
+        toast.error('Esa etiqueta ya existe', { description: `Se llama "${dupe.label}".` });
+        // Aunque exista, marcarla es lo que la persona quería hacer.
+        if (!form.seasons.includes(dupe.label)) toggleSeasonIn(setForm, dupe.label);
+        return;
+      }
+      const r = await addSongTag(label);
+      if (!r.ok) { toast.error('No se pudo crear la etiqueta', { description: r.error }); return; }
+      await loadTags();
+      toggleSeasonIn(setForm, r.tag!.label);
+      toast.success(`Etiqueta "${r.tag!.label}" creada y marcada`);
+    };
+
+    return (
+      <div>
+        <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">
+          Temporada litúrgica{' '}
+          <span className="text-gray-400">(opcional; elige una o varias, la 1ª es la principal)</span>
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {options.map((s) => {
+            const idx = form.seasons.indexOf(s);
+            const on = idx !== -1;
+            return (
+              <button
+                key={s}
+                type="button"
+                // Tocar una etiqueta ya marcada que NO es la principal la asciende;
+                // tocar la principal (o una sin marcar) alterna, como siempre.
+                onClick={() => (on && idx > 0 ? makePrimarySeason(setForm, s) : toggleSeasonIn(setForm, s))}
+                title={on && idx > 0 ? `Hacer "${s}" la principal` : undefined}
+                className={`px-3 py-1.5 rounded-full text-sm font-bold border-2 active:scale-95 transition-all ${
+                  on
+                    ? 'bg-blue-700 text-white border-brand-border'
+                    : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
+                }`}
+              >
+                {s}{idx === 0 ? ' ★' : ''}
+              </button>
+            );
+          })}
+
+          {/* Alta rápida: crear una etiqueta sin salir del formulario */}
+          <button
+            type="button"
+            onClick={createTag}
+            className="px-3 py-1.5 rounded-full text-sm font-bold border-2 border-dashed border-green-400 text-green-800 dark:text-green-200 bg-white dark:bg-slate-700 active:scale-95"
+          >
+            <Plus className="w-3.5 h-3.5 inline -mt-0.5" strokeWidth={3} /> Nueva etiqueta
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            ★ principal. Toca una marcada para hacerla principal; la principal, para desmarcarla.
+            Sin marcar = sirve para todas las temporadas.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowTagManager(true)}
+            className="text-xs text-blue-600 dark:text-blue-300 font-bold hover:underline"
+          >
+            Gestionar etiquetas
+          </button>
+        </div>
+
+        {orphans.length > 0 && (
+          <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+            {orphans.length === 1 ? 'La etiqueta' : 'Las etiquetas'} <strong>{orphans.join(', ')}</strong>{' '}
+            {orphans.length === 1 ? 'ya no está' : 'ya no están'} en el catálogo. Puedes quitar
+            {orphans.length === 1 ? 'la' : 'las'} de este canto o volver a crear
+            {orphans.length === 1 ? 'la' : 'las'}.
+          </p>
+        )}
+      </div>
+    );
+  };
+
   const renderVoicesBlock = (form: SongForm, setForm: Dispatch<SetStateAction<SongForm>>) => {
     const detect = (folderId: string) => {
       const inFolder = sheets.filter(s => s.parentId === folderId);
@@ -364,7 +480,79 @@ export function SongManager() {
 
   useEffect(() => {
     load();
-  }, [load]);
+    loadTags();
+  }, [load, loadTags]);
+
+  /** Cuántos cantos del catálogo usan una etiqueta (para avisar antes de borrarla). */
+  const songsUsingTag = useCallback(
+    (label: string) => songs.filter(s => ((s.liturgicalSeasons as unknown as string[]) ?? []).includes(label)),
+    [songs],
+  );
+
+  /**
+   * Renombrar en el catálogo NO renombra la etiqueta dentro de los cantos: son
+   * textos sueltos en `liturgical_seasons`. Para que no queden desalineados, aquí
+   * se reescriben también los cantos que la usaban (respetando el orden, porque la
+   * primera es la principal).
+   */
+  const handleRenameTag = async (tag: SongTag) => {
+    const raw = window.prompt(`Nuevo nombre para "${tag.label}":`, tag.label);
+    if (raw === null) return;
+    const label = raw.trim();
+    if (!label || label === tag.label) return;
+    const dupe = findDuplicate(tags, label, tag.id);
+    if (dupe) { toast.error('Ya existe una etiqueta con ese nombre'); return; }
+
+    const affected = songsUsingTag(tag.label);
+    const r = await renameSongTag(tag.id, label);
+    if (!r.ok) { toast.error('No se pudo renombrar', { description: r.error }); return; }
+
+    let failed = 0;
+    for (const song of affected) {
+      const seasons = ((song.liturgicalSeasons as unknown as string[]) ?? [])
+        .map(s => (s === tag.label ? label : s));
+      const up = await updateSong(song.id, { liturgicalSeasons: seasons as unknown as LiturgicalSeason[] });
+      if (!up.ok) failed++;
+    }
+    await loadTags();
+    if (affected.length) await load();
+    if (failed) {
+      toast.warning(`Etiqueta renombrada, pero ${failed} canto(s) quedaron con el nombre viejo`);
+    } else {
+      toast.success(`Etiqueta renombrada${affected.length ? ` en ${affected.length} canto(s)` : ''}`);
+    }
+  };
+
+  /**
+   * Borrar la etiqueta del catálogo. Los cantos que la tengan NO se tocan: se
+   * avisa cuántos son y quedan mostrándola como "fuera del catálogo" en su ficha,
+   * desde donde se puede quitar. Borrar en cascada las etiquetas de decenas de
+   * cantos por un clic sería demasiado destructivo para deshacerlo a mano.
+   */
+  const handleDeleteTag = async (tag: SongTag) => {
+    const inUse = songsUsingTag(tag.label).length;
+    const warning = inUse
+      ? `\n\n${inUse} canto(s) la tienen puesta. Se quitará de la lista, pero esos cantos la conservarán hasta que se la quites en su ficha.`
+      : '';
+    if (!window.confirm(`¿Eliminar la etiqueta "${tag.label}" del catálogo?${warning}`)) return;
+    const r = await deleteSongTag(tag.id);
+    if (!r.ok) { toast.error('No se pudo eliminar', { description: r.error }); return; }
+    await loadTags();
+    toast.success(`Etiqueta "${tag.label}" eliminada`);
+  };
+
+  /** Crear una etiqueta desde el gestor (sin marcarla en ningún canto). */
+  const handleCreateTagFromManager = async () => {
+    const raw = window.prompt('Nombre de la nueva etiqueta:');
+    if (raw === null) return;
+    const label = raw.trim();
+    if (!label) return;
+    if (findDuplicate(tags, label)) { toast.error('Ya existe una etiqueta con ese nombre'); return; }
+    const r = await addSongTag(label);
+    if (!r.ok) { toast.error('No se pudo crear la etiqueta', { description: r.error }); return; }
+    await loadTags();
+    toast.success(`Etiqueta "${r.tag!.label}" creada`);
+  };
 
   const categories = [
     'Todos',
@@ -971,31 +1159,7 @@ export function SongManager() {
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Guitarra = con acordes · Órgano = con partitura. Sin marcar sirve para cualquier instrumento.</p>
               </div>
 
-              {/* Temporada litúrgica (varias permitidas; sin marcar = todas) */}
-              <div>
-                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">
-                  Temporada litúrgica <span className="text-gray-400">(opcional; sin marcar = todas)</span>
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {SEASON_TAGS.map((s) => {
-                    const on = f.seasons.includes(s);
-                    return (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => toggleSeasonIn(setF, s)}
-                        className={`px-3 py-1.5 rounded-full text-sm font-bold border-2 active:scale-95 transition-all ${
-                          on
-                            ? 'bg-blue-700 text-white border-brand-border'
-                            : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
-                        }`}
-                      >
-                        {s}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              {renderSeasonsBlock(f, setF)}
 
               {/* Litúrgico / No litúrgico */}
               <div>
@@ -1051,6 +1215,88 @@ export function SongManager() {
                 {savingSong ? <Loader className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />}
                 {savingSong ? 'Guardando...' : 'Guardar cambios'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: gestor del catálogo de etiquetas (crear / renombrar / borrar) */}
+      {showTagManager && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setShowTagManager(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-lg w-full border-4 border-brand-border max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-gradient-to-br from-brand to-brand-strong text-white p-5 flex items-center justify-between border-b-4 border-brand-border z-10">
+              <div className="flex items-center gap-3 min-w-0">
+                <Tags className="w-6 h-6 flex-shrink-0" strokeWidth={2.5} />
+                <h2 className="text-xl font-bold min-w-0 truncate">Etiquetas del catálogo</h2>
+              </div>
+              <button onClick={() => setShowTagManager(false)} className="p-2 hover:bg-white/20 rounded-xl flex-shrink-0">
+                <X className="w-6 h-6" strokeWidth={2.5} />
+              </button>
+            </div>
+
+            <div className="p-5">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                Estas son las etiquetas que se pueden marcar en cada canto. Son comunes a todo el
+                catálogo, así que un cambio aquí lo ven todas las parroquias.
+              </p>
+
+              <button
+                onClick={handleCreateTagFromManager}
+                className="w-full mb-4 py-3 bg-gradient-to-br from-blue-700 to-blue-900 text-white rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95"
+              >
+                <Plus className="w-5 h-5" strokeWidth={3} />
+                Nueva etiqueta
+              </button>
+
+              {loadingTags && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                  <Loader className="w-4 h-4 animate-spin" /> Cargando etiquetas…
+                </p>
+              )}
+
+              {!loadingTags && tags.length > 0 && !isPersistedTag(tags[0]) && (
+                <div className="mb-3 bg-amber-50 dark:bg-amber-900/30 border-2 border-amber-300 dark:border-amber-700 rounded-xl p-3">
+                  <p className="text-xs text-amber-900 dark:text-amber-100">
+                    Se está mostrando la <strong>lista por defecto</strong>: la tabla <code>song_tags</code>{' '}
+                    todavía no existe en la base. Aplica la migración{' '}
+                    <code>20260814_song_tags.sql</code> para poder crear y borrar etiquetas.
+                  </p>
+                </div>
+              )}
+
+              <ul className="divide-y divide-gray-100 dark:divide-slate-700">
+                {tags.map((tag) => {
+                  const uses = songsUsingTag(tag.label).length;
+                  const editable = isPersistedTag(tag);
+                  return (
+                    <li key={tag.id} className="py-2 flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-gray-800 dark:text-white truncate">{tag.label}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {uses === 0 ? 'Sin cantos' : `${uses} canto${uses === 1 ? '' : 's'}`}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleRenameTag(tag)}
+                        disabled={!editable}
+                        aria-label={`Renombrar ${tag.label}`}
+                        className="p-2 rounded-xl bg-blue-600 text-white active:scale-95 disabled:opacity-40"
+                      >
+                        <Pencil className="w-4 h-4" strokeWidth={2.5} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTag(tag)}
+                        disabled={!editable}
+                        aria-label={`Eliminar ${tag.label}`}
+                        className="p-2 rounded-xl bg-red-600 text-white active:scale-95 disabled:opacity-40"
+                      >
+                        <Trash2 className="w-4 h-4" strokeWidth={2.5} />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           </div>
         </div>
@@ -1209,31 +1455,7 @@ export function SongManager() {
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Guitarra = con acordes · Órgano = con partitura. Sin marcar sirve para cualquier instrumento.</p>
               </div>
 
-              {/* Temporada litúrgica (varias permitidas; sin marcar = sirve para todas) */}
-              <div>
-                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">
-                  Temporada litúrgica <span className="text-gray-400">(opcional; sin marcar = todas)</span>
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {SEASON_TAGS.map((s) => {
-                    const on = na.seasons.includes(s);
-                    return (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => toggleSeasonIn(setNa, s)}
-                        className={`px-3 py-1.5 rounded-full text-sm font-bold border-2 active:scale-95 transition-all ${
-                          on
-                            ? 'bg-blue-700 text-white border-brand-border'
-                            : 'bg-white dark:bg-slate-700 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-slate-600'
-                        }`}
-                      >
-                        {s}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              {renderSeasonsBlock(na, setNa)}
 
               {/* Litúrgico / No litúrgico */}
               <div>
