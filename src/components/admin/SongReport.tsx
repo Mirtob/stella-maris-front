@@ -1,15 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ArrowLeft, ClipboardList, Download, Loader, AlertTriangle, CheckCircle2, Search,
+  ArrowLeft, ClipboardList, CloudUpload, Download, ExternalLink, FileSpreadsheet,
+  Loader, AlertTriangle, CheckCircle2, Search,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Song } from '../../types';
 import { matchesSearch } from '../../utils/textSearch';
 import {
   buildSongReport, mergeDriveStats, summarizeDrive, reportToCSV,
+  reportToWorkbook, reportFileName, DRIVE_REPORT_NAME,
   matchesReportFilter, REPORT_FILTER_LABEL, VIDEO_STATUS_LABEL,
   type ReportFilter, type SongReportRow, type DriveEntryFile, type DriveEntryFolder,
 } from '../../utils/songReport';
+import { buildXlsx } from '../../utils/xlsx';
+import { saveToDrive, isDriveSaveConfigured } from '../../services/driveUpload';
 
 /**
  * Reportería del catálogo de cantos (dentro de Gestión de Cantos).
@@ -72,6 +76,9 @@ export function SongReport({ songs, loading, onBack }: {
   const [drive, setDrive] = useState<{ files: DriveEntryFile[]; folders: DriveEntryFolder[] } | null>(null);
   const [driveError, setDriveError] = useState(false);
   const [loadingDrive, setLoadingDrive] = useState(true);
+  // Guardado del Excel en "Mi unidad" (OAuth drive.file).
+  const [savingDrive, setSavingDrive] = useState(false);
+  const [driveLink, setDriveLink] = useState<string | null>(null);
 
   // Conteo de PDF por carpeta de Drive. Si Drive no responde, el informe del
   // catálogo se muestra igual: solo se pierde la columna de contraste.
@@ -108,17 +115,63 @@ export function SongReport({ songs, loading, onBack }: {
     [report.rows, filter, search],
   );
 
-  const downloadCSV = () => {
-    if (visibleRows.length === 0) { toast.error('No hay cantos que exportar'); return; }
-    const blob = new Blob([reportToCSV(visibleRows)], { type: 'text/csv;charset=utf-8' });
+  /** Dispara la descarga de un Blob con el nombre dado. */
+  const download = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `planilla-cantos-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  /**
+   * Excel con TODOS los KPI en un solo archivo (Resumen + Por clasificación +
+   * Planilla). A diferencia del CSV, no depende del filtro en pantalla: es la
+   * foto completa del catálogo, que es lo que se comparte con los demás admins.
+   */
+  const downloadXlsx = () => {
+    if (report.rows.length === 0) { toast.error('No hay cantos que exportar'); return; }
+    const now = new Date();
+    download(buildXlsx(reportToWorkbook(report, byCategory, now)), reportFileName(now));
+    toast.success('Excel descargado', {
+      description: `${report.rows.length} cantos · 3 hojas (Resumen, Por clasificación, Planilla)`,
+    });
+  };
+
+  /**
+   * Guarda el mismo Excel en "Mi unidad" del admin. La primera vez crea el
+   * archivo; después reemplaza su contenido, para que el enlace compartido con
+   * los demás admins siempre muestre la última versión.
+   */
+  const saveDrive = async () => {
+    if (report.rows.length === 0) { toast.error('No hay cantos que exportar'); return; }
+    setSavingDrive(true);
+    setDriveLink(null);
+    const file = buildXlsx(reportToWorkbook(report, byCategory, new Date()));
+    const r = await saveToDrive(file, DRIVE_REPORT_NAME);
+    setSavingDrive(false);
+    if (!r.ok) {
+      toast.error('No se pudo guardar en Drive', { description: r.error });
+      return;
+    }
+    setDriveLink(r.link ?? null);
+    toast.success(r.updated ? 'Actualizado en tu Drive' : 'Guardado en tu Drive', {
+      description: r.updated
+        ? 'Se reemplazó el archivo anterior: el enlace compartido sigue sirviendo.'
+        : `"${DRIVE_REPORT_NAME}" quedó en Mi unidad. Compártelo con los demás admins.`,
+    });
+  };
+
+  /** CSV de lo que está a la vista: útil para trabajar un filtro puntual. */
+  const downloadCSV = () => {
+    if (visibleRows.length === 0) { toast.error('No hay cantos que exportar'); return; }
+    download(
+      new Blob([reportToCSV(visibleRows)], { type: 'text/csv;charset=utf-8' }),
+      `planilla-cantos-${new Date().toISOString().slice(0, 10)}.csv`,
+    );
     toast.success(`Planilla descargada (${visibleRows.length} cantos)`);
   };
 
@@ -203,43 +256,46 @@ export function SongReport({ songs, loading, onBack }: {
           <div className="overflow-x-auto -mx-1 px-1">
             {/* Entra completa en un teléfono de 390 px; si el nombre de una carpeta
                 es muy largo, el contenedor permite arrastrar de lado. */}
-            <table className="w-full text-sm min-w-[330px]">
+            {/* Las 6 columnas numéricas van a ancho fijo y angosto para que la tabla
+                entre completa en un teléfono de 390 px; el nombre de la carpeta se
+                queda con el resto y, si hace falta, parte en dos líneas. */}
+            <table className="w-full text-sm table-fixed">
               <thead>
-                <tr className="text-left text-[11px] uppercase text-gray-500 dark:text-gray-400 border-b-2 border-gray-200 dark:border-slate-700">
-                  <th className="py-2 pr-2 font-bold">Clasificación</th>
-                  <th className="py-2 px-1 text-center font-bold">Cantos</th>
-                  <th className="py-2 px-1 text-center font-bold" title="Versión órgano">🎹</th>
-                  <th className="py-2 px-1 text-center font-bold" title="Versión guitarra">🎶</th>
-                  <th className="py-2 px-1 text-center font-bold" title="Con las dos versiones">✅</th>
-                  <th className="py-2 px-1 text-center font-bold" title="Letra con acordes">♯</th>
-                  <th className="py-2 pl-1 text-center font-bold" title="PDF en la carpeta de Drive">PDF</th>
+                <tr className="text-left text-[10px] text-gray-500 dark:text-gray-400 border-b-2 border-gray-200 dark:border-slate-700">
+                  <th className="py-2 pr-1 font-bold">Clasificación</th>
+                  <th className="py-2 px-0 w-9 text-center font-bold">Cantos</th>
+                  <th className="py-2 px-0 w-8 text-center font-bold" title="Con versión órgano">🎹</th>
+                  <th className="py-2 px-0 w-8 text-center font-bold" title="Con versión guitarra">🎶</th>
+                  <th className="py-2 px-0 w-8 text-center font-bold" title="Con las dos versiones">✅</th>
+                  <th className="py-2 px-0 w-8 text-center font-bold" title="Letra con acordes">♯</th>
+                  <th className="py-2 px-0 w-9 text-center font-bold" title="PDF en la carpeta de Drive">PDF</th>
                 </tr>
               </thead>
               <tbody>
                 {byCategory.map((c) => (
                   <tr key={c.category} className="border-b border-gray-100 dark:border-slate-700/60">
-                    <td className="py-2 pr-2 font-bold text-gray-800 dark:text-white">{c.category}</td>
-                    <td className="py-2 px-1 text-center text-gray-800 dark:text-gray-100 font-bold">{c.total}</td>
-                    <td className="py-2 px-1 text-center text-gray-600 dark:text-gray-300">{c.organo}</td>
-                    <td className="py-2 px-1 text-center text-gray-600 dark:text-gray-300">{c.guitarra}</td>
-                    <td className={`py-2 px-1 text-center font-bold ${
+                    <td className="py-2 pr-1 font-bold text-gray-800 dark:text-white text-[13px] leading-tight">{c.category}</td>
+                    <td className="py-2 px-0 text-center text-gray-800 dark:text-gray-100 font-bold">{c.total}</td>
+                    <td className="py-2 px-0 text-center text-gray-600 dark:text-gray-300">{c.organo}</td>
+                    <td className="py-2 px-0 text-center text-gray-600 dark:text-gray-300">{c.guitarra}</td>
+                    <td className={`py-2 px-0 text-center font-bold ${
                       c.total > 0 && c.completos === c.total ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'
                     }`}>{c.completos}</td>
-                    <td className="py-2 px-1 text-center text-gray-600 dark:text-gray-300">{c.conAcordes}</td>
-                    <td className="py-2 pl-1 text-center text-gray-500 dark:text-gray-400">
+                    <td className="py-2 px-0 text-center text-gray-600 dark:text-gray-300">{c.conAcordes}</td>
+                    <td className="py-2 px-0 text-center text-gray-500 dark:text-gray-400">
                       {c.drivePdfs === undefined ? '—' : c.drivePdfs}
                     </td>
                   </tr>
                 ))}
                 {byCategory.length > 0 && (
                   <tr className="border-t-2 border-gray-300 dark:border-slate-600">
-                    <td className="py-2 pr-2 font-bold text-gray-800 dark:text-white">Total</td>
-                    <td className="py-2 px-1 text-center font-bold text-gray-800 dark:text-white">{t.total}</td>
-                    <td className="py-2 px-1 text-center font-bold text-gray-700 dark:text-gray-200">{t.organo}</td>
-                    <td className="py-2 px-1 text-center font-bold text-gray-700 dark:text-gray-200">{t.guitarra}</td>
-                    <td className="py-2 px-1 text-center font-bold text-gray-700 dark:text-gray-200">{t.completos}</td>
-                    <td className="py-2 px-1 text-center font-bold text-gray-700 dark:text-gray-200">{t.conAcordes}</td>
-                    <td className="py-2 pl-1 text-center font-bold text-gray-600 dark:text-gray-300">
+                    <td className="py-2 pr-1 font-bold text-gray-800 dark:text-white">Total</td>
+                    <td className="py-2 px-0 text-center font-bold text-gray-800 dark:text-white">{t.total}</td>
+                    <td className="py-2 px-0 text-center font-bold text-gray-700 dark:text-gray-200">{t.organo}</td>
+                    <td className="py-2 px-0 text-center font-bold text-gray-700 dark:text-gray-200">{t.guitarra}</td>
+                    <td className="py-2 px-0 text-center font-bold text-gray-700 dark:text-gray-200">{t.completos}</td>
+                    <td className="py-2 px-0 text-center font-bold text-gray-700 dark:text-gray-200">{t.conAcordes}</td>
+                    <td className="py-2 px-0 text-center font-bold text-gray-600 dark:text-gray-300">
                       {drive ? byCategory.reduce((n, c) => n + (c.drivePdfs ?? 0), 0) : '—'}
                     </td>
                   </tr>
@@ -292,11 +348,55 @@ export function SongReport({ songs, loading, onBack }: {
           </div>
 
           <button
+            onClick={downloadXlsx}
+            className="w-full mb-2 py-3 bg-gradient-to-br from-green-700 to-emerald-900 text-white rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95"
+          >
+            <FileSpreadsheet className="w-5 h-5" strokeWidth={2.5} />
+            Descargar Excel — todos los KPI
+          </button>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2 text-center">
+            Un solo archivo con las hojas <strong>Resumen</strong>, <strong>Por clasificación</strong> y{' '}
+            <strong>Planilla</strong> ({report.rows.length} cantos).
+          </p>
+
+          {/* Guardar en Drive: mismo Excel, en "Mi unidad" del admin */}
+          {isDriveSaveConfigured() && (
+            <>
+              <button
+                onClick={saveDrive}
+                disabled={savingDrive}
+                className="w-full mb-2 py-3 bg-gradient-to-br from-blue-700 to-indigo-900 text-white rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 disabled:opacity-60"
+              >
+                {savingDrive
+                  ? <Loader className="w-5 h-5 animate-spin" />
+                  : <CloudUpload className="w-5 h-5" strokeWidth={2.5} />}
+                {savingDrive ? 'Guardando en Drive…' : 'Guardar en mi Drive'}
+              </button>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2 text-center">
+                Queda como <strong>{DRIVE_REPORT_NAME}</strong> en <strong>Mi unidad</strong>. Cada vez que lo
+                guardes se reemplaza ese mismo archivo, así el enlace que compartas con los demás admins
+                siempre muestra la última versión. Google te pedirá permiso: la app solo puede ver y
+                modificar los archivos que ella misma crea.
+              </p>
+              {driveLink && (
+                <a
+                  href={driveLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full mb-2 py-2 bg-white dark:bg-slate-700 border-2 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200 rounded-xl text-sm font-bold flex items-center justify-center gap-2 active:scale-95"
+                >
+                  <ExternalLink className="w-4 h-4" strokeWidth={2.5} />
+                  Abrir en Drive y compartir
+                </a>
+              )}
+            </>
+          )}
+          <button
             onClick={downloadCSV}
-            className="w-full mb-3 py-2.5 bg-gradient-to-br from-green-700 to-emerald-900 text-white rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95"
+            className="w-full mb-3 py-2 bg-white dark:bg-slate-700 border-2 border-green-300 dark:border-green-700 text-green-800 dark:text-green-200 rounded-xl text-sm font-bold flex items-center justify-center gap-2 active:scale-95"
           >
             <Download className="w-4 h-4" strokeWidth={2.5} />
-            Descargar planilla ({visibleRows.length})
+            CSV de la lista filtrada ({visibleRows.length})
           </button>
 
           {/* Cabecera de columnas */}

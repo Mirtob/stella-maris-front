@@ -21,6 +21,7 @@
 import { Song } from '../types';
 import { MOMENT_TO_CATEGORY } from './category';
 import { toVideoId } from './songVideo';
+import type { XlsxSheet } from './xlsx';
 
 /** Sin acentos, minúsculas, espacios colapsados. */
 const norm = (s: string) =>
@@ -250,6 +251,10 @@ export function folderToCategory(folder: string): string {
   const key = norm(folder);
   if (key === 'salida' || key === 'final') return 'Salida';
   if (key === 'exposicion') return 'Exposición y Procesión';
+  // "Misas" guarda una carpeta por Misa del ordinario, con Kyrie, Gloria, Santo,
+  // Cordero y Padre Nuestro mezclados dentro. No corresponde a un solo momento,
+  // así que se informa como una fila propia en vez de repartir sus PDF a ojo.
+  if (key === 'misas') return 'Misas (ordinario)';
   return CATEGORY_BY_KEY.get(key) ?? folder;
 }
 
@@ -354,6 +359,124 @@ export function reportToCSV(rows: SongReportRow[]): string {
   }
   return '﻿' + lines.join('\r\n');
 }
+
+// ── Libro Excel: todos los KPI en un solo archivo ───────────────────────────
+
+/** Porcentaje entero, 0 si no hay base (para no escribir NaN en la celda). */
+const pct = (part: number, total: number): number => (total ? Math.round((part / total) * 100) : 0);
+
+const XLSX_HEADERS = {
+  clasificacion: [
+    'Clasificación', 'Cantos', 'Versión órgano', 'Versión guitarra', 'Ambas versiones',
+    'Completos', 'Pendientes', 'Sin video', 'Con partitura', 'Con acordes',
+    'PDF en Drive', 'Carpetas en Drive',
+  ],
+  planilla: CSV_HEADERS,
+};
+
+/**
+ * Las tres hojas del informe en UN solo libro:
+ *   «Resumen» (los KPI del catálogo), «Por clasificación» (el desglose por
+ *   carpeta de Drive) y «Planilla» (una fila por canto con lo que le falta).
+ *
+ * Es la misma información que se ve en pantalla: se arma sobre el mismo
+ * `SongReport`, así que no puede desincronizarse del informe.
+ */
+export function reportToWorkbook(
+  report: SongReport,
+  byCategory: CategoryReport[],
+  generatedAt: Date = new Date(),
+): XlsxSheet[] {
+  const t = report.totals;
+  const B = (v: string) => ({ v, bold: true });
+  const fecha = generatedAt.toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const resumen: XlsxSheet = {
+    name: 'Resumen',
+    columnWidths: [38, 12, 46],
+    freezeRows: 4,
+    rows: [
+      [B('Reportería de cantos — Stella Maris')],
+      [`Generado el ${fecha}`],
+      [],
+      [B('Indicador'), B('Valor'), B('Detalle')],
+      ['Cantos en el catálogo', t.total, ''],
+      ['Con las dos versiones (completos)', t.completos, `${pct(t.completos, t.total)}% del catálogo`],
+      ['Pendientes', t.pendientes, 'Les falta al menos una versión'],
+      [],
+      [B('Versiones grabadas en el canal')],
+      ['🎹 Con versión órgano', t.organo, `${pct(t.organo, t.total)}% del catálogo`],
+      ['🎶 Con versión guitarra', t.guitarra, `${pct(t.guitarra, t.total)}% del catálogo`],
+      ['Con ambas versiones', t.ambas, ''],
+      ['Solo video único (sin instrumento)', t.soloGeneral, 'Mover el enlace a órgano o guitarra'],
+      ['Sin ningún video', t.sinVideo, ''],
+      ['Gregorianos', t.gregorianos, 'No llevan versión de guitarra'],
+      [],
+      [B('Partituras y letra')],
+      ['Con partitura', t.conPartitura, `${pct(t.conPartitura, t.total)}% del catálogo`],
+      ['Con partituras por voz (polifonía)', t.conVoces, ''],
+      ['Con letra', t.conLetra, ''],
+      ['Con letra y acordes', t.conAcordes, `${pct(t.conAcordes, t.total)}% del catálogo`],
+      [],
+      [B('Regla que se aplica')],
+      ['En el canal debe estar el mismo canto en los dos instrumentos (órgano y guitarra).'],
+      ['La única excepción es el canto gregoriano: no lleva versión de guitarra, le basta una grabación.'],
+      ['Para eximir un canto, márcalo con la etiqueta "Gregoriano" en el editor de cantos.'],
+    ],
+  };
+
+  const clasificacion: XlsxSheet = {
+    name: 'Por clasificación',
+    columnWidths: [30, 9, 14, 15, 15, 11, 11, 10, 13, 12, 13, 16],
+    freezeRows: 1,
+    rows: [
+      XLSX_HEADERS.clasificacion.map(B),
+      ...byCategory.map(c => [
+        c.category, c.total, c.organo, c.guitarra, c.ambas,
+        c.completos, c.pendientes, c.sinVideo, c.conPartitura, c.conAcordes,
+        c.drivePdfs ?? null, c.driveFolders ?? null,
+      ]),
+      [
+        B('Total'), t.total, t.organo, t.guitarra, t.ambas,
+        t.completos, t.pendientes, t.sinVideo, t.conPartitura, t.conAcordes,
+        byCategory.some(c => c.drivePdfs !== undefined)
+          ? byCategory.reduce((n, c) => n + (c.drivePdfs ?? 0), 0) : null,
+        byCategory.some(c => c.driveFolders !== undefined)
+          ? byCategory.reduce((n, c) => n + (c.driveFolders ?? 0), 0) : null,
+      ],
+    ],
+  };
+
+  const si = (b: boolean) => (b ? 'Sí' : 'No');
+  const planilla: XlsxSheet = {
+    name: 'Planilla',
+    columnWidths: [34, 22, 12, 14, 15, 12, 18, 11, 8, 8, 9, 40],
+    freezeRows: 1,
+    rows: [
+      XLSX_HEADERS.planilla.map(B),
+      ...report.rows.map(r => [
+        r.title, r.category, si(r.gregorian), si(r.hasOrgano), si(r.hasGuitarra),
+        si(r.hasGeneral), VIDEO_STATUS_LABEL[r.videoStatus], si(r.hasSheet),
+        r.voices, si(r.hasLyrics), si(r.hasChords), r.missing.join(' + ') || '—',
+      ]),
+    ],
+  };
+
+  return [resumen, clasificacion, planilla];
+}
+
+/** Nombre del archivo que se DESCARGA (lleva la fecha para no pisar el anterior). */
+export function reportFileName(generatedAt: Date = new Date(), ext = 'xlsx'): string {
+  return `reporteria-cantos-${generatedAt.toISOString().slice(0, 10)}.${ext}`;
+}
+
+/**
+ * Nombre del archivo en Drive. A diferencia de la descarga, es FIJO y sin fecha:
+ * al volver a guardar se reemplaza el contenido de ese mismo archivo, así el
+ * enlace que se repartió a los demás admins nunca queda obsoleto ni se llena
+ * Drive de copias. La fecha de generación va dentro, en la hoja «Resumen».
+ */
+export const DRIVE_REPORT_NAME = 'Reportería de cantos — Stella Maris.xlsx';
 
 // ── Filtros de la planilla ──────────────────────────────────────────────────
 

@@ -193,7 +193,51 @@ medida que subes cantos.
 | **Resumen** | Cuántos cantos hay, cuántos tienen **versión órgano**, cuántos **versión guitarra**, cuántos tienen **partitura** y cuántos tienen **letra con acordes**. |
 | **Avance del par** | Qué porcentaje del catálogo ya tiene **las dos versiones** grabadas. |
 | **Por clasificación** | Cantos por cada **carpeta de Drive** (Entrada, Ofertorio, Comunión, Salida…), con sus versiones, acordes y el número de **PDF que hay en esa carpeta**. Sirve para ver dónde falta material. |
-| **Planilla de subida** | Una fila por canto con ✓/— en órgano, guitarra, partitura y acordes, y el texto **"Falta: …"**. Se filtra por lo que falta y se **descarga en CSV** (se abre en Excel o Google Sheets). |
+| **Planilla de subida** | Una fila por canto con ✓/— en órgano, guitarra, partitura y acordes, y el texto **"Falta: …"**. Se filtra por lo que falta. |
+
+### Compartir el informe con los demás admins 📊
+
+El botón **"Descargar Excel — todos los KPI"** entrega **un solo archivo `.xlsx`** con tres hojas:
+
+| Hoja | Contenido |
+|---|---|
+| **Resumen** | Todos los indicadores: total, completos, por instrumento, partituras, acordes, gregorianos. |
+| **Por clasificación** | El desglose por carpeta de Drive, con los PDF que hay en cada una. |
+| **Planilla** | Una fila por canto con lo que le falta. |
+
+El Excel trae **el catálogo completo**, no lo que esté filtrado en pantalla, y los números van
+como números (se pueden sumar y ordenar en Excel o Google Sheets).
+
+**Para dejarlo disponible al resto de los admins** — botón **"Guardar en mi Drive"**:
+
+1. Toca **"Guardar en mi Drive"**. Google te pedirá permiso la primera vez; acepta.
+2. El archivo queda en **Mi unidad** como **`Reportería de cantos — Stella Maris.xlsx`**.
+3. Toca **"Abrir en Drive y compartir"** → clic derecho → **Compartir** → agrega a los otros
+   admins como **Lector** (o **Editor** si quieres que anoten sobre la planilla).
+4. **Compartes el enlace una sola vez.** Cada vez que vuelvas a tocar el botón se reemplaza el
+   contenido de ese mismo archivo: el enlace no cambia y los demás siempre ven la última versión.
+   La fecha de generación va dentro, en la hoja *Resumen*.
+
+> **Qué permiso pide y qué NO puede hacer:** la app pide únicamente `drive.file`, que da acceso
+> **solo a los archivos que ella misma crea**. No puede leer, modificar ni borrar nada más de tu
+> Drive, y el permiso se olvida al recargar la página (no queda guardado en el navegador).
+
+> El botón **"CSV de la lista filtrada"** es para otra cosa: exporta **solo lo que estés viendo**
+> (por ejemplo, únicamente los cantos a los que les falta guitarra), útil para repartir tareas.
+
+#### Si el botón "Guardar en mi Drive" da error
+
+Necesita estar configurado el Client ID de Google (una vez, por el desarrollador):
+
+| Dónde | Qué debe estar |
+|---|---|
+| Vercel → *Environment Variables* | `VITE_GOOGLE_CLIENT_ID` con el Client ID de OAuth. Si falta, el botón **no aparece**. |
+| Google Cloud Console → *Credenciales* → el Client ID | El dominio del sitio en **"Orígenes autorizados de JavaScript"** (ej. `https://stella-maris-front.vercel.app`). Si falta, Google rechaza el permiso. |
+| Google Cloud Console → *Pantalla de consentimiento* | Publicada, o la cuenta del admin agregada como **usuario de prueba**. El scope `drive.file` **no** es sensible: no requiere verificación de Google. |
+
+> Si no se puede configurar, siempre queda el camino manual: **Descargar Excel** → arrastrarlo a
+> **Mi unidad** en [drive.google.com](https://drive.google.com) → **Compartir**. Al reemplazar un
+> archivo del mismo nombre, elige *"Reemplazar archivo existente"* para conservar el enlace.
 
 **La regla que aplica:** en el canal debe estar **el mismo canto en los dos instrumentos**
 (órgano y guitarra). La **única excepción es el canto gregoriano**, que no lleva versión de

@@ -20,7 +20,19 @@ node tests/output/reporteria.mjs
 ```
 
 Salida esperada: `TODO OK — 45 ok, 0 fallas`, `TODO OK — 37 ok, 0 fallas` y
-`TODO OK — 70 ok, 0 fallas`. Si alguna falla, imprime el caso con lo esperado y lo obtenido.
+`TODO OK — 97 ok, 0 fallas`. Si alguna falla, imprime el caso con lo esperado y lo obtenido.
+
+### Validar el Excel de verdad
+
+Los tests comprueban la estructura del `.xlsx` (firma ZIP, hojas, escapes), pero el archivo
+generado conviene abrirlo con un lector real. Con el `.venv` del proyecto:
+
+```bash
+python -W error::UserWarning -c "import openpyxl; wb=openpyxl.load_workbook('archivo.xlsx'); print(wb.sheetnames)"
+```
+
+`-W error::UserWarning` es importante: openpyxl **avisa en vez de fallar** cuando al libro le
+falta una pieza (por ejemplo el estilo por defecto), y ese aviso es justo lo que se quiere ver.
 
 > Se usa `esbuild` (ya viene con Vite) porque el proyecto no tiene `tsc` instalado
 > y los módulos bajo prueba son TypeScript.
@@ -39,6 +51,8 @@ Salida esperada: `TODO OK — 45 ok, 0 fallas`, `TODO OK — 37 ok, 0 fallas` y
 | Filtro por instrumento | Solo se ven los cantos del instrumento elegido; un momento puede quedar en cero y es correcto |
 | **Video por instrumento** (`video-por-instrumento`) | El organista ve la grabación con órgano y el guitarrista la de guitarra; el catálogo viejo (un solo `youtube_id`) no se queda sin video; si falta tu versión se usa la otra **marcada como respaldo** para que la pantalla avise; IDs a medio pegar se descartan; se acepta pegar la URL completa (watch, youtu.be, embed, shorts) |
 | **Reportería del catálogo** (`reporteria-cantos`) | La regla del **par órgano+guitarra** y su **excepción gregoriana** (con un video basta); un video "único" sin instrumento NO cuenta como par completo; los **acordes** se detectan solo en tokens que son acordes de verdad (`[Lam]`, `[Fa#m7]`) y no en acotaciones (`[Estribillo]`, `[bis]`, `[Coro]`); totales y desglose por clasificación; cruce con las **carpetas de Drive** (nombres sin tilde, `Final`→`Salida`, el `.mp3` de MuseScore no cuenta); CSV con `;` entrecomillado |
+| **Excel de la reportería** (`reporteria-cantos`) | El libro trae las tres hojas (Resumen / Por clasificación / Planilla) con **los mismos números que la pantalla**, los valores como número y no como texto, la cabecera en negrita; y el escritor `utils/xlsx.ts` produce un ZIP válido, escapa `&`/`<` y **renombra pestañas duplicadas** (dos con el mismo nombre invalidan el libro entero en Excel) |
+| **Guardar en Drive** (`reporteria-cantos`) | El nombre en Drive es **fijo** (para que el enlace compartido no cambie) mientras que el de la descarga lleva fecha; la consulta por nombre **escapa apóstrofos y barras** (un `'` sin escapar rompe la query de Drive); y el cuerpo multipart usa **el mismo boundary que el header** — `Blob` normaliza su MIME a minúsculas, así que un boundary con mayúsculas los desalinearía y Drive respondería 400 sin explicar |
 
 ## Cuidado con los datos de prueba
 

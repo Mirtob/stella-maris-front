@@ -9,8 +9,10 @@ import { Song } from '../../src/types';
 import {
   lyricsHaveChords, isGregorianSong, songReportRow, buildSongReport,
   summarizeDrive, mergeDriveStats, folderToCategory, reportToCSV,
-  matchesReportFilter,
+  matchesReportFilter, reportToWorkbook, reportFileName, DRIVE_REPORT_NAME,
 } from '../../src/utils/songReport';
+import { columnLetter, buildXlsx } from '../../src/utils/xlsx';
+import { driveNameQuery, buildMultipartBody } from '../../src/services/driveUpload';
 
 let pass = 0, fail = 0;
 function check(name: string, actual: unknown, expected: unknown) {
@@ -150,6 +152,7 @@ check('"Comunion" (sin tilde) → Comunión', folderToCategory('Comunion'), 'Com
 check('"Salida" → Salida', folderToCategory('Salida'), 'Salida');
 check('"Final" → Salida', folderToCategory('Final'), 'Salida');
 check('"Rito de Aspersion" → con tilde', folderToCategory('Rito de Aspersion'), 'Rito de Aspersión');
+check('"Misas" es el ordinario, fila propia', folderToCategory('Misas'), 'Misas (ordinario)');
 check('carpeta desconocida se muestra tal cual', folderToCategory('Cantos varios'), 'Cantos varios');
 
 console.log('\n== Cruce con Drive ==');
@@ -186,6 +189,98 @@ check('cabecera con las columnas pedidas',
 check('fila de "Entrada B" marca lo que falta', lineas[2].includes('Versión guitarra'), true);
 const conPuntoYComa = reportToCSV([songReportRow(song({ title: 'Gloria; y paz' }))]);
 check('el título con ";" va entrecomillado', conPuntoYComa.includes('"Gloria; y paz"'), true);
+
+console.log('\n== Libro Excel: todos los KPI en un archivo ==');
+const wb = reportToWorkbook(rep, merged, new Date('2026-08-12T12:00:00Z'));
+check('tres hojas', wb.map(s => s.name), ['Resumen', 'Por clasificación', 'Planilla']);
+check('los nombres de pestaña caben en 31 caracteres', wb.every(s => s.name.length <= 31), true);
+const resumen = new Map(
+  wb[0].rows.filter(r => typeof r[0] === 'string' && r.length > 1).map(r => [r[0] as string, r[1]]),
+);
+check('KPI total', resumen.get('Cantos en el catálogo'), 5);
+check('KPI órgano', resumen.get('🎹 Con versión órgano'), 3);
+check('KPI guitarra', resumen.get('🎶 Con versión guitarra'), 2);
+check('KPI completos', resumen.get('Con las dos versiones (completos)'), 2);
+check('KPI acordes', resumen.get('Con letra y acordes'), 1);
+check('los valores van como número, no texto', typeof resumen.get('Cantos en el catálogo'), 'number');
+
+const hojaCat = wb[1];
+check('la hoja de clasificación trae fila por categoría + total',
+  hojaCat.rows.length, rep.byCategory.length + 2);
+check('la última fila es el Total con los mismos números',
+  hojaCat.rows[hojaCat.rows.length - 1].slice(1, 6), [5, 3, 2, 1, 2]);
+check('los PDF de Drive llegan a la hoja',
+  hojaCat.rows[1].slice(0, 2).concat(hojaCat.rows[1][10] as never), ['Entrada', 2, 3]);
+
+const hojaPlanilla = wb[2];
+check('la planilla trae todos los cantos + cabecera', hojaPlanilla.rows.length, rep.rows.length + 1);
+check('cabecera de la planilla en negrita',
+  (hojaPlanilla.rows[0][0] as { bold?: boolean }).bold, true);
+
+check('nombre del archivo con la fecha',
+  reportFileName(new Date('2026-08-12T12:00:00Z')), 'reporteria-cantos-2026-08-12.xlsx');
+
+console.log('\n== Escritura del .xlsx ==');
+check('columna 0 → A', columnLetter(0), 'A');
+check('columna 25 → Z', columnLetter(25), 'Z');
+check('columna 26 → AA', columnLetter(26), 'AA');
+check('columna 27 → AB', columnLetter(27), 'AB');
+
+const blob = buildXlsx(wb);
+check('es un xlsx (tipo MIME)',
+  blob.type, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+const bytes = new Uint8Array(await blob.arrayBuffer());
+// 'PK\x03\x04' — un .xlsx es un ZIP, así que empieza por la firma local del ZIP.
+check('empieza por la firma ZIP', Array.from(bytes.slice(0, 4)), [0x50, 0x4b, 0x03, 0x04]);
+const texto = new TextDecoder().decode(bytes);
+check('lleva el manifiesto de tipos', texto.includes('[Content_Types].xml'), true);
+check('lleva una hoja por pestaña',
+  ['sheet1.xml', 'sheet2.xml', 'sheet3.xml'].every(n => texto.includes(`xl/worksheets/${n}`)), true);
+check('el título del canto viaja dentro del XML', texto.includes('Kyrie gregoriano'), true);
+
+// El "&" de un título rompería el XML si no se escapara.
+const conAmpersand = buildXlsx([{ name: 'Hoja', rows: [['Cristo & la Iglesia <3']] }]);
+const textoAmp = new TextDecoder().decode(new Uint8Array(await conAmpersand.arrayBuffer()));
+check('escapa & y <', textoAmp.includes('Cristo &amp; la Iglesia &lt;3'), true);
+check('no deja el & crudo', /Cristo & la/.test(textoAmp), false);
+
+// Dos pestañas con el mismo nombre invalidan el libro entero en Excel.
+const dupes = buildXlsx([{ name: 'Datos', rows: [['a']] }, { name: 'Datos', rows: [['b']] }]);
+const textoDup = new TextDecoder().decode(new Uint8Array(await dupes.arrayBuffer()));
+check('renombra la pestaña duplicada', textoDup.includes('name="Datos 2"'), true);
+
+console.log('\n== Guardar en Drive ==');
+check('el nombre en Drive es fijo (mismo enlace siempre)',
+  DRIVE_REPORT_NAME, 'Reportería de cantos — Stella Maris.xlsx');
+check('el nombre de la descarga sí lleva fecha',
+  reportFileName(new Date('2026-08-12T12:00:00Z')).includes('2026-08-12'), true);
+check('consulta por nombre', driveNameQuery('Informe.xlsx'),
+  "name = 'Informe.xlsx' and trashed = false");
+// Un apóstrofo sin escapar cierra el literal y rompe (o inyecta en) la consulta.
+check('escapa el apóstrofo del nombre', driveNameQuery("Cantos d'Ávila.xlsx"),
+  "name = 'Cantos d\\'Ávila.xlsx' and trashed = false");
+check('escapa la barra invertida', driveNameQuery('a\\b.xlsx'),
+  "name = 'a\\\\b.xlsx' and trashed = false");
+
+const multi = buildMultipartBody(
+  { name: 'Informe.xlsx', mimeType: 'application/vnd.ms-excel' },
+  new Blob(['DATOS'], { type: 'application/vnd.ms-excel' }),
+  'limite',
+);
+const cuerpoTexto = await multi.body.text();
+check('el header declara el boundary', multi.contentType, 'multipart/related; boundary=limite');
+check('lleva la metadata primero', cuerpoTexto.includes('{"name":"Informe.xlsx"'), true);
+check('lleva el contenido después', cuerpoTexto.includes('\r\n\r\nDATOS\r\n'), true);
+check('cierra el multipart', cuerpoTexto.trimEnd().endsWith('--limite--'), true);
+// El header y el cuerpo tienen que coincidir: si no, Drive responde 400 sin explicar.
+check('header y cuerpo usan el mismo boundary',
+  cuerpoTexto.startsWith(`--${multi.contentType.split('boundary=')[1]}`), true);
+// Blob normaliza el MIME a minúsculas; por eso el boundary se genera ya en minúsculas.
+const conMayusculas = buildMultipartBody({}, new Blob(['x']), 'LIMITE');
+check('un boundary en mayúsculas no desalinea el cuerpo',
+  (await conMayusculas.body.text()).startsWith(`--${conMayusculas.body.type.split('boundary=')[1]}`), true);
+check('boundary autogenerado cuando no se pasa',
+  buildMultipartBody({}, new Blob(['x'])).contentType.startsWith('multipart/related; boundary=stella'), true);
 
 console.log(`\n${fail === 0 ? 'TODO OK' : 'HAY FALLAS'} — ${pass} ok, ${fail} fallas\n`);
 if (fail > 0) process.exit(1);
