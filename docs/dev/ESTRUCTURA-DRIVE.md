@@ -6,8 +6,10 @@ Escrito a partir de lo que el código realmente hace, no de una convención dese
 Quién lee este Drive:
 - `api/sheets.ts` → `walkDrive()`: recorre **todo** el árbol y devuelve cada archivo con
   su ruta relativa en `path` (p. ej. `Entrada/Entrada - Cuaresma`).
-- `src/components/songs/SongManager.tsx` → arma el **selector de partitura** del editor de
-  cantos, agrupado por el **primer** nivel de carpeta.
+- `src/utils/sheetFolderSearch.ts` → la lógica de los **dos buscadores** de la ficha del
+  canto: filtro por texto, filtro por momento (1.er nivel de carpeta) y sugerencia por
+  parecido con el título. La usan `SheetFilePicker` (el PDF único) y `VoiceSheetPicker`
+  (la carpeta con las voces), ambos en `src/components/songs/`.
 - `src/utils/ordinarySheetMusic.ts` → `pickOrdinarySheet()`: resuelve **solo** las partes
   del ordinario, usando el **último** segmento de la ruta + el nombre del archivo.
 
@@ -19,11 +21,11 @@ Conviene tenerlo claro antes de invertir tiempo en mover carpetas.
 
 | Nivel | ¿La app lo usa? | Para qué |
 |---|---|---|
-| **1.º — momento de la Misa** | **Sí** | Agrupa el selector y lo ordena en el orden de la Misa |
-| **2.º — tiempo litúrgico** | Solo como etiqueta | Se muestra como prefijo: *"Entrada - Cuaresma — Perdona a tu pueblo"* |
+| **1.º — momento de la Misa** | **Sí** | Son los chips que filtran los buscadores, en el orden de la Misa |
+| **2.º — tiempo litúrgico** | Solo como etiqueta | Se muestra bajo el nombre y se puede buscar por él |
 | **Carpeta dentro de `Misas`** | **Sí** | Resuelve automáticamente la partitura de cada parte del ordinario |
 | **Nombre del archivo** | **Sí** (ordinario) | Identifica de qué parte es |
-| **Un PDF por voz** | **No, hoy no** | Cada canto apunta a **un** solo PDF (`sheetMusicUrl`) |
+| **Un PDF por voz** | **Sí** | La ficha enlaza la **carpeta** y las voces se deducen del nombre de cada PDF (ver Nivel 3) |
 
 > **El tiempo litúrgico real de un canto NO sale de la carpeta**: sale del campo
 > `liturgicalSeasons` del canto, que se edita en la app. La carpeta ayuda a la persona a
@@ -82,7 +84,7 @@ que `Comunión`.
 > `Salida` a secas y el código la reconoce por alias.
 
 Una carpeta con un nombre que no esté en la lista **no rompe nada**: sus archivos aparecen
-igual en el selector, en un grupo propio ordenado al final.
+igual en los buscadores, con un chip propio ordenado al final.
 
 ### Nivel 2 — tiempo litúrgico (opcional, recomendado)
 
@@ -122,8 +124,32 @@ Una carpeta con el nombre del canto y dentro un PDF por voz:
     └── 📄 Ave verum - Bajo.pdf
 ```
 
-Como la app enlaza **un** PDF por canto, incluye siempre un **Full Score**: es el que
-conviene enlazar. Los de cada voz quedan disponibles en Drive para repartir al coro.
+Incluye siempre un **Full Score**: es el que ve quien no tiene voz asignada, y el que la
+app toma como partitura principal del canto.
+
+En la ficha del canto se enlaza **la carpeta** (no cada PDF) desde el bloque *Partituras por
+voz*, y de ahí se deducen las voces solas.
+
+---
+
+## Los dos buscadores de la ficha del canto
+
+Ni *Partitura (Google Drive)* (el PDF único) ni *Partituras por voz* (la carpeta) son
+listas desplegables: con cientos de archivos eso no se navega. Los dos funcionan igual:
+
+- **Escribir el nombre** — sin acentos y en cualquier orden ("arcadelt ave" sirve). En el
+  buscador de carpetas el texto también entra a los **nombres de los PDF** de adentro.
+- **Chips por momento de la Misa** — con el conteo de cada uno; primero el momento del
+  canto que se está cargando.
+- **Solo carpetas con PDF** — tildado por defecto en el de carpetas.
+- Cada fila dice lo que trae: la carpeta muestra cuántos PDF y qué voces se detectan.
+- Como salida de emergencia, el de partituras acepta **pegar el ID de Drive a mano**
+  (útil cuando el archivo se subió recién: la lista de Drive se cachea una hora).
+
+> 💡 **Nombra la carpeta —y el PDF— igual que el canto.** Cuando el nombre coincide con el
+> título escrito en la ficha, la app lo propone solo con un botón *"Usar esta"*; con
+> cientos de partituras es la diferencia entre un clic y buscar a mano. Entre el archivo
+> general y sus voces (`… - Soprano`), se propone el general.
 
 ---
 

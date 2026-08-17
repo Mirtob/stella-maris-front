@@ -20,10 +20,13 @@ node tests/output/reporteria.mjs
 
 npx esbuild tests/unit/etiquetas-canto.test.ts --bundle --platform=node --format=esm --outfile=tests/output/etiquetas.mjs
 node tests/output/etiquetas.mjs
+
+npx esbuild tests/unit/buscador-carpetas.test.ts --bundle --platform=node --format=esm --outfile=tests/output/buscador-carpetas.mjs
+node tests/output/buscador-carpetas.mjs
 ```
 
-Salida esperada: `45`, `37`, `109` y `33` ok, con 0 fallas. Si alguna falla, imprime el caso
-con lo esperado y lo obtenido.
+Salida esperada: `45`, `37`, `109`, `33` y `51` ok, con 0 fallas. Si alguna falla, imprime el
+caso con lo esperado y lo obtenido.
 
 > Ojo al importar en una prueba: `services/supabaseClient.ts` **crea el cliente al importarse**
 > y revienta sin variables de entorno. Por eso la lógica pura vive en `utils/` (p. ej.
@@ -59,6 +62,7 @@ falta una pieza (por ejemplo el estilo por defecto), y ese aviso es justo lo que
 | **Video por instrumento** (`video-por-instrumento`) | El organista ve la grabación con órgano y el guitarrista la de guitarra; el catálogo viejo (un solo `youtube_id`) no se queda sin video; si falta tu versión se usa la otra **marcada como respaldo** para que la pantalla avise; IDs a medio pegar se descartan; se acepta pegar la URL completa (watch, youtu.be, embed, shorts) |
 | **Reportería del catálogo** (`reporteria-cantos`) | La regla del **par órgano+guitarra** y su **excepción gregoriana** (con un video basta); un video "único" sin instrumento NO cuenta como par completo; los **acordes** se detectan solo en tokens que son acordes de verdad (`[Lam]`, `[Fa#m7]`) y no en acotaciones (`[Estribillo]`, `[bis]`, `[Coro]`); totales y desglose por clasificación; cruce con las **carpetas de Drive** (nombres sin tilde, `Final`→`Salida`, el `.mp3` de MuseScore no cuenta); CSV con `;` entrecomillado |
 | **Excel de la reportería** (`reporteria-cantos`) | El libro trae las tres hojas (Resumen / Por clasificación / Planilla) con **los mismos números que la pantalla**, los valores como número y no como texto, la cabecera en negrita; y el escritor `utils/xlsx.ts` produce un ZIP válido, escapa `&`/`<` y **renombra pestañas duplicadas** (dos con el mismo nombre invalidan el libro entero en Excel) |
+| **Buscadores de Drive** (`buscador-carpetas`) | Los dos selectores de la ficha del canto (la **carpeta** con las voces y el **PDF** único). Con cientos de archivos, lo que se está cargando aparece arriba: **por parecido con el título** (ignorando tildes y muletillas — "Vienen con Alegría" encuentra `Vienen con Alegria`) y después **por el momento** del canto. El texto busca dentro de los **nombres de los PDF**; las carpetas **sin PDF** se esconden salvo que se pida verlas; las que **solo agrupan** otras caen al final; lo suelto en la raíz va al final del todo. Entre el archivo general y sus voces gana el **general** (`Ave Maria.pdf` antes que `Ave Maria-Soprano.pdf`), pero ese desempate **no** se aplica cuando nada coincide —ahí manda el alfabeto—. La sugerencia automática se calla ante un **empate exacto** (dos con el mismo nombre) o si la carpeta está vacía |
 | **Etiquetas de canto** (`etiquetas-canto`) | La lista por defecto trae las nuevas (Domingo de Ramos, Funerales, Otros sacramentos, Fiestas patronales) **sin perder** las de antes y sin duplicados; los duplicados se detectan ignorando acentos, caja y espacios (y una etiqueta no choca consigo misma al renombrarse); y la regla de la **etiqueta principal**: la 1ª marcada manda, tocar una marcada la asciende, desmarcar la principal asciende a la siguiente, y sin ninguna el canto sirve para todas las temporadas |
 | **Guardar en Drive** (`reporteria-cantos`) | El nombre en Drive es **fijo** (para que el enlace compartido no cambie) mientras que el de la descarga lleva fecha; la consulta por nombre **escapa apóstrofos y barras** (un `'` sin escapar rompe la query de Drive); y el cuerpo multipart usa **el mismo boundary que el header** — `Blob` normaliza su MIME a minúsculas, así que un boundary con mayúsculas los desalinearía y Drive respondería 400 sin explicar |
 

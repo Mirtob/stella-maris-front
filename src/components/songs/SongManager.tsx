@@ -13,7 +13,9 @@ import { formatDuration } from '../../services/youtube';
 import { matchesSearch } from '../../utils/textSearch';
 import { toVideoId, pickSongVideo } from '../../utils/songVideo';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-import { detectSheets, defaultSheet, FULL_SCORE, type SongSheet } from '../../utils/sheetParts';
+import { detectSheets, defaultSheet, type SongSheet } from '../../utils/sheetParts';
+import { SheetFilePicker } from './SheetFilePicker';
+import { VoiceSheetPicker } from './VoiceSheetPicker';
 import { SongReport } from '../admin/SongReport';
 import { buildSongReport } from '../../utils/songReport';
 
@@ -39,6 +41,9 @@ const MOMENT_OPTIONS: { value: MassMoment; label: string }[] = [
   // 'no-liturgico' NO es un chip: lo determina el toggle "Tipo de canto" (abajo), para
   // que el momento y `is_liturgical` nunca queden contradictorios.
 ];
+
+/** Los rótulos de los momentos, en el orden de la Misa (para ordenar las carpetas). */
+const MOMENT_LABELS = MOMENT_OPTIONS.map(o => o.label);
 
 /**
  * Admin SongManager — conectado a la tabla `songs` de Supabase.
@@ -188,63 +193,25 @@ export function SongManager() {
       .finally(() => setLoadingSheets(false));
   }, [editSong, showAdd, sheets.length, loadingSheets]);
 
-  // Opciones del selector de partitura AGRUPADAS por momento (1.er nivel de carpeta) y,
-  // dentro, por lo que venga debajo (tiempo litúrgico y/o canto polifónico). Se prioriza
-  // arriba la carpeta del momento del canto que se está editando.
-  //
-  // El nombre de la carpeta de Drive se compara SIN acentos ni mayúsculas, y con algunos
-  // alias: en Drive las carpetas se llaman "Comunion" (sin tilde) y "Salida", mientras la
-  // app rotula "Comunión" y "Final / Salida". Con comparación literal esos dos momentos
-  // caían al fondo, entre las carpetas desconocidas, y perdían el atajo de "el momento
-  // del canto, primero". Ojo: NO conviene renombrar la carpeta a "Final / Salida" en
-  // Drive, porque la barra es el separador de `path` y partiría la ruta en dos.
-  const sheetOptions = (currentMoment?: MassMoment) => {
-    const folderKey = (s: string) =>
-      s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
-    // Alias carpeta-de-Drive → etiqueta de la app, para los que no coinciden textualmente.
-    const FOLDER_ALIASES: Record<string, string> = {
-      salida: 'Final / Salida',
-      final: 'Final / Salida',
-      misas: 'Kyrie', // las partes del ordinario viven bajo "Misas/<nombre de la Misa>"
-    };
-    const labelByKey = new Map(MOMENT_OPTIONS.map(o => [folderKey(o.label), o.label]));
-    /** Etiqueta de momento que le corresponde a una carpeta, o la propia carpeta. */
-    const toMomentLabel = (folder: string) =>
-      labelByKey.get(folderKey(folder)) ?? FOLDER_ALIASES[folderKey(folder)] ?? folder;
+  /** Rótulo del momento del canto que se está cargando (para ordenar lo de Drive). */
+  const momentLabelOf = (m?: MassMoment) => MOMENT_OPTIONS.find(o => o.value === m)?.label;
 
-    const momentLabels = MOMENT_OPTIONS.map(o => o.label);
-    const currentLabel = MOMENT_OPTIONS.find(o => o.value === currentMoment)?.label;
-    const NO_FOLDER = '(Sin carpeta)';
-
-    const groups = new Map<string, { id: string; label: string }[]>();
-    for (const s of sheets) {
-      const segs = (s.path || '').split('/').map(x => x.trim()).filter(Boolean);
-      const moment = segs[0] ? toMomentLabel(segs[0]) : NO_FOLDER;
-      const sub = segs.slice(1).join(' / ');
-      const clean = s.name.replace(/\.pdf$/i, '');
-      const label = sub ? `${sub} — ${clean}` : clean;
-      if (!groups.has(moment)) groups.set(moment, []);
-      groups.get(moment)!.push({ id: s.id, label });
-    }
-
-    const rank = (moment: string) => {
-      if (currentLabel && moment === currentLabel) return -1;      // el del canto, primero
-      const i = momentLabels.indexOf(moment);
-      if (i !== -1) return i;                                       // orden de la Misa
-      if (moment === NO_FOLDER) return 9999;                       // sueltas, al final
-      return 5000;                                                 // otras carpetas, alfabético
-    };
-
-    return Array.from(groups.entries())
-      .sort((a, b) => (rank(a[0]) - rank(b[0])) || a[0].localeCompare(b[0]))
-      .map(([moment, items]) => (
-        <optgroup key={moment} label={moment}>
-          {items.sort((x, y) => x.label.localeCompare(y.label)).map(it => (
-            <option key={it.id} value={it.id}>{it.label}</option>
-          ))}
-        </optgroup>
-      ));
-  };
+  /**
+   * Bloque "Partitura (Google Drive)": el PDF único del canto. Es un buscador, no una
+   * lista — con cientos de partituras en Drive un desplegable no se navega. Ver
+   * SheetFilePicker y utils/sheetFolderSearch.
+   */
+  const renderSheetBlock = (form: SongForm, setForm: Dispatch<SetStateAction<SongForm>>) => (
+    <SheetFilePicker
+      files={sheets}
+      loading={loadingSheets}
+      momentLabels={MOMENT_LABELS}
+      currentMomentLabel={momentLabelOf(form.moments[0])}
+      songTitle={form.title}
+      value={form.driveFileId}
+      onPick={(id) => setForm(prev => ({ ...prev, driveFileId: id }))}
+    />
+  );
 
 
   /**
@@ -422,48 +389,17 @@ export function SongManager() {
       }
     };
     return (
-      <div className="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl p-3">
-        <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">
-          Partituras por voz <span className="text-gray-400">(polifonía — opcional)</span>
-        </label>
-        <select
-          value={form.driveFolderId}
-          onChange={(e) => detect(e.target.value)}
-          className="w-full px-4 py-2.5 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium"
-        >
-          <option value="">— Sin carpeta (canto a una voz) —</option>
-          {folders.map(fo => (
-            <option key={fo.id} value={fo.id}>{fo.path}</option>
-          ))}
-        </select>
-
-        {form.sheets.length > 0 ? (
-          <>
-            <ul className="mt-2 space-y-1">
-              {form.sheets.map(sh => (
-                <li key={sh.fileId} className="flex items-baseline gap-2 text-sm">
-                  <span className={`font-bold ${sh.part === FULL_SCORE ? 'text-green-700' : 'text-gray-700 dark:text-gray-200'}`}>
-                    {sh.part === FULL_SCORE ? '★ ' : ''}{sh.part}
-                  </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{sh.fileName}</span>
-                </li>
-              ))}
-            </ul>
-            <button
-              type="button"
-              onClick={() => detect(form.driveFolderId)}
-              className="mt-2 text-xs text-blue-600 hover:underline"
-            >
-              Volver a detectar (si agregaste una voz en Drive)
-            </button>
-          </>
-        ) : (
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Elige la carpeta del canto y se detectarán solas las voces e instrumentos.
-            La marcada con ★ es la que ve quien no tiene voz asignada.
-          </p>
-        )}
-      </div>
+      <VoiceSheetPicker
+        folders={folders}
+        files={sheets}
+        loading={loadingSheets}
+        momentLabels={MOMENT_LABELS}
+        currentMomentLabel={momentLabelOf(form.moments[0])}
+        songTitle={form.title}
+        value={form.driveFolderId}
+        sheets={form.sheets}
+        onPick={detect}
+      />
     );
   };
 
@@ -1071,33 +1007,8 @@ export function SongManager() {
                   />
                 </div>
               ))}
-              {/* Partitura: elegir el archivo de la carpeta de Drive (sin buscar el ID a mano) */}
-              <div>
-                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">
-                  Partitura (Google Drive)
-                </label>
-                <select
-                  value={f.driveFileId}
-                  onChange={(e) => setF(prev => ({ ...prev, driveFileId: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium"
-                >
-                  <option value="">{loadingSheets ? 'Cargando partituras…' : '— Sin partitura —'}</option>
-                  {/* Si el canto ya tiene un ID que no está en la lista, mostrarlo igual. */}
-                  {f.driveFileId && !sheets.some(s => s.id === f.driveFileId) && (
-                    <option value={f.driveFileId}>Partitura actual ({f.driveFileId.slice(0, 8)}…)</option>
-                  )}
-                  {sheetOptions(f.moments[0])}
-                </select>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Elige el archivo de la carpeta de partituras. Si no aparece, súbelo a Drive y vuelve a abrir este editor.
-                </p>
-                <input
-                  value={f.driveFileId}
-                  onChange={(e) => setF(prev => ({ ...prev, driveFileId: e.target.value }))}
-                  placeholder="…o pega el ID del archivo de Drive manualmente"
-                  className="w-full mt-2 px-4 py-2 rounded-xl text-sm text-gray-700 bg-gray-50 border-2 border-gray-200 focus:outline-none focus:border-blue-500"
-                />
-              </div>
+              {/* Partitura: buscar el archivo en el Drive (sin ir a pescar el ID a mano) */}
+              {renderSheetBlock(f, setF)}
 
               {renderVideosBlock(f, setF)}
 
@@ -1377,23 +1288,7 @@ export function SongManager() {
               ))}
 
               {/* Partitura (Google Drive) */}
-              <div>
-                <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Partitura (Google Drive)</label>
-                <select
-                  value={na.driveFileId}
-                  onChange={(e) => setNa(prev => ({ ...prev, driveFileId: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-xl text-base text-gray-900 bg-white border-2 border-gray-300 focus:outline-none focus:border-blue-500 font-medium"
-                >
-                  <option value="">{loadingSheets ? 'Cargando partituras…' : '— Sin partitura —'}</option>
-                  {sheetOptions(na.moments[0])}
-                </select>
-                <input
-                  value={na.driveFileId}
-                  onChange={(e) => setNa(prev => ({ ...prev, driveFileId: e.target.value }))}
-                  placeholder="…o pega el ID del archivo de Drive manualmente"
-                  className="w-full mt-2 px-4 py-2 rounded-xl text-sm text-gray-700 bg-gray-50 border-2 border-gray-200 focus:outline-none focus:border-blue-500"
-                />
-              </div>
+              {renderSheetBlock(na, setNa)}
 
               {renderVideosBlock(na, setNa)}
 
