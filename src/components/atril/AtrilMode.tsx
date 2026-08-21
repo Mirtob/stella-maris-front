@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { X, ZoomIn, ZoomOut, ChevronUp, ChevronDown, RotateCcw, Play, Pause, Maximize2, Minimize2, Music, List, Printer, Loader, Timer, Minus, Plus } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, ChevronUp, ChevronDown, RotateCcw, Play, Pause, Maximize2, Minimize2, Music, List, Printer, Loader, Timer, Minus, Plus, MoreVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import { Song, UserRole, InstrumentType } from '../../types';
 import { transposeContent, getTransposedKey, keyPrefersFlats, formatTransposition, getChordNotation, setChordNotation, type ChordNotation } from '../../utils/chordTranspose';
@@ -28,6 +28,15 @@ interface AtrilModeProps {
 }
 
 type ContentMode = 'score' | 'chords' | 'lyrics';
+
+/** Si el repertorio queda abierto o cerrado se recuerda entre Misas (no es una preferencia de perfil). */
+const LIST_PREF_KEY = 'atril.showList';
+const readListPref = (): boolean => {
+  try { return localStorage.getItem(LIST_PREF_KEY) === '1'; } catch { return false; }
+};
+const writeListPref = (open: boolean) => {
+  try { localStorage.setItem(LIST_PREF_KEY, open ? '1' : '0'); } catch { /* modo privado */ }
+};
 
 /**
  * Modo Atril — DOCUMENTO CONTINUO. Todos los cantos de la Misa en orden, apilados como
@@ -65,7 +74,19 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
   const [activeIndex, setActiveIndex] = useState(0);
   const [printing, setPrinting] = useState(false);
   const [showMetro, setShowMetro] = useState(false);
+  // Repertorio: panel que se saca de la vista. En el teléfono tapaba la partitura y
+  // dejaba los botones de arriba fuera de pantalla; en el computador tampoco hace falta
+  // tenerlo fijo, porque los cantos ya vienen en el orden de la Misa. Arranca cerrado y
+  // se recuerda la elección.
+  const [showList, setShowList] = useState(readListPref);
+  // Menú "más" de la barra superior: en pantallas chicas guarda lo secundario para que
+  // Salir, Repertorio, Zoom y Pantalla completa entren siempre.
+  const [menuOpen, setMenuOpen] = useState(false);
   const metro = useMetronome(90);
+
+  const toggleList = () => setShowList((v) => { writeListPref(!v); return !v; });
+  /** ¿El repertorio flota sobre el contenido? (en pantallas chicas sí, y hay que cerrarlo) */
+  const listFloats = () => typeof window !== 'undefined' && window.innerWidth < 1024;
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<(HTMLElement | null)[]>([]);
@@ -108,15 +129,21 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
     setPdfZoom(z => Math.max(0.5, +(z - 0.2).toFixed(2)));
   };
 
-  // ESC: salir del modo concentración o cerrar el atril.
+  // ESC: cerrar lo que esté abierto encima (menú, repertorio), luego el modo
+  // concentración y, por último, el atril.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (showTip) return;
-      if (e.key === 'Escape') { if (focus) setFocus(false); else onClose(); }
+      if (e.key !== 'Escape') return;
+      if (menuOpen) setMenuOpen(false);
+      else if (showList) toggleList();
+      else if (focus) setFocus(false);
+      else onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [focus, onClose, showTip]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus, onClose, showTip, menuOpen, showList]);
 
   // Sección activa (para resaltar el repertorio y mostrar el título en la barra).
   useEffect(() => {
@@ -163,11 +190,15 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
   const jumpTo = (i: number) => {
     setActiveIndex(i);
     sectionRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // En pantalla chica el repertorio tapa la partitura: elegir un canto lo cierra.
+    if (listFloats() && showList) toggleList();
   };
 
   const toggleFocus = () => {
     const next = !focus;
     setFocus(next);
+    // Concentración = la mayor superficie posible para la partitura.
+    if (next && showList) toggleList();
     try {
       if (next) document.documentElement.requestFullscreen?.();
       else if (document.fullscreenElement) document.exitFullscreen?.();
@@ -208,23 +239,41 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
   };
 
   const btn = 'flex items-center justify-center rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 transition-all border border-white/20 text-white';
+  const menuItem = 'w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-white text-left hover:bg-white/10 active:scale-[0.98] transition-all';
   const activeSong = orderedSongs[activeIndex];
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-slate-900 text-white">
-      {/* Top bar */}
-      <div className="flex items-center gap-2 px-3 py-2 bg-slate-950 border-b border-white/10 flex-shrink-0">
-        <button onClick={onClose} className={`${btn} px-3 py-2 gap-2 flex-shrink-0`} aria-label="Salir del atril">
+      {/* Barra superior. En el teléfono solo queda lo imprescindible —Salir, Repertorio,
+          Zoom y Pantalla completa—; el resto vive en el menú "⋮", para que ningún botón
+          se salga de la pantalla. Desde `sm` se ve todo en línea, como siempre. */}
+      <div className="relative flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 bg-slate-950 border-b border-white/10 flex-shrink-0">
+        <button onClick={onClose} className={`${btn} w-10 h-10 sm:w-auto sm:h-11 sm:px-3 sm:gap-2 flex-shrink-0`} aria-label="Salir del atril">
           <X className="w-5 h-5" strokeWidth={2.5} />
           <span className="font-bold text-sm hidden sm:inline">Salir</span>
         </button>
 
+        {/* Repertorio: abrir/cerrar. Es el botón que reemplaza a la barra lateral fija. */}
+        <button
+          data-tour="atril-repertorio"
+          onClick={toggleList}
+          aria-label={showList ? 'Ocultar repertorio' : 'Ver repertorio'}
+          aria-expanded={showList}
+          title="Repertorio de la Misa"
+          className={`${btn} w-10 h-10 sm:w-11 sm:h-11 flex-shrink-0 ${showList ? 'bg-amber-500/30 border-amber-400' : ''}`}
+        >
+          <List className="w-6 h-6" strokeWidth={2.5} />
+        </button>
+
+        {/* El título solo desde `sm`: en el teléfono cada canto ya lo muestra en su
+            cabecera pegajosa, y ese espacio hace falta para los botones. */}
         {!focus && (
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 hidden sm:block">
             <div className="font-bold truncate leading-tight">{activeSong?.title ?? 'Atril'}</div>
             <div className="text-xs text-amber-300/90 truncate">{instrumentLabel}</div>
           </div>
         )}
+        <div className="flex-1 sm:hidden" />
 
         {/* Cambio rápido de voz: solo si algún canto de HOY trae partituras por voz.
             No toca el perfil — es para el que dobla en otra parte esta vez. */}
@@ -233,7 +282,7 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
             value={voicePart}
             onChange={(e) => setVoicePart(e.target.value)}
             aria-label="Voz o instrumento"
-            className="flex-shrink-0 bg-white/10 border border-white/25 rounded-lg px-2 py-1.5 text-sm font-bold text-white focus:outline-none focus:border-amber-400"
+            className="hidden sm:block flex-shrink-0 bg-white/10 border border-white/25 rounded-lg px-2 py-1.5 text-sm font-bold text-white focus:outline-none focus:border-amber-400"
           >
             <option value="" className="text-black">Partitura general</option>
             {partsInCantoral.map(p => (
@@ -248,14 +297,14 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
         )}
 
         {/* Zoom global (letra y partitura) */}
-        <button onClick={zoomOut} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label="Reducir"><ZoomOut className="w-6 h-6" strokeWidth={2.5} /></button>
-        <button data-tour="atril-zoom" onClick={zoomIn} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label="Agrandar"><ZoomIn className="w-6 h-6" strokeWidth={2.5} /></button>
+        <button onClick={zoomOut} className={`${btn} w-10 h-10 sm:w-11 sm:h-11 flex-shrink-0`} aria-label="Reducir"><ZoomOut className="w-6 h-6" strokeWidth={2.5} /></button>
+        <button data-tour="atril-zoom" onClick={zoomIn} className={`${btn} w-10 h-10 sm:w-11 sm:h-11 flex-shrink-0`} aria-label="Agrandar"><ZoomIn className="w-6 h-6" strokeWidth={2.5} /></button>
 
         {/* Cifrado de acordes global: latino (Do, Re…) ↔ americano (C, D…) */}
         {hasChords && (
           <button
             onClick={() => changeNotation(notation === 'latin' ? 'american' : 'latin')}
-            className={`${btn} px-2 h-11 flex-shrink-0 text-xs font-bold`}
+            className={`${btn} hidden sm:flex px-2 h-11 flex-shrink-0 text-xs font-bold`}
             aria-label="Cambiar cifrado de acordes (latino/americano)"
             title="Cifrado latino / americano"
           >
@@ -267,7 +316,7 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
         {hasChords && (
           <button
             onClick={() => setShowMetro((s) => !s)}
-            className={`${btn} w-11 h-11 flex-shrink-0 ${showMetro || metro.running ? 'bg-amber-500/30 border-amber-400' : ''}`}
+            className={`${btn} hidden sm:flex w-11 h-11 flex-shrink-0 ${showMetro || metro.running ? 'bg-amber-500/30 border-amber-400' : ''}`}
             aria-label="Metrónomo"
             aria-pressed={showMetro}
             title="Metrónomo"
@@ -277,32 +326,121 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
         )}
 
         {/* Imprimir el atril (PDF vertical, tal cual se ve) */}
-        <button onClick={handlePrint} disabled={printing} className={`${btn} w-11 h-11 flex-shrink-0 disabled:opacity-60`} aria-label="Imprimir" title="Imprimir (PDF vertical, tal cual se ve)">
+        <button onClick={handlePrint} disabled={printing} className={`${btn} hidden sm:flex w-11 h-11 flex-shrink-0 disabled:opacity-60`} aria-label="Imprimir" title="Imprimir (PDF vertical, tal cual se ve)">
           {printing ? <Loader className="w-6 h-6 animate-spin" /> : <Printer className="w-6 h-6" strokeWidth={2.5} />}
         </button>
 
         {/* Modo concentración */}
-        <button data-tour="atril-concentracion" onClick={toggleFocus} className={`${btn} w-11 h-11 flex-shrink-0`} aria-label={focus ? 'Salir de pantalla completa' : 'Pantalla completa'}>
+        <button data-tour="atril-concentracion" onClick={toggleFocus} className={`${btn} w-10 h-10 sm:w-11 sm:h-11 flex-shrink-0`} aria-label={focus ? 'Salir de pantalla completa' : 'Pantalla completa'}>
           {focus ? <Minimize2 className="w-6 h-6" strokeWidth={2.5} /> : <Maximize2 className="w-6 h-6" strokeWidth={2.5} />}
         </button>
+
+        {/* Menú "⋮" — solo en pantalla chica: lo que no cabe en la barra */}
+        <button
+          onClick={() => setMenuOpen(o => !o)}
+          className={`${btn} sm:hidden w-10 h-10 flex-shrink-0 ${menuOpen ? 'bg-white/25' : ''}`}
+          aria-label="Más opciones"
+          aria-expanded={menuOpen}
+        >
+          <MoreVertical className="w-6 h-6" strokeWidth={2.5} />
+        </button>
+
+        {menuOpen && (
+          <>
+            <button
+              className="fixed inset-0 z-40 cursor-default sm:hidden"
+              onClick={() => setMenuOpen(false)}
+              aria-label="Cerrar el menú"
+              tabIndex={-1}
+            />
+            <div className="absolute right-2 top-full mt-1 z-50 w-60 rounded-2xl bg-slate-900 border border-white/20 shadow-2xl p-2 space-y-1 sm:hidden">
+              <div className="px-2 pb-1">
+                <div className="font-bold truncate leading-tight">{activeSong?.title ?? 'Atril'}</div>
+                <div className="text-xs text-amber-300/90 truncate">{instrumentLabel}</div>
+              </div>
+
+              {!isPuebloFiel && partsInCantoral.length > 0 && (
+                <label className="block px-2 py-1">
+                  <span className="text-[11px] text-white/50 font-bold">Voz o instrumento</span>
+                  <select
+                    value={voicePart}
+                    onChange={(e) => setVoicePart(e.target.value)}
+                    className="w-full mt-1 bg-white/10 border border-white/25 rounded-lg px-2 py-2 text-sm font-bold text-white focus:outline-none focus:border-amber-400"
+                  >
+                    <option value="" className="text-black">Partitura general</option>
+                    {partsInCantoral.map(p => (
+                      <option key={p} value={p} className="text-black">{p}</option>
+                    ))}
+                    {voicePart && !partsInCantoral.includes(voicePart) && (
+                      <option value={voicePart} className="text-black">{voicePart}</option>
+                    )}
+                  </select>
+                </label>
+              )}
+
+              {/* El menú NO se cierra al tocar estas: son de las que se tocan varias veces
+                  seguidas o dejan algo abierto abajo. */}
+              {hasChords && (
+                <button onClick={() => changeNotation(notation === 'latin' ? 'american' : 'latin')} className={menuItem}>
+                  <Music className="w-5 h-5" strokeWidth={2.5} />
+                  Cifrado: <span className="text-amber-300">{notation === 'latin' ? 'Do·Re' : 'C·D'}</span>
+                </button>
+              )}
+              {hasChords && (
+                <button
+                  onClick={() => { setShowMetro(s => !s); setMenuOpen(false); }}
+                  className={`${menuItem} ${showMetro || metro.running ? 'text-amber-300' : ''}`}
+                  aria-pressed={showMetro}
+                >
+                  <Timer className="w-5 h-5" strokeWidth={2.5} />
+                  Metrónomo
+                </button>
+              )}
+              <button
+                onClick={() => { setMenuOpen(false); handlePrint(); }}
+                disabled={printing}
+                className={`${menuItem} disabled:opacity-60`}
+              >
+                {printing ? <Loader className="w-5 h-5 animate-spin" /> : <Printer className="w-5 h-5" strokeWidth={2.5} />}
+                Imprimir
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
-      <div className="flex flex-1 min-h-0">
-        {/* Sidebar de repertorio (salta a la sección; oculta en concentración) */}
-        {!focus && (
-          <aside data-tour="atril-repertorio" className="w-44 sm:w-56 flex-shrink-0 bg-slate-950/60 border-r border-white/10 overflow-y-auto">
-            <div className="px-3 py-2 text-xs font-bold text-white/50 flex items-center gap-1.5"><List className="w-4 h-4" /> Repertorio</div>
-            {orderedSongs.map((s, i) => (
-              <button
-                key={s.id || i}
-                onClick={() => jumpTo(i)}
-                className={`w-full text-left px-3 py-3 border-b border-white/5 transition-colors ${i === activeIndex ? 'bg-amber-500/20 border-l-4 border-l-amber-400' : 'hover:bg-white/5'}`}
-              >
-                <div className="text-xs text-amber-300/80">{s.category}</div>
-                <div className="text-sm font-bold leading-tight break-words">{s.title}</div>
-              </button>
-            ))}
-          </aside>
+      <div className="relative flex flex-1 min-h-0">
+        {/* Repertorio: cajón que se saca de la vista. Hasta `lg` FLOTA sobre la partitura
+            (con fondo oscuro detrás) y se cierra al elegir un canto; desde `lg` se acopla
+            como columna y se queda hasta que se cierre a mano. Nunca es permanente. */}
+        {showList && (
+          <>
+            <button
+              className="absolute inset-0 z-20 bg-black/60 lg:hidden cursor-default"
+              onClick={toggleList}
+              aria-label="Cerrar repertorio"
+              tabIndex={-1}
+            />
+            <aside className="absolute inset-y-0 left-0 z-30 w-64 max-w-[80vw] shadow-2xl lg:static lg:w-56 lg:max-w-none lg:shadow-none flex-shrink-0 bg-slate-950 lg:bg-slate-950/60 border-r border-white/10 overflow-y-auto">
+              <div className="sticky top-0 flex items-center gap-1.5 px-3 py-2 bg-slate-950 border-b border-white/10">
+                <List className="w-4 h-4 text-white/50" />
+                <span className="text-xs font-bold text-white/50 flex-1">Repertorio</span>
+                <button onClick={toggleList} className={`${btn} w-8 h-8`} aria-label="Ocultar repertorio">
+                  <X className="w-4 h-4" strokeWidth={2.5} />
+                </button>
+              </div>
+              {orderedSongs.map((s, i) => (
+                <button
+                  key={s.id || i}
+                  onClick={() => jumpTo(i)}
+                  className={`w-full text-left px-3 py-3 border-b border-white/5 transition-colors ${i === activeIndex ? 'bg-amber-500/20 border-l-4 border-l-amber-400' : 'hover:bg-white/5'}`}
+                >
+                  <div className="text-xs text-amber-300/80">{s.category}</div>
+                  <div className="text-sm font-bold leading-tight break-words">{s.title}</div>
+                </button>
+              ))}
+            </aside>
+          </>
         )}
 
         {/* Documento continuo: TODOS los cantos apilados */}
@@ -351,7 +489,15 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
                       <div className="flex items-center gap-1 flex-shrink-0" {...(i === activeIndex ? { 'data-tour': 'atril-transpositor' } : {})}>
                         {key && <span className="text-xs text-amber-300 mr-1 hidden sm:inline">Tono: {key}</span>}
                         <button onClick={() => setTransposition(i, t - 1)} className={`${btn} w-9 h-9`} aria-label="Bajar medio tono"><ChevronDown className="w-5 h-5" strokeWidth={2.5} /></button>
-                        <span className="text-xs font-bold w-9 text-center text-amber-300">{formatTransposition(t)}</span>
+                        {/* Forma corta (0, +1, −2): el texto largo de formatTransposition se
+                            desbordaba sobre los botones en el teléfono. Queda en el title. */}
+                        <span
+                          className="text-sm font-bold w-8 text-center text-amber-300"
+                          style={{ fontVariantNumeric: 'tabular-nums' }}
+                          title={formatTransposition(t)}
+                        >
+                          {t === 0 ? '0' : t > 0 ? `+${t}` : `−${Math.abs(t)}`}
+                        </span>
                         <button onClick={() => setTransposition(i, t + 1)} className={`${btn} w-9 h-9`} aria-label="Subir medio tono"><ChevronUp className="w-5 h-5" strokeWidth={2.5} /></button>
                         {t !== 0 && (
                           <button onClick={() => setTransposition(i, 0)} className={`${btn} w-9 h-9`} aria-label="Tono original"><RotateCcw className="w-4 h-4" strokeWidth={2.5} /></button>
@@ -403,10 +549,6 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
           )}
         </main>
 
-        {/* Botón flotante para reabrir el repertorio en modo concentración */}
-        {focus && (
-          <button onClick={() => setFocus(false)} className={`${btn} fixed bottom-24 left-4 w-12 h-12 z-10`} aria-label="Mostrar repertorio"><List className="w-6 h-6" strokeWidth={2.5} /></button>
-        )}
       </div>
 
       {/* Panel del metrónomo (músicos): play/stop, BPM ± y slider, tap tempo y pulso visual */}
@@ -436,7 +578,23 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
         </div>
       )}
 
+      {/* En concentración la barra de velocidad se recoge en un botón flotante: en un
+          teléfono esos ~70px de alto son partitura. La velocidad se deja elegida antes
+          de entrar; tocar la pantalla sigue pausando. */}
+      {focus && (
+        <button
+          onClick={() => setPlaying(p => !p)}
+          // A la izquierda: la derecha de cada cabecera lleva transpositor y favorito.
+          className={`${btn} fixed left-4 w-14 h-14 z-20 shadow-xl bg-slate-800/90`}
+          style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+          aria-label={playing ? 'Pausar desplazamiento' : 'Iniciar desplazamiento'}
+        >
+          {playing ? <Pause className="w-6 h-6" fill="currentColor" /> : <Play className="w-6 h-6" fill="currentColor" />}
+        </button>
+      )}
+
       {/* Barra de autoscroll global (letra y partituras) */}
+      {!focus && (
       <div data-tour="atril-autoscroll" className="flex items-center gap-3 px-4 py-3 bg-slate-950 border-t border-white/10 flex-shrink-0" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
         <button onClick={() => setPlaying(p => !p)} className={`${btn} w-12 h-12 flex-shrink-0`} aria-label={playing ? 'Pausar desplazamiento' : 'Iniciar desplazamiento'}>
           {playing ? <Pause className="w-6 h-6" fill="currentColor" /> : <Play className="w-6 h-6" fill="currentColor" />}
@@ -450,6 +608,7 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
         />
         <span className="text-sm font-bold w-6 text-center text-amber-300 flex-shrink-0">{speed}</span>
       </div>
+      )}
 
       {/* Tip contextual (F4): se muestra la 1ª vez que se abre el atril */}
       {showTip && (

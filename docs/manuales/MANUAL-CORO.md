@@ -134,12 +134,21 @@ Lo abres con el botón **🎼 Modo Atril** en cualquier cantoral publicado.
 | **Notación** | Cambia entre cifrado **latino** (Do, Re, Mi) y **americano** (C, D, E). |
 | **Autoscroll** | Desplaza el documento solo, a velocidad regulable, para no soltar el instrumento. |
 | **Metrónomo** | Play/stop, BPM con ± y deslizador, **tap tempo** y pulso visual. |
-| **Modo concentración** | Pantalla completa sin distracciones (sales con **ESC**). |
+| **Modo concentración** | Pantalla completa: además esconde la barra de velocidad (queda un botón ▶ flotante) para dejarle a la partitura toda la pantalla. Sales con **ESC**. |
 | **🖨️ Imprimir** | Genera un PDF vertical **tal cual lo ves**, respetando transposiciones y notación. |
-| **Repertorio** | Panel lateral para saltar directo a un canto. |
+| **☰ Repertorio** | Abre y cierra la lista de cantos para saltar directo a uno. |
 
 > La transposición es **por canto**; el zoom y la notación (latino/americano) son **globales**.
 > La ortografía respeta la armadura: en tonalidades con bemoles verás **Sib**, no La#.
+
+**El repertorio no se queda fijo.** Como los cantos ya vienen en el orden de la Misa, la lista
+arranca **cerrada** y se abre con el botón **☰**: así ninguna partitura queda tapada. En el
+teléfono la lista flota encima y se cierra sola al elegir un canto; en computador queda como
+columna hasta que la cierres. La app recuerda cómo la dejaste.
+
+**En el teléfono la barra de arriba deja a la vista lo imprescindible** —Salir, ☰ Repertorio,
+Zoom y Pantalla completa— y guarda el resto (voz, cifrado, metrónomo e imprimir) en el
+menú **⋮**. En tablet y computador se sigue viendo todo en línea.
 
 ---
 

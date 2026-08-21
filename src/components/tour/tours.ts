@@ -211,7 +211,7 @@ export const atrilTips: TourStep[] = [
     target: 'atril-repertorio',
     skipIfMissing: true,
     title: 'Tu repertorio',
-    body: 'Toca cualquier canto de la lista para saltar a él. El canto activo queda resaltado.',
+    body: 'Con este botón abres y cierras la lista de cantos para saltar a cualquiera. Va cerrada para no tapar la partitura: los cantos ya están en el orden de la Misa.',
   },
   {
     id: 'zoom',
@@ -232,7 +232,7 @@ export const atrilTips: TourStep[] = [
     target: 'atril-concentracion',
     skipIfMissing: true,
     title: 'Pantalla completa',
-    body: 'Oculta la barra lateral y entra en modo concentración. ESC vuelve atrás.',
+    body: 'Le da a la partitura toda la pantalla: esconde el repertorio y la barra de velocidad (queda un botón ▶ flotante). ESC vuelve atrás.',
   },
   {
     id: 'autoscroll',
