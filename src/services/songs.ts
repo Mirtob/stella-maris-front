@@ -27,19 +27,25 @@ export interface SongInput {
   extraMoments?: MassMoment[];
   liturgicalSeasons?: LiturgicalSeason[];
   instruments?: InstrumentType[];
-  driveFileId?: string;
+  /**
+   * Partitura del canto en Drive. En `updateSong`, `null` BORRA la que hubiera y
+   * `undefined` deja la columna intacta — sin el `null` no habría forma de quitarle
+   * la partitura a un canto desde la app.
+   */
+  driveFileId?: string | null;
   /** Carpeta del canto en Drive (polifonía): de ahí salen las partituras por voz. */
   driveFolderId?: string | null;
   /** Partituras por voz/instrumento detectadas en esa carpeta. */
   sheets?: { part: string; fileId: string; fileName: string }[];
-  artist?: string;
-  author?: string;
-  originalKey?: string;
-  duration?: string;
-  massName?: string;
-  lyrics?: string;
+  // Los campos de texto siguen la misma regla: `null` = vaciar, `undefined` = no tocar.
+  artist?: string | null;
+  author?: string | null;
+  originalKey?: string | null;
+  duration?: string | null;
+  massName?: string | null;
+  lyrics?: string | null;
   isLiturgical?: boolean;
-  nonLiturgicalCategory?: Song['nonLiturgicalCategory'];
+  nonLiturgicalCategory?: Song['nonLiturgicalCategory'] | null;
 }
 
 // ---------------------------------------------------------------------------

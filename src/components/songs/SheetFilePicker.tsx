@@ -1,6 +1,6 @@
 import { FileText, X, Check, Sparkles } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { MomentChips, SearchField } from './SheetSearchControls';
+import { MomentChips, RefreshDriveButton, SearchField } from './SheetSearchControls';
 import {
   buildFileOptions, scoreByTitle, filterOptions, momentCountsOf, suggestedMatch,
   type DriveFile, type FileOption,
@@ -22,6 +22,10 @@ interface Props {
   /** Archivo elegido (driveFileId). */
   value: string;
   onPick: (fileId: string) => void;
+  /** Volver a leer Drive sin caché (para partituras recién subidas). */
+  onRefresh?: () => void | Promise<void>;
+  /** ¿El canto tiene además una carpeta de partituras por voz enlazada? */
+  hasVoiceFolder?: boolean;
 }
 
 /**
@@ -36,7 +40,8 @@ interface Props {
  * Drive no responde.
  */
 export function SheetFilePicker({
-  files, loading, momentLabels, currentMomentLabel, songTitle, value, onPick,
+  files, loading, momentLabels, currentMomentLabel, songTitle, value, onPick, onRefresh,
+  hasVoiceFolder = false,
 }: Props) {
   const [query, setQuery] = useState('');
   const [moment, setMoment] = useState('');
@@ -159,6 +164,15 @@ export function SheetFilePicker({
         </div>
       )}
 
+      {/* Quitar el PDF con una carpeta de voces enlazada no deja al canto sin partitura:
+          la app sigue sacándola de la carpeta. Decirlo evita el "la quité y sigue ahí". */}
+      {!value && hasVoiceFolder && (
+        <p className="mb-2 text-xs text-amber-700 dark:text-amber-300">
+          Este canto sigue tomando su partitura de la <strong>carpeta de voces</strong> de aquí
+          abajo. Para dejarlo sin partitura, quita también la carpeta.
+        </p>
+      )}
+
       {(!value || changing) && (
         <>
           <SearchField
@@ -167,6 +181,12 @@ export function SheetFilePicker({
             placeholder={loading ? 'Cargando partituras de Drive…' : 'Buscar partitura por nombre…'}
           />
           <MomentChips counts={counts} value={moment} onChange={setMoment} />
+
+          {onRefresh && (
+            <div className="flex justify-end mt-2">
+              <RefreshDriveButton loading={loading} onRefresh={onRefresh} />
+            </div>
+          )}
 
           <div className="mt-2 space-y-1.5 max-h-64 overflow-y-auto">
             {results.slice(0, MAX_VISIBLE).map(row)}

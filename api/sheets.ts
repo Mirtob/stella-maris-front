@@ -120,9 +120,18 @@ const API_KEY = (process.env.GOOGLE_API_KEY || process.env.VITE_GOOGLE_DRIVE_API
 
 const FOLDER_MIME = 'application/vnd.google-apps.folder';
 // Cotas de seguridad para que un Drive enorme (o un ciclo de atajos) no
-// dispare cientos de llamadas ni agote la quota de la API.
-const MAX_FOLDERS = 200;
-const MAX_FILES = 3000;
+// dispare cientos de llamadas ni agote la quota de la API. Si se alcanzan, la
+// respuesta lo dice (`truncated`) en vez de mentir con un árbol a medias: era
+// justo el modo de falla de "subí la partitura y la app no la encuentra".
+const MAX_FOLDERS = 400;
+const MAX_FILES = 5000;
+
+/**
+ * Carpetas que NO se recorren. `.mscbackup` son los respaldos que MuseScore deja al
+ * lado de cada partitura: no traen ningún PDF, ensucian el selector y se comían un
+ * cuarto del cupo de carpetas (34 de 131 en el Drive real).
+ */
+const isSkippableFolder = (name: string) => name.startsWith('.');
 
 interface SheetFile { id: string; name: string; mimeType: string; path?: string; parentId?: string }
 interface SheetFolder { id: string; name: string; path: string }
@@ -153,7 +162,7 @@ async function listFolderChildren(folderId: string, apiKey: string): Promise<any
  * todos los archivos NO-carpeta encontrados, con su ruta relativa en `path`.
  * Protegido contra ciclos (set `seen`) y con cotas MAX_FOLDERS / MAX_FILES.
  */
-async function walkDrive(rootId: string, apiKey: string): Promise<{ files: SheetFile[]; folders: SheetFolder[] }> {
+async function walkDrive(rootId: string, apiKey: string): Promise<{ files: SheetFile[]; folders: SheetFolder[]; truncated: boolean }> {
   const files: SheetFile[] = [];
   // Las carpetas se devuelven aparte: la ficha del canto enlaza UNA carpeta (la del
   // canto polifónico) y de ahí deduce sus voces. Sin esto habría que adivinar la
@@ -172,6 +181,7 @@ async function walkDrive(rootId: string, apiKey: string): Promise<{ files: Sheet
     const children = await listFolderChildren(id, apiKey);
     for (const child of children) {
       if (child.mimeType === FOLDER_MIME) {
+        if (isSkippableFolder(child.name)) continue;
         const childPath = path ? `${path}/${child.name}` : child.name;
         if (!seen.has(child.id)) {
           queue.push({ id: child.id, path: childPath });
@@ -186,7 +196,10 @@ async function walkDrive(rootId: string, apiKey: string): Promise<{ files: Sheet
       }
     }
   }
-  return { files, folders };
+  // Quedó algo sin recorrer: el árbol que se devuelve está incompleto y quien lo
+  // consuma tiene que poder avisarlo.
+  const truncated = queue.length > 0 || files.length >= MAX_FILES;
+  return { files, folders, truncated };
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -198,10 +211,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { files, folders } = await walkDrive(FOLDER_ID, API_KEY);
-    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600');
+    const { files, folders, truncated } = await walkDrive(FOLDER_ID, API_KEY);
+    // El listado se cachea una hora (recorrer el Drive entero es caro), pero con
+    // `?fresh=1` se pide sin caché: es lo que usa el botón "Actualizar desde Drive"
+    // cuando alguien acaba de subir una partitura y necesita verla YA.
+    const fresh = req.query.fresh !== undefined;
+    res.setHeader('Cache-Control', fresh ? 'no-store' : 'public, max-age=3600, s-maxage=3600');
     // `files` se mantiene tal cual por compatibilidad con el selector existente.
-    return res.status(200).json({ files, folders });
+    return res.status(200).json({ files, folders, truncated });
   } catch (err: any) {
     console.error('sheets list error:', err?.message);
     return res.status(500).json({ error: 'No se pudo listar partituras' });

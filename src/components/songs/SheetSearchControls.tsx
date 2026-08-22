@@ -1,4 +1,4 @@
-import { Search, X } from 'lucide-react';
+import { Search, X, RefreshCw } from 'lucide-react';
 
 /**
  * Los dos controles que comparten los buscadores de Drive (el de la carpeta con las voces
@@ -33,6 +33,33 @@ export function SearchField({ value, onChange, placeholder }: SearchFieldProps) 
         </button>
       )}
     </div>
+  );
+}
+
+interface RefreshDriveButtonProps {
+  loading: boolean;
+  onRefresh: () => void | Promise<void>;
+}
+
+/**
+ * "Actualizar desde Drive": vuelve a leer el árbol SIN caché.
+ *
+ * El listado de Drive se cachea una hora y además queda en memoria mientras dura la
+ * sesión, así que una partitura recién subida —o una subcarpeta nueva— no aparecía
+ * por más que se cerrara y abriera el formulario. Este botón es la salida.
+ */
+export function RefreshDriveButton({ loading, onRefresh }: RefreshDriveButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={() => onRefresh()}
+      disabled={loading}
+      title="Volver a leer las carpetas de Drive (para lo que acabas de subir)"
+      className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-300 hover:underline disabled:opacity-60"
+    >
+      <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} strokeWidth={3} />
+      {loading ? 'Leyendo Drive…' : '¿Recién la subiste? Actualizar desde Drive'}
+    </button>
   );
 }
 

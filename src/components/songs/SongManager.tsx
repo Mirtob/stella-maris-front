@@ -14,6 +14,7 @@ import { matchesSearch } from '../../utils/textSearch';
 import { toVideoId, pickSongVideo } from '../../utils/songVideo';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { detectSheets, defaultSheet, type SongSheet } from '../../utils/sheetParts';
+import { songTextPatch } from '../../utils/songUpdatePatch';
 import { SheetFilePicker } from './SheetFilePicker';
 import { VoiceSheetPicker } from './VoiceSheetPicker';
 import { SongReport } from '../admin/SongReport';
@@ -44,6 +45,14 @@ const MOMENT_OPTIONS: { value: MassMoment; label: string }[] = [
 
 /** Los rótulos de los momentos, en el orden de la Misa (para ordenar las carpetas). */
 const MOMENT_LABELS = MOMENT_OPTIONS.map(o => o.label);
+
+/**
+ * "Sirve para cualquier instrumento": la terna que guarda la BD y que escribe el alta
+ * cuando no se marca ninguna versión. Se usa al EDITAR para poder volver a genérico
+ * desmarcando los chips (antes se mandaba `undefined` y la versión vieja sobrevivía).
+ * `InstrumentType` solo cubre Guitarra/Órgano, de ahí el cast.
+ */
+const GENERIC_INSTRUMENTS = ['Coro', 'Guitarra', 'Órgano'] as unknown as InstrumentType[];
 
 /**
  * Admin SongManager — conectado a la tabla `songs` de Supabase.
@@ -174,24 +183,58 @@ export function SongManager() {
   const [folders, setFolders] = useState<{ id: string; name: string; path: string }[]>([]);
   const [loadingSheets, setLoadingSheets] = useState(false);
 
-  // Cargar la lista de partituras de Drive al abrir el editor o el alta (una vez).
+  /**
+   * Trae el árbol de partituras de Drive.
+   *
+   * `/api/sheets` se cachea una hora (recorrerlo entero es caro), y además la lista
+   * se guarda en memoria mientras dura la sesión. Eso hacía que una partitura recién
+   * subida —sobre todo dentro de una subcarpeta nueva— no apareciera por más que se
+   * cerrara y abriera el formulario. Con `force` se pide sin caché: es el botón
+   * "Actualizar desde Drive" de los dos buscadores.
+   */
+  type DriveSheet = { id: string; name: string; path?: string; parentId?: string };
+  const loadSheets = useCallback(async (force = false): Promise<DriveSheet[]> => {
+    setLoadingSheets(true);
+    try {
+      const url = force ? `/api/sheets?fresh=${Date.now()}` : '/api/sheets';
+      const r = await fetch(url, force ? { cache: 'no-store' } : undefined);
+      if (!r.ok) throw new Error(`El listado de Drive respondió ${r.status}`);
+      const d = await r.json();
+      const pdfs = (d.files || [])
+        .filter((x: any) => (x.mimeType || '').includes('pdf'))
+        .map((x: any) => ({
+          id: x.id, name: x.name,
+          path: x.path as string | undefined, parentId: x.parentId as string | undefined,
+        }));
+      setSheets(pdfs);
+      setFolders((d.folders || []).map((x: any) => ({ id: x.id, name: x.name, path: x.path })));
+      if (force) {
+        toast.success(`Drive actualizado: ${pdfs.length} partituras`, {
+          description: `${(d.folders || []).length} carpetas leídas.`,
+        });
+      }
+      // El recorrido tiene tope: si se alcanzó, hay carpetas que NO se leyeron y más
+      // vale decirlo que dejar a alguien buscando una partitura que no está listada.
+      if (d.truncated) {
+        toast.warning('El Drive es más grande que el tope de lectura', {
+          description: 'Quedaron carpetas sin listar. Avísale al equipo para subir el límite.',
+        });
+      }
+      return pdfs as DriveSheet[];
+    } catch (err: any) {
+      // Sin red o con Drive caído queda el campo para pegar el ID a mano.
+      if (force) toast.error('No se pudo leer Drive', { description: err?.message });
+      return [];
+    } finally {
+      setLoadingSheets(false);
+    }
+  }, []);
+
+  // Cargar la lista al abrir el editor o el alta (una vez por sesión).
   useEffect(() => {
     if ((!editSong && !showAdd) || sheets.length > 0 || loadingSheets) return;
-    setLoadingSheets(true);
-    fetch('/api/sheets')
-      .then(r => (r.ok ? r.json() : { files: [] }))
-      .then(d => {
-        setSheets((d.files || [])
-          .filter((x: any) => (x.mimeType || '').includes('pdf'))
-          .map((x: any) => ({
-            id: x.id, name: x.name,
-            path: x.path as string | undefined, parentId: x.parentId as string | undefined,
-          })));
-        setFolders((d.folders || []).map((x: any) => ({ id: x.id, name: x.name, path: x.path })));
-      })
-      .catch(() => { /* sin red: queda el campo manual */ })
-      .finally(() => setLoadingSheets(false));
-  }, [editSong, showAdd, sheets.length, loadingSheets]);
+    loadSheets();
+  }, [editSong, showAdd, sheets.length, loadingSheets, loadSheets]);
 
   /** Rótulo del momento del canto que se está cargando (para ordenar lo de Drive). */
   const momentLabelOf = (m?: MassMoment) => MOMENT_OPTIONS.find(o => o.value === m)?.label;
@@ -210,6 +253,10 @@ export function SongManager() {
       songTitle={form.title}
       value={form.driveFileId}
       onPick={(id) => setForm(prev => ({ ...prev, driveFileId: id }))}
+      onRefresh={() => loadSheets(true)}
+      // Con carpeta de voces enlazada, quitar este PDF NO deja al canto sin partitura:
+      // sigue saliendo la de la carpeta. Se avisa para no dejar a nadie dando vueltas.
+      hasVoiceFolder={!!form.driveFolderId}
     />
   );
 
@@ -373,17 +420,28 @@ export function SongManager() {
   };
 
   const renderVoicesBlock = (form: SongForm, setForm: Dispatch<SetStateAction<SongForm>>) => {
-    const detect = (folderId: string) => {
-      const inFolder = sheets.filter(s => s.parentId === folderId);
+    // `list` explícita porque tras "Actualizar desde Drive" hay que detectar con lo
+    // recién traído: el estado `sheets` todavía no se actualizó en ese mismo tick.
+    const detect = (folderId: string, list = sheets) => {
+      const inFolder = list.filter(s => s.parentId === folderId);
       const found = detectSheets(inFolder);
       const full = defaultSheet(found);
-      setForm(prev => ({
-        ...prev,
-        driveFolderId: folderId,
-        sheets: found,
-        // Solo se pisa la partitura principal si se detectó alguna.
-        driveFileId: full ? full.fileId : prev.driveFileId,
-      }));
+      setForm(prev => {
+        // Al QUITAR la carpeta se lleva consigo la partitura que ella misma había puesto
+        // (el full score). Una elegida a mano, en cambio, se respeta: si no, quitar la
+        // carpeta borraría un PDF que nadie pidió borrar.
+        const sheetCameFromFolder = !!prev.driveFolderId
+          && list.some(s => s.parentId === prev.driveFolderId && s.id === prev.driveFileId);
+        return {
+          ...prev,
+          driveFolderId: folderId,
+          sheets: found,
+          // Solo se pisa la partitura principal si se detectó alguna.
+          driveFileId: full
+            ? full.fileId
+            : (folderId === '' && sheetCameFromFolder ? '' : prev.driveFileId),
+        };
+      });
       if (folderId && found.length === 0) {
         toast.warning('Esa carpeta no tiene PDF', { description: 'Sube las partituras a Drive y vuelve a elegirla.' });
       }
@@ -399,6 +457,12 @@ export function SongManager() {
         value={form.driveFolderId}
         sheets={form.sheets}
         onPick={detect}
+        // Al releer Drive se vuelven a detectar las voces de la carpeta enlazada: si
+        // se agregó una voz nueva, aparece sin tener que tocar nada más.
+        onRefresh={async () => {
+          const fresh = await loadSheets(true);
+          if (form.driveFolderId) detect(form.driveFolderId, fresh);
+        }}
       />
     );
   };
@@ -597,25 +661,21 @@ export function SongManager() {
     if (!videosAreValid(f)) return;
     setSavingSong(true);
     const mp = momentPayload(f);
+    // Ojo con el vacío: en `updateSong`, `undefined` significa "no tocar la columna",
+    // así que todo lo que se pueda BORRAR desde el editor viaja como `null`
+    // (ver utils/songUpdatePatch). Antes la partitura quitada volvía al guardar.
     const r = await updateSong(editSong.id, {
       title: f.title.trim(),
-      author: f.author.trim() || undefined,
-      artist: f.artist.trim() || undefined,
       massMoment: mp.massMoment,
       extraMoments: mp.extraMoments,
-      // Vacío = no tocar la versión guardada; con chips = fijar esa versión.
-      instruments: f.instruments.length ? f.instruments : undefined,
+      // Sin chips = sirve para cualquier instrumento (es lo que guarda el alta).
+      instruments: f.instruments.length ? f.instruments : GENERIC_INSTRUMENTS,
       ...videoPayload(f),
-      driveFileId: f.driveFileId.trim() || undefined,
-      driveFolderId: f.driveFolderId.trim() || null,
+      ...songTextPatch(f),
       sheets: f.sheets,
-      duration: f.duration.trim() || undefined,
-      originalKey: f.originalKey.trim() || undefined,
-      massName: f.massName.trim() || undefined,
-      lyrics: f.lyrics || undefined,
       liturgicalSeasons: f.seasons as unknown as LiturgicalSeason[],
       isLiturgical: f.isLiturgical,
-      nonLiturgicalCategory: f.isLiturgical ? undefined : (f.nonLiturgicalCategory as Song['nonLiturgicalCategory']) || undefined,
+      nonLiturgicalCategory: f.isLiturgical ? null : (f.nonLiturgicalCategory as Song['nonLiturgicalCategory']) || null,
     });
     setSavingSong(false);
     if (!r.ok) { toast.error('No se pudo guardar', { description: r.error }); return; }
@@ -672,18 +732,11 @@ export function SongManager() {
       // Vacío = sirve para todas las versiones (default {coro,guitarra,organo}).
       instruments: na.instruments.length ? na.instruments : undefined,
       ...videoPayload(na),
-      driveFileId: na.driveFileId.trim() || undefined,
-      driveFolderId: na.driveFolderId.trim() || null,
+      ...songTextPatch(na),
       sheets: na.sheets,
-      author: na.author.trim() || undefined,
-      artist: na.artist.trim() || undefined,
-      originalKey: na.originalKey.trim() || undefined,
-      duration: na.duration.trim() || undefined,
-      massName: na.massName.trim() || undefined,
-      lyrics: na.lyrics || undefined,
       liturgicalSeasons: na.seasons as unknown as LiturgicalSeason[],
       isLiturgical: na.isLiturgical,
-      nonLiturgicalCategory: na.isLiturgical ? undefined : (na.nonLiturgicalCategory as Song['nonLiturgicalCategory']) || undefined,
+      nonLiturgicalCategory: na.isLiturgical ? null : (na.nonLiturgicalCategory as Song['nonLiturgicalCategory']) || null,
     });
     setAddingSong(false);
     if (!r.ok) { toast.error('No se pudo agregar el canto', { description: r.error }); return; }

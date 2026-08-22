@@ -1,6 +1,6 @@
 import { FolderOpen, Folder, X, Check, RefreshCw, Sparkles, FileText } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { MomentChips, SearchField } from './SheetSearchControls';
+import { MomentChips, RefreshDriveButton, SearchField } from './SheetSearchControls';
 import { FULL_SCORE, type SongSheet } from '../../utils/sheetParts';
 import {
   buildFolderOptions, scoreByTitle, filterFolderOptions, momentCounts, suggestedFolder,
@@ -28,6 +28,8 @@ interface Props {
   sheets: SongSheet[];
   /** Elegir carpeta (o '' para quitarla). El formulario hace la detección. */
   onPick: (folderId: string) => void;
+  /** Volver a leer Drive sin caché (para carpetas o voces recién subidas). */
+  onRefresh?: () => void | Promise<void>;
 }
 
 /**
@@ -44,7 +46,7 @@ interface Props {
  *    elegirla, ver el resultado y volver atrás.
  */
 export function VoiceSheetPicker({
-  folders, files, loading, momentLabels, currentMomentLabel, songTitle, value, sheets, onPick,
+  folders, files, loading, momentLabels, currentMomentLabel, songTitle, value, sheets, onPick, onRefresh,
 }: Props) {
   const [query, setQuery] = useState('');
   const [moment, setMoment] = useState<string>('');
@@ -171,12 +173,15 @@ export function VoiceSheetPicker({
           )}
 
           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+            {/* Releer Drive de verdad: si solo se re-detectara con la lista en memoria,
+                una voz recién subida seguiría sin aparecer. */}
             <button
               type="button"
-              onClick={() => onPick(value)}
-              className="text-xs text-blue-600 dark:text-blue-300 font-bold hover:underline inline-flex items-center gap-1"
+              onClick={() => (onRefresh ? onRefresh() : onPick(value))}
+              disabled={loading}
+              className="text-xs text-blue-600 dark:text-blue-300 font-bold hover:underline inline-flex items-center gap-1 disabled:opacity-60"
             >
-              <RefreshCw className="w-3 h-3" strokeWidth={3} />
+              <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} strokeWidth={3} />
               Volver a detectar (si agregaste una voz en Drive)
             </button>
             <button
@@ -220,15 +225,18 @@ export function VoiceSheetPicker({
           />
           <MomentChips counts={counts} value={moment} onChange={setMoment} />
 
-          <label className="flex items-center gap-2 mt-2 text-xs text-gray-600 dark:text-gray-300">
-            <input
-              type="checkbox"
-              checked={onlyWithPdf}
-              onChange={(e) => setOnlyWithPdf(e.target.checked)}
-              className="w-4 h-4 accent-blue-700"
-            />
-            Solo carpetas que ya tienen PDF
-          </label>
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mt-2">
+            <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+              <input
+                type="checkbox"
+                checked={onlyWithPdf}
+                onChange={(e) => setOnlyWithPdf(e.target.checked)}
+                className="w-4 h-4 accent-blue-700"
+              />
+              Solo carpetas que ya tienen PDF
+            </label>
+            {onRefresh && <RefreshDriveButton loading={loading} onRefresh={onRefresh} />}
+          </div>
 
           {/* Resultados */}
           <div className="mt-2 space-y-1.5 max-h-64 overflow-y-auto">

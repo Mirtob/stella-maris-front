@@ -189,13 +189,29 @@ recomendable: sirve de respaldo si alguna vez se mueve la carpeta.
 
 | Cosa | Detalle |
 |---|---|
-| **Máx. carpetas** | 200 (`MAX_FOLDERS`). Se corta **en silencio**: lo que sobra no aparece. |
-| **Máx. archivos** | 3000 (`MAX_FILES`), también en silencio. |
-| **Uso actual** | 15 carpetas y 30 archivos — holgura de sobra. |
+| **Máx. carpetas** | 400 (`MAX_FOLDERS`). Si se alcanza, la respuesta trae `truncated: true` y la app **avisa** en vez de callarse. |
+| **Máx. archivos** | 5000 (`MAX_FILES`), con el mismo aviso. |
+| **Uso actual** (22-ago-2026) | 131 carpetas y 646 archivos (293 PDF). |
+| **`.mscbackup`** | **No se recorren.** Son los respaldos de MuseScore: no traen PDF y eran 34 de esas 131 carpetas. |
 | **`/` en nombres** | Prohibido: parte la ruta en niveles falsos. |
 | **Tildes / mayúsculas** | Indiferentes en carpetas de momento. |
-| **Carpetas vacías** | Inofensivas (hoy `Aleluya` y `Post Evangelio` lo están). |
-| **Profundidad** | Sin límite propio; cada nivel extra solo alarga la etiqueta del selector. |
+| **Carpetas vacías** | Inofensivas; en el buscador quedan ocultas salvo que se destilde "solo con PDF". |
+| **Profundidad** | Sin límite propio; cada nivel extra solo alarga la ruta que se muestra. |
+
+### Caché: por qué lo recién subido no aparece solo
+
+`/api/sheets` recorre **todo** el árbol, así que la respuesta se cachea **una hora**, y
+además la app se queda con la lista en memoria mientras dura la sesión. Consecuencia: una
+partitura (o una subcarpeta) que acabas de subir a Drive **no aparece sola**.
+
+Por eso los dos buscadores traen **"¿Recién la subiste? Actualizar desde Drive"**, que pide
+`/api/sheets?fresh=…` con `Cache-Control: no-store` y vuelve a detectar las voces de la
+carpeta enlazada. El aviso que sale al terminar dice cuántas partituras y carpetas se
+leyeron.
+
+> Si después de actualizar **sigue sin aparecer**, ya no es la caché: revisa que la carpeta
+> nueva esté compartida como el resto del Drive de partituras (la app lee con una API key,
+> no con tu cuenta, así que solo ve lo que es accesible con el enlace).
 
 Con la estructura completa (≈10 momentos × ≈8 tiempos ≈ 80 carpetas, más las de Misas y
 las de cantos polifónicos) se queda cómodamente bajo el tope de 200. Conviene revisarlo si
