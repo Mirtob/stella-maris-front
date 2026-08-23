@@ -93,8 +93,10 @@ export function CantoralManager({ cantorals, onEdit, onDelete, onShare }: Cantor
                     <BookOpen className="w-6 h-6" strokeWidth={2.5} />
                     <span className="text-lg font-bold">{cantoral.parishName}</span>
                   </div>
+                  {/* La insignia va en green-700, no green-500: en blanco sobre verde
+                      claro el contraste era 2.2 (mínimo 4.5) y a pleno sol no se lee. */}
                   {cantoral.statusLabel === 'Publicados' ? (
-                    <span className="bg-green-500 text-white px-3 py-1 rounded-lg text-sm font-bold flex items-center gap-1">
+                    <span className="bg-green-700 text-white px-3 py-1 rounded-lg text-sm font-bold flex items-center gap-1">
                       <Eye className="w-4 h-4" />
                       Público
                     </span>
@@ -151,6 +153,10 @@ export function CantoralManager({ cantorals, onEdit, onDelete, onShare }: Cantor
                 
                 <button
                   onClick={() => setPendingDeleteId(cantoral.id)}
+                  // Solo tiene ícono: sin nombre, un lector de pantalla anunciaba
+                  // "botón" a secas… en el botón de BORRAR.
+                  aria-label={`Eliminar el cantoral de ${cantoral.parishName}`}
+                  title="Eliminar cantoral"
                   className="bg-gradient-to-br from-red-600 to-red-700 text-white py-3 px-4 rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-lg border-2 border-red-800 hover:shadow-xl"
                 >
                   <Trash2 className="w-5 h-5" strokeWidth={2.5} />

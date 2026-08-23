@@ -285,7 +285,9 @@ export function Login({ onGoogleLogin }: LoginProps) {
                 <button
                   type="button"
                   onClick={() => setUserMode('login')}
-                  className="w-full flex items-center justify-center gap-2 text-sm font-bold text-blue-100 hover:text-white py-2 transition-colors"
+                  // min-h-11 = 44px: es la vía de entrada de quien no usa Google y
+                  // quedaba en 41px, por debajo del mínimo táctil.
+                  className="w-full min-h-11 flex items-center justify-center gap-2 text-sm font-bold text-blue-100 hover:text-white py-2 transition-colors"
                 >
                   <User className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
                   Entrar con usuario y clave
@@ -293,7 +295,7 @@ export function Login({ onGoogleLogin }: LoginProps) {
                 <button
                   type="button"
                   onClick={() => setUserMode('signup')}
-                  className="w-full flex items-center justify-center gap-2 text-sm font-bold text-amber-300 hover:text-amber-200 py-1 transition-colors"
+                  className="w-full min-h-11 flex items-center justify-center gap-2 text-sm font-bold text-amber-300 hover:text-amber-200 py-1 transition-colors"
                 >
                   <UserPlus className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
                   Crear una cuenta nueva

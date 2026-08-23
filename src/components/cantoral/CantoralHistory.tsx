@@ -360,6 +360,7 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, onClo
             <p className="text-sm font-bold text-purple-800 dark:text-purple-300 mb-2 uppercase tracking-wide">🗓️ ¿Cuándo?</p>
             <div className="grid grid-cols-2 gap-3 mb-4">
               <select
+                aria-label="Filtrar por año"
                 value={selectedYear}
                 onChange={(e) => { setSelectedYear(e.target.value); setSelectedMonth('all'); }}
                 className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 dark:focus:border-purple-400 bg-white/60 dark:bg-white/10 text-purple-950 dark:text-white font-bold shadow-lg transition-colors"
@@ -369,6 +370,7 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, onClo
                 ))}
               </select>
               <select
+                aria-label="Filtrar por mes"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 dark:focus:border-purple-400 bg-white/60 dark:bg-white/10 text-purple-950 dark:text-white font-bold shadow-lg transition-colors"
@@ -385,6 +387,7 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, onClo
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* País */}
               <select
+                aria-label="Filtrar por país"
                 value={selectedCountry}
                 onChange={(e) => { setSelectedCountry(e.target.value); setSelectedDiocese('all'); setSelectedParish('all'); setSelectedChapel('all'); }}
                 className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 dark:focus:border-purple-400 bg-white/60 dark:bg-white/10 text-purple-950 dark:text-white font-bold shadow-lg transition-colors"
@@ -397,6 +400,7 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, onClo
 
               {/* Diócesis */}
               <select
+                aria-label="Filtrar por diócesis"
                 value={selectedDiocese}
                 onChange={(e) => { setSelectedDiocese(e.target.value); setSelectedParish('all'); setSelectedChapel('all'); }}
                 className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 dark:focus:border-purple-400 bg-white/60 dark:bg-white/10 text-purple-950 dark:text-white font-bold shadow-lg transition-colors"
@@ -409,6 +413,7 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, onClo
 
               {/* Parroquia */}
               <select
+                aria-label="Filtrar por parroquia"
                 value={selectedParish}
                 onChange={(e) => { setSelectedParish(e.target.value); setSelectedChapel('all'); }}
                 className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 dark:focus:border-purple-400 bg-white/60 dark:bg-white/10 text-purple-950 dark:text-white font-bold shadow-lg transition-colors"
@@ -425,6 +430,7 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, onClo
               {/* Capilla */}
               {chapelOptions.length > 0 && (
                 <select
+                  aria-label="Filtrar por capilla"
                   value={selectedChapel}
                   onChange={(e) => setSelectedChapel(e.target.value)}
                   className="w-full px-4 py-4 text-lg rounded-xl border-2 border-white/60 dark:border-white/20 focus:outline-none focus:border-purple-600 dark:focus:border-purple-400 bg-white/60 dark:bg-white/10 text-purple-950 dark:text-white font-bold shadow-lg transition-colors"

@@ -36,7 +36,7 @@ export function NotFound({ reason = 'unknown-route', attemptedPath, onGoHome }: 
         <p className="text-base sm:text-lg text-brand-ink-soft mb-2 leading-relaxed">
           {isInvalidLink
             ? 'El código QR o el enlace que abriste no tiene el formato correcto. Puede que esté roto o sea de una versión vieja de la app.'
-            : 'La página que buscás no existe o fue movida.'}
+            : 'La página que buscas no existe o fue movida.'}
         </p>
 
         {attemptedPath && (

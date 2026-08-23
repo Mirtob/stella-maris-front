@@ -288,7 +288,10 @@ export function FormacionRoadmap({ userId, userName, userParish }: { userId: str
                 return (
                   <div key={mod.id} className={`rounded-xl p-2 text-center border-2 ${earned ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700' : 'bg-gray-100 dark:bg-slate-800/50 border-gray-200 dark:border-slate-700'}`}>
                     <div className={`text-2xl leading-none ${earned ? '' : 'grayscale opacity-40'}`}>{badge?.emoji}</div>
-                    <div className={`text-[10px] leading-tight mt-1 font-semibold ${earned ? 'text-brand-ink' : 'text-gray-400'}`}>{badge?.name}</div>
+                    {/* El nombre de la insignia sin ganar va en gray-600: en gray-400
+                        sobre el fondo gris el contraste era 2.4 (mínimo 4.5) y a 10px
+                        no se leía. Sigue viéndose apagado respecto de las ganadas. */}
+                    <div className={`text-[10px] leading-tight mt-1 font-semibold ${earned ? 'text-brand-ink' : 'text-gray-600 dark:text-gray-300'}`}>{badge?.name}</div>
                   </div>
                 );
               })}

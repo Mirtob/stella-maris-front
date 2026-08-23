@@ -655,6 +655,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                     <Filter className="w-3.5 h-3.5" /> Parroquia
                   </label>
                   <select
+                    aria-label="Filtrar el archivo por parroquia"
                     value={archiveParish}
                     onChange={(e) => { setArchiveParish(e.target.value); setArchiveChapel('all'); }}
                     className="w-full px-3 py-2 text-sm rounded-lg border border-white/60 dark:border-white/20 bg-white/70 dark:bg-white/10 text-brand-ink font-semibold focus:outline-none focus:border-blue-600"
@@ -669,6 +670,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                       <Church className="w-3.5 h-3.5" /> Capilla
                     </label>
                     <select
+                      aria-label="Filtrar el archivo por capilla"
                       value={archiveChapel}
                       onChange={(e) => setArchiveChapel(e.target.value)}
                       className="w-full px-3 py-2 text-sm rounded-lg border border-white/60 dark:border-white/20 bg-white/70 dark:bg-white/10 text-brand-ink font-semibold focus:outline-none focus:border-blue-600"
