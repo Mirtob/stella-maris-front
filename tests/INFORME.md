@@ -11,6 +11,65 @@
 
 ---
 
+## Corrida 2026-08-23 — QA final de cierre de la versión 1
+
+| Campo | Valor |
+|---|---|
+| **Commit** | `934a39e` (cierre de v1: plan completo + humo por pantalla + auto-ataque) |
+| **Entorno** | Producción — `https://stella-maris-front.vercel.app/` + Supabase `szoaiiipglebpewwzfgh` |
+| **Ejecutado por** | Claude Code (automatizado) |
+| **Resultado** | ✅ **APROBADO CON UNA OBSERVACIÓN** — un hallazgo de seguridad cuya corrección exige aplicar SQL a mano (ver S-1) |
+
+### Bloque automatizado
+
+| Bloque | Comando | Resultado |
+|---|---|---|
+| Compilación | `npm run build` | ✅ sin errores |
+| Unitarias (6 suites, 294 casos) | `npx esbuild … && node tests/output/*.mjs` | ✅ 45 · 37 · 109 · 33 · 51 · 19, 0 fallas |
+| Integración backend | `node tests/integration/run-all.mjs` | ✅ **17/17** |
+| Smoke headless (prod) | `node tests/pwa/smoke-headless.mjs` | ✅ 7/7 |
+| PWA / manifest / íconos | `node tests/pwa/check-prod.mjs` | ✅ 18 OK · 1 WARN intencional (SW sin caché) |
+| Estrés / rate limit | `node tests/stress/rate-limit.mjs` | ✅ 0×5xx · el 0×429 es por el ritmo del script (ver R-2) |
+| Accesibilidad (13 pantallas) | axe-core sobre el banco de pantallas | ✅ 0 violaciones críticas o graves **tras los arreglos** |
+| Humo por pantalla | 12 vistas × 3 roles + 9 subpaneles admin + 9 rutas públicas | ✅ 0 errores de JS |
+| Auto-ataque | `node tests/security/escalada.mjs` + sondas manuales | ⚠️ 15 bloqueos / **1 escalada** (S-1) |
+
+**Catálogo:** 52 cantos (QA-2 cerrado: el umbral del plan era 30).
+
+### Hallazgos y qué se hizo
+
+| # | Hallazgo | Sev | Estado |
+|---|---|---|---|
+| **R-1** | `/api/sheets` tardaba **8,3 s** contra el tope de 10 s de la función: 504 en cuanto creciera el Drive. Listaba las carpetas de a una. | P1 | ✅ Paralelizado en tandas de 8 (`2d33199`). Medido en prod después: **2,5-3,4 s**. Árbol idéntico al secuencial, verificado contra el Drive real. |
+| **R-2** | El rate limit **fallaba abierto bajo ráfaga**: de 100 peticiones en paralelo solo se contaban ~26 y ninguna daba 429. Causa: el RPC compartido se abortaba a los 800 ms y las instancias nuevas con TLS frío tardan ~1,2 s. | P1 | ✅ Timeout a 2 s (`2d33199`). Verificado en prod: 200 en ráfaga → **150 pasan, 50 × 429**. |
+| **R-3** | Seis endpoints **sin ningún límite**: `recover-password` (manda correos), `notify-cantoral` (push a toda la parroquia), `admin-users`, `delete-account`, `push-subscribe`, `push-test`. | P1 | ✅ Todos con límite; `recover-password` y `suggest` además *fail-closed* (`2d33199`). |
+| **R-4** | `notify-cantoral` solo exigía estar logueado: cualquier cuenta podía disparar el push de "nuevo cantoral" a toda una parroquia, en bucle. | P1 | ✅ Ahora exige rol Coro o Admin, leído con la service key sobre el uid del token (`2d33199`). |
+| **R-5** | `/api/youtube` cobraba el mismo cupo para `search` (100 unidades de cuota) que para el resto (1): se podía quemar la cuota diaria en dos minutos. | P2 | ✅ Cubo aparte de 10/min para `search` (`934a39e`). |
+| **A-1** | Seis `<select>` de filtros sin nombre accesible (Historial y Cantorales); botón de **eliminar** solo con ícono y sin nombre; insignia "Público" con contraste 2.2; insignias de formación con contraste 2.4. | P2 | ✅ Corregido (`8af106b`). axe: 0 graves. |
+| **A-2** | Botones táctiles bajo 44 px en el Login (41 y 32 px) y el botón de tema (36 px). | P2 | ✅ Todos a 44 px (`8af106b`). |
+| **A-3** | El 404 usaba voseo ("la página que buscás"). | P3 | ✅ Corregido (`8af106b`). |
+| **S-1** | **La política `cantorals_insert` solo pedía estar autenticado.** Una cuenta recién creada de Pueblo fiel publicó un cantoral con parroquia inventada, visible **hasta para anónimos**. Comprobado en producción; la fila y la cuenta se borraron enseguida. | **P1** | ⚠️ **ABIERTO hasta aplicar** `supabase/migrations/20260823_publish_requires_choir.sql` en el SQL Editor. Prueba que lo reproduce: `tests/security/escalada.mjs`. |
+| **S-2** | `recover-password` responde distinto para un usuario que existe (200) y uno que no (404): permite enumerar usuarios. | P3 | ⚠️ **Aceptado**: el mensaje claro ayuda a los usuarios mayores y el límite nuevo (5 cada 15 min por IP) acota el sondeo a 20 intentos por hora. Documentado, no corregido. |
+| **S-3** | La encuesta pública escribe en `survey_responses` directo a Supabase, sin pasar por `api/*`, así que no tiene límite de tasa. | P3 | ⚠️ Aceptado: la ventana de la muestra ya pasó y el daño máximo es basura en una tabla. |
+
+### Lo que aguantó el auto-ataque
+
+- **RLS anónima**: 0 filas en las 8 tablas privadas; 0 INSERT, 0 UPDATE, 0 DELETE (recuento antes/después: 52 cantos intactos, ningún título "HACKEADO").
+- **RLS con sesión real** (cuenta desechable de Pueblo fiel): no lee perfiles ajenos, no se asciende a Admin (lo corta el trigger), no toca el catálogo, ni etiquetas, ni parroquias, ni cantorales ajenos.
+- **Endpoints**: 401/403 sin token, con token falsificado y con token real sin rol. El cron rechaza la cabecera `x-vercel-cron` falsificada.
+- **Secretos**: 1,9 MB de bundle revisados — sin service_role, sin Resend, sin claves de Google, sin VAPID privada.
+- **Cabeceras**: HSTS, nosniff, X-Frame-Options DENY, CSP con `frame-ancestors 'none'`, sin `unsafe-eval` ni scripts inline.
+- **Inyección**: sin `dangerouslySetInnerHTML` en toda la app (el formato de la letra arma nodos de React, no HTML); `/api/pdf` rechaza rutas y URLs (SSRF).
+
+### Pendiente manual (no automatizable desde aquí)
+
+1. **Aplicar la migración `20260823_publish_requires_choir.sql`** y volver a correr `node tests/security/escalada.mjs` (debe dar 16 bloqueos, 0 escaladas).
+2. `tests/sql/checks.sql` en el SQL Editor (incluye el bloque §11 nuevo, que verifica esa política).
+3. Rotar la API key de Google que estuvo expuesta en el bundle (ya no se sirve, pero sigue siendo válida).
+4. Smoke en teléfono real con login de Google (`tests/smoke/CHECKLIST.md`).
+
+---
+
 ## Corrida 2026-07-23 — Arranque del QA de freeze (bloque automatizado)
 
 | Campo | Valor |
