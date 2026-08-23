@@ -50,8 +50,8 @@ async function distributedCheck(key: string, limit: number, windowSeconds: numbe
   }
 }
 
-async function rateLimit(req: VercelRequest, res: VercelResponse, maxRequests: number, windowMs: number): Promise<boolean> {
-  const key = `youtube:${clientIp(req)}`;
+async function rateLimit(req: VercelRequest, res: VercelResponse, bucket: string, maxRequests: number, windowMs: number): Promise<boolean> {
+  const key = `${bucket}:${clientIp(req)}`;
   const windowSeconds = Math.ceil(windowMs / 1000);
   const dist = await distributedCheck(key, maxRequests, windowSeconds);
   if (dist) {
@@ -72,7 +72,6 @@ async function rateLimit(req: VercelRequest, res: VercelResponse, maxRequests: n
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Método no permitido' });
-  if (!(await rateLimit(req, res, 60, 60_000))) return;
 
   const API_KEY = (process.env.GOOGLE_API_KEY || process.env.VITE_GOOGLE_DRIVE_API_KEY || process.env.VITE_YOUTUBE_API_KEY || '').trim();
   if (!API_KEY) return res.status(500).json({ error: 'API key no configurada' });
@@ -80,6 +79,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const q = req.query as Record<string, string | string[]>;
   const endpoint = String(q.endpoint || '');
   if (!ALLOWED.has(endpoint)) return res.status(400).json({ error: 'Endpoint no permitido' });
+
+  // `search` cuesta 100 unidades de cuota; el resto, 1. Con el mismo tope de 60/min se
+  // podía quemar la cuota diaria entera (10.000) en menos de dos minutos y dejar la
+  // sincronización del canal muerta hasta el día siguiente. Por eso lleva cubo aparte.
+  const esBusqueda = endpoint === 'search';
+  if (!(await rateLimit(req, res, esBusqueda ? 'youtube-search' : 'youtube',
+                        esBusqueda ? 10 : 60, 60_000))) return;
 
   const params = new URLSearchParams();
   for (const [k, v] of Object.entries(q)) {

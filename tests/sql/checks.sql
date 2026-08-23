@@ -158,3 +158,28 @@ SELECT event_object_table, trigger_name, event_manipulation, action_timing
 FROM information_schema.triggers
 WHERE event_object_schema = 'public'
 ORDER BY event_object_table, trigger_name;
+
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- 11. PUBLICAR EXIGE SER CORO (regresión del auto-ataque del 23-ago-2026)
+-- ─────────────────────────────────────────────────────────────────────────
+-- Antes, `cantorals_insert` solo pedía estar autenticado: una cuenta cualquiera
+-- de Pueblo fiel publicaba un cantoral visible para todos (comprobado en
+-- producción). Ver migración 20260823_publish_requires_choir.
+--
+-- Esperado: la política de INSERT de published_cantorals y la de
+-- custom_liturgical_dates mencionan is_choir_or_admin.
+SELECT tablename, policyname, with_check
+FROM pg_policies
+WHERE schemaname = 'public'
+  AND policyname IN ('cantorals_insert', 'cld_insert')
+ORDER BY tablename;
+
+-- Esperado: la función existe, es SECURITY DEFINER y tiene search_path vacío.
+SELECT p.proname,
+       p.prosecdef                       AS security_definer,
+       pg_get_function_result(p.oid)     AS devuelve,
+       p.proconfig                       AS config
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public' AND p.proname = 'is_choir_or_admin';

@@ -88,3 +88,23 @@ El informe queda listo para enviarse al inversor.
 - No probamos quota real de Google Drive/YouTube — esos endpoints están cacheados 1h.
 - Tests integrados usan la `anon key`, no `service_role`. Eso es correcto: las pruebas confirman lo que un usuario normal puede o no puede hacer.
 - El admin-side requiere ejecutar el SQL manualmente porque la `anon key` no tiene privilegios sobre `auth.users`.
+
+## Auto-ataque de seguridad (opt-in)
+
+```bash
+node tests/security/escalada.mjs
+```
+
+Crea una cuenta desechable de **Pueblo fiel** por el registro normal, intenta con ella
+todo lo que no debería poder (leer perfiles ajenos, ascenderse a Admin, escribir en el
+catálogo, publicar cantorales, llamar a los endpoints de admin) y la borra al terminar.
+
+Es la única prueba que cubre las políticas RLS **con una sesión real**: el resto de la
+suite corre con la `anon key` y solo cubre al visitante anónimo.
+
+> Escribe en producción (una cuenta, que después borra). Si el registro devuelve 429, el
+> límite por IP está haciendo su trabajo: hay que esperar 15 minutos.
+
+Salida esperada: **16 bloqueos correctos, 0 escaladas**. Mientras la migración
+`20260823_publish_requires_choir.sql` no esté aplicada, "publicar un cantoral siendo
+Pueblo fiel" sale en rojo — es el hallazgo que originó la prueba.
