@@ -57,7 +57,10 @@ async function distributedCheck(key: string, limit: number, windowSeconds: numbe
   const anon = (process.env.VITE_SUPABASE_ANON_KEY || '').trim();
   if (!url || !anon) return null;
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 800);
+  // 2 s, no 800 ms: bajo ráfaga las instancias nuevas pagan TLS frío y el RPC tardaba
+  // ~1,2 s, así que se abortaba y el limiter caía al de memoria (por instancia) —
+  // medido contra producción: de 100 peticiones en paralelo solo se contaban ~26.
+  const timer = setTimeout(() => ctrl.abort(), 2000);
   try {
     const r = await fetch(`${url}/rest/v1/rpc/api_rate_limit`, {
       method: 'POST',
@@ -158,11 +161,24 @@ async function listFolderChildren(folderId: string, apiKey: string): Promise<any
 }
 
 /**
+ * Cuántas carpetas se piden a Drive a la vez.
+ *
+ * De a una, el Drive real tardaba ~8,3 s en producción: pegado al tope de 10 s de la
+ * función serverless, o sea un 504 esperando a que el catálogo creciera un poco más.
+ * Medido sobre el Drive real (97 carpetas útiles, 612 archivos): 28,7 s en serie,
+ * 4,3 s con 8 y 3,5 s con 16. Se queda en 8 porque el salto grande ya está ahí y
+ * varios administradores actualizando a la vez no deben agotar la cuota de Drive.
+ */
+const CONCURRENCY = 8;
+
+/**
  * Recorre recursivamente (BFS) el árbol de carpetas desde `rootId` y devuelve
  * todos los archivos NO-carpeta encontrados, con su ruta relativa en `path`.
  * Protegido contra ciclos (set `seen`) y con cotas MAX_FOLDERS / MAX_FILES.
+ *
+ * Se exporta para poder medirlo y probarlo fuera de la función serverless.
  */
-async function walkDrive(rootId: string, apiKey: string): Promise<{ files: SheetFile[]; folders: SheetFolder[]; truncated: boolean }> {
+export async function walkDrive(rootId: string, apiKey: string): Promise<{ files: SheetFile[]; folders: SheetFolder[]; truncated: boolean }> {
   const files: SheetFile[] = [];
   // Las carpetas se devuelven aparte: la ficha del canto enlaza UNA carpeta (la del
   // canto polifónico) y de ahí deduce sus voces. Sin esto habría que adivinar la
@@ -173,26 +189,37 @@ async function walkDrive(rootId: string, apiKey: string): Promise<{ files: Sheet
   let foldersVisited = 0;
 
   while (queue.length > 0 && foldersVisited < MAX_FOLDERS && files.length < MAX_FILES) {
-    const { id, path } = queue.shift()!;
-    if (seen.has(id)) continue;
-    seen.add(id);
-    foldersVisited++;
+    // Se toma un nivel de a tandas: las carpetas hermanas se piden en paralelo.
+    const batch: { id: string; path: string }[] = [];
+    while (queue.length > 0 && batch.length < CONCURRENCY && foldersVisited + batch.length < MAX_FOLDERS) {
+      const next = queue.shift()!;
+      if (seen.has(next.id)) continue;
+      seen.add(next.id);
+      batch.push(next);
+    }
+    if (batch.length === 0) break;
+    foldersVisited += batch.length;
 
-    const children = await listFolderChildren(id, apiKey);
-    for (const child of children) {
-      if (child.mimeType === FOLDER_MIME) {
-        if (isSkippableFolder(child.name)) continue;
-        const childPath = path ? `${path}/${child.name}` : child.name;
-        if (!seen.has(child.id)) {
-          queue.push({ id: child.id, path: childPath });
-          folders.push({ id: child.id, name: child.name, path: childPath });
+    const listings = await Promise.all(
+      batch.map(async (folder) => ({ folder, children: await listFolderChildren(folder.id, apiKey) })),
+    );
+
+    for (const { folder: { id, path }, children } of listings) {
+      for (const child of children) {
+        if (child.mimeType === FOLDER_MIME) {
+          if (isSkippableFolder(child.name)) continue;
+          const childPath = path ? `${path}/${child.name}` : child.name;
+          if (!seen.has(child.id)) {
+            queue.push({ id: child.id, path: childPath });
+            folders.push({ id: child.id, name: child.name, path: childPath });
+          }
+        } else {
+          files.push({
+            id: child.id, name: child.name, mimeType: child.mimeType,
+            path: path || undefined, parentId: id,
+          });
+          if (files.length >= MAX_FILES) break;
         }
-      } else {
-        files.push({
-          id: child.id, name: child.name, mimeType: child.mimeType,
-          path: path || undefined, parentId: id,
-        });
-        if (files.length >= MAX_FILES) break;
       }
     }
   }

@@ -38,8 +38,7 @@ function applyCors(req: VercelRequest, res: VercelResponse): boolean {
   return true;
 }
 
-interface Hit { count: number; resetAt: number; }
-const hits = new Map<string, Hit>();
+// Sin contador en memoria a propósito: este endpoint es fail-closed (ver rateLimit).
 
 function clientIp(req: VercelRequest): string {
   const fwd = req.headers['x-forwarded-for'];
@@ -57,7 +56,10 @@ async function distributedCheck(key: string, limit: number, windowSeconds: numbe
   const anon = (process.env.VITE_SUPABASE_ANON_KEY || '').trim();
   if (!url || !anon) return null;
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 800);
+  // 2 s, no 800 ms: bajo ráfaga las instancias nuevas pagan TLS frío y el RPC tardaba
+  // ~1,2 s, así que se abortaba y el limiter caía al de memoria (por instancia) —
+  // medido contra producción: de 100 peticiones en paralelo solo se contaban ~26.
+  const timer = setTimeout(() => ctrl.abort(), 2000);
   try {
     const r = await fetch(`${url}/rest/v1/rpc/api_rate_limit`, {
       method: 'POST',
@@ -94,23 +96,12 @@ async function rateLimit(req: VercelRequest, res: VercelResponse, endpoint: stri
     return true;
   }
 
-  // 2) Fallback en memoria (por instancia) si el distribuido no está disponible.
-  const now = Date.now();
-  let hit = hits.get(key);
-  if (!hit || hit.resetAt < now) {
-    hit = { count: 0, resetAt: now + windowMs };
-    hits.set(key, hit);
-  }
-  hit.count += 1;
-  res.setHeader('X-RateLimit-Limit', String(maxRequests));
-  res.setHeader('X-RateLimit-Remaining', String(Math.max(0, maxRequests - hit.count)));
-  res.setHeader('X-RateLimit-Reset', String(Math.ceil(hit.resetAt / 1000)));
-  if (hit.count > maxRequests) {
-    res.setHeader('Retry-After', String(Math.ceil((hit.resetAt - now) / 1000)));
-    res.status(429).json({ error: 'Demasiadas peticiones.' });
-    return false;
-  }
-  return true;
+  // 2) Sin contador compartido se DENIEGA (fail-closed). Aquí cada petición que pasa
+  // es una llamada pagada a Gemini, y el respaldo en memoria no frena una ráfaga
+  // repartida entre instancias serverless: ante la duda, mejor un 429 que una factura.
+  res.setHeader('Retry-After', String(windowSeconds));
+  res.status(429).json({ error: 'Servicio ocupado. Intenta de nuevo en un minuto.' });
+  return false;
 }
 
 const GEMINI_MODELS = [

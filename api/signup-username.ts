@@ -56,7 +56,10 @@ async function distributedCheck(key: string, limit: number, windowSeconds: numbe
   const anon = (process.env.VITE_SUPABASE_ANON_KEY || '').trim();
   if (!url || !anon) return null;
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 800);
+  // 2 s, no 800 ms: bajo ráfaga las instancias nuevas pagan TLS frío y el RPC tardaba
+  // ~1,2 s, así que se abortaba y el limiter caía al de memoria (por instancia) —
+  // medido contra producción: de 100 peticiones en paralelo solo se contaban ~26.
+  const timer = setTimeout(() => ctrl.abort(), 2000);
   try {
     const r = await fetch(`${url}/rest/v1/rpc/api_rate_limit`, {
       method: 'POST',
