@@ -106,7 +106,7 @@ Estado:    abierto / en review / cerrado
 | ~~QA-1~~ ✅ | **Rate limit no enforce en serverless** — `const hits = new Map()` por instancia. | P2 | **RESUELTO 2026-06-17**: limiter distribuido vía RPC `api_rate_limit` (Supabase, migración `20260617`), fail-open al de memoria. Verificado en prod: 20×200 + 15×429. | ✅ `rate-limit.mjs` ahora usa cache-buster y **gate de regresión** (exit 1 si no hay 429 o hay 5xx). |
 | ~~QA-2~~ ✅ | **Catálogo casi vacío** (2 cantos). Riesgo #1 de marcha blanca. | P1 | **RESUELTO 2026-08-23**: el catálogo tiene **52 cantos** (umbral del plan: 30). | ✅ `run-all.mjs` reporta el conteo de `search_songs sin filtros` en cada corrida. |
 | ~~QA-3~~ ✅ | **5 respuestas 4xx intermitentes** en `/api/sheets` bajo carga. | P3 | **RESUELTO 2026-08-23**: eran el recorrido secuencial del Drive rozando el tope de 10 s de la función (8,3 s medidos). Paralelizado a tandas de 8 → 2,5-3,4 s. La corrida del 23-ago dio **0×4xx y 0×5xx**. | ✅ `rate-limit.mjs` ya desglosa `other4xx` / `server5xx`. |
-| QA-4 | **Publicar no exigía rol** (`cantorals_insert`): cualquier cuenta publicaba un cantoral visible para todos. Comprobado en producción el 23-ago. | **P1** | Aplicar `supabase/migrations/20260823_publish_requires_choir.sql` en el SQL Editor. **Abierto hasta entonces.** | ✅ `tests/security/escalada.mjs` (rojo hoy, verde al aplicar) + §11 de `tests/sql/checks.sql`. |
+| ~~QA-4~~ ✅ | **Publicar no exigía rol** (`cantorals_insert`): cualquier cuenta publicaba un cantoral visible para todos. Comprobado en producción el 23-ago. | **P1** | **RESUELTO 2026-08-23**: migración `20260823_publish_requires_choir.sql` aplicada. Verificado en los dos sentidos: Pueblo fiel bloqueado (403), Coro publica igual que siempre (201). | ✅ `tests/security/escalada.mjs` (16/0) + §11 de `tests/sql/checks.sql`. |
 
 ---
 
@@ -119,8 +119,8 @@ Estado:    abierto / en review / cerrado
 **2026-08-23 (cierre de la versión 1)** — Build ✅ · Unitarias 294/294 ✅ · Integración 17/17 ✅ ·
 Smoke headless 7/7 ✅ · PWA 18 OK/1 WARN intencional ✅ · Estrés 0×5xx ✅ · Humo por pantalla
 (12 vistas × 3 roles + 9 subpaneles admin + 9 rutas públicas) sin errores de JS ✅ ·
-Accesibilidad 0 violaciones graves ✅ · Auto-ataque 15 bloqueos / **1 escalada (QA-4, abierta:
-falta aplicar la migración)** ⚠️ · Catálogo 52 cantos ✅.
+Accesibilidad 0 violaciones graves ✅ · Auto-ataque **16 bloqueos / 0 escaladas** ✅ (QA-4 cerrado
+con la migración aplicada) · Catálogo 52 cantos ✅.
 Detalle completo en `tests/INFORME.md`.
 
 ### Rutina nueva desde este cierre
