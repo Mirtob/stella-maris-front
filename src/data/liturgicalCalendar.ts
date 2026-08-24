@@ -1,3 +1,4 @@
+import { parseYmdLocal, getTodayLocal } from '../utils/dateLocal';
 export interface LiturgicalEvent {
   id: string;
   name: string;
@@ -657,22 +658,25 @@ export const liturgicalCalendar2026: LiturgicalEvent[] = [
 
 // Obtener solemnidades que requieren alertas (4 semanas antes)
 export function getUpcomingSolemnities(daysAhead: number = 28): LiturgicalEvent[] {
-  const today = new Date();
-  const futureDate = new Date();
-  futureDate.setDate(today.getDate() + daysAhead);
-  
+  // Medianoche local a ambos lados (ver utils/dateLocal): con `new Date('YYYY-MM-DD')`
+  // la fecha se parsea en UTC y en Chile cae el día anterior, así que la celebración
+  // de HOY se quedaba fuera de "las próximas".
+  const hoy = parseYmdLocal(getTodayLocal());
+  const hasta = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + daysAhead);
+
   return liturgicalCalendar2026.filter(event => {
-    const eventDate = new Date(event.date);
-    return event.importance === 'high' && 
-           eventDate >= today && 
-           eventDate <= futureDate;
+    const eventDate = parseYmdLocal(event.date);
+    return event.importance === 'high' &&
+           eventDate >= hoy &&
+           eventDate <= hasta;
   });
 }
 
 // Obtener eventos por mes
 export function getEventsByMonth(month: number, year: number = 2026): LiturgicalEvent[] {
   return liturgicalCalendar2026.filter(event => {
-    const eventDate = new Date(event.date);
+    // Local: en UTC, un evento del día 1 caía en el mes anterior.
+    const eventDate = parseYmdLocal(event.date);
     return eventDate.getMonth() === month && eventDate.getFullYear() === year;
   });
 }

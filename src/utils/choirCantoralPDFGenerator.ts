@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import { Song, InstrumentType } from '../types';
 import { isOrdinary } from './ordinary';
+import { formatYmdForDisplay } from './dateLocal';
 import { embedPartituraPages } from './embedPartitura';
 import { stripLyricsFormatting } from './lyricsFormat';
 import { pickVideoUrl } from './songVideo';
@@ -82,12 +83,8 @@ export const generateChoirCantoralPDF = async (
   pdf.setFontSize(16);
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(55, 65, 81); // gray-700
-  const formattedDate = new Date(date).toLocaleDateString('es-ES', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  // Local, no UTC (ver dateLocal): si no, la portada muestra el día anterior.
+  const formattedDate = formatYmdForDisplay(date);
   const dateWidth = pdf.getTextWidth(formattedDate);
   pdf.text(formattedDate, (pageWidth - dateWidth) / 2, yPosition);
   yPosition += 10;
@@ -482,7 +479,7 @@ export const generateChoirCantoralPDF = async (
   pdf.text(dateGenerated, (pageWidth - dateGeneratedWidth) / 2, yPosition);
 
   // Generar nombre de archivo y blob
-  const fileName = `Folleto_Cantoral_${new Date(date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')}.pdf`;
+  const fileName = `Folleto_Cantoral_${formatYmdForDisplay(date, { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')}.pdf`;
   const blob = pdf.output('blob');
 
   if (options.download !== false) {

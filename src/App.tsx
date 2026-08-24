@@ -98,7 +98,7 @@ import { syncPushParishes } from './services/push';
 import { PrelaunchDemo } from './components/survey/PrelaunchDemo';
 import { readSignupPrefs, clearSignupPrefs } from './config/signupPrefs';
 import { effectiveVoicePart } from './utils/sheetParts';
-import { getTodayLocal, addDaysLocal, isWithinInclusive } from './utils/dateLocal';
+import { getTodayLocal, addDaysLocal, isWithinInclusive, formatYmdForDisplay } from './utils/dateLocal';
 import { massTypeBadge } from './utils/massType';
 import { generateCantoralPDF } from './utils/cantoralPDFGenerator';
 import { isCurrentUserAdmin } from './services/admin';
@@ -1538,12 +1538,12 @@ function renderView(p: ViewProps): JSX.Element | null {
             if (p.effectiveRole === 'Coro') {
               p.navigate('main');
               toast.success(`Crear cantoral para: ${liturgicalDate}`, {
-                description: `Fecha: ${new Date(date).toLocaleDateString('es-ES')}`,
+                description: `Fecha: ${formatYmdForDisplay(date, { day: '2-digit', month: '2-digit', year: 'numeric' })}`,
                 duration: 5000,
               });
             } else {
               toast.info(liturgicalDate, {
-                description: new Date(date).toLocaleDateString('es-ES'),
+                description: formatYmdForDisplay(date, { day: '2-digit', month: '2-digit', year: 'numeric' }),
                 duration: 3000,
               });
             }

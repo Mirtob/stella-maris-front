@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { parseYmdLocal } from '../../utils/dateLocal';
 import { ArrowLeft, Play, ChevronDown, ChevronUp, X, Music, FileText, ExternalLink } from 'lucide-react';
 import { PublishedCantoral, Song, UserRole, InstrumentType } from '../../types';
 import { safeUrl } from '../../utils/safeUrl';
@@ -69,7 +70,8 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
   };
 
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
+    // Local, no UTC (ver utils/dateLocal): si no, muestra el día anterior.
+    const date = parseYmdLocal(dateStr);
     return date.toLocaleDateString('es-ES', { 
       weekday: 'long', 
       day: 'numeric',

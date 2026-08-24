@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Bell, X, Calendar, Church } from 'lucide-react';
 import { LiturgicalEvent, getUpcomingSolemnities } from '../../data/liturgicalCalendar';
+import { parseYmdLocal, formatYmdForDisplay, getTodayLocal } from '../../utils/dateLocal';
 
 export function SolemnityAlerts() {
   const [alerts, setAlerts] = useState<LiturgicalEvent[]>([]);
@@ -25,15 +26,15 @@ export function SolemnityAlerts() {
 
   const alert = visibleAlerts[0];
 
+  // Días completos entre HOY y la celebración, comparando medianoches locales: con
+  // `new Date(dateStr)` (que parsea en UTC) el "¡Hoy!" y el "Mañana" salían corridos.
   const getDaysUntil = (dateStr: string) => {
-    const diff = new Date(dateStr).getTime() - new Date().getTime();
-    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+    const hoy = parseYmdLocal(getTodayLocal()).getTime();
+    const dia = parseYmdLocal(dateStr).getTime();
+    return Math.round((dia - hoy) / (1000 * 60 * 60 * 24));
   };
 
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString('es-ES', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-    });
+  const formatDate = (dateStr: string) => formatYmdForDisplay(dateStr);
 
   const daysUntil = getDaysUntil(alert.date);
   const daysLabel = daysUntil === 0 ? '¡Hoy!' : daysUntil === 1 ? 'Mañana' : `En ${daysUntil} días`;

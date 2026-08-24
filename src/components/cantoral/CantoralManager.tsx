@@ -1,5 +1,6 @@
 import { BookOpen, Calendar, Edit2, Trash2, Share2, Eye } from 'lucide-react';
 import { useState } from 'react';
+import { parseYmdLocal } from '../../utils/dateLocal';
 import { PublishedCantoral } from '../../types';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 
@@ -31,7 +32,9 @@ export function CantoralManager({ cantorals, onEdit, onDelete, onShare }: Cantor
   );
 
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
+    // parseYmdLocal: 'YYYY-MM-DD' con new Date() se parsea en UTC y muestra el día
+    // anterior en Chile.
+    const date = parseYmdLocal(dateStr);
     return new Intl.DateTimeFormat('es-ES', {
       weekday: 'long',
       year: 'numeric',

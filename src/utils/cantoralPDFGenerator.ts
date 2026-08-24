@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import { PublishedCantoral, Song } from '../types';
 import { getCurrentLiturgicalSeason } from './liturgicalSeason';
+import { parseYmdLocal, formatYmdForDisplay } from './dateLocal';
 import { getChannelUrl } from '../services/youtube';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
 import { getGarland } from '../data/garlands';
@@ -180,7 +181,8 @@ interface LiturgicalColors {
 }
 
 function getColorsForDate(dateStr: string): LiturgicalColors {
-  const date = new Date(dateStr);
+  // Local, no UTC: en el borde de un tiempo litúrgico el color se iba al anterior.
+  const date = parseYmdLocal(dateStr);
   const season = getCurrentLiturgicalSeason(date);
 
   switch (season) {
@@ -458,10 +460,9 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   // ─── PORTADA ───
   // Guirnalda completa arriba y abajo; todo el texto centrado horizontal y
   // verticalmente en el espacio entre ambas.
-  const dateObj = new Date(cantoral.date);
-  const formattedDate = dateObj.toLocaleDateString('es-ES', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-  });
+  // parseYmdLocal, no new Date(): 'YYYY-MM-DD' se parsea como medianoche UTC y en
+  // Chile (UTC-4) eso cae el día anterior — la portada salía con la fecha de ayer.
+  const formattedDate = formatYmdForDisplay(cantoral.date);
 
   let coverTop = margin;
   let coverBottom = pageH - margin;

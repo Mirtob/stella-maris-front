@@ -1,6 +1,7 @@
 import { X, Download, Music } from 'lucide-react';
 import { Song, InstrumentType, PublishedCantoral } from '../../types';
 import { useState } from 'react';
+import { formatYmdForDisplay } from '../../utils/dateLocal';
 import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
 import { stripLyricsFormatting } from '../../utils/lyricsFormat';
 import { DEFAULT_GARLAND_ID } from '../../data/garlands';
@@ -160,12 +161,7 @@ export function CantoralPDFPreview({
               <div>
                 <span className="text-blue-200">Fecha:</span>
                 <span className="ml-2 font-bold">
-                  {new Date(date).toLocaleDateString('es-ES', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
+                  {formatYmdForDisplay(date)}
                 </span>
               </div>
               {celebration && (
