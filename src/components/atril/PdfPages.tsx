@@ -106,7 +106,11 @@ export function PdfPages({ proxyUrl, driveViewUrl, title, zoom, fromPage, toPage
           canvas.style.background = '#ffffff';
           const ctx = canvas.getContext('2d');
           if (!ctx) continue;
-          const dpr = window.devicePixelRatio || 1;
+          // Tope de 2: los teléfonos reportan 3 y a esa escala los lienzos triplican
+          // la memoria sin que se note en pantalla (el zoom del visor recupera detalle
+          // cuando hace falta). Ver PdfBlobViewer: a DPR 3 el visor se quedaba sin
+          // memoria y moría al segundo intento.
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
           canvas.width = viewport.width * dpr;
           canvas.height = viewport.height * dpr;
           canvas.style.width = viewport.width + 'px';

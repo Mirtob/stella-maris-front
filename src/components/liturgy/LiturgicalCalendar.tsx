@@ -109,6 +109,7 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false
   };
 
   const handleAddEvent = () => {
+    if (!puedeAgregarCelebracion) return;   // el botón no existe para el Pueblo fiel
     if (!newEventName || !newEventDay || !newEventMonth) {
       alert('Por favor completa todos los campos requeridos');
       return;
@@ -178,7 +179,15 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false
           : `Guardada para ${scope}.`)
           + (enableAlert ? ` Alerta ${alertDaysBefore} ${alertDaysBefore === 1 ? 'día' : 'días'} antes.` : ''),
       });
+    } else if (/row-level security|permission|42501|no autorizado|forbidden/i.test(r.error || '')) {
+      // Rechazo por permisos: NO tiene sentido dejarla "solo en esta sesión", porque no
+      // se va a guardar nunca. Se quita de la lista y se dice claro por qué.
+      setCustomEvents(prev => prev.filter(e => e.id !== finalEvent.id));
+      toast.error('No puedes agregar celebraciones', {
+        description: 'Solo el coro y el administrador de la parroquia pueden hacerlo.',
+      });
     } else {
+      // Falla de red o del servidor: se conserva en pantalla, pero avisando que no quedó guardada.
       toast.warning('Se agregó solo en esta sesión', {
         description: r.error || 'No se pudo guardar en el servidor.',
       });
@@ -186,6 +195,16 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false
   };
 
   const isPuebloFiel = userRole === 'Pueblo fiel';
+
+  /**
+   * Agregar celebraciones es cosa del coro y del administrador: son las que ve TODA la
+   * parroquia. El Pueblo fiel ni siquiera ve el botón.
+   *
+   * La base ya lo impide (política `cld_insert`, migración 20260823), pero sin este
+   * filtro el botón aparecía igual y, al fallar el guardado, la celebración se mostraba
+   * "solo en esta sesión": el usuario creía haberla agregado para todos.
+   */
+  const puedeAgregarCelebracion = isAdmin || userRole === 'Coro' || userRole === 'Admin';
 
   // ¿Hay un cantoral publicado para esta celebración? Coincide por nombre litúrgico
   // o por fecha (incluida la víspera, que se guarda el día anterior en I Vísperas).
@@ -265,17 +284,19 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false
           </div>
         </div>
 
-        {/* Add Event Button */}
-        <button
-          onClick={() => setShowAddEventModal(true)}
-          className="w-full p-6 mb-8 flex items-center justify-center gap-3 bg-gradient-to-br from-purple-600 to-purple-700 border-4 border-purple-500 rounded-3xl shadow-xl hover:shadow-2xl active:scale-98 transition-all"
-        >
-          <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={2.5} />
-          <span className="text-2xl font-bold text-white">Agregar celebración</span>
-        </button>
+        {/* Agregar celebración — solo coro y administrador */}
+        {puedeAgregarCelebracion && (
+          <button
+            onClick={() => setShowAddEventModal(true)}
+            className="w-full p-6 mb-8 flex items-center justify-center gap-3 bg-gradient-to-br from-purple-600 to-purple-700 border-4 border-purple-500 rounded-3xl shadow-xl hover:shadow-2xl active:scale-98 transition-all"
+          >
+            <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-white" strokeWidth={2.5} />
+            <span className="text-2xl font-bold text-white">Agregar celebración</span>
+          </button>
+        )}
 
         {/* Add Event Modal */}
-        {showAddEventModal && (
+        {puedeAgregarCelebracion && showAddEventModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowAddEventModal(false)}>
             <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-2xl border-4 border-purple-300 dark:border-purple-700 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
               {/* Header - Fixed */}
