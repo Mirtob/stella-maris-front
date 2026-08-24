@@ -200,11 +200,16 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false
    * Agregar celebraciones es cosa del coro y del administrador: son las que ve TODA la
    * parroquia. El Pueblo fiel ni siquiera ve el botón.
    *
+   * Manda el rol con el que se ENTRÓ (`userRole`), no `isAdmin`. `isAdmin` dice que la
+   * cuenta está en la tabla `admins`, no con qué rol se está actuando: incluyéndolo, el
+   * administrador que entraba como Pueblo fiel seguía viendo el botón. `isAdmin` decide
+   * otra cosa —si la celebración es global o de la parroquia—, y para eso se queda.
+   *
    * La base ya lo impide (política `cld_insert`, migración 20260823), pero sin este
    * filtro el botón aparecía igual y, al fallar el guardado, la celebración se mostraba
    * "solo en esta sesión": el usuario creía haberla agregado para todos.
    */
-  const puedeAgregarCelebracion = isAdmin || userRole === 'Coro' || userRole === 'Admin';
+  const puedeAgregarCelebracion = userRole === 'Coro' || userRole === 'Admin';
 
   // ¿Hay un cantoral publicado para esta celebración? Coincide por nombre litúrgico
   // o por fecha (incluida la víspera, que se guarda el día anterior en I Vísperas).
