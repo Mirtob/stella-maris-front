@@ -183,3 +183,30 @@ SELECT p.proname,
 FROM pg_proc p
 JOIN pg_namespace n ON n.oid = p.pronamespace
 WHERE n.nspname = 'public' AND p.proname = 'is_choir_or_admin';
+
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- 12. PUBLICAR SOLO EN LA PARROQUIA PROPIA (migración 20260824)
+-- ─────────────────────────────────────────────────────────────────────────
+-- Un coro de la parroquia A podía publicar un cantoral —o agregar una celebración—
+-- en la parroquia B. Ver 20260824_scope_por_parroquia y
+-- tests/security/parroquia-ajena.mjs.
+--
+-- Esperado: las tres políticas mencionan user_covers_parish.
+SELECT tablename, policyname, cmd, with_check
+FROM pg_policies
+WHERE schemaname = 'public'
+  AND policyname IN ('cantorals_insert', 'cantorals_update', 'cld_insert')
+ORDER BY tablename, policyname;
+
+-- Esperado: la función existe, SECURITY DEFINER y con search_path vacío.
+SELECT p.proname, p.prosecdef AS security_definer, p.proconfig AS config
+FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public' AND p.proname IN ('user_covers_parish', 'is_choir_or_admin');
+
+-- Cuántos perfiles NO declaran parroquia (a esos la política no los bloquea, a
+-- propósito). Si el número es alto, conviene revisar por qué no sincronizan.
+SELECT count(*) AS perfiles_sin_parroquia
+FROM user_profiles
+WHERE COALESCE(array_length(parishes, 1), 0) = 0
+  AND COALESCE(btrim(parish_name), '') = '';

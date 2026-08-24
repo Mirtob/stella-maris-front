@@ -108,3 +108,20 @@ suite corre con la `anon key` y solo cubre al visitante anónimo.
 Salida esperada: **16 bloqueos correctos, 0 escaladas**. Mientras la migración
 `20260823_publish_requires_choir.sql` no esté aplicada, "publicar un cantoral siendo
 Pueblo fiel" sale en rojo — es el hallazgo que originó la prueba.
+
+### Publicar fuera de la parroquia
+
+```bash
+node tests/security/parroquia-ajena.mjs
+```
+
+Crea una cuenta desechable de **Coro**, le declara una parroquia y comprueba las tres
+combinaciones: su parroquia y una capilla suya (debe poder) y una parroquia ajena (no
+debe poder), lo mismo para las celebraciones del calendario. Borra todo al terminar.
+
+Salida esperada con la migración `20260824_scope_por_parroquia` aplicada: **6 correctos,
+0 problemas**. Sin ella salen 2 en rojo — ese es el agujero que cierra.
+
+> Ojo con el alcance: la parroquia del perfil es **autodeclarada** (cada usuario edita su
+> propia fila). Esto frena el accidente y el abuso casual, no a alguien decidido: para eso
+> haría falta una membresía verificada por el párroco o el admin.

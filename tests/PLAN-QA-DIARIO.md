@@ -106,6 +106,7 @@ Estado:    abierto / en review / cerrado
 | ~~QA-1~~ ✅ | **Rate limit no enforce en serverless** — `const hits = new Map()` por instancia. | P2 | **RESUELTO 2026-06-17**: limiter distribuido vía RPC `api_rate_limit` (Supabase, migración `20260617`), fail-open al de memoria. Verificado en prod: 20×200 + 15×429. | ✅ `rate-limit.mjs` ahora usa cache-buster y **gate de regresión** (exit 1 si no hay 429 o hay 5xx). |
 | ~~QA-2~~ ✅ | **Catálogo casi vacío** (2 cantos). Riesgo #1 de marcha blanca. | P1 | **RESUELTO 2026-08-23**: el catálogo tiene **52 cantos** (umbral del plan: 30). | ✅ `run-all.mjs` reporta el conteo de `search_songs sin filtros` en cada corrida. |
 | ~~QA-3~~ ✅ | **5 respuestas 4xx intermitentes** en `/api/sheets` bajo carga. | P3 | **RESUELTO 2026-08-23**: eran el recorrido secuencial del Drive rozando el tope de 10 s de la función (8,3 s medidos). Paralelizado a tandas de 8 → 2,5-3,4 s. La corrida del 23-ago dio **0×4xx y 0×5xx**. | ✅ `rate-limit.mjs` ya desglosa `other4xx` / `server5xx`. |
+| QA-5 | **Publicar no estaba atado a la parroquia**: un coro de la parroquia A podía publicar un cantoral —o agregar una celebración— en la parroquia B. Reproducido el 24-ago. | P2 | Aplicar `supabase/migrations/20260824_scope_por_parroquia.sql`. **Abierto hasta entonces.** Ojo: la parroquia es autodeclarada, así que es una baranda, no un muro. | ✅ `tests/security/parroquia-ajena.mjs` (2 en rojo hoy, 6/0 al aplicar) + §12 de `tests/sql/checks.sql`. |
 | ~~QA-4~~ ✅ | **Publicar no exigía rol** (`cantorals_insert`): cualquier cuenta publicaba un cantoral visible para todos. Comprobado en producción el 23-ago. | **P1** | **RESUELTO 2026-08-23**: migración `20260823_publish_requires_choir.sql` aplicada. Verificado en los dos sentidos: Pueblo fiel bloqueado (403), Coro publica igual que siempre (201). | ✅ `tests/security/escalada.mjs` (16/0) + §11 de `tests/sql/checks.sql`. |
 
 ---
@@ -126,8 +127,9 @@ Detalle completo en `tests/INFORME.md`.
 ### Rutina nueva desde este cierre
 
 ```bash
-node tests/security/escalada.mjs   # opt-in: crea y borra una cuenta desechable
+node tests/security/escalada.mjs          # opt-in: crea y borra una cuenta desechable
+node tests/security/parroquia-ajena.mjs   # opt-in: publicar fuera de la parroquia
 ```
 
-Correrla **tras cualquier cambio de políticas RLS o de roles**. Es la única prueba que
+Correrlas **tras cualquier cambio de políticas RLS o de roles**. Es la única prueba que
 cubre las RLS con una sesión real; el resto de la suite solo ve lo que ve un anónimo.
