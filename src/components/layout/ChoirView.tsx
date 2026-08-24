@@ -14,6 +14,7 @@ import { PsalmFromBook } from '../songs/PsalmFromBook';
 import { getLiturgicalDateForDate, getPersistedCustomDates, setPersistedCustomDates } from '../../utils/liturgicalCalendar';
 import { getSundayCycle } from '../../utils/liturgicalCycle';
 import { resolvePsalm } from '../../data/psalmIndex';
+import { buildPsalmSong } from '../../utils/psalmSong';
 import { AddSolemnityModal } from '../liturgy/AddSolemnityModal';
 import { addCustomLiturgicalDate, toLiturgicalDate } from '../../services/liturgicalDates';
 import { computeUsage, resolveAnnualTarget } from '../../utils/previousUsage';
@@ -102,26 +103,11 @@ export function ChoirView({
 
   // Canto "Salmo" sintético: antífona (letra) + referencia a la página del libro. Viaja al
   // cantoral publicado, al PDF y al Modo Atril. `null` si no hay salmo para la fecha.
-  const psalmSong = useMemo<Song | null>(() => {
-    const cel = getLiturgicalDateForDate(massDate);
-    const p = cel ? resolvePsalm(getSundayCycle(massDate), cel) : null;
-    if (!p) return null;
-    const antiphon = psalmAntiphon.trim();
-    if (!antiphon && p.page == null) return null;
-    return {
-      id: `psalm-${massDate}`,
-      title: 'Salmo responsorial',
-      category: 'Salmo',
-      youtubeId: '',
-      duration: '',
-      lyrics: antiphon,
-      massMoment: 'salmo',
-      isLiturgical: true,
-      psalmBookId: p.driveFileId,
-      psalmPage: p.page,
-      psalmPageEnd: p.pageEnd,
-    } as Song;
-  }, [massDate, psalmAntiphon]);
+  // La regla vive en utils/psalmSong: basta con la antífona O con la página del libro.
+  const psalmSong = useMemo<Song | null>(
+    () => buildPsalmSong(massDate, psalmAntiphon),
+    [massDate, psalmAntiphon],
+  );
   // Tip contextual del constructor (F4): 1ª vez que se abre una categoría.
   const [showConstructorTip, setShowConstructorTip] = useState(false);
   const { songs: allSongs } = useSongs();

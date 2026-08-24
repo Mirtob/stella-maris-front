@@ -48,14 +48,46 @@ export function PsalmFromBook({ date, role, zoom = 1, antiphon, onAntiphonChange
   const celebration = getLiturgicalDateForDate(date);
   const psalm = celebration ? resolvePsalm(cycle, celebration) : null;
 
+  /** La caja de la antífona, que es lo único que el coro puede escribir a mano. */
+  const campoAntifona = (valor: string) => (
+    <div className="mb-3">
+      <label className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1 mb-1">
+        Antífona (respuesta del pueblo) · editable
+      </label>
+      <textarea
+        value={valor}
+        onChange={(e) => onAntiphonChange!(e.target.value)}
+        rows={2}
+        placeholder="Escribe la antífona del salmo…"
+        className="w-full px-3 py-2 rounded-xl border-2 border-amber-200 dark:border-amber-800 bg-white dark:bg-slate-900 text-brand-ink font-semibold focus:outline-none focus:border-amber-500 resize-y"
+      />
+    </div>
+  );
+
   if (!psalm) {
+    const aviso = celebration
+      ? <>Salmo del libro <strong>pendiente</strong> para «{celebration}» (Año {cycle}).</>
+      : <>El calendario no trae una celebración para esta fecha.</>;
+
+    // Aunque el índice no tenga el salmo, en el constructor SÍ se deja escribir la
+    // antífona: si no, el coro se quedaba sin salmo en el cantoral solo porque esa
+    // celebración todavía no está en el libro. Lo que escriba viaja igual al
+    // cantoral, al folleto y al Atril.
+    if (editable && onAntiphonChange) {
+      return (
+        <div className={box}>
+          {head}
+          <p className="text-sm text-brand-ink-soft mb-3">{aviso} Escríbela a mano y viajará al cantoral.</p>
+          {campoAntifona(antiphon ?? '')}
+        </div>
+      );
+    }
+
     return (
       <div className={box}>
         {head}
         <p className="text-sm text-brand-ink-soft">
-          {celebration
-            ? <>Salmo del libro <strong>pendiente</strong> para «{celebration}» (Año {cycle}). Se mostrará cuando esté en el índice.</>
-            : <>No hay salmo del libro para esta fecha.</>}
+          {aviso} {celebration ? 'Se mostrará cuando esté en el índice.' : ''}
         </p>
       </div>
     );
@@ -76,18 +108,7 @@ export function PsalmFromBook({ date, role, zoom = 1, antiphon, onAntiphonChange
 
       {/* Antífona (respuesta del pueblo). Editable en el constructor. */}
       {editable && onAntiphonChange ? (
-        <div className="mb-3">
-          <label className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1 mb-1">
-            Antífona (respuesta del pueblo) · editable
-          </label>
-          <textarea
-            value={shownAntiphon}
-            onChange={(e) => onAntiphonChange(e.target.value)}
-            rows={2}
-            placeholder="Escribe la antífona del salmo…"
-            className="w-full px-3 py-2 rounded-xl border-2 border-amber-200 dark:border-amber-800 bg-white dark:bg-slate-900 text-brand-ink font-semibold focus:outline-none focus:border-amber-500 resize-y"
-          />
-        </div>
+        campoAntifona(shownAntiphon)
       ) : shownAntiphon ? (
         <p className="text-brand-ink font-semibold leading-relaxed bg-white dark:bg-slate-900 rounded-xl p-3 border border-amber-200 dark:border-amber-800 mb-3">
           <span className="text-amber-700 dark:text-amber-300 font-bold mr-1">R/</span>{shownAntiphon}
