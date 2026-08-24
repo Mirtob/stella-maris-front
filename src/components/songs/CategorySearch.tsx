@@ -6,6 +6,7 @@ import { useSongs } from '../../hooks/useSongs';
 import { getCategoryColors } from '../../utils/colors';
 import { getCurrentLiturgicalColor, getLiturgicalCrossColor } from '../../utils/liturgicalColors';
 import { matchesSearch } from '../../utils/textSearch';
+import { songMatchesSeason } from '../../utils/songSeason';
 import { AddGloriaDialog } from '../cantoral/AddGloriaDialog';
 import { AddPadreNuestroDialog, PadreNuestroLanguage } from '../cantoral/AddPadreNuestroDialog';
 import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji } from '../../utils/specialLiturgicalDays';
@@ -112,30 +113,10 @@ export function CategorySearch({
     // Obtener todos los cantos de esta categoría (sin los Aleluyas si es Cuaresma)
     const categorySongs = songs.filter(song => songInCategory(song, category) && !hiddenByLent(song));
 
-    // Filtrar por tiempo litúrgico
-    const suggestedSongs = categorySongs.filter(song => {
-      // Considerar TODAS las etiquetas del canto (no solo la primera), porque un
-      // canto puede tener varias (p. ej. "Tiempo Ordinario" + "Virgen María").
-      const seasons = (song.liturgicalSeasons && song.liturgicalSeasons.length > 0
-        ? (song.liturgicalSeasons as string[])
-        : (song.liturgicalSeason ? song.liturgicalSeason.split(',') : [])
-      ).map(s => s.trim()).filter(Boolean);
-
-      // Sin etiquetas → sirve para todas las temporadas.
-      if (seasons.length === 0) return true;
-
-      // Mapear nombres de temporadas
-      const seasonMapping: Record<string, string[]> = {
-        'Adviento': ['Adviento'],
-        'Navidad': ['Navidad'],
-        'Cuaresma': ['Cuaresma'],
-        'Pascua': ['Pascua'],
-        'Tiempo Ordinario': ['Ordinario', 'Tiempo Ordinario'],
-      };
-      
-      const currentSeasonVariants = seasonMapping[currentSeason] || [currentSeason];
-      return seasons.some(s => currentSeasonVariants.includes(s));
-    });
+    // Filtrar por tiempo litúrgico. La regla vive en utils/songSeason y la comparte
+    // el carrusel de sugerencias: tenerla en dos sitios fue justo lo que las hizo
+    // divergir (el carrusel llegó a ofrecer cantos de Navidad en Tiempo Ordinario).
+    const suggestedSongs = categorySongs.filter(song => songMatchesSeason(song, currentSeason));
     
     // Excluir cantos que ya están en el cantoral
     const availableSongs = suggestedSongs.filter(song => !isInCantoral(song.id));

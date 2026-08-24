@@ -3,8 +3,8 @@ import { Sparkles, ChevronLeft, ChevronRight, Play, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Song, InstrumentType } from '../../types';
 import { useSongs } from '../../hooks/useSongs';
-import { getCurrentLiturgicalSeason } from '../../utils/liturgicalSeason';
-import { matchesSearch } from '../../utils/textSearch';
+import { getCurrentLiturgicalSeason, isAlleluiaTitleInLent } from '../../utils/liturgicalSeason';
+import { songMatchesSeason } from '../../utils/songSeason';
 import { filterByInstrument } from '../../utils/instrument';
 
 interface LiturgicalSuggestionsProps {
@@ -79,81 +79,28 @@ export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = 
   // Obtener sugerencias según el tiempo litúrgico actual
   const liturgicalSeason = getCurrentLiturgicalSeason();
 
-  // Filtrar cantos que tengan tags relacionados con el tiempo litúrgico
-  // Y que NO estén ya agregados al cantoral.
-  // matchesSearch hace la búsqueda insensible a acentos.
+  /**
+   * Cantos que sirven para el tiempo litúrgico de hoy y que todavía no están en el
+   * cantoral.
+   *
+   * Antes esto filtraba por `song.tags` (un campo de YouTube que el catálogo real no
+   * llena) y, al no encontrar nada, RELLENABA con los primeros cantos del catálogo:
+   * por eso en Tiempo Ordinario salían cantos de Navidad. Ahora usa la misma regla
+   * que el buscador por categoría (utils/songSeason) y, si no hay cuatro, muestra
+   * menos: es preferible una sugerencia de menos que una fuera de tiempo.
+   */
   const getSuggestedSongs = (): Song[] => {
-    let filteredSongs: Song[] = [];
+    // En Cuaresma no se canta el Aleluya: no ofrecer cantos que lo anuncian.
+    const hoy = new Date();
+    const fueraDeTiempo = (song: Song) =>
+      song.category === 'Aleluya' && isAlleluiaTitleInLent(song.title, hoy);
 
-    switch (liturgicalSeason) {
-      case 'Adviento':
-        filteredSongs = realSongs.filter(song =>
-          song.tags?.includes('Adviento') ||
-          song.tags?.includes('Preparación') ||
-          song.tags?.includes('Espera') ||
-          matchesSearch(song.title, 'adviento') ||
-          matchesSearch(song.title, 'prepara')
-        );
-        break;
-      
-      case 'Navidad':
-        filteredSongs = realSongs.filter(song =>
-          song.tags?.includes('Navidad') ||
-          song.tags?.includes('Nacimiento') ||
-          matchesSearch(song.title, 'navidad') ||
-          matchesSearch(song.title, 'nació')
-        );
-        break;
-
-      case 'Cuaresma':
-        filteredSongs = realSongs.filter(song =>
-          song.tags?.includes('Cuaresma') ||
-          song.tags?.includes('Penitencia') ||
-          song.tags?.includes('Conversión') ||
-          matchesSearch(song.title, 'cuaresma') ||
-          matchesSearch(song.title, 'perdón')
-        );
-        break;
-
-      case 'Pascua':
-        filteredSongs = realSongs.filter(song =>
-          song.tags?.includes('Pascua') ||
-          song.tags?.includes('Resurrección') ||
-          song.tags?.includes('Aleluya') ||
-          matchesSearch(song.title, 'pascua') ||
-          matchesSearch(song.title, 'resucitó') ||
-          matchesSearch(song.title, 'aleluya')
-        );
-        break;
-      
-      case 'Tiempo Ordinario':
-      default:
-        // Para Tiempo Ordinario, mostrar los más populares o recientes
-        filteredSongs = realSongs.filter(song =>
-          song.tags?.includes('Ordinario') || 
-          song.tags?.includes('Popular')
-        );
-        break;
-    }
-    
-    // **IMPORTANTE: Filtrar cantos que YA estén en el cantoral**
-    // Si un canto ya fue elegido para alguna parte de la misa, no aparecerá como sugerencia
-    filteredSongs = filteredSongs.filter(song => 
-      !cantoral.some(cantoralSong => cantoralSong.id === song.id)
-    );
-    
-    // Si no hay suficientes cantos con tags, tomar los primeros cantos disponibles (que no estén en el cantoral)
-    if (filteredSongs.length < 4) {
-      const remainingSongs = realSongs
-        .filter(song => !cantoral.some(cs => cs.id === song.id))
-        .slice(0, 4 - filteredSongs.length);
-      filteredSongs = [...filteredSongs, ...remainingSongs];
-    }
-    
-    // Limitar a 4 sugerencias únicas
-    return filteredSongs.slice(0, 4).filter((song, index, self) => 
-      index === self.findIndex(s => s.id === song.id)
-    );
+    return realSongs
+      .filter(song =>
+        songMatchesSeason(song, liturgicalSeason)
+        && !fueraDeTiempo(song)
+        && !cantoral.some(c => c.id === song.id))
+      .slice(0, 4);
   };
 
   const suggestedSongs = getSuggestedSongs();
