@@ -210,3 +210,26 @@ SELECT count(*) AS perfiles_sin_parroquia
 FROM user_profiles
 WHERE COALESCE(array_length(parishes, 1), 0) = 0
   AND COALESCE(btrim(parish_name), '') = '';
+
+-- ── ¿La nueva política dejaría a algún coro fuera? ───────────────────────────
+-- El riesgo de atar publicar a la parroquia es el falso positivo: un coro real cuya
+-- parroquia declarada en el perfil NO coincida exactamente con el nombre con el que
+-- publica quedaría bloqueado. Esta consulta lo lista ANTES de que pase un domingo.
+--
+-- Esperado: 0 filas. Si aparece alguna, corregir el perfil de esa persona
+-- (Ajustes → parroquia) o su fila en user_profiles.
+SELECT p.email,
+       p.role,
+       c.parish_name AS publico_en,
+       p.parish_name AS declara,
+       p.parishes    AS declara_lista
+FROM published_cantorals c
+JOIN user_profiles p ON p.id = c.created_by
+WHERE COALESCE(array_length(p.parishes, 1), 0) > 0
+   OR COALESCE(btrim(p.parish_name), '') <> ''
+GROUP BY p.email, p.role, c.parish_name, p.parish_name, p.parishes
+HAVING NOT bool_or(
+     c.parish_name = p.parish_name
+  OR c.parish_name = ANY (COALESCE(p.parishes, ARRAY[]::TEXT[]))
+  OR left(c.parish_name, length(p.parish_name) + 3) = p.parish_name || ' · '
+);
