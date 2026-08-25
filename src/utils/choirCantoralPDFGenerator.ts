@@ -89,14 +89,18 @@ export const generateChoirCantoralPDF = async (
   pdf.text(formattedDate, (pageWidth - dateWidth) / 2, yPosition);
   yPosition += 10;
 
-  // Celebración litúrgica
+  // Celebración litúrgica. Se parte en varias líneas si hace falta: un nombre largo
+  // ("Solemnidad de …, patronos de la parroquia") se salía de la hoja por los dos lados.
   if (celebration) {
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(147, 51, 234); // purple-600
-    const celebrationWidth = pdf.getTextWidth(celebration);
-    pdf.text(celebration, (pageWidth - celebrationWidth) / 2, yPosition);
-    yPosition += 10;
+    const lineas = pdf.splitTextToSize(celebration, pageWidth - 40) as string[];
+    for (const linea of lineas) {
+      pdf.text(linea, (pageWidth - pdf.getTextWidth(linea)) / 2, yPosition);
+      yPosition += 7;
+    }
+    yPosition += 3;
   }
 
   // Horario

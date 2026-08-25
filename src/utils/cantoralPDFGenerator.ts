@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import { PublishedCantoral, Song } from '../types';
 import { getCurrentLiturgicalSeason } from './liturgicalSeason';
 import { parseYmdLocal, formatYmdForDisplay } from './dateLocal';
+import { recortarConElipsis } from './pdfText';
 import { getChannelUrl } from '../services/youtube';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
 import { getGarland } from '../data/garlands';
@@ -399,6 +400,10 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   const garlandImg = await loadImage(garlandStyle.src);
   const garland = garlandImg ? clipWhite(garlandImg) : null;
 
+  /** Recorta con «…» midiendo con la fuente y el tamaño puestos ahora (ver utils/pdfText). */
+  const recortarAlAncho = (texto: string, maxW: number): string =>
+    recortarConElipsis(texto, maxW, (t) => pdf.getTextWidth(t));
+
   // Header en cada página
   const addPageHeader = () => {
     if (logo) {
@@ -412,7 +417,11 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     }
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(120, 120, 120);
-    pdf.text(cleanText(cantoral.liturgicalDate), pageW - margin, 10, { align: 'right' });
+    // El encabezado es UNA línea sobre la regla: una celebración de nombre largo
+    // ("Solemnidad de …, patronos de la parroquia") se salía de la hoja y se metía
+    // encima del logo. Aquí se recorta; en la portada, en cambio, se parte en varias.
+    pdf.text(recortarAlAncho(cleanText(cantoral.liturgicalDate), pageW - margin * 2 - 18),
+      pageW - margin, 10, { align: 'right' });
     pdf.setDrawColor(220, 220, 220);
     pdf.setLineWidth(0.3);
     pdf.line(margin, 13, pageW - margin, 13);
@@ -486,9 +495,21 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     { t: cantoral.choirName ? `Coro: ${cleanText(cantoral.choirName)}` : '', s: 11, b: false, c: [80, 80, 80], h: 8 },
   ] as CoverLine[]).filter(l => l.t.trim() !== '');
 
-  const totalH = coverLines.reduce((s, l) => s + adv(l.h), 0);
+  // Cada línea se parte en las que hagan falta para no salirse de la hoja: el nombre
+  // de una celebración puede ser largo ("Solemnidad de …, patronos de la parroquia") y
+  // antes se escribía de corrido, pasándose de los dos bordes. Se mide con la fuente y
+  // el tamaño de esa línea, que es lo que decide dónde corta.
+  const anchoUtil = pageW - margin * 2;
+  const lineasPortada = coverLines.flatMap((l) => {
+    pdf.setFont('helvetica', l.b ? 'bold' : 'normal');
+    pdf.setFontSize(l.s);
+    const partes = pdf.splitTextToSize(l.t, anchoUtil) as string[];
+    return partes.map(t => ({ ...l, t }));
+  });
+
+  const totalH = lineasPortada.reduce((s, l) => s + adv(l.h), 0);
   let cy = coverTop + Math.max(0, (coverBottom - coverTop - totalH) / 2);
-  for (const line of coverLines) {
+  for (const line of lineasPortada) {
     pdf.setFont('helvetica', line.b ? 'bold' : 'normal');
     pdf.setFontSize(line.s);
     pdf.setTextColor(...line.c);
