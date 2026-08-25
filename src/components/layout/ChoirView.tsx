@@ -33,7 +33,7 @@ interface ChoirViewProps {
   isAdmin?: boolean;   // Admin verificado (aunque actúe como Coro): sus celebraciones son globales
   cantoral: Song[];
   onAddToCantoral: (song: Song) => void;
-  onRemoveFromCantoral: (songId: string) => void;
+  onRemoveFromCantoral: (songId: string, category?: string) => void;
   /** El 2.º argumento es el instrumento con el que se toca ESTA Misa: decide qué
    *  versión del video (órgano/guitarra) se abre. */
   onPlaySong: (song: Song, instrument?: InstrumentType) => void;
@@ -180,7 +180,7 @@ export function ChoirView({
       const m = /^Salmo AT (\d+)$/.exec(s.category);
       return m ? Number(m[1]) > n : false;
     });
-    dropped.forEach((s) => onRemoveFromCantoral(s.id));
+    dropped.forEach((s) => onRemoveFromCantoral(s.id, s.category));
     setAtReadings(n);
     if (dropped.length > 0) {
       toast.info(

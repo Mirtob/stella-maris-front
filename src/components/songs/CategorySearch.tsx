@@ -7,6 +7,7 @@ import { getCategoryColors } from '../../utils/colors';
 import { getCurrentLiturgicalColor, getLiturgicalCrossColor } from '../../utils/liturgicalColors';
 import { matchesSearch } from '../../utils/textSearch';
 import { songMatchesSeason } from '../../utils/songSeason';
+import { estaEnParte, partesUsadas as usadoEnPartes, ordenarSugerencias } from '../../utils/cantoralParts';
 import { AddGloriaDialog } from '../cantoral/AddGloriaDialog';
 import { AddPadreNuestroDialog, PadreNuestroLanguage } from '../cantoral/AddPadreNuestroDialog';
 import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji } from '../../utils/specialLiturgicalDays';
@@ -27,7 +28,7 @@ interface CategorySearchProps {
   onToggle: () => void;
   onClose: () => void;
   onAddToCantoral: (song: Song) => void;
-  onRemoveFromCantoral: (songId: string) => void;
+  onRemoveFromCantoral: (songId: string, category?: string) => void;
   cantoral: Song[];
   onPlaySong: (song: Song) => void;
   preferredInstrument?: InstrumentType;
@@ -75,10 +76,20 @@ export function CategorySearch({
   // guardados en el momento 'aleluya'.
   const categoryMoment = categoryToMoment(category);
 
-  // **FUNCIÓN AUXILIAR**: Verificar si un canto está en el cantoral
-  const isInCantoral = (songId: string) => {
-    return cantoral.some(s => s.id === songId);
-  };
+  /**
+   * ¿Este canto ya está usado EN ESTA PARTE de la Misa?
+   *
+   * Antes bastaba con estar en el cantoral, en cualquier parte: un canto etiquetado
+   * para Entrada, Comunión y Salida se bloqueaba entero al usarlo una vez. Ahora se
+   * bloquea solo aquí y sigue disponible en sus otras partes, hasta usarlo en todas.
+   */
+  const isInCantoral = (songId: string) => estaEnParte(cantoral, songId, category);
+
+  /** Partes de la Misa donde este canto YA se está usando (para avisarlo en la ficha). */
+  const partesUsadas = (songId: string) => usadoEnPartes(cantoral, songId, category);
+
+  /** Cantos agregados a ESTA parte (para el contador del encabezado). */
+  const añadidosAquí = cantoral.filter(s => s.category === category).length;
 
   const isMassPart = (category: string) => {
     return ['Kyrie', 'Gloria', 'Santo', 'Cordero de Dios'].includes(category);
@@ -118,14 +129,17 @@ export function CategorySearch({
     // divergir (el carrusel llegó a ofrecer cantos de Navidad en Tiempo Ordinario).
     const suggestedSongs = categorySongs.filter(song => songMatchesSeason(song, currentSeason));
     
-    // Excluir cantos que ya están en el cantoral
-    const availableSongs = suggestedSongs.filter(song => !isInCantoral(song.id));
-
     // Solo los del instrumento con el que se toca esta Misa
-    const forInstrument = filterByInstrument(availableSongs, preferredInstrument);
+    const forInstrument = filterByInstrument(suggestedSongs, preferredInstrument);
+
+    // Quita los ya usados EN ESTA parte (en otras siguen disponibles) y ofrece
+    // primero el canto cuya parte PRINCIPAL es esta: un canto de Entrada que además
+    // sirve para Comunión se sugiere antes en Entrada, y solo si ya se usó ahí
+    // asoma en las demás (regla en utils/cantoralParts).
+    const ordenados = ordenarSugerencias(forInstrument, category, categoryMoment, cantoral);
 
     // Retornar solo los primeros 3 como sugerencias
-    return forInstrument.slice(0, 3);
+    return ordenados.slice(0, 3);
   };
 
   const suggestedSongs = getSuggestedSongs();
@@ -193,7 +207,7 @@ export function CategorySearch({
     if (category !== 'Comunión') {
       // Remover cualquier canto existente de esta categoría
       const existingInCategory = cantoral.filter(s => s.category === category);
-      existingInCategory.forEach(s => onRemoveFromCantoral(s.id));
+      existingInCategory.forEach(s => onRemoveFromCantoral(s.id, category));
     }
 
     // Caso especial: Kyrie
@@ -345,8 +359,8 @@ export function CategorySearch({
     // Remover Santo y Cordero existentes PRIMERO
     const existingSanto = cantoral.filter(s => s.category === 'Santo');
     const existingCordero = cantoral.filter(s => s.category === 'Cordero de Dios');
-    existingSanto.forEach(s => onRemoveFromCantoral(s.id));
-    existingCordero.forEach(s => onRemoveFromCantoral(s.id));
+    existingSanto.forEach(s => onRemoveFromCantoral(s.id, 'Santo'));
+    existingCordero.forEach(s => onRemoveFromCantoral(s.id, 'Cordero de Dios'));
 
     // Guardar referencias locales antes de cerrar el modal
     const kyrieToAdd = pendingKyrie;
@@ -381,7 +395,7 @@ export function CategorySearch({
   const handleSelectGloria = (gloria: Song) => {
     // Remover Gloria existente si lo hay
     const existingGloria = cantoral.filter(s => s.category === 'Gloria');
-    existingGloria.forEach(s => onRemoveFromCantoral(s.id));
+    existingGloria.forEach(s => onRemoveFromCantoral(s.id, 'Gloria'));
 
     addAsPart(gloria, 'Gloria');
 
@@ -450,9 +464,11 @@ export function CategorySearch({
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {filteredSongs.length > 0 && cantoral.filter(s => categorySongs.some(cs => cs.id === s.id)).length > 0 && (
+          {/* Cuenta solo lo agregado A ESTA parte: un canto que sirve para varias
+              (Entrada y Comunión, p. ej.) se cuenta donde se usó, no en todas. */}
+          {añadidosAquí > 0 && (
             <span className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-bold border border-white/30">
-              {cantoral.filter(s => categorySongs.some(cs => cs.id === s.id)).length} añadido{cantoral.filter(s => categorySongs.some(cs => cs.id === s.id)).length !== 1 ? 's' : ''}
+              {añadidosAquí} añadido{añadidosAquí !== 1 ? 's' : ''}
             </span>
           )}
           {isExpanded ? (
@@ -467,7 +483,7 @@ export function CategorySearch({
       {cantoral.filter(s => s.category === category).length > 0 && (
         <div className="px-3 sm:px-4 py-3 bg-green-50/80 dark:bg-green-900/20 border-t-2 border-green-200 dark:border-green-800 space-y-2">
           {cantoral.filter(s => s.category === category).map((s) => (
-            <div key={s.id} className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-xl p-2.5 border border-green-200 dark:border-green-700">
+            <div key={`${s.id}::${s.category}`} className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-xl p-2.5 border border-green-200 dark:border-green-700">
               <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" strokeWidth={2.5} />
               <span className="flex-1 min-w-0 text-sm sm:text-base font-bold text-brand-ink truncate">{s.title}</span>
               <button
@@ -478,7 +494,7 @@ export function CategorySearch({
                 <Play className="w-4 h-4" fill="currentColor" />
               </button>
               <button
-                onClick={() => onRemoveFromCantoral(s.id)}
+                onClick={() => onRemoveFromCantoral(s.id, s.category)}
                 aria-label={`Quitar ${s.title}`}
                 className="w-9 h-9 flex-shrink-0 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg flex items-center justify-center active:scale-95 transition-all"
               >
@@ -667,6 +683,15 @@ export function CategorySearch({
                         <div className="flex items-center gap-1.5 bg-green-500/20 backdrop-blur-sm rounded-full pl-2 pr-3 py-1 border-2 border-green-500" aria-label="Agregado al cantoral">
                           <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" strokeWidth={2.5} />
                           <span className="text-xs font-bold text-green-700 dark:text-green-300">Agregado</span>
+                        </div>
+                      )}
+                      {/* Ya se usa en otra parte de la Misa: se puede usar aquí igual,
+                          pero conviene saberlo antes de repetirlo. */}
+                      {!isInCantoral(song.id) && partesUsadas(song.id).length > 0 && (
+                        <div className="flex items-center gap-1 bg-amber-500/20 rounded-full px-2.5 py-1 border border-amber-500" title={`Ya está en: ${partesUsadas(song.id).join(', ')}`}>
+                          <span className="text-[11px] font-bold text-amber-800 dark:text-amber-200">
+                            Ya en {partesUsadas(song.id).join(' y ')}
+                          </span>
                         </div>
                       )}
                     </div>

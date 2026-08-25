@@ -247,7 +247,7 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
                     </div>
                     <div className="space-y-3">
                       {songs.map((song) => (
-                        <div key={song.id}>
+                        <div key={`${song.id}::${song.category}`}>
                           <h3 className="text-lg font-bold text-brand-ink-soft mb-1">
                             {song.title}
                             {song.author && (

@@ -108,7 +108,7 @@ export function CantoralPreview({ cantoral, onRemove, onPlaySong }: CantoralPrev
             <div className="space-y-2">
               {groupedSongs[category].map((song) => (
                 <div
-                  key={song.id}
+                  key={`${song.id}::${song.category}`}
                   className="bg-white/60 dark:bg-white/5 rounded-lg p-3 border border-white/60 dark:border-white/10 group hover:bg-white/80 dark:hover:bg-white/10 transition-all"
                 >
                   <div className="flex items-start gap-3">

@@ -362,7 +362,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                   <div className="space-y-2">
                     {songsInCategory.map((song) => (
                       <button
-                        key={song.id}
+                        key={`${song.id}::${song.category}`}
                         onClick={() => onPlaySong(song)}
                         className="w-full bg-white/40 dark:bg-white/10 backdrop-blur-sm border-2 rounded-xl p-4 flex items-center justify-between active:scale-98 transition-all shadow-md hover:shadow-lg"
                         style={{ borderColor: colors.border }}

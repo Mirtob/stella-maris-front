@@ -853,7 +853,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {PDF_SIZES.map((s) => (
                     <button
-                      key={s.id}
+                      key={`${s.id}::${s.category}`}
                       type="button"
                       onClick={() => setPdfSize(s.id)}
                       aria-pressed={pdfSize === s.id}

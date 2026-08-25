@@ -630,7 +630,7 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, onClo
                                   .filter(song => song.category === category)
                                   .map((song) => (
                                     <div
-                                      key={song.id}
+                                      key={`${song.id}::${song.category}`}
                                       className="bg-white dark:bg-gray-800 rounded-xl p-4 border-2 border-gray-200 dark:border-gray-600 transition-colors"
                                     >
                                       <div className="flex items-start gap-3">

@@ -431,7 +431,7 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
               </div>
               {orderedSongs.map((s, i) => (
                 <button
-                  key={s.id || i}
+                  key={`${s.id}::${s.category}::${i}`}
                   onClick={() => jumpTo(i)}
                   className={`w-full text-left px-3 py-3 border-b border-white/5 transition-colors ${i === activeIndex ? 'bg-amber-500/20 border-l-4 border-l-amber-400' : 'hover:bg-white/5'}`}
                 >
@@ -474,7 +474,7 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
 
               return (
                 <section
-                  key={s.id || i}
+                  key={`${s.id}::${s.category}::${i}`}
                   data-idx={i}
                   ref={(el) => { sectionRefs.current[i] = el; }}
                   className="scroll-mt-0 border-b-4 border-slate-800"

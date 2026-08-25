@@ -202,7 +202,7 @@ export function CantoralPDFPreview({
               <div className="space-y-4">
                 {groupedSongs[category].map((song, index) => (
                   <div
-                    key={song.id}
+                    key={`${song.id}::${song.category}`}
                     className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4 border border-gray-300 dark:border-gray-600 transition-colors"
                   >
                     {/* Título del canto */}

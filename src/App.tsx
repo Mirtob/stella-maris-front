@@ -752,12 +752,27 @@ function AppContent() {
     // cantorales de la nueva parroquia en la vista actual (p. ej. Pueblo fiel en 'main').
   };
 
+  /**
+   * Un canto en el cantoral se identifica por CANTO + PARTE, no solo por el canto.
+   *
+   * Un mismo canto puede estar etiquetado para varias partes de la Misa (Entrada,
+   * Comunión, Salida). Antes el cantoral guardaba por id, así que usarlo en Entrada lo
+   * dejaba fuera de las demás; ahora se bloquea solo en la parte donde ya se usó y
+   * sigue disponible en las otras.
+   */
   const handleAddToCantoral = (song: Song) => {
-    setCantoral(prev => prev.find(s => s.id === song.id) ? prev : [...prev, song]);
+    setCantoral(prev =>
+      prev.find(s => s.id === song.id && s.category === song.category)
+        ? prev
+        : [...prev, song]);
   };
 
-  const handleRemoveFromCantoral = (songId: string) => {
-    setCantoral(prev => prev.filter(s => s.id !== songId));
+  /** Sin `category` quita el canto de todas las partes (comportamiento antiguo). */
+  const handleRemoveFromCantoral = (songId: string, category?: string) => {
+    setCantoral(prev => prev.filter(s =>
+      category !== undefined
+        ? !(s.id === songId && s.category === category)
+        : s.id !== songId));
   };
 
   const handlePlaySong = (song: Song, instrument?: InstrumentType) => {
