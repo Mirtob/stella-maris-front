@@ -9,6 +9,7 @@ import { matchesSearch } from '../../utils/textSearch';
 import { isPrincipalAdminEmail } from '../../config/admin';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { ParishPicker } from './ParishPicker';
+import { idsDuplicados } from '../../utils/profileMerge';
 
 type ProfileRow = UserProfile & { createdAt?: string; lastSeenAt?: string };
 
@@ -74,6 +75,9 @@ export function ProfileManager() {
       setCurrentEmail(data.session?.user?.email ?? null);
     }).catch(() => setCurrentEmail(null));
   }, []);
+
+  // Fichas que parecen de la misma persona (se marcan en la tarjeta).
+  const duplicados = idsDuplicados(users);
 
   const filteredUsers = users.filter(user => {
     const matchesText =
@@ -290,20 +294,49 @@ export function ProfileManager() {
                       );
                     })()}
                   </div>
-                  <div className={`flex items-center gap-1 px-2 py-1 rounded-lg border-2 flex-shrink-0 ${getRoleBadgeColor(user.role)}`}>
-                    {getRoleIcon(user.role)}
-                    <span className="text-xs sm:text-sm font-bold">{user.role}</span>
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg border-2 ${getRoleBadgeColor(user.role)}`}>
+                      {getRoleIcon(user.role)}
+                      <span className="text-xs sm:text-sm font-bold">{user.role}</span>
+                    </div>
+                    {duplicados.has(user.id) && (
+                      <span
+                        title="Hay otra ficha con el mismo nombre o correo de recuperación. Revisa si es la misma persona registrada dos veces."
+                        className="px-2 py-0.5 rounded-full text-[11px] font-bold border bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700"
+                      >
+                        ⚠️ Posible duplicado
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 {/* Additional Info */}
                 <div className="space-y-1.5 mb-3 text-sm">
-                  {user.parishName && (
-                    <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                      <span>⛪</span>
-                      <span className="truncate" title={user.parishName}>{user.parishName}</span>
-                    </div>
-                  )}
+                  {/* TODAS las parroquias del usuario, no solo la principal: un mismo
+                      fiel puede estar en dos, y mostrando una sola parecía que el
+                      registro se había perdido. */}
+                  {(() => {
+                    const parroquias = Array.from(new Set([
+                      ...(user.parishes ?? []),
+                      user.parishName,
+                    ].filter((p): p is string => !!p)));
+                    if (parroquias.length === 0) return null;
+                    return (
+                      <div className="flex items-start gap-2 text-gray-700 dark:text-gray-300">
+                        <span className="flex-shrink-0">⛪</span>
+                        <div className="min-w-0 flex flex-col gap-0.5">
+                          {parroquias.map(p => (
+                            <span key={p} className="truncate" title={p}>{p}</span>
+                          ))}
+                          {parroquias.length > 1 && (
+                            <span className="text-[11px] font-bold text-blue-700 dark:text-blue-300">
+                              En {parroquias.length} parroquias
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   {user.instrument && (
                     <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                       <span>

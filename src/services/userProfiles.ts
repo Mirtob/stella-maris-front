@@ -130,8 +130,17 @@ export async function adminUpdateUserProfile(
 export async function updateUserRole(id: string, role: UserProfile['role']): Promise<{ ok: boolean; error?: string }> {
   try {
     const sb = getSupabaseClient();
-    const { error } = await sb.from(TABLE).update({ role }).eq('id', id);
+    // `.select()` no es decorativo: sin él, PostgREST devuelve 200 aunque la RLS
+    // (o el trigger que reserva los cambios de rol al admin principal) no haya
+    // dejado tocar ninguna fila. La app cantaba "Rol actualizado" y no cambiaba nada.
+    const { data, error } = await sb.from(TABLE).update({ role }).eq('id', id).select('id, role');
     if (error) return { ok: false, error: error.message };
+    if (!data || data.length === 0) {
+      return { ok: false, error: 'No se modificó ninguna ficha: revisa que seas el administrador principal.' };
+    }
+    if (data[0].role !== role) {
+      return { ok: false, error: `La base dejó el rol en "${data[0].role}".` };
+    }
     return { ok: true };
   } catch (err: any) {
     return { ok: false, error: err?.message };

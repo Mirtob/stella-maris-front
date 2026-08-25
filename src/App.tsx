@@ -99,6 +99,7 @@ import { PrelaunchDemo } from './components/survey/PrelaunchDemo';
 import { readSignupPrefs, clearSignupPrefs } from './config/signupPrefs';
 import { effectiveVoicePart } from './utils/sheetParts';
 import { getTodayLocal, addDaysLocal, isWithinInclusive, formatYmdForDisplay } from './utils/dateLocal';
+import { mergeProfile } from './utils/profileMerge';
 import { massTypeBadge } from './utils/massType';
 import { generateCantoralPDF } from './utils/cantoralPDFGenerator';
 import { isCurrentUserAdmin } from './services/admin';
@@ -535,12 +536,25 @@ function AppContent() {
 
       if (storedSession) {
         if (storedProfile) {
-          setUserProfile(storedProfile);
+          // El perfil PERMANENTE vive en Supabase, no en este teléfono. Antes se usaba
+          // el local y encima se subía tal cual: si el admin cambiaba el rol o las
+          // parroquias, el dispositivo ni se enteraba y, al abrir la app, PISABA el
+          // cambio en la base con su copia vieja. Ahora manda el servidor y el
+          // dispositivo solo aporta lo de la sesión (ver mergeProfile).
+          const remote = await getCurrentUserProfile(storedProfile.id).catch(() => null);
+          const profile = remote ? mergeProfile(remote, storedProfile) : storedProfile;
+          if (remote && remote.role !== storedProfile.role) {
+            toast.info(`Tu perfil ahora es ${remote.role}`, {
+              description: 'Lo cambió un administrador de la parroquia.',
+            });
+          }
+          setUserProfile(profile);
+          saveUserProfile(profile);
           // Refresh last_seen_at + datos en Supabase. Fire-and-forget.
-          upsertCurrentUserProfile(storedProfile).catch(() => undefined);
+          upsertCurrentUserProfile(profile).catch(() => undefined);
           // Sentry: contexto sin PII — solo rol y ID anónimo (UUID Supabase).
-          setSentryUserContext(storedProfile.role, storedProfile.id);
-          toast.success(`¡Bienvenido ${storedProfile.name}! 🎵`);
+          setSentryUserContext(profile.role, profile.id);
+          toast.success(`¡Bienvenido ${profile.name}! 🎵`);
 
           // Pick up a pending cantoral from a previous QR scan that required login.
           // sanitizeCantoralId() guards against tampered localStorage values.
@@ -555,9 +569,10 @@ function AppContent() {
           localStorage.removeItem(PENDING_CANTORAL_KEY);
 
           // Admin no necesita parroquia/selector — entra directo.
-          // Para el resto: si no hay activeRole, mostrar selector.
-          const isAdminProfile = storedProfile.role === 'Admin';
-          if (!isAdminProfile && !storedProfile.activeRole) {
+          // Para el resto: si no hay activeRole, mostrar selector. Si el admin le
+          // cambió el rol, mergeProfile ya borró el activeRole viejo → vuelve a elegir.
+          const isAdminProfile = profile.role === 'Admin';
+          if (!isAdminProfile && !profile.activeRole) {
             setShowParishSelector(true);
           }
           setRoute({ screen: 'app', view: 'main' });
