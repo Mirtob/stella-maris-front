@@ -1,6 +1,8 @@
-import { X, Home, BookOpen, GraduationCap, ShieldCheck, Music, LogOut, User, Settings, List, History, Calendar, Church, Book, Cross, ChevronDown, Check, Heart } from 'lucide-react';
+import { X, Home, BookOpen, GraduationCap, ShieldCheck, Music, LogOut, User, Settings, List, History, Calendar, Church, Book, Cross, ChevronDown, Check, Heart, Compass } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { UserProfile, UserRole } from '../../types';
+import { esVisita, parroquiasDelPerfil } from '../../utils/parishVisit';
+import { formatActiveParishLabel } from '../../utils/parish';
 import { IconButton } from '../common/IconButton';
 import logoStellaMaris from 'figma:asset/logo-stella-maris.webp';
 
@@ -18,11 +20,13 @@ interface SidebarProps {
   effectiveRoleOverride?: UserRole;
   /** Cambio rápido de parroquia activa (Coro / Pueblo fiel con varias parroquias). */
   onSwitchParish?: (parish: string) => void;
+  /** Abre el buscador de parroquias para ir de visita a una ajena al perfil. */
+  onVisitParish?: () => void;
   /** Reinicia y vuelve a mostrar el tutorial del rol actual. */
   onReplayTour?: () => void;
 }
 
-export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate, onLogout, onOpenSettings, effectiveRoleOverride, onSwitchParish, onReplayTour }: SidebarProps) {
+export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate, onLogout, onOpenSettings, effectiveRoleOverride, onSwitchParish, onVisitParish, onReplayTour }: SidebarProps) {
   const [parishMenuOpen, setParishMenuOpen] = useState(false);
   // Use the session-level role (activeRole) so the menu reflects what the user
   // chose today, not their permanent registration role. App can override this
@@ -30,11 +34,13 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
   const effectiveRole = effectiveRoleOverride || userProfile.activeRole || userProfile.role;
   const activeParish = userProfile.activeParishName || userProfile.parishName;
 
-  const userParishes: string[] = (userProfile.parishes && userProfile.parishes.length > 0)
-    ? userProfile.parishes
-    : (userProfile.parishName ? [userProfile.parishName] : []);
-  // Admin no usa parroquia (CRUD global). Solo Coro/Pueblo fiel con >1 conmutan.
-  const canSwitchParish = !!onSwitchParish && effectiveRole !== 'Admin' && userParishes.length > 1;
+  const userParishes: string[] = parroquiasDelPerfil(userProfile);
+  const deVisita = esVisita(userProfile);
+  // Admin no usa parroquia (CRUD global). El conmutador se abre para quien tiene
+  // varias parroquias Y para quien puede ir de visita a una ajena (aunque tenga una).
+  const puedeVisitar = !!onVisitParish && effectiveRole !== 'Admin';
+  const canSwitchParish = effectiveRole !== 'Admin'
+    && ((!!onSwitchParish && userParishes.length > 1) || puedeVisitar);
 
   const handleNavigate = (view: string) => {
     onNavigate(view);
@@ -163,13 +169,15 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
                       aria-expanded={parishMenuOpen}
                       className="w-full flex items-center gap-2 text-sm text-left rounded-lg px-1 py-1 hover:bg-white/10 transition-colors"
                     >
-                      <span className="text-base">⛪</span>
+                      <span className="text-base">{deVisita ? '🧭' : '⛪'}</span>
                       {/* Q20 — title nativo muestra el nombre completo al hover/long-press. */}
-                      <span className="font-medium truncate flex-1" title={activeParish}>{activeParish}</span>
+                      <span className="font-medium truncate flex-1" title={activeParish}>{formatActiveParishLabel(activeParish)}</span>
                       <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${parishMenuOpen ? 'rotate-180' : ''}`} />
                     </button>
                     {!parishMenuOpen && (
-                      <p className="text-[11px] text-white/60 mt-0.5 ml-7">Toca para cambiar de parroquia</p>
+                      <p className="text-[11px] text-white/60 mt-0.5 ml-7">
+                        {deVisita ? 'Estás de visita · toca para volver' : 'Toca para cambiar de parroquia'}
+                      </p>
                     )}
                     {parishMenuOpen && (
                       <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">
@@ -181,7 +189,7 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
                               onClick={() => {
                                 setParishMenuOpen(false);
                                 if (!isActive) {
-                                  onSwitchParish!(parish);
+                                  onSwitchParish?.(parish);
                                   onClose();
                                 }
                               }}
@@ -196,6 +204,20 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
                             </button>
                           );
                         })}
+
+                        {/* Ir a una parroquia que no es del perfil: un viaje, la Misa
+                            Crismal en la catedral, la parroquia de la familia. */}
+                        {puedeVisitar && (
+                          <button
+                            onClick={() => { setParishMenuOpen(false); onClose(); onVisitParish!(); }}
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left bg-white/5 text-blue-50 hover:bg-white/15 border border-dashed border-white/30 transition-colors"
+                          >
+                            <Compass className="w-4 h-4 flex-shrink-0" />
+                            <span className="flex-1">
+                              {deVisita ? 'Ir a otra parroquia' : 'Voy a otra parroquia (visita)'}
+                            </span>
+                          </button>
+                        )}
                       </div>
                     )}
                   </>
@@ -227,8 +249,10 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
                       : 'bg-white/40 dark:bg-white/10 text-brand-strong dark:text-blue-50 hover:bg-white/60 dark:hover:bg-white/20 border-2 border-white/50 dark:border-white/15 hover:border-blue-300'
                 }`}
                 style={{
-                  animationDelay: `${index * 0.05}s`,
-                  animation: 'slideIn 0.3s ease-out forwards',
+                  // El retardo va DENTRO del shorthand: puesto aparte, `animation` lo
+                  // pisaba (los ítems entraban todos a la vez) y React avisaba por
+                  // mezclar shorthand y no-shorthand en cada rerender.
+                  animation: `slideIn 0.3s ease-out ${index * 0.05}s forwards`,
                   opacity: 0
                 }}
               >

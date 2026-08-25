@@ -18,6 +18,8 @@ export function mergeProfile(remoto: UserProfile, local: UserProfile): UserProfi
     // Elección de sesión: vive solo en el dispositivo.
     activeParishName: local.activeParishName,
     lastSessionParish: local.lastSessionParish,
+    // Las parroquias visitadas son historial de este teléfono, no del perfil.
+    recentVisits: local.recentVisits,
     // Si el admin cambió el rol, la elección anterior ya no vale: que vuelva a elegir
     // (un Pueblo fiel ascendido a Coro tiene que poder entrar como Coro).
     activeRole: cambioElRol ? undefined : local.activeRole,

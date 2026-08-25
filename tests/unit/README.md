@@ -44,9 +44,12 @@ node tests/output/pdftexto.mjs
 
 npx esbuild tests/unit/cantoral-partes.test.ts --bundle --platform=node --format=esm --outfile=tests/output/cantoral-partes.mjs
 node tests/output/cantoral-partes.mjs
+
+npx esbuild tests/unit/visita-parroquia.test.ts --bundle --platform=node --format=esm --outfile=tests/output/visita.mjs
+node tests/output/visita.mjs
 ```
 
-Salida esperada: `45`, `37`, `109`, `33`, `51`, `19`, `27`, `38`, `19`, `16`, `12` y `23` ok, con 0 fallas. Si alguna falla, imprime el
+Salida esperada: `45`, `37`, `109`, `33`, `51`, `19`, `27`, `38`, `19`, `16`, `12`, `23` y `25` ok, con 0 fallas. Si alguna falla, imprime el
 caso con lo esperado y lo obtenido.
 
 > Ojo al importar en una prueba: `services/supabaseClient.ts` **crea el cliente al importarse**

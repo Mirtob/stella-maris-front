@@ -24,6 +24,9 @@ interface PublishedCantoralsProps {
   /** Voz del corista, para elegir su partitura en cantos polifonicos. */
   userVoicePart?: string;
   userParishName?: string; // Parroquia del usuario para filtrar
+  /** La parroquia activa es una VISITA (no es del perfil). Cambia los textos:
+   *  aquí no es "tu coro" ni "tu parroquia". Ver utils/parishVisit. */
+  visiting?: boolean;
   /** Editar un cantoral publicado (solo Coro/Admin). */
   onEdit?: (cantoralId: string) => void;
   /** Clonar: usar este cantoral como base para una Misa nueva (solo Coro/Admin). */
@@ -49,7 +52,7 @@ const secondaryActionBtn =
 const iconManageBtn =
   'w-11 h-11 flex-shrink-0 bg-white/60 dark:bg-white/5 text-blue-900 dark:text-blue-100 border border-blue-200/70 dark:border-white/10 rounded-lg flex items-center justify-center active:scale-95 transition-all';
 
-export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onListen, userRole, userInstrument, userVoicePart, userParishName, onEdit, onClone, onDelete, onShare }: PublishedCantoralsProps) {
+export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onListen, userRole, userInstrument, userVoicePart, userParishName, visiting = false, onEdit, onClone, onDelete, onShare }: PublishedCantoralsProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewingOrdinary, setViewingOrdinary] = useState<string | null>(null);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
@@ -521,7 +524,9 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                   : 'No hay cantorales publicados'}
               </h2>
               <p className="text-xs text-brand-ink-soft mb-3">
-                {userRole === 'Pueblo fiel' ? (
+                {visiting ? (
+                  <>Esta parroquia todavía no publica sus Misas en Stella Maris,<br />o aún no hay ninguna próxima</>
+                ) : userRole === 'Pueblo fiel' ? (
                   <>Las misas de las próximas dos semanas<br />aparecerán aquí cuando tu coro las publique</>
                 ) : (
                   <>Los cantorales que publiquen los coros de tu parroquia<br />aparecerán aquí para que puedas verlos</>
@@ -529,7 +534,9 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
               </p>
               {userParishName && (
                 <div className="mt-6 bg-blue-100/60 dark:bg-blue-900/40 rounded-xl p-4 border-2 border-blue-300 dark:border-blue-700">
-                  <p className="text-sm text-blue-950 dark:text-blue-100 font-semibold mb-2">📍 Tu parroquia:</p>
+                  <p className="text-sm text-blue-950 dark:text-blue-100 font-semibold mb-2">
+                    {visiting ? '🧭 De visita en:' : '📍 Tu parroquia:'}
+                  </p>
                   <p className="text-base text-blue-900 dark:text-blue-200">
                     {parseParishChapel(userParishName).parish}
                   </p>
@@ -634,9 +641,11 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                 Icon={Calendar}
                 title="No hay cantorales vigentes"
                 description={
-                  userRole === 'Pueblo fiel'
-                    ? 'Cuando tu coro publique una misa próxima, aparecerá aquí.'
-                    : 'Arma y publica un cantoral desde el Inicio para que aparezca aquí.'
+                  visiting
+                    ? 'Cuando el coro de esta parroquia publique una Misa próxima, aparecerá aquí.'
+                    : userRole === 'Pueblo fiel'
+                      ? 'Cuando tu coro publique una misa próxima, aparecerá aquí.'
+                      : 'Arma y publica un cantoral desde el Inicio para que aparezca aquí.'
                 }
               />
             )}

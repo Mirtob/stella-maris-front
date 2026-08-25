@@ -56,6 +56,8 @@ const LiturgicalCalendar = lazyWithReload(() => import('./components/liturgy/Lit
 const SheetMusicLibrary = lazyWithReload(() => import('./components/songs/SheetMusicLibrary').then(m => ({ default: m.SheetMusicLibrary })));
 import { LoadingScreen } from './components/common/LoadingScreen';
 import { SelectActiveParishDialog } from './components/profile/SelectActiveParishDialog';
+import { VisitParishDialog } from './components/profile/VisitParishDialog';
+import { VisitBanner } from './components/profile/VisitBanner';
 import { RoleGuard } from './components/profile/RoleGuard';
 import { CantoralQRDialog } from './components/cantoral/CantoralQRDialog';
 import { MultiPublishSummary } from './components/cantoral/MultiPublishSummary';
@@ -100,6 +102,8 @@ import { readSignupPrefs, clearSignupPrefs } from './config/signupPrefs';
 import { effectiveVoicePart } from './utils/sheetParts';
 import { getTodayLocal, addDaysLocal, isWithinInclusive, formatYmdForDisplay } from './utils/dateLocal';
 import { mergeProfile } from './utils/profileMerge';
+import { splitActiveParish, formatActiveParishLabel } from './utils/parish';
+import { esVisita, parroquiasDelPerfil, recordarVisita } from './utils/parishVisit';
 import { massTypeBadge } from './utils/massType';
 import { generateCantoralPDF } from './utils/cantoralPDFGenerator';
 import { isCurrentUserAdmin } from './services/admin';
@@ -289,6 +293,8 @@ function AppContent() {
   const [chapelsByParish, setChapelsByParish] = useState<Record<string, { id: string; name: string }[]>>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showParishSelector, setShowParishSelector] = useState(false);
+  // Buscador de parroquia "de visita", abierto desde el menú lateral.
+  const [showVisitDialog, setShowVisitDialog] = useState(false);
   // Fuerza re-render al cerrar el tour (para que hasSeenTour() se reevalúe).
   const [, setTourTick] = useState(0);
   const [qrCantoral, setQrCantoral] = useState<PublishedCantoral | null>(null);
@@ -429,10 +435,12 @@ function AppContent() {
   // del suscriptor (para los avisos de "nuevo cantoral") cuando cambia el perfil.
   useEffect(() => {
     if (route.screen !== 'app' || !userProfile) return;
+    // Solo las parroquias PROPIAS. Una parroquia de visita no debe dejar al usuario
+    // suscrito a sus avisos de "nuevo cantoral" para siempre por haber pasado un domingo.
     const parishes = Array.from(new Set([
       ...(userProfile.parishes ?? []),
       userProfile.parishName,
-      userProfile.activeParishName,
+      esVisita(userProfile) ? undefined : userProfile.activeParishName,
     ].filter((x): x is string => !!x)));
     // Rol PERMANENTE (no el de vista temporal): el recordatorio "publica el cantoral"
     // debe seguir llegando a un Coro/Admin aunque esté actuando como Pueblo fiel.
@@ -716,12 +724,19 @@ function AppContent() {
   const handleSelectActiveParish = (parish: string, role: UserRole) => {
     if (!userProfile) return;
     // Save both the active session state AND remember this selection for next time
+    const propias = parroquiasDelPerfil(userProfile);
+    const visita = !!parish
+      && !propias.some(p => splitActiveParish(p).parishFull === splitActiveParish(parish).parishFull);
     const updated: UserProfile = {
       ...userProfile,
       activeParishName: parish,
       activeRole: role,
       lastSessionRole: role,
-      lastSessionParish: parish,
+      // La visita no reemplaza a la parroquia de casa como sugerencia de la próxima sesión.
+      lastSessionParish: visita ? userProfile.lastSessionParish : parish,
+      recentVisits: visita
+        ? recordarVisita(userProfile.recentVisits, parish, propias)
+        : userProfile.recentVisits,
     };
     setUserProfile(updated);
     saveUserProfile(updated);
@@ -739,15 +754,24 @@ function AppContent() {
   const handleSwitchActiveParish = (parish: string) => {
     if (!userProfile) return;
     if (parish === (userProfile.activeParishName || userProfile.parishName)) return;
+    const propias = parroquiasDelPerfil(userProfile);
+    const visita = !propias.some(p => splitActiveParish(p).parishFull === splitActiveParish(parish).parishFull);
     const updated: UserProfile = {
       ...userProfile,
       activeParishName: parish,
-      lastSessionParish: parish,
+      // Una visita no se recuerda como "la parroquia de la sesión anterior": al volver
+      // a entrar, lo natural es proponer la propia, no la de aquel viaje.
+      lastSessionParish: visita ? userProfile.lastSessionParish : parish,
+      recentVisits: visita
+        ? recordarVisita(userProfile.recentVisits, parish, propias)
+        : userProfile.recentVisits,
     };
     setUserProfile(updated);
     saveUserProfile(updated);
     upsertCurrentUserProfile(updated).catch(() => undefined);
-    toast.success(`Parroquia: ${parish}`);
+    toast.success(visita
+      ? `De visita en ${formatActiveParishLabel(parish)}`
+      : `Parroquia: ${formatActiveParishLabel(parish)}`);
     // No hace falta navegar: el effect de carga depende de userProfile y recarga los
     // cantorales de la nueva parroquia en la vista actual (p. ej. Pueblo fiel en 'main').
   };
@@ -1241,9 +1265,24 @@ function AppContent() {
   if (effectiveRole === 'Coro' && userProfile.role === 'Pueblo fiel') {
     effectiveRole = 'Pueblo fiel';
   }
+  // De visita en otra parroquia se participa como Pueblo fiel: publicar y editar
+  // cantorales es del coro de casa (y la RLS lo bloquea igual), así que ni siquiera
+  // se ofrecen los botones. Ver utils/parishVisit.
+  const deVisita = esVisita(userProfile);
+  if (deVisita) effectiveRole = 'Pueblo fiel';
 
   return (
     <div>
+      {showVisitDialog && (
+        <VisitParishDialog
+          recentVisits={userProfile.recentVisits}
+          chapelsByParish={chapelsByParish}
+          ownParish={deVisita ? parroquiasDelPerfil(userProfile)[0] : undefined}
+          onSelect={(parish) => { setShowVisitDialog(false); handleSwitchActiveParish(parish); }}
+          onClose={() => setShowVisitDialog(false)}
+        />
+      )}
+
       {showParishSelector && (
         <SelectActiveParishDialog
           parishes={userProfile.parishes ?? []}
@@ -1296,6 +1335,7 @@ function AppContent() {
         onOpenSettings={handleOpenSettings}
         effectiveRoleOverride={effectiveRole}
         onSwitchParish={handleSwitchActiveParish}
+        onVisitParish={() => setShowVisitDialog(true)}
         onReplayTour={() => {
           resetTour(effectiveRole);
           navigate('main');
@@ -1328,6 +1368,16 @@ function AppContent() {
             userProfile.activeParishName,
           ].filter((x): x is string => !!x)))}
           role={userProfile.role}
+        />
+      )}
+
+      {/* De visita en otra parroquia: decirlo siempre y dejar la vuelta a un toque.
+          Sin esto, ver el cantoral de otra parroquia se confunde con un error. */}
+      {deVisita && (
+        <VisitBanner
+          parish={userProfile.activeParishName ?? ''}
+          role={userProfile.role}
+          onReturn={() => handleSwitchActiveParish(parroquiasDelPerfil(userProfile)[0] ?? '')}
         />
       )}
 
@@ -1440,6 +1490,7 @@ function renderView(p: ViewProps): JSX.Element | null {
             userInstrument={p.userProfile.instrument}
             userVoicePart={effectiveVoicePart(p.userProfile.voicePart, p.userProfile.instrument)}
             userParishName={p.activeParishName}
+            visiting={esVisita(p.userProfile)}
             // El Pueblo fiel puede compartir el QR (no editar/eliminar).
             onShare={p.onShareCantoral}
           />
@@ -1473,6 +1524,7 @@ function renderView(p: ViewProps): JSX.Element | null {
           userRole={p.effectiveRole}
           userInstrument={p.userProfile.instrument}
           userParishName={p.activeParishName}
+          visiting={esVisita(p.userProfile)}
           // Editar/Eliminar solo Coro/Admin; Compartir (QR) lo puede usar también el Pueblo fiel.
           // "Usar como base" (clonar) va SOLO en el Historial (los publicados duran poco).
           onEdit={p.effectiveRole !== 'Pueblo fiel' ? p.onEditCantoral : undefined}

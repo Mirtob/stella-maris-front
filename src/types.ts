@@ -149,6 +149,9 @@ export interface UserProfile {
   activeRole?: UserRole; // Rol efectivo en esta sesión (Coro puede participar como Pueblo fiel en otra parroquia)
   lastSessionRole?: UserRole;  // Rol elegido en la sesión anterior — persiste tras logout para sugerirlo en el próximo dialog
   lastSessionParish?: string;  // Parroquia elegida en la sesión anterior — persiste tras logout
+  /** Últimas parroquias visitadas (ajenas al perfil), para volver en un toque.
+   *  Vive solo en el dispositivo: no se sube a `user_profiles`. Ver utils/parishVisit.ts. */
+  recentVisits?: string[];
   recoveryEmail?: string;      // T13 — Email alternativo para recuperación de cuenta. Solo lo usa el admin en flujos de recovery.
 }
 
