@@ -9,6 +9,7 @@ import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551
 import { getGarland } from '../data/garlands';
 import { getPdfFont, getPdfScale } from '../data/pdfStyle';
 import { renderPdfToImages, imposeBooklet } from './atrilBookletPDF';
+import { repartirEnColumnas, type Pieza } from './pdfColumns';
 
 interface PDFGeneratorOptions {
   cantoral: PublishedCantoral;
@@ -129,8 +130,8 @@ function drawSideGarland(
   // Tallo central
   pdf.line(xOuter, midY, xInner, midY);
   // Pares de hojas a lo largo del tallo (motivo de laurel), inclinadas hacia el título
-  const leaves = 4;
-  const lf = 2.2; // largo de cada hoja
+  const leaves = 3;
+  const lf = 1.8; // largo de cada hoja
   for (let k = 1; k <= leaves; k++) {
     const t = k / (leaves + 1);
     const x = xOuter + span * t;
@@ -375,7 +376,11 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   // va más grande ("Grande"). Interceptamos setFontSize/setFont de esta instancia para
   // escalar y forzar la familia elegida sin tener que tocar cada llamada del documento.
   const fontFamily = getPdfFont(cantoral.pdfFont).jsFont;
-  const scale = getPdfScale(cantoral.pdfSize);
+  // `scale` NO es constante: el cuerpo del folleto se rearma con una escala menor si
+  // con la elegida no cabría en una sola hoja (ver "ajuste a una hoja" más abajo). La
+  // portada se dibuja antes, siempre con la escala elegida por quien publica.
+  const escalaBase = getPdfScale(cantoral.pdfSize);
+  let scale = escalaBase;
   const adv = (n: number) => n * scale; // escala los avances verticales (interlineado)
   const _setFontSize = pdf.setFontSize.bind(pdf);
   (pdf as any).setFontSize = (size: number) => _setFontSize(size * scale);
@@ -384,10 +389,13 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
 
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
-  const margin = 18;
-  const contentW = pageW - margin * 2;
+  const margin = 18;              // portada
+  // El cuerpo aprovecha más hoja que la portada: dos columnas de borde a borde. El
+  // encabezado y el pie (que solo existen en las hojas de cantos) usan este mismo
+  // margen para que las reglas acompañen a las columnas.
+  const margenCuerpo = 13;
+  const contentW = pageW - margenCuerpo * 2;
 
-  let y = margin;
   let pageNum = 1;
 
   // Logo redondo de la app para el encabezado (si falla la carga, se usa el texto).
@@ -408,62 +416,36 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   const addPageHeader = () => {
     if (logo) {
       const d = 12; // diámetro: redondo y un poco más grande
-      pdf.addImage(logo.dataUrl, 'PNG', margin, 1, d, d);
+      pdf.addImage(logo.dataUrl, 'PNG', margenCuerpo, 1, d, d);
     } else {
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(10);
       pdf.setTextColor(60, 60, 60);
-      pdf.text('Stella Maris', margin, 10);
+      pdf.text('Stella Maris', margenCuerpo, 10);
     }
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(120, 120, 120);
     // El encabezado es UNA línea sobre la regla: una celebración de nombre largo
     // ("Solemnidad de …, patronos de la parroquia") se salía de la hoja y se metía
     // encima del logo. Aquí se recorta; en la portada, en cambio, se parte en varias.
-    pdf.text(recortarAlAncho(cleanText(cantoral.liturgicalDate), pageW - margin * 2 - 18),
-      pageW - margin, 10, { align: 'right' });
+    pdf.text(recortarAlAncho(cleanText(cantoral.liturgicalDate), pageW - margenCuerpo * 2 - 18),
+      pageW - margenCuerpo, 10, { align: 'right' });
     pdf.setDrawColor(220, 220, 220);
     pdf.setLineWidth(0.3);
-    pdf.line(margin, 13, pageW - margin, 13);
+    pdf.line(margenCuerpo, 13, pageW - margenCuerpo, 13);
   };
 
   // Footer en cada página
   const addPageFooter = () => {
     pdf.setDrawColor(220, 220, 220);
     pdf.setLineWidth(0.3);
-    pdf.line(margin, pageH - 12, pageW - margin, pageH - 12);
+    pdf.line(margenCuerpo, pageH - 12, pageW - margenCuerpo, pageH - 12);
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(9);
     pdf.setTextColor(140, 140, 140);
     const parish = cleanText(cantoral.parishName);
-    pdf.text(parish, margin, pageH - 7);
-    pdf.text(`Pág. ${pageNum}`, pageW - margin, pageH - 7, { align: 'right' });
-  };
-
-  // Saltar de página si no entra el contenido
-  const needPage = (required: number) => {
-    if (y + required > pageH - 18) {
-      addPageFooter();
-      pdf.addPage();
-      pageNum++;
-      addPageHeader();
-      y = 22;
-    }
-  };
-
-  // Renderizar bloque de texto con wrap automático
-  const renderTextBlock = (text: string, fontSize: number, lineHeight: number, options: { bold?: boolean; color?: [number, number, number]; align?: 'left' | 'center' } = {}) => {
-    pdf.setFont('helvetica', options.bold ? 'bold' : 'normal');
-    pdf.setFontSize(fontSize);
-    pdf.setTextColor(...(options.color ?? [30, 30, 30]));
-
-    const lines = pdf.splitTextToSize(text, contentW) as string[];
-    for (const line of lines) {
-      needPage(lineHeight);
-      const x = options.align === 'center' ? pageW / 2 : margin;
-      pdf.text(line, x, y, options.align === 'center' ? { align: 'center' } : undefined);
-      y += lineHeight;
-    }
+    pdf.text(parish, margenCuerpo, pageH - 7);
+    pdf.text(`Pág. ${pageNum}`, pageW - margenCuerpo, pageH - 7, { align: 'right' });
   };
 
   // ─── PORTADA ───
@@ -517,11 +499,17 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     cy += adv(line.h);
   }
 
-  // ─── CANTOS POR CATEGORÍA ───
-  pdf.addPage();
-  pageNum++;
-  addPageHeader();
-  y = 22;
+  // ─── CUERPO DEL FOLLETO: DOS COLUMNAS CONTINUAS ───
+  //
+  // Estructura tomada del folleto impreso de la parroquia: la portada va sola y todo
+  // lo demás cae en un flujo de dos columnas que llena la hoja de arriba abajo —se
+  // baja por la columna izquierda y se sigue por la derecha, como un periódico—, de
+  // modo que el cantoral entero quepa en una sola hoja.
+  //
+  // Antes las dos columnas eran POR CANTO (estrofa 1 izquierda, 2 derecha, y la fila
+  // avanzaba según la más alta): cada estrofa corta dejaba un hueco al lado, los
+  // títulos y las guirnaldas ocupaban el ancho completo, y un cantoral normal se iba
+  // a tres o cuatro hojas.
 
   // Agrupar cantos por parte de la misa
   const byCategory = cantoral.songs.reduce((acc, song) => {
@@ -534,25 +522,24 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     (a, b) => CATEGORY_ORDER.indexOf(a) - CATEGORY_ORDER.indexOf(b)
   );
 
-  // Espacio simétrico (arriba y abajo) de cada guirnalda, para que quede SIEMPRE
-  // centrada entre el canto anterior y el siguiente que separa.
-  const bandGap = adv(8);
-
   // Marcas de sección dentro de la letra ("Coro:", "Estrofa 2", etc.).
   const SECTION_RE = /^(Coro|Estrofa\s*\d*|Puente|Final|Refrán|Recitativo)\s*:?\s*$/i;
 
-  // Alto utilizable de una página (de y=22 tras el encabezado al límite inferior).
-  const usableH = (pageH - 18) - 22;
+  // Geometría de la caja de texto: entre la regla del encabezado y la del pie.
+  const colTop = 17;
+  const colBottom = pageH - 14;
+  const gutter = 7;                              // canal entre columnas
+  const colW = (contentW - gutter) / 2;
+  const colX = [margenCuerpo, margenCuerpo + colW + gutter];
 
-  // ── Maquetación a DOS COLUMNAS ──
-  // Las estrofas se reparten en dos columnas para aprovechar el ancho de la hoja:
-  // estrofa 1 arriba-izquierda, 2 arriba-derecha, 3 debajo de la 1, 4 debajo de la 2…
-  // (columna izquierda = estrofas impares, derecha = pares). Cada fila avanza según la
-  // estrofa más alta del par, así ambas columnas quedan alineadas. Las proporciones se
-  // mantienen porque el ancho de columna se deriva del ancho de contenido escalado.
-  const gutter = adv(8); // separación entre columnas
-  const colW = (contentW - gutter) / 2; // ancho de cada columna
-  const colX = [margin, margin + colW + gutter]; // x de inicio de cada columna
+  // QR del canal: se arma antes para poder incluirlo en la medición (así nunca es él
+  // quien obliga a abrir una hoja más).
+  let qrDataUrl: string | null = null;
+  try {
+    qrDataUrl = await QRCode.toDataURL(getChannelUrl(), { margin: 0, width: 240 });
+  } catch {
+    // Si falla la generación del QR, el folleto se entrega igual.
+  }
 
   // Parte la letra en estrofas: bloques de líneas separados por líneas en blanco.
   const parseStanzas = (lyrics: string): string[][] => {
@@ -567,232 +554,267 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     return stanzas;
   };
 
-  // Mide el alto (mm, ya escalado) de una estrofa a un ancho de columna dado, con el
-  // mismo criterio con que se dibuja (marcas de sección + wrap del texto).
-  const measureStanza = (stanza: string[], width: number): number => {
-    let h = 0;
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10.5);
-    for (const raw of stanza) {
-      const line = raw.replace(/\s+$/, '');
-      if (SECTION_RE.test(line.trim())) { h += adv(6); continue; }
-      if (hasLyricFormatting(line)) {
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(10.5);
-        const { runs } = parseRuns(line);
-        h += wrapStyledRuns(pdf, runs, width).length * adv(5.5);
-        continue;
-      }
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10.5);
-      const wrapped = pdf.splitTextToSize(line, width) as string[];
-      h += wrapped.length * adv(5.5);
-    }
-    return h;
-  };
-
-  // Dibuja una estrofa en una columna (x fijo, desde startY), justificada al ancho de
-  // columna; la última línea de cada wrap y las de una sola línea quedan a la izquierda.
-  // No hace saltos de página: el salto se decide por FILA (par de estrofas) más arriba.
-  const drawStanzaAt = (stanza: string[], x: number, startY: number, width: number) => {
-    let yy = startY;
-    for (const raw of stanza) {
-      const line = raw.replace(/\s+$/, '');
-      if (SECTION_RE.test(line.trim())) {
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(10.5);
-        pdf.setTextColor(80, 80, 80);
-        pdf.text(line.trim(), x, yy);
-        yy += adv(6);
-        continue;
-      }
-      if (hasLyricFormatting(line)) {
-        pdf.setFontSize(10.5);
-        pdf.setTextColor(40, 40, 40);
-        const { centered, runs } = parseRuns(line);
-        const wl = wrapStyledRuns(pdf, runs, width);
-        yy = drawStyledLines(pdf, wl, x, yy, width, centered, adv(5.5));
-        continue;
-      }
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10.5);
-      pdf.setTextColor(40, 40, 40);
-      const wrapped = pdf.splitTextToSize(line, width) as string[];
-      wrapped.forEach((wl, wi) => {
-        if (wi < wrapped.length - 1) drawJustifiedLine(pdf, wl, x, yy, width);
-        else pdf.text(wl, x, yy);
-        yy += adv(5.5);
-      });
-    }
-  };
-
-  // Mide el alto total de un canto en dos columnas (título + autor + filas de estrofas)
-  // para decidir si cabe completo en lo que queda de página.
-  const measureSongHeight = (song: Song): number => {
-    let h = 0;
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(12);
-    const titleLines = pdf.splitTextToSize(cleanText(song.title), contentW) as string[];
-    h += titleLines.length * adv(6);
-    if (song.author) h += adv(5);
-    h += adv(2);
-    const lyrics = cleanLyrics(song.lyrics || '');
-    if (!lyrics) return h + adv(6);
-    const stanzas = parseStanzas(lyrics);
-    for (let i = 0; i < stanzas.length; i += 2) {
-      const lh = measureStanza(stanzas[i], colW);
-      const rh = stanzas[i + 1] ? measureStanza(stanzas[i + 1], colW) : 0;
-      h += Math.max(lh, rh);
-      if (i + 2 < stanzas.length) h += adv(3); // separación entre filas
-    }
-    return h;
-  };
-
-  sortedCategories.forEach((category, catIdx) => {
-    // Cabecera de categoría: la guirnalda con el título del momento, centrada entre
-    // los dos cantos que separa (mismo espacio arriba y abajo).
-    const label = cleanText(category).toUpperCase();
-
-    // Gap superior. El contenido anterior dejó ~un avance de línea final (adv(5.5)),
-    // que también es aire; lo descontamos para que el espacio de ARRIBA quede igual al
-    // de ABAJO y la guirnalda caiga centrada entre ambos cantos.
-    if (catIdx > 0) y += Math.max(adv(2), bandGap - adv(5.5));
-
-    // Guirnalda de sección: cenefa vectorial sencilla (laurel fino y poco invasivo,
-    // del mismo color que la letra) con el título del momento centrado, ocupando el
-    // resto del ancho de la hoja. La banda mide 1.2 cm de grosor. Reservamos también el
-    // comienzo del primer canto para que la guirnalda no quede huérfana al pie de hoja.
-    const bandH = adv(12); // 1.2 cm de grosor de la banda
-    const firstSongStart = Math.min(measureSongHeight(byCategory[category][0]), adv(28));
-    needPage(bandH + adv(4) + bandGap + firstSongStart);
-    const midY = y + bandH / 2;
-
-    // Título del momento, centrado (se achica si no cabe, dejando aire a los lados).
-    pdf.setFont('helvetica', 'bold');
-    let fs = 13;
-    pdf.setFontSize(fs);
-    const maxTitleW = contentW - adv(44);
-    while (pdf.getTextWidth(label) > maxTitleW && fs > 8) { fs -= 0.5; pdf.setFontSize(fs); }
-    pdf.setTextColor(...colors.primary);
-    pdf.text(label, pageW / 2, midY, { align: 'center', baseline: 'middle' });
-
-    // Cenefa a cada lado del título, del color de la letra de los cantos.
-    const labelW = pdf.getTextWidth(label);
-    const innerGap = adv(5);
-    const leftInner = pageW / 2 - labelW / 2 - innerGap;
-    const rightInner = pageW / 2 + labelW / 2 + innerGap;
-    const garlandColor: [number, number, number] = [40, 40, 40];
-    drawSideGarland(pdf, margin + 4, leftInner, midY, garlandColor);
-    drawSideGarland(pdf, pageW - margin - 4, rightInner, midY, garlandColor);
-
-    y = midY + bandH / 2;
-
-    // Gap inferior (igual al superior) → la guirnalda queda centrada entre ambos cantos.
-    y += bandGap;
-
-    byCategory[category].forEach((song, idx) => {
-      const songH = measureSongHeight(song);
-      // Mantener cada canto entero en una página cuando quepa: si no cabe en lo que
-      // resta de hoja, saltar de página ANTES de empezarlo (sin cortes a media hoja).
-      // El primer canto tras la guirnalda no fuerza salto (la guirnalda ya reservó su
-      // comienzo, así no queda huérfana); si es muy largo, igual cortará entre estrofas.
-      if (idx > 0 && songH <= usableH) needPage(songH);
-      else needPage(adv(20));
-
-      // Título del canto. Fija fuente y tamaño ANTES de medir, para que el ajuste de
-      // línea se calcule al mismo tamaño con que se dibuja y nunca exceda el ancho.
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(12);
-      const titleLines = pdf.splitTextToSize(cleanText(song.title), contentW) as string[];
-      titleLines.forEach((line) => {
-        needPage(adv(6));
-        // Reaplicar estilo DESPUÉS de needPage: si saltó de página, addPageHeader
-        // dejó el color en gris y el texto saldría descolorido.
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(12);
-        pdf.setTextColor(...colors.primary);
-        pdf.text(line, margin, y);
-        y += adv(6);
-      });
-
-      // Autor (si existe)
-      if (song.author) {
-        pdf.setFont('helvetica', 'italic');
-        pdf.setFontSize(9);
-        pdf.setTextColor(130, 130, 130);
-        pdf.text(`${cleanText(song.author)}`, margin, y);
-        y += adv(5);
-      }
-
-      y += adv(2);
-
-      // Letra a DOS COLUMNAS, por filas de dos estrofas (1 izq, 2 der, 3 bajo la 1…).
-      // Cada fila es atómica: si no entra en lo que queda de hoja, salta de página
-      // ANTES de empezarla → el corte cae siempre al final de una fila de estrofas,
-      // nunca a media estrofa. Cada estrofa queda justificada al ancho de su columna.
-      const lyrics = cleanLyrics(song.lyrics || '');
-      if (lyrics) {
-        const stanzas = parseStanzas(lyrics);
-        for (let i = 0; i < stanzas.length; i += 2) {
-          const left = stanzas[i];
-          const right = stanzas[i + 1];
-          const lh = measureStanza(left, colW);
-          const rh = right ? measureStanza(right, colW) : 0;
-          const rowH = Math.max(lh, rh);
-          if (rowH <= usableH) needPage(rowH); // mantener la fila (par de estrofas) junta
-          const rowY = y;
-          drawStanzaAt(left, colX[0], rowY, colW);
-          if (right) drawStanzaAt(right, colX[1], rowY, colW);
-          y = rowY + rowH;
-          if (i + 2 < stanzas.length) y += adv(3); // separación entre filas
-        }
-      } else {
-        pdf.setFont('helvetica', 'italic');
-        pdf.setFontSize(9);
-        pdf.setTextColor(160, 160, 160);
-        pdf.text('(Letra no disponible)', margin, y);
-        y += adv(6);
-      }
-
-      // Separador entre cantos de la misma categoría (línea fina en color litúrgico)
-      if (idx < byCategory[category].length - 1) {
-        y += adv(4);
-        pdf.setDrawColor(...colors.primary);
-        pdf.setLineWidth(0.2);
-        pdf.line(pageW / 2 - 24, y, pageW / 2 + 24, y);
-        y += adv(6);
-      }
-    });
-    // Sin gap extra aquí: el espacio entre la última letra y la siguiente guirnalda
-    // lo da el `bandGap` superior de la próxima categoría (simétrico con el inferior).
-  });
-
-  // ─── QR al canal de YouTube (esquina inferior derecha de la última hoja) ───
-  try {
-    const qrDataUrl = await QRCode.toDataURL(getChannelUrl(), { margin: 0, width: 240 });
-    const qrSize = 26;
-    const bottomLimit = pageH - 16;          // justo por encima de la línea del footer
-    const qrY = bottomLimit - qrSize;        // borde superior del QR
-    const qrTopWithCaption = qrY - 8;        // reservar el rótulo de dos líneas
-
-    // Si el contenido llega hasta esa zona, llevar el QR a una página nueva.
-    if (y > qrTopWithCaption) {
-      addPageFooter();
-      pdf.addPage();
-      pageNum++;
-      addPageHeader();
-    }
-    const qrX = pageW - margin - qrSize;
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(8);
-    pdf.setTextColor(...colors.primary);
-    pdf.text('Escúchalos en nuestro', qrX + qrSize / 2, qrY - 4.5, { align: 'center' });
-    pdf.text('canal de YouTube', qrX + qrSize / 2, qrY - 1, { align: 'center' });
-    pdf.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
-  } catch {
-    // Si falla la generación del QR, el folleto se entrega igual.
+  /**
+   * Una pieza del flujo (un encabezado, un título, UNA línea de letra, un separador…).
+   * Se mide al construirla y se dibuja donde el empaquetador decida.
+   */
+  interface Elem extends Pieza {
+    /** Pinta la pieza con el borde superior en (x, y) y ancho w. */
+    draw: (x: number, y: number, w: number) => void;
+    /** Piezas que viajan juntas: un encabezado con su primer canto, un título con
+     *  las primeras líneas de su letra. Si el grupo entero no cabe en lo que resta de
+     *  columna, se salta ANTES — así no queda un rótulo colgando al pie. */
+    grupo?: string;
+    /** Es aire de separación: se omite si cae justo al empezar una columna. */
+    espacio?: boolean;
   }
 
+  // Interlineado de la letra (mm antes de escalar). El ajuste a una hoja lo aprieta un
+  // punto antes que achicar la letra: leer apretado cuesta menos que leer chico.
+  let interlineado = 5.5;
+
+  /** Arma todo el cuerpo con la escala y el interlineado vigentes. Se rehace al ajustar. */
+  const construirElementos = (): Elem[] => {
+    const els: Elem[] = [];
+    const LH = adv(interlineado);
+    const BASE = adv(4);        // de borde superior de la pieza a la línea base del texto
+
+    const espacio = (h: number) => els.push({ h, draw: () => {}, espacio: true });
+
+    // Encabezado de parte de la Misa: rótulo en color litúrgico con una cenefa a cada
+    // lado, dentro del ancho de la columna (la guirnalda a hoja completa no cabe en un
+    // flujo de dos columnas y costaba media hoja de alto).
+    const encabezado = (label: string) => {
+      const texto = cleanText(label).toUpperCase();
+      const h = adv(8);
+      els.push({
+        h,
+        draw: (x, y, w) => {
+          pdf.setFont('helvetica', 'bold');
+          let fs = 10.5;
+          pdf.setFontSize(fs);
+          while (pdf.getTextWidth(texto) > w - adv(16) && fs > 7) { fs -= 0.5; pdf.setFontSize(fs); }
+          pdf.setTextColor(...colors.primary);
+          const midY = y + h / 2;
+          pdf.text(texto, x + w / 2, midY, { align: 'center', baseline: 'middle' });
+          const tw = pdf.getTextWidth(texto);
+          const hueco = adv(3);
+          drawSideGarland(pdf, x, x + w / 2 - tw / 2 - hueco, midY, colors.primary);
+          drawSideGarland(pdf, x + w, x + w / 2 + tw / 2 + hueco, midY, colors.primary);
+        },
+      });
+    };
+
+    // Título del canto: centrado, en cursiva negrita, con el autor entre paréntesis
+    // en la misma línea — como en el folleto impreso ("Hija de Sión (L. Deiss)").
+    const titulo = (song: Song) => {
+      const texto = cleanText(song.title) + (song.author ? ` (${cleanText(song.author)})` : '');
+      pdf.setFont('helvetica', 'bolditalic');
+      pdf.setFontSize(11);
+      const lineas = pdf.splitTextToSize(texto, colW) as string[];
+      const paso = adv(5.8);
+      els.push({
+        h: lineas.length * paso + adv(1.5),
+        draw: (x, y, w) => {
+          pdf.setFont('helvetica', 'bolditalic');
+          pdf.setFontSize(11);
+          pdf.setTextColor(40, 40, 40);
+          lineas.forEach((l, i) => pdf.text(l, x + w / 2, y + BASE + i * paso, { align: 'center' }));
+        },
+      });
+    };
+
+    // Una línea de letra = una pieza. Que el corte entre columnas caiga a mitad de una
+    // estrofa es lo normal en un folleto impreso, y es lo que permite llenar la hoja.
+    const lineasDeEstrofa = (estrofa: string[]) => {
+      for (const raw of estrofa) {
+        const line = raw.replace(/\s+$/, '');
+
+        if (SECTION_RE.test(line.trim())) {
+          const marca = line.trim();
+          els.push({
+            h: adv(6),
+            draw: (x, y) => {
+              pdf.setFont('helvetica', 'bold');
+              pdf.setFontSize(10.5);
+              pdf.setTextColor(80, 80, 80);
+              pdf.text(marca, x, y + BASE);
+            },
+          });
+          continue;
+        }
+
+        if (hasLyricFormatting(line)) {
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(10.5);
+          const { centered, runs } = parseRuns(line);
+          for (const envuelta of wrapStyledRuns(pdf, runs, colW)) {
+            els.push({
+              h: LH,
+              draw: (x, y, w) => {
+                pdf.setFontSize(10.5);
+                pdf.setTextColor(40, 40, 40);
+                drawStyledLines(pdf, [envuelta], x, y + BASE, w, centered, LH);
+              },
+            });
+          }
+          continue;
+        }
+
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(10.5);
+        const envueltas = pdf.splitTextToSize(line, colW) as string[];
+        envueltas.forEach((texto, i) => {
+          const ultima = i === envueltas.length - 1;
+          els.push({
+            h: LH,
+            draw: (x, y, w) => {
+              pdf.setFont('helvetica', 'normal');
+              pdf.setFontSize(10.5);
+              pdf.setTextColor(40, 40, 40);
+              // Justificada salvo la última línea del párrafo (como el folleto impreso).
+              if (ultima) pdf.text(texto, x, y + BASE);
+              else drawJustifiedLine(pdf, texto, x, y + BASE, w);
+            },
+          });
+        });
+      }
+    };
+
+    // Separador entre cantos: regla fina partida por una crucecita, el "---+++---" del
+    // folleto impreso dibujado con el trazo de la app.
+    const separador = () => {
+      const h = adv(7);
+      els.push({
+        h,
+        draw: (x, y, w) => {
+          const cx = x + w / 2;
+          const my = y + h / 2;
+          const brazo = adv(1.4);
+          pdf.setDrawColor(...colors.primary);
+          pdf.setLineWidth(0.3);
+          pdf.line(cx - w * 0.3, my, cx - brazo * 2.2, my);
+          pdf.line(cx + brazo * 2.2, my, cx + w * 0.3, my);
+          pdf.line(cx - brazo, my, cx + brazo, my);
+          pdf.line(cx, my - brazo, cx, my + brazo);
+        },
+      });
+    };
+
+    /** Ata las `cuantas` piezas que empiezan en `desde` para que no se separen. */
+    const agrupar = (desde: number, cuantas: number, id: string) => {
+      for (let i = desde; i < Math.min(els.length, desde + cuantas); i++) els[i].grupo = id;
+    };
+
+    sortedCategories.forEach((category, catIdx) => {
+      if (catIdx > 0) espacio(adv(4));
+      const iCabecera = els.length;
+      encabezado(category);
+      espacio(adv(2));
+
+      byCategory[category].forEach((song, idx) => {
+        const iCanto = els.length;
+        titulo(song);
+        const lyrics = cleanLyrics(song.lyrics || '');
+        if (lyrics) {
+          const estrofas = parseStanzas(lyrics);
+          estrofas.forEach((estrofa, i) => {
+            lineasDeEstrofa(estrofa);
+            if (i < estrofas.length - 1) espacio(adv(2.5));
+          });
+        } else {
+          els.push({
+            h: adv(6),
+            draw: (x, y) => {
+              pdf.setFont('helvetica', 'italic');
+              pdf.setFontSize(9);
+              pdf.setTextColor(160, 160, 160);
+              pdf.text('(Letra no disponible)', x, y + BASE);
+            },
+          });
+        }
+        // El título viaja con la primera línea de su letra, y el encabezado de la parte
+        // con el título de su primer canto: así ningún rótulo queda solo al pie de una
+        // columna. No se ata más que eso a propósito: cada línea que se exige por
+        // adelantado es espacio que puede quedar en blanco al final de la columna.
+        agrupar(iCanto, 2, `canto-${category}-${idx}`);
+        if (idx === 0) agrupar(iCabecera, iCanto - iCabecera + 1, `parte-${catIdx}`);
+        if (idx < byCategory[category].length - 1) separador();
+      });
+    });
+
+    // Cierre: QR al canal, centrado al final del flujo (como el escudo del folleto
+    // impreso). Va dentro de la medición, así que nunca abre una hoja por su cuenta.
+    if (qrDataUrl) {
+      const lado = 22;
+      const h = adv(9) + lado;
+      els.push({
+        h,
+        draw: (x, y, w) => {
+          const cx = x + w / 2;
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(8);
+          pdf.setTextColor(...colors.primary);
+          pdf.text('Escúchalos en nuestro', cx, y + adv(4), { align: 'center' });
+          pdf.text('canal de YouTube', cx, y + adv(7.5), { align: 'center' });
+          pdf.addImage(qrDataUrl!, 'PNG', cx - lado / 2, y + adv(9), lado, lado);
+        },
+      });
+    }
+
+    return els;
+  };
+
+  /** Cuántas hojas de cantos ocupan estas piezas (el reparto vive en utils/pdfColumns). */
+  const medir = (els: Elem[]): number =>
+    repartirEnColumnas(els, { top: colTop, bottom: colBottom, columnas: 2 }).hojas;
+
+  /** Dibuja las piezas ya repartidas, abriendo hoja (con encabezado y pie) al pasar. */
+  const dibujar = (els: Elem[]) => {
+    const { colocadas } = repartirEnColumnas(els, { top: colTop, bottom: colBottom, columnas: 2 });
+    let hojaActual = 1;
+    for (const c of colocadas) {
+      if (c.hoja > hojaActual) {
+        addPageFooter();
+        pdf.addPage();
+        pageNum++;
+        addPageHeader();
+        hojaActual = c.hoja;
+      }
+      els[c.pieza].draw(colX[c.columna], c.y, colW);
+    }
+  };
+
+  // ── Ajuste a una sola hoja ──
+  // Con la letra elegida al publicar puede no caber. Se prueba achicando de a poco
+  // hasta un piso legible (el folleto lo lee gente de todas las edades) y se elige la
+  // letra MÁS GRANDE que logre el menor número de hojas: achicar solo sirve si ahorra
+  // una hoja; si no la ahorra, la letra chica no compra nada y se descarta.
+  const ESCALA_MINIMA = Math.max(0.85, escalaBase * 0.7);
+  const ESCALAS: number[] = [];
+  for (let s = escalaBase; s > ESCALA_MINIMA - 1e-9; s -= 0.05) ESCALAS.push(Number(s.toFixed(3)));
+  const INTERLINEADOS = [5.5, 5.2, 4.9];
+
+  let mejor: { escala: number; interlineado: number; hojas: number; elementos: Elem[] } | null = null;
+  buscar:
+  for (const s of ESCALAS) {
+    for (const il of INTERLINEADOS) {
+      scale = s;
+      interlineado = il;
+      const els = construirElementos();
+      const hojas = medir(els);
+      if (!mejor || hojas < mejor.hojas) mejor = { escala: s, interlineado: il, hojas, elementos: els };
+      if (hojas === 1) break buscar;
+    }
+  }
+  scale = mejor!.escala;
+  interlineado = mejor!.interlineado;
+  const elementos = mejor!.elementos;
+
+  pdf.addPage();
+  pageNum++;
+  addPageHeader();
+  dibujar(elementos);
   addPageFooter();
 
   // El folleto del Pueblo fiel es SOLO la letra (sin acordes ni partituras).
@@ -803,14 +825,21 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   // Se rasteriza cada página carta (con toda su decoración) y se coloca en orden de
   // cuadernillo, para imprimir a doble faz y doblar al medio. Es EL MISMO diseño de la
   // vista previa, solo que reordenado como librito.
-  if (booklet) {
+  //
+  // Con portada + UNA hoja de cantos no hay nada que doblar: esas dos caras ya son una
+  // hoja impresa por lado y lado, y pasarlas por la imposición solo serviría para
+  // achicar la letra a la mitad y dejar dos medias hojas en blanco. En ese caso se
+  // entrega el folleto tal cual.
+  const paginas = 1 + mejor!.hojas;
+  if (booklet && paginas > 2) {
     const images = await renderPdfToImages({ data: pdf.output('arraybuffer') }, 1400);
     const bookletBlob = imposeBooklet(images);
     if (download) saveBlob(bookletBlob, `Cantoral_${safeFileName}_cuadernillo.pdf`);
     return { blob: bookletBlob, url: URL.createObjectURL(bookletBlob) };
   }
 
-  // Descargar (o solo devolver el blob para previsualización, sin descargar).
+  // Descargar (o solo devolver el blob para previsualización, sin descargar). El
+  // nombre dice "cuadernillo" solo cuando de verdad hubo que doblarlo.
   if (download) pdf.save(`Cantoral_${safeFileName}.pdf`);
   const blob = pdf.output('blob');
   return { blob, url: URL.createObjectURL(blob) };
