@@ -225,7 +225,12 @@ export function CategorySearch({
       // por si el Cordero de la Misa quedó con una diferencia mínima en massName.
       const normMisa = (x?: string) =>
         (x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
-      const sameMisa = (s: Song) => !!s.massName && normMisa(s.massName) === normMisa(song.massName);
+      // Las partes de una misma Misa no siempre se cargaron con el nombre idéntico:
+      // el Kyrie quedó como "Nebreda (Do mayor)" y el Gloria como "Nebreda" a secas.
+      // Comparando solo el nombre base (sin el paréntesis de la tonalidad) el
+      // constructor vuelve a ofrecer las partes que faltan en vez de dejarlas fuera.
+      const baseMisa = (x?: string) => normMisa(x).replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+      const sameMisa = (s: Song) => !!s.massName && baseMisa(s.massName) === baseMisa(song.massName);
 
       const findMassPart = (cat: string): Song | null =>
         instrumentSongs.find(s => sameMisa(s) && songInCategory(s, cat) && s.version === song.version)

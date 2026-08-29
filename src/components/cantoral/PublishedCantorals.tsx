@@ -10,6 +10,7 @@ import { CantoralWithOrdinary } from './CantoralWithOrdinary';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { addDaysLocal, getWeekRangeLocal, isWithinInclusive, parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
 import { massTypeBadge, cantoralYaPaso } from '../../utils/massType';
+import { groupSongsByMassPart, massCategoryIcon } from '../../utils/ordinary';
 import { parseParishChapel, splitActiveParish } from '../../utils/parish';
 import { LiturgicalColorBadge } from '../liturgy/LiturgicalColorBadge';
 import { toast } from 'sonner';
@@ -70,8 +71,6 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
   const [archiveParish, setArchiveParish] = useState<string>('all');
   const [archiveChapel, setArchiveChapel] = useState<string>('all');
   const [archiveSearch, setArchiveSearch] = useState<string>('');
-
-  const categoryOrder = ['Entrada', 'Kyrie', 'Gloria', 'Salmo', 'Aleluya', 'Post Evangelio', 'Ofertorio', 'Santo', 'Padre Nuestro', 'Cordero de Dios', 'Comunión', 'Salida'];
 
   // ── Filtrado base por rol + parroquia ──────────────────────────────────────
   let roleList = cantorals;
@@ -144,27 +143,16 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
   const allVisible = userRole === 'Pueblo fiel' ? puebloWindow : roleList;
 
   // ── Helpers de presentación ────────────────────────────────────────────────
-  const groupSongsByCategory = (songs: Song[]) => {
-    const grouped = songs.reduce((acc, song) => {
-      if (!acc[song.category]) acc[song.category] = [];
-      acc[song.category].push(song);
-      return acc;
-    }, {} as Record<string, Song[]>);
-
-    return Object.keys(grouped).sort((a, b) => categoryOrder.indexOf(a) - categoryOrder.indexOf(b));
-  };
+  // Orden litúrgico de las partes: viene de utils/ordinary (fuente única). La lista
+  // local que había aquí no conocía las partes propias de la Vigilia ni el rótulo de
+  // Cuaresma, y al ordenar con `indexOf` (-1) esas partes saltaban antes de la Entrada.
+  const groupSongsByCategory = (songs: Song[]) =>
+    groupSongsByMassPart(songs).map(g => g.category);
 
   const formatDateShort = (dateStr: string) =>
     formatYmdForDisplay(dateStr, { weekday: 'short', month: 'short', day: 'numeric' });
 
-  const getCategoryIcon = (category: string) => {
-    const icons: Record<string, string> = {
-      'Entrada': '⛪', 'Kyrie': '🙏', 'Gloria': '✨', 'Santo': '✝️', 'Cordero de Dios': '🐑',
-      'Credo': '📿', 'Padre Nuestro': '🙏', 'Salmo': '📖', 'Aleluya': '🎺', 'Post Evangelio': '📿',
-      'Ofertorio': '🍇', 'Comunión': '🫓', 'Salida': '⛪',
-    };
-    return icons[category] || '🎵';
-  };
+  const getCategoryIcon = (category: string) => massCategoryIcon(category);
 
   // Agrupa una lista por fecha (más reciente primero)
   const groupByDate = (list: PublishedCantoral[]): [string, PublishedCantoral[]][] => {

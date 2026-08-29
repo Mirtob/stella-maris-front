@@ -39,6 +39,12 @@ node tests/output/salmo.mjs
 npx esbuild tests/unit/perfil-admin.test.ts --bundle --platform=node --format=esm --outfile=tests/output/perfil.mjs
 node tests/output/perfil.mjs
 
+npx esbuild tests/unit/cantoral-vista-completa.test.ts --bundle --platform=node --format=esm --outfile=tests/output/cantoral-vista.mjs
+node tests/output/cantoral-vista.mjs
+
+npx esbuild tests/unit/instalar-plataforma.test.ts --bundle --platform=node --format=esm --outfile=tests/output/instalar-plataforma.mjs
+node tests/output/instalar-plataforma.mjs
+
 npx esbuild tests/unit/pdf-texto.test.ts --bundle --platform=node --format=esm --outfile=tests/output/pdftexto.mjs
 node tests/output/pdftexto.mjs
 
@@ -120,3 +126,16 @@ perfectamente válido. Usa algo de otro largo (`'corto'`).
 **Sábado Santo queda fuera** a propósito: la Cuaresma termina antes del Triduo. De
 ahí que la Vigilia Pascual conserve su Aleluya Triple y no se le aplique el filtro
 de Cuaresma. Hay tests que fijan este borde en ambos sentidos.
+
+
+## El cantoral publicado tiene que mostrar lo MISMO que se seleccionó
+
+`cantoral-vista-completa.test.ts` fija dos cosas que se rompieron el día del
+lanzamiento (29-ago-2026):
+
+1. **Todos** los cantos de cada parte, no solo el primero. La Comunión lleva dos o
+   tres; la guía "Ver Ordinario" hacía `.find()` y mostraba uno.
+2. El **orden** sale de `utils/ordinary` y de ningún otro lado. Cada vista tenía su
+   propia lista incompleta y ordenaba con `indexOf`: una parte que no estuviera en
+   ella daba -1 y se iba ARRIBA DE TODO. Si agregas un rótulo de parte nuevo,
+   agrégalo a `MASS_CATEGORY_ORDER` — no a una lista local.

@@ -15,6 +15,7 @@ import { FavoriteButton } from '../songs/FavoriteButton';
 import { LyricsWithChords } from '../songs/LyricsWithChords';
 import { transposeContent, getChordNotation, keyPrefersFlats } from '../../utils/chordTranspose';
 import { AtrilMode } from '../atril/AtrilMode';
+import { groupSongsByMassPart, massCategoryIcon } from '../../utils/ordinary';
 
 // Extrae el Drive file ID de una URL de Drive y arma la URL del proxy (PDF embebido).
 function getDriveProxyUrl(sheetMusicUrl?: string): { proxyUrl: string; driveViewUrl: string } | null {
@@ -80,21 +81,27 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
     });
   };
 
-  // Encontrar canción por categoría
-  const findSongByCategory = (category: string): Song | undefined => {
-    return cantoral.songs.find(song => song.category === category);
-  };
+  /**
+   * TODOS los cantos de una parte de la Misa, no solo el primero.
+   *
+   * La Comunión lleva normalmente dos o tres cantos, y cualquier parte puede llevar
+   * más de uno. Antes esta guía hacía `.find(...)` y mostraba únicamente el primero:
+   * el coro publicaba tres cantos de Comunión y aquí veía uno solo, como si el
+   * constructor hubiera perdido su selección.
+   */
+  const songsForCategory = (category: string): Song[] =>
+    cantoral.songs.filter(song => song.category === category);
 
   // Renderizar sección de la misa
   const renderSection = (section: MassSection) => {
     const isExpanded = expandedSections.includes(section.id);
 
-    // Si es una sección de canto, buscar el canto correspondiente
+    // Si es una sección de canto, buscar los cantos correspondientes
     if (section.type === 'song' && section.category) {
-      const song = findSongByCategory(section.category);
-      
-      if (!song) {
-        return null; // No renderizar si no hay canto para esta categoría
+      const songs = songsForCategory(section.category);
+
+      if (songs.length === 0) {
+        return null; // No renderizar si no hay canto para esta parte
       }
 
       return (
@@ -115,25 +122,32 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
             </h3>
           </div>
 
-          {/* Song Card */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl p-3 sm:p-5 border-2 sm:border-4 border-purple-200 dark:border-purple-700 shadow-xl transition-colors">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <button
-                onClick={() => setSelectedSong(song)}
-                className="w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl sm:rounded-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform shadow-lg"
+          {/* Una tarjeta por canto de la parte (la Comunión suele llevar varios) */}
+          <div className="space-y-3">
+            {songs.map((song, i) => (
+              <div
+                key={`${song.id}::${song.category}::${i}`}
+                className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl p-3 sm:p-5 border-2 sm:border-4 border-purple-200 dark:border-purple-700 shadow-xl transition-colors"
               >
-                <Music className="w-6 h-6 sm:w-8 sm:h-8" strokeWidth={2.5} />
-              </button>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-base sm:text-2xl font-bold text-gray-800 dark:text-white leading-tight line-clamp-2">
-                  {song.title}
-                </h4>
-                <p className="text-sm sm:text-xl text-gray-600 dark:text-gray-400 truncate">
-                  {song.artist || 'Artista desconocido'}
-                </p>
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <button
+                    onClick={() => setSelectedSong(song)}
+                    className="w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl sm:rounded-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform shadow-lg"
+                  >
+                    <Music className="w-6 h-6 sm:w-8 sm:h-8" strokeWidth={2.5} />
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-base sm:text-2xl font-bold text-gray-800 dark:text-white leading-tight line-clamp-2">
+                      {song.title}
+                    </h4>
+                    <p className="text-sm sm:text-xl text-gray-600 dark:text-gray-400 truncate">
+                      {song.artist || 'Artista desconocido'}
+                    </p>
+                  </div>
+                  <FavoriteButton songId={song.id} className="text-rose-400 hover:bg-rose-50 dark:hover:bg-white/10 flex-shrink-0" />
+                </div>
               </div>
-              <FavoriteButton songId={song.id} className="text-rose-400 hover:bg-rose-50 dark:hover:bg-white/10 flex-shrink-0" />
-            </div>
+            ))}
           </div>
 
           {/* Texto del ordinario en latín (para seguir/cantar la parte fija) */}
@@ -329,7 +343,30 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
                 ? s.id !== 'penitential' && s.id !== 'kyrie-song'
                 : s.id !== 'aspersion' && s.id !== 'aspersion-song'
             );
-            return sections.map(section => renderSection(section));
+            // Partes que el coro llenó pero que este ordinario no contempla (p. ej.
+            // "Aclamación al Evangelio" en Cuaresma, o un oficio propio abierto con
+            // otra variante). Antes quedaban invisibles aquí aunque sí estuvieran
+            // publicadas: se muestran al final para que no falte ningún canto.
+            const cubiertas = new Set(
+              sections.filter(x => x.type === 'song' && x.category).map(x => x.category as string),
+            );
+            const sueltas = groupSongsByMassPart(cantoral.songs.filter(x => !cubiertas.has(x.category)));
+
+            return (
+              <>
+                {sections.map(section => renderSection(section))}
+                {sueltas.map(({ category }) =>
+                  renderSection({
+                    id: `extra-${category}`,
+                    title: category,
+                    type: 'song',
+                    posture: 'standing',
+                    category,
+                    icon: massCategoryIcon(category),
+                  }),
+                )}
+              </>
+            );
           })()}
         </div>
 

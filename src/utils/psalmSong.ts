@@ -42,3 +42,20 @@ export function buildPsalmSong(massDate: string, antiphon: string): Song | null 
     psalmPageEnd: delLibro?.pageEnd,
   } as Song;
 }
+
+/** ¿Este "canto" es el salmo del libro, armado a partir de la fecha de la Misa? */
+export function isBookPsalm(song: Pick<Song, 'id' | 'category'>): boolean {
+  return song.category === 'Salmo' && String(song.id).startsWith('psalm-');
+}
+
+/**
+ * Cantos que se cargan al constructor al EDITAR o CLONAR un cantoral publicado.
+ *
+ * Deja fuera el salmo responsorial, que no es un canto del catálogo: se deriva de la
+ * fecha de la Misa (página del libro + antífona de la celebración) y lleva esa fecha
+ * en el id. Si viajaba en la copia, el constructor veía que "ya hay Salmo" y publicaba
+ * el del domingo viejo. Sin él, se vuelve a derivar de la fecha nueva.
+ */
+export function songsForBuilder<T extends Pick<Song, 'id' | 'category'>>(songs: T[]): T[] {
+  return songs.filter(s => !isBookPsalm(s));
+}

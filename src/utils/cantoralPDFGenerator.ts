@@ -10,6 +10,7 @@ import { getGarland } from '../data/garlands';
 import { getPdfFont, getPdfScale } from '../data/pdfStyle';
 import { renderPdfToImages, imposeBooklet } from './atrilBookletPDF';
 import { repartirEnColumnas, type Pieza } from './pdfColumns';
+import { sortCategoriesByMassOrder } from './ordinary';
 
 interface PDFGeneratorOptions {
   cantoral: PublishedCantoral;
@@ -164,12 +165,6 @@ function drawJustifiedLine(pdf: any, text: string, x: number, y: number, width: 
   });
 }
 
-const CATEGORY_ORDER = [
-  'Entrada', 'Rito de Aspersión', 'Kyrie', 'Gloria', 'Salmo', 'Aleluya',
-  'Post Evangelio', 'Respuesta a Oración Universal', 'Ofertorio', 'Santo',
-  'Aclamación Consagración', 'Amén (Doxología)', 'Padre Nuestro',
-  'Tuyo es el Reino', 'Cordero de Dios', 'Comunión', 'Salida',
-];
 
 // ──────────────────────────────────────────────
 // Colores litúrgicos
@@ -518,9 +513,11 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     return acc;
   }, {} as Record<string, Song[]>);
 
-  const sortedCategories = Object.keys(byCategory).sort(
-    (a, b) => CATEGORY_ORDER.indexOf(a) - CATEGORY_ORDER.indexOf(b)
-  );
+  // Orden litúrgico desde utils/ordinary (fuente única). Con la lista local que había
+  // aquí, una parte que no estuviera en ella (las de la Vigilia Pascual, o el rótulo
+  // "Aclamación al Evangelio" de Cuaresma) daba indexOf = -1 y se imprimía ANTES de
+  // la Entrada. Ahora lo desconocido va al final.
+  const sortedCategories = sortCategoriesByMassOrder(Object.keys(byCategory));
 
   // Marcas de sección dentro de la letra ("Coro:", "Estrofa 2", etc.).
   const SECTION_RE = /^(Coro|Estrofa\s*\d*|Puente|Final|Refrán|Recitativo)\s*:?\s*$/i;
