@@ -1,4 +1,4 @@
-import { X, Home, BookOpen, GraduationCap, ShieldCheck, Music, LogOut, User, Settings, List, History, Calendar, Church, Book, Cross, ChevronDown, Check, Heart, Compass } from 'lucide-react';
+import { X, Home, BookOpen, GraduationCap, ShieldCheck, Music, LogOut, User, Settings, List, History, Calendar, Church, Book, Cross, ChevronDown, Check, Heart, Compass, Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { UserProfile, UserRole } from '../../types';
 import { esVisita, parroquiasDelPerfil } from '../../utils/parishVisit';
@@ -24,9 +24,13 @@ interface SidebarProps {
   onVisitParish?: () => void;
   /** Reinicia y vuelve a mostrar el tutorial del rol actual. */
   onReplayTour?: () => void;
+  /** Abre el módulo "Instalar aplicación" (paso a paso + avisos). */
+  onOpenInstall?: () => void;
+  /** ¿La app ya corre instalada? Si sí, el acceso a instalar sobra. */
+  appInstalled?: boolean;
 }
 
-export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate, onLogout, onOpenSettings, effectiveRoleOverride, onSwitchParish, onVisitParish, onReplayTour }: SidebarProps) {
+export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate, onLogout, onOpenSettings, effectiveRoleOverride, onSwitchParish, onVisitParish, onReplayTour, onOpenInstall, appInstalled }: SidebarProps) {
   const [parishMenuOpen, setParishMenuOpen] = useState(false);
   // Use the session-level role (activeRole) so the menu reflects what the user
   // chose today, not their permanent registration role. App can override this
@@ -266,6 +270,22 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
               </button>
             );
           })}
+
+          {/* Instalar la app. Va aparte de las vistas del shell porque es una pantalla
+              propia (/instalar) y porque el problema que resuelve no es de navegación
+              sino de que la gente no encuentra cómo instalarla en su teléfono. Se
+              esconde cuando ya está instalada: ahí no aporta nada. */}
+          {onOpenInstall && !appInstalled && (
+            <button
+              onClick={() => { onOpenInstall(); onClose(); }}
+              className="w-full p-4 rounded-xl flex items-center gap-3 transition-all transform hover:scale-[1.02] bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg border-2 border-orange-700"
+            >
+              <Download className="w-6 h-6 flex-shrink-0 text-white" strokeWidth={2.5} />
+              <span className="text-lg font-bold text-left leading-tight break-words min-w-0 flex-1">
+                Instalar la aplicación
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Footer - FIJO EN LA PARTE INFERIOR - NO SE DESPLAZA */}

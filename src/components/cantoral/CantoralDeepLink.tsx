@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Download, ArrowLeft, FileX, Share, Plus, Smartphone, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
-import { PublishedCantoral, Song } from '../../types';
+import { PublishedCantoral } from '../../types';
 import { getCantoralById } from '../../services/cantorals';
 import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
 import { PlaylistPlayer } from '../songs/PlaylistPlayer';
 import { LyricsOnly } from '../songs/LyricsOnly';
+import { groupSongsByMassPart, massCategoryIcon } from '../../utils/ordinary';
 import { hasAnyVideo } from '../../utils/songVideo';
 import {
   getDeferredInstallPrompt,
@@ -19,45 +20,22 @@ interface CantoralDeepLinkProps {
   cantoralId: string;
   /** Para usuarios que quieren entrar a la app completa (los lleva a login/app). */
   onOpenInApp: (cantoral: PublishedCantoral) => void;
+  /** Abre el módulo "Instalar aplicación" (paso a paso según el teléfono). */
+  onOpenInstall?: () => void;
   onCancel: () => void;
 }
 
-// Orden e iconos por parte de la Misa (mismo criterio que PublishedCantorals).
-const CATEGORY_ORDER = [
-  'Entrada', 'Kyrie', 'Gloria', 'Salmo', 'Aleluya', 'Aclamación al Evangelio',
-  'Post Evangelio', 'Ofertorio', 'Santo', 'Padre Nuestro', 'Cordero de Dios',
-  'Comunión', 'Salida',
-];
-const CATEGORY_ICONS: Record<string, string> = {
-  'Entrada': '⛪', 'Kyrie': '🙏', 'Gloria': '✨', 'Salmo': '📖', 'Aleluya': '🎺',
-  'Aclamación al Evangelio': '📯', 'Post Evangelio': '📿', 'Ofertorio': '🍇',
-  'Santo': '✝️', 'Padre Nuestro': '🙏', 'Cordero de Dios': '🐑', 'Comunión': '🫓',
-  'Salida': '⛪',
-};
-
-function groupByCategory(songs: Song[]): { category: string; songs: Song[] }[] {
-  const grouped: Record<string, Song[]> = {};
-  for (const s of songs) {
-    (grouped[s.category] ||= []).push(s);
-  }
-  return Object.keys(grouped)
-    .sort((a, b) => {
-      const ia = CATEGORY_ORDER.indexOf(a);
-      const ib = CATEGORY_ORDER.indexOf(b);
-      if (ia === -1 && ib === -1) return 0;
-      if (ia === -1) return 1;
-      if (ib === -1) return -1;
-      return ia - ib;
-    })
-    .map((category) => ({ category, songs: grouped[category] }));
-}
+// Orden e iconos por parte de la Misa: fuente única en utils/ordinary, la misma que
+// usan la lista de cantorales, el folleto PDF y el Modo Atril. La lista local que
+// había aquí no conocía las partes de los oficios propios (Vigilia, Triduo).
+const groupByCategory = groupSongsByMassPart;
 
 /**
  * Pantalla al abrir un deep link /c/:id (p. ej. desde un QR). Muestra SIEMPRE el
  * cantoral en la vista de Pueblo fiel (letras, sin acordes), sin requerir login, y
  * sugiere instalar la app. Permite descargar el PDF de letras.
  */
-export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: CantoralDeepLinkProps) {
+export function CantoralDeepLink({ cantoralId, onOpenInApp, onOpenInstall, onCancel }: CantoralDeepLinkProps) {
   const [cantoral, setCantoral] = useState<PublishedCantoral | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -122,14 +100,21 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
     }
   };
 
+  /**
+   * Instalar desde el QR. Si el navegador ofrece el botón nativo, se instala de un
+   * toque aquí mismo. Si no, se abre el módulo /instalar, que da los pasos del
+   * navegador REAL de la persona: el consejo genérico de "abre los tres puntos" que
+   * había aquí es justo lo que no le sirvió a casi nadie en el lanzamiento, porque
+   * ese menú se llama y se ubica distinto en cada teléfono Android.
+   */
   const handleInstall = async () => {
     if (installAvailable) {
       const r = await promptInstall();
-      if (r === 'accepted') toast.success('¡Gracias! La app se está instalando.');
-      else if (r === 'unavailable') setShowInstallHelp(true);
-    } else {
-      setShowInstallHelp((v) => !v);
+      if (r === 'accepted') { toast.success('¡Gracias! La app se está instalando.'); return; }
+      if (r === 'dismissed') return;
     }
+    if (onOpenInstall) onOpenInstall();
+    else setShowInstallHelp((v) => !v);
   };
 
   const groups = cantoral ? groupByCategory(cantoral.songs ?? []) : [];
@@ -202,15 +187,24 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
                     {ios ? (
                       <p className="flex items-center gap-2">
                         Toca <Share className="inline w-4 h-4" /> <strong>Compartir</strong> y luego
-                        <strong>“Agregar a inicio”</strong>.
+                        <strong>“Añadir a pantalla de inicio”</strong>.
                       </p>
                     ) : (
                       <p>
-                        Abre el menú del navegador (⋮) y elige <strong>“Instalar app”</strong> o
+                        Abre el menú del navegador (⋮) y elige <strong>“Instalar aplicación”</strong> o
                         <strong> “Agregar a pantalla de inicio”</strong>.
                       </p>
                     )}
                   </div>
+                )}
+
+                {onOpenInstall && (
+                  <button
+                    onClick={onOpenInstall}
+                    className="mt-3 w-full text-sm font-bold text-blue-100 underline underline-offset-4 active:scale-95 transition-all"
+                  >
+                    Ver cómo instalarla en mi teléfono
+                  </button>
                 )}
               </div>
             )}
@@ -242,7 +236,7 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onCancel }: Cantoral
                 {groups.map(({ category, songs }) => (
                   <section key={category}>
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-2xl">{CATEGORY_ICONS[category] || '🎵'}</span>
+                      <span className="text-2xl">{massCategoryIcon(category)}</span>
                       <h2 className="text-xl font-bold text-brand-ink">{category}</h2>
                     </div>
                     <div className="space-y-3">

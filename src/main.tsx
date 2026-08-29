@@ -4,7 +4,7 @@ import App from "./App";
 import "./index.css";
 import { initSentry } from "./services/sentry";
 import { CACHE_NAME as OFFLINE_CACHE } from "./services/offlineCache";
-import { reportDisplayMode } from "./services/push";
+import { reportDisplayMode, registerPwaServiceWorker } from "./services/push";
 
 // Inicializar Sentry ANTES de renderizar la app.
 // Si VITE_SENTRY_DSN no está configurada, queda inactivo silenciosamente.
@@ -43,6 +43,12 @@ async function cleanupAndRender() {
       // ignorar errores — la app carga igual
     }
   }
+
+  // Registrar el service worker de la PWA. No cachea (ver public/push-sw.js): está
+  // para las notificaciones y para que el navegador ofrezca instalar la app en un
+  // toque. Sin esto, en Android había que cazar la opción en el menú ⋮, que cambia de
+  // nombre y de lugar en cada teléfono.
+  void registerPwaServiceWorker();
 
   // Avisar al push-sw si esta ventana es la app INSTALADA, para que al tocar una
   // notificación abra la PWA y no una pestaña del navegador.

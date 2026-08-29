@@ -4,6 +4,11 @@ const fs = require('fs');
 const path = require('path');
 
 const APP_URL = 'https://stella-maris-front.vercel.app';
+// El QR lleva DIRECTO al módulo de instalación, no a la raíz. Tras el lanzamiento del
+// 29-ago-2026 quedó claro que el problema no era llegar a la app sino instalarla: en
+// /instalar hay un botón de un toque y, si el navegador no lo ofrece, los pasos del
+// teléfono que la persona tiene de verdad. Desde ahí se entra igual a la app.
+const INSTALL_URL = `${APP_URL}/instalar`;
 const OUT_DIR = path.join(__dirname, 'docs', 'presentacion');
 const PDF_PATH = path.join(OUT_DIR, 'Stella-Maris-Instalacion-y-Presentacion.pdf');
 const QR_PATH = path.join(OUT_DIR, 'QR-app.png');
@@ -16,7 +21,7 @@ const GRAY = [110, 110, 110];
 (async () => {
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
-  const qr = await QRCode.toDataURL(APP_URL, {
+  const qr = await QRCode.toDataURL(INSTALL_URL, {
     width: 700, margin: 1, errorCorrectionLevel: 'M',
     color: { dark: '#1e3a8a', light: '#ffffff' },
   });
@@ -48,11 +53,11 @@ const GRAY = [110, 110, 110];
   doc.roundedRect(qrX - 4, 56, qrSize + 8, qrSize + 8, 3, 3, 'S');
   doc.addImage(qr, 'PNG', qrX, 60, qrSize, qrSize);
   doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...BLUE);
-  text('Escanea para abrir la app', W / 2, 122, { align: 'center' });
+  text('Escanea y te guiamos paso a paso', W / 2, 122, { align: 'center' });
   doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...GRAY);
-  text(APP_URL, W / 2, 128, { align: 'center' });
+  text(INSTALL_URL, W / 2, 128, { align: 'center' });
 
-  const boxY = 138, boxH = 82, gap = 8;
+  const boxY = 138, boxH = 62, gap = 8;
   const boxW = (W - M * 2 - gap) / 2;
   const drawBox = (x, title, steps) => {
     doc.setFillColor(245, 247, 251);
@@ -74,22 +79,23 @@ const GRAY = [110, 110, 110];
       yy += lines.length * 4.6 + 2.2;
     });
   };
-  drawBox(M, 'En Android (Chrome)', [
-    'Escanea el QR o entra a la dirección de arriba.',
-    'Toca el menú (los tres puntos, arriba a la derecha).',
-    'Elige "Instalar aplicación" o "Añadir a la pantalla de inicio".',
-    'Confirma. Queda con su ícono, como una app normal.',
+  drawBox(M, 'En Android', [
+    'Escanea el QR con la cámara del teléfono.',
+    'Toca el botón azul "Instalar la aplicación" y confirma.',
+    'Si ese botón no aparece, la misma pantalla te dice dónde está la opción en TU teléfono.',
+    'Queda con su ícono, como una app normal.',
   ]);
-  drawBox(M + boxW + gap, 'En iPhone (Safari)', [
-    'Abre Safari y entra a la dirección de arriba (o escanea el QR).',
-    'Toca el botón Compartir (el cuadro con la flecha hacia arriba).',
+  drawBox(M + boxW + gap, 'En iPhone', [
+    'Escanea el QR y ábrelo en Safari.',
+    'Toca Compartir (el cuadro con la flecha hacia arriba).',
     'Desliza y elige "Añadir a pantalla de inicio".',
-    'Toca "Añadir". Listo, queda con su ícono.',
+    'Ábrela desde el ícono: eso hace falta para recibir los avisos.',
   ]);
   doc.setFont('helvetica', 'italic'); doc.setFontSize(8.6); doc.setTextColor(...GRAY);
-  text('En iPhone es importante usar Safari (no Chrome) para poder instalarla.', W / 2, boxY + boxH + 6, { align: 'center' });
+  text('Si abriste el enlace dentro de WhatsApp o Instagram, no se puede instalar: ábrelo en Chrome (o Safari).', W / 2, boxY + boxH + 6, { align: 'center' });
+  text('En iPhone solo Safari puede instalarla. Chrome en iPhone no.', W / 2, boxY + boxH + 10.5, { align: 'center' });
 
-  let fy = boxY + boxH + 16;
+  let fy = boxY + boxH + 22;
   doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...BLUE);
   text('¿Qué puedes hacer?', M, fy);
   fy += 7;
@@ -97,6 +103,7 @@ const GRAY = [110, 110, 110];
   const feats = [
     'Ver el cantoral de cada Misa: letras, horarios y el orden de la celebración.',
     'Escuchar los cantos y seguir la Misa desde el teléfono.',
+    'Recibir un aviso cuando tu parroquia publica un cantoral nuevo (se activan en la misma pantalla).',
     'Coro: armar y publicar cantorales, ver partituras y usar el Modo Atril.',
     'Funciona sin internet una vez que la abriste (útil dentro de la iglesia).',
   ];
@@ -111,7 +118,7 @@ const GRAY = [110, 110, 110];
   doc.setDrawColor(...BLUE); doc.setLineWidth(0.5);
   doc.line(M, H - 20, W - M, H - 20);
   doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...BLUE);
-  text('Presentación oficial: 29 de agosto', M, H - 13);
+  text('Pide ayuda a tu coro si algo no te resulta', M, H - 13);
   doc.setFont('helvetica', 'normal'); doc.setTextColor(...GRAY); doc.setFontSize(9);
   text('Stella Maris · Cantorales', W - M, H - 13, { align: 'right' });
 
@@ -215,7 +222,7 @@ const GRAY = [110, 110, 110];
 
   doc.setDrawColor(...BLUE); doc.line(M, H - 20, W - M, H - 20);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
-  text('El QR de la app también está como imagen aparte: QR-app.png (para pegarlo en la PPT).', M, H - 13);
+  text('El QR (que lleva a /instalar) también está aparte: QR-app.png, para pegarlo en la PPT o imprimirlo.', M, H - 13);
 
   fs.writeFileSync(PDF_PATH, Buffer.from(doc.output('arraybuffer')));
   console.log('OK PDF  ->', PDF_PATH);

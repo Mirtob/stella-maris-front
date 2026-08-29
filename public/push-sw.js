@@ -1,10 +1,24 @@
-// Service worker DEDICADO a notificaciones push (Web Push / PWA).
-// NO cachea nada ni tiene handler de `fetch`: por eso NO reintroduce el problema de
-// versiones viejas por el que se desactivó el sw.js del app-shell. Solo despierta al
-// llegar un push y al tocar la notificación.
+// Service worker de la PWA: notificaciones push + la condición que Chrome exige para
+// ofrecer "Instalar aplicación".
+//
+// NO CACHEA NADA, y eso es deliberado: el sw.js del app-shell se desactivó porque
+// servía versiones viejas de la app. El handler de `fetch` de más abajo NO llama a
+// respondWith, así que toda petición sigue yendo a la red exactamente igual que sin
+// service worker. Si alguien alguna vez agrega ahí una caché, vuelve el problema de
+// las versiones viejas: no lo hagas.
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+
+// El handler de `fetch` existe SOLO para que el navegador considere instalable la app.
+// Chrome no dispara `beforeinstallprompt` si el service worker no tiene uno, y sin ese
+// evento no hay botón "Instalar" de un toque: la persona queda obligada a encontrar la
+// opción en el menú del navegador, que se llama distinto y está en distinto lugar en
+// cada teléfono. En el lanzamiento del 29-ago-2026 fue justo lo que impidió instalar la
+// app a casi todo el mundo en Android.
+//
+// Pasa de largo a propósito (sin respondWith): la red decide, no hay copia local.
+self.addEventListener('fetch', () => { /* passthrough: sin caché, siempre red */ });
 
 // Ids de las ventanas que reportaron correr como app INSTALADA (display standalone).
 // La API de clientes no distingue una pestaña del navegador de la PWA, así que es la

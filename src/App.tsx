@@ -98,6 +98,8 @@ import { listCustomLiturgicalDates, toLiturgicalDate } from './services/liturgic
 import { setPersistedCustomDates } from './utils/liturgicalCalendar';
 import { syncPushParishes } from './services/push';
 import { PrelaunchDemo } from './components/survey/PrelaunchDemo';
+import { InstallApp } from './components/install/InstallApp';
+import { isStandalone as isStandaloneApp } from './utils/installPrompt';
 import { readSignupPrefs, clearSignupPrefs } from './config/signupPrefs';
 import { effectiveVoicePart } from './utils/sheetParts';
 import { getTodayLocal, addDaysLocal, isWithinInclusive, formatYmdForDisplay } from './utils/dateLocal';
@@ -105,6 +107,7 @@ import { mergeProfile } from './utils/profileMerge';
 import { splitActiveParish, formatActiveParishLabel } from './utils/parish';
 import { esVisita, parroquiasDelPerfil, recordarVisita } from './utils/parishVisit';
 import { massTypeBadge } from './utils/massType';
+import { songsForBuilder } from './utils/psalmSong';
 import { generateCantoralPDF } from './utils/cantoralPDFGenerator';
 import { isCurrentUserAdmin } from './services/admin';
 import { upsertCurrentUserProfile, getCurrentUserProfile } from './services/userProfiles';
@@ -176,6 +179,8 @@ function classifyPath(): { kind: 'ok' } | { kind: 'invalid-link' | 'unknown-rout
   if (path === '/' || path === '/auth/callback') return { kind: 'ok' };
   // Pantalla de muestra pública (sin login)
   if (path === '/demo' || path.startsWith('/demo/')) return { kind: 'ok' };
+  // Módulo "Instalar aplicación" (sin login: se llega desde el QR de la parroquia)
+  if (path === '/instalar' || path === '/instalar/') return { kind: 'ok' };
   // Deep link de cantoral
   if (path.startsWith('/c/')) {
     const id = getCantoralIdFromPath();
@@ -248,6 +253,9 @@ type AppRoute =
   | { screen: 'cantoral-link'; cantoralId: string }
   | { screen: 'parish-link'; parish: string }
   | { screen: 'demo'; cantoralId?: string }
+  // Módulo de instalación. Es público (se llega desde el QR sin haber entrado nunca),
+  // y `returnTo` lo trae de vuelta a donde estaba quien lo abre desde el menú.
+  | { screen: 'install'; returnTo?: AppRoute }
   | { screen: 'terms'; returnTo: AppRoute }
   | { screen: 'privacy'; returnTo: AppRoute }
   | { screen: 'not-found'; reason: 'invalid-link' | 'unknown-route'; attemptedPath: string }
@@ -490,6 +498,13 @@ function AppContent() {
     const demo = getDemoFromPath();
     if (demo.isDemo) {
       setRoute({ screen: 'demo', cantoralId: demo.cantoralId });
+      return;
+    }
+
+    // /instalar — la pantalla que enseña a poner la app en el teléfono. Va antes de
+    // cualquier auth: quien escanea el QR en la iglesia todavía no tiene cuenta.
+    if (window.location.pathname.replace(/\/$/, '') === '/instalar') {
+      setRoute({ screen: 'install' });
       return;
     }
 
@@ -1095,7 +1110,7 @@ function AppContent() {
   const handleEditCantoral = (id: string) => {
     const c = publishedCantorals.find(x => x.id === id);
     if (!c) return;
-    setCantoral(c.songs);
+    setCantoral(songsForBuilder(c.songs));
     setEditingCantoralId(id);
     navigate('main');
     toast.info('Editando cantoral', {
@@ -1109,7 +1124,7 @@ function AppContent() {
   // Historial (que trae cantorales que no están en `publishedCantorals`). El original no
   // se toca.
   const handleCloneCantoral = (c: PublishedCantoral) => {
-    setCantoral(c.songs);
+    setCantoral(songsForBuilder(c.songs));
     setEditingCantoralId(null);
     navigate('main');
     toast.info('Cantoral copiado como base', {
@@ -1168,10 +1183,37 @@ function AppContent() {
     return <PrelaunchDemo cantoralId={route.cantoralId} />;
   }
 
+  if (route.screen === 'install') {
+    const volverA = route.returnTo;
+    // Al volver hay que dejar la URL como estaba: si se llegó desde el QR, el enlace
+    // del cantoral; si se llegó desde el menú, la raíz.
+    const urlDeVuelta = volverA?.screen === 'cantoral-link'
+      ? `/c/${volverA.cantoralId}`
+      : '/';
+    return (
+      <InstallApp
+        parishes={userProfile ? parroquiasDelPerfil(userProfile) : []}
+        role={userProfile?.activeRole || userProfile?.role}
+        loggedIn={!!userProfile}
+        onLogin={() => {
+          window.history.replaceState({}, '', '/');
+          setRoute({ screen: 'app', view: 'main' });
+        }}
+        onBack={volverA
+          ? () => { window.history.replaceState({}, '', urlDeVuelta); setRoute(volverA); }
+          : undefined}
+      />
+    );
+  }
+
   if (route.screen === 'cantoral-link') {
     return (
       <CantoralDeepLink
         cantoralId={route.cantoralId}
+        onOpenInstall={() => {
+          window.history.pushState({}, '', '/instalar');
+          setRoute({ screen: 'install', returnTo: route });
+        }}
         onOpenInApp={() => {
           // Clean the URL and switch to the published-cantorals view
           window.history.replaceState({}, '', '/');
@@ -1340,6 +1382,12 @@ function AppContent() {
           resetTour(effectiveRole);
           navigate('main');
           setTourTick(t => t + 1);
+        }}
+        appInstalled={isStandaloneApp()}
+        onOpenInstall={() => {
+          // URL propia para poder pasarla por WhatsApp ("entra a …/instalar").
+          window.history.pushState({}, '', '/instalar');
+          setRoute({ screen: 'install', returnTo: { screen: 'app', view } });
         }}
       />
 

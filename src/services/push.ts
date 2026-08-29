@@ -106,6 +106,29 @@ export function reportDisplayMode(): void {
   }
 }
 
+/**
+ * Registra el service worker de la PWA al arrancar la app.
+ *
+ * Antes solo se registraba al ACTIVAR las notificaciones, y eso tenía un costo que no
+ * se veía: sin service worker registrado, Chrome nunca considera instalable la app y
+ * nunca dispara `beforeinstallprompt`, así que el botón "Instalar" de un toque no
+ * existía y había que buscar la opción en el menú del navegador — distinta en cada
+ * teléfono. Registrarlo desde el inicio es lo que habilita la instalación en un toque.
+ *
+ * El SW no cachea nada (ver public/push-sw.js), así que esto NO revive el problema de
+ * versiones viejas por el que se desactivó el sw.js del app-shell.
+ */
+export async function registerPwaServiceWorker(): Promise<void> {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+  // Contextos no seguros (http en un móvil de pruebas) rechazan el registro: no es
+  // un error que deba llegar al usuario.
+  try {
+    await navigator.serviceWorker.register(SW_URL);
+  } catch {
+    /* sin SW la app funciona igual; solo se pierde el botón de instalar en un toque */
+  }
+}
+
 /** ¿El dispositivo ya está suscrito a push en este navegador? */
 export async function isPushEnabled(): Promise<boolean> {
   if (!pushSupported()) return false;
