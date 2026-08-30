@@ -90,3 +90,33 @@ export function cantoralActivoAhora(c: CantoralLike, now: Date = new Date()): bo
   const t = now.getTime();
   return t >= cantoralWindowStart(c).getTime() && t <= cantoralWindowEnd(c).getTime();
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// Conversión del horario de la Misa.
+//
+// La BD guarda 'HH:MM AM/PM' y el <input type="time"> del constructor usa 'HH:MM' de
+// 24 h. Al editar un cantoral publicado hay que ir de lo primero a lo segundo, y antes
+// no se hacía: el constructor arrancaba siempre en las 10:00 y el horario real se
+// perdía sin avisar.
+// ──────────────────────────────────────────────────────────────────────────
+
+/** 'HH:MM AM/PM' → 'HH:MM' de 24 h. `null` si el texto no tiene esa forma. */
+export function massTimeTo24h(raw: string): string | null {
+  const m = (raw || '').trim().toUpperCase().replace(/\s+/g, ' ').match(/^(\d{1,2}):(\d{2})(?: (AM|PM))?$/);
+  if (!m) return null;
+  let h = parseInt(m[1], 10);
+  const minutos = m[2];
+  const periodo = m[3];
+  if (periodo === 'PM' && h < 12) h += 12;
+  if (periodo === 'AM' && h === 12) h = 0;   // 12 AM = medianoche
+  if (h > 23 || Number(minutos) > 59) return null;
+  return `${String(h).padStart(2, '0')}:${minutos}`;
+}
+
+/** 'HH:MM' de 24 h → 'HH:MM AM/PM' (el formato que se guarda). */
+export function massTimeTo12h(hhmm: string): string {
+  const [h, m] = (hhmm || '10:00').split(':').map(Number);
+  const periodo = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${periodo}`;
+}

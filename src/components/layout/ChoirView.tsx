@@ -19,6 +19,7 @@ import { AddSolemnityModal } from '../liturgy/AddSolemnityModal';
 import { addCustomLiturgicalDate, toLiturgicalDate } from '../../services/liturgicalDates';
 import { computeUsage, resolveAnnualTarget } from '../../utils/previousUsage';
 import { getTodayLocal, formatYmdForDisplay, parseYmdLocal } from '../../utils/dateLocal';
+import { massTimeTo24h, massTimeTo12h } from '../../utils/massType';
 import { getGospelAcclamationName, getGospelAcclamationIcon, getCurrentLiturgicalSeason, displayCategoryForDate } from '../../utils/liturgicalSeason';
 import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji, getBuildableCelebrations, SpecialLiturgicalDay } from '../../utils/specialLiturgicalDays';
 import { useSongs } from '../../hooks/useSongs';
@@ -42,6 +43,10 @@ interface ChoirViewProps {
   parishCantorals?: PublishedCantoral[];
   /** Id del cantoral en edición (se excluye del cálculo de repeticiones). */
   editingCantoralId?: string | null;
+  /** El cantoral que se está editando: de aquí salen su fecha, hora y tipo de Misa. */
+  editingCantoral?: PublishedCantoral | null;
+  /** Salir de la edición sin tocar el cantoral publicado. */
+  onCancelEdit?: () => void;
 }
 
 // Horarios de Misa seleccionables cada 30 min (06:00–22:00). Valor 'HH:MM' (24h).
@@ -67,6 +72,8 @@ export function ChoirView({
   onPublishCantoral,
   parishCantorals,
   editingCantoralId,
+  editingCantoral,
+  onCancelEdit,
 }: ChoirViewProps) {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showInstrumentModal, setShowInstrumentModal] = useState(false);
@@ -108,6 +115,24 @@ export function ChoirView({
     () => buildPsalmSong(massDate, psalmAntiphon),
     [massDate, psalmAntiphon],
   );
+  /**
+   * Al ENTRAR a editar un cantoral publicado, reponer su fecha, su horario y su tipo
+   * de Misa.
+   *
+   * Antes el constructor arrancaba siempre en "hoy, 10:00, Misa del día", así que al
+   * editar se perdían los tres. El coro tenía que ir a mirar la fecha al listado —
+   * y salir del constructor cancelaba la edición, de modo que al volver "guardar" se
+   * convertía en publicar otro cantoral, con su aviso push y todo. Se dispara solo
+   * cuando cambia el cantoral en edición, para no pisar lo que el coro ajuste después.
+   */
+  useEffect(() => {
+    if (!editingCantoral) return;
+    setMassDate(editingCantoral.date);
+    const hhmm = massTimeTo24h(editingCantoral.massTime);
+    if (hhmm) setMassTime(hhmm);
+    setMassType(editingCantoral.massType ?? (editingCantoral.vigil ? 'visperas_i' : 'dia'));
+  }, [editingCantoral?.id]);
+
   // Tip contextual del constructor (F4): 1ª vez que se abre una categoría.
   const [showConstructorTip, setShowConstructorTip] = useState(false);
   const { songs: allSongs } = useSongs();
@@ -219,13 +244,7 @@ export function ChoirView({
     // (evitamos el triple aviso modal + toast + tarjeta).
   };
 
-  // 'HH:MM' (24h del input time) → 'HH:MM AM/PM' (formato que usa el modal de publicación).
-  const to12h = (hhmm: string): string => {
-    const [h, m] = (hhmm || '10:00').split(':').map(Number);
-    const period = h >= 12 ? 'PM' : 'AM';
-    const dh = h % 12 === 0 ? 12 : h % 12;
-    return `${String(dh).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
-  };
+  // Las conversiones de horario viven en utils/massType (con sus pruebas).
 
   const handleToggleCategory = (category: string) => {
     setExpandedCategories(prev => ({
@@ -316,10 +335,40 @@ export function ChoirView({
             <Music className="w-5 h-5 text-white" strokeWidth={2.5} />
           </div>
           <div className="min-w-0">
-            <h1 className="text-lg font-bold text-brand-ink leading-tight">Armar cantoral</h1>
+            <h1 className="text-lg font-bold text-brand-ink leading-tight">
+              {editingCantoral ? 'Editar cantoral' : 'Armar cantoral'}
+            </h1>
             <p className="text-sm text-brand-ink-soft truncate">{parishName}</p>
           </div>
         </div>
+
+        {/* Estás EDITANDO uno ya publicado, no armando uno nuevo. Tiene que verse: sin
+            este cartel la diferencia era invisible y el coro creía estar publicando de
+            nuevo. Al guardar se actualiza el mismo cantoral y NO se manda ningún aviso. */}
+        {editingCantoral && (
+          <div className="mt-4 bg-amber-100/80 dark:bg-amber-900/30 backdrop-blur-sm rounded-2xl p-4 border-2 border-amber-400 dark:border-amber-700">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl flex-shrink-0" aria-hidden>✏️</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-base font-bold text-amber-950 dark:text-amber-100 leading-snug">
+                  Estás editando el cantoral del {formatYmdForDisplay(editingCantoral.date, { weekday: 'long', day: 'numeric', month: 'long' })}
+                </p>
+                <p className="text-sm text-amber-900 dark:text-amber-200 mt-0.5">
+                  {editingCantoral.liturgicalDate} · {editingCantoral.massTime}. Al guardar se
+                  actualiza este mismo cantoral, sin volver a avisar a la parroquia.
+                </p>
+                {onCancelEdit && (
+                  <button
+                    onClick={onCancelEdit}
+                    className="mt-2 text-sm font-bold text-amber-900 dark:text-amber-200 underline underline-offset-4 active:scale-95 transition-all"
+                  >
+                    Cancelar la edición
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Datos de la Misa — al inicio: fecha + hora + tipo. Fijan la celebración/ciclo
             (cargan el salmo del libro) y pre-llenan el menú de publicación. */}
@@ -348,7 +397,7 @@ export function ChoirView({
                 className="w-full px-3 py-2.5 rounded-xl border-2 border-blue-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-brand-ink font-semibold focus:outline-none focus:border-brand"
               >
                 {MASS_TIME_OPTIONS.map((t) => (
-                  <option key={t} value={t}>{to12h(t)}</option>
+                  <option key={t} value={t}>{massTimeTo12h(t)}</option>
                 ))}
               </select>
             </div>
@@ -640,7 +689,7 @@ export function ChoirView({
             >
               <Send className="w-6 h-6 flex-shrink-0" />
               <span className="text-base sm:text-lg font-bold min-w-0 leading-tight text-center break-words">
-                Publicar Cantoral · {cantoral.length} {cantoral.length === 1 ? 'canto' : 'cantos'}
+                {editingCantoral ? 'Guardar cambios' : 'Publicar Cantoral'} · {cantoral.length} {cantoral.length === 1 ? 'canto' : 'cantos'}
               </span>
             </button>
           </div>
@@ -655,11 +704,12 @@ export function ChoirView({
           parishes={parishes}
           isAdmin={isAdmin}
           initialDate={massDate}
-          initialMassTime={to12h(massTime)}
+          initialMassTime={massTimeTo12h(massTime)}
           initialMassType={massType}
           onClose={() => setShowPublishModal(false)}
           onPublish={handlePublish}
           userInstruments={userInstruments}
+          isEditing={!!editingCantoral}
         />
       )}
 

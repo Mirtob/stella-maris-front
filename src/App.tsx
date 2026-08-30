@@ -344,9 +344,12 @@ function AppContent() {
       setPendingNavigateView(view as ViewState);
       return;
     }
-    // Salir del constructor cancela cualquier edición en curso (evita actualizar
-    // por error un cantoral previo al publicar uno nuevo más tarde).
-    if (view !== 'main') setEditingCantoralId(null);
+    // OJO: salir del constructor NO cancela la edición. Antes sí, y el borrador se
+    // quedaba igual: quien salía a mirar la fecha del cantoral que estaba editando
+    // volvía con los mismos cantos pero SIN la marca de edición, así que "guardar"
+    // se convertía en PUBLICAR OTRO — con su aviso push incluido y un duplicado.
+    // La edición termina cuando termina el borrador (al guardar o al descartarlo),
+    // y mientras tanto el constructor lo dice con un cartel bien visible.
     setRoute({ screen: 'app', view: view as ViewState });
   }
 
@@ -925,7 +928,12 @@ function AppContent() {
         return;
       }
       setCantoral([]);
-      toast.success('Cantoral actualizado');
+      // Guardar NO avisa a nadie: el aviso push es de "hay cantoral nuevo", y aquí no
+      // lo hay. Volver a mandarlo por cada corrección de un canto entrena a la gente a
+      // ignorar las notificaciones. El texto lo dice para que el coro quede tranquilo.
+      toast.success('Cambios guardados', {
+        description: 'Se actualizó el cantoral publicado. No se envió ningún aviso.',
+      });
       const activeParish = userProfile?.activeParishName || userProfile?.parishName;
       setPublishedCantorals(await listCantorals(activeParish));
       // Regenerar el PDF del coro EN SEGUNDO PLANO (no bloquea la edición).
@@ -1028,6 +1036,10 @@ function AppContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ cantoralIds: cs.map(c => c.id) }),
+        // El aviso sale en segundo plano justo después de publicar. Sin `keepalive`, si
+        // el coro cierra la app o bloquea el teléfono en ese instante, el navegador
+        // cancela la petición y el aviso no se manda nunca — sin ningún error visible.
+        keepalive: true,
       });
       const result = await r.json().catch(() => ({} as any));
       if (!r.ok) {
@@ -1116,6 +1128,13 @@ function AppContent() {
     toast.info('Editando cantoral', {
       description: 'Modifica los cantos y la fecha/hora, y vuelve a publicarlo.',
     });
+  };
+
+  /** Salir de la edición: se descarta el borrador y el cantoral original queda intacto. */
+  const handleCancelEdit = () => {
+    setEditingCantoralId(null);
+    setCantoral([]);
+    toast.info('Edición cancelada', { description: 'El cantoral publicado quedó como estaba.' });
   };
 
   // Clonar: carga los cantos de un cantoral (propio, de otra parroquia o del historial)
@@ -1442,6 +1461,9 @@ function AppContent() {
             publishedCantorals,
             loadingCantorals,
             editingCantoralId,
+            editingCantoral: editingCantoralId
+              ? publishedCantorals.find(c => c.id === editingCantoralId) ?? null
+              : null,
             onAddToCantoral: handleAddToCantoral,
             onRemoveFromCantoral: handleRemoveFromCantoral,
             onPlaySong: handlePlaySong,
@@ -1449,6 +1471,7 @@ function AppContent() {
             navigate,
             onDeleteCantoral: handleDeleteCantoral,
             onEditCantoral: handleEditCantoral,
+            onCancelEdit: handleCancelEdit,
             onCloneCantoral: handleCloneCantoral,
             onShareCantoral: handleShareCantoral,
             onListen: handleListen,
@@ -1491,6 +1514,8 @@ interface ViewProps {
   publishedCantorals: PublishedCantoral[];
   loadingCantorals: boolean;
   editingCantoralId: string | null;
+  /** El cantoral que se está editando, para reponer su fecha/hora/tipo de Misa. */
+  editingCantoral: PublishedCantoral | null;
   onAddToCantoral: (song: Song) => void;
   onRemoveFromCantoral: (songId: string) => void;
   /** `instrument` opcional: versión del video a abrir cuando el coro toca hoy con
@@ -1500,6 +1525,7 @@ interface ViewProps {
   navigate: (view: string) => void;
   onDeleteCantoral: (id: string) => Promise<void>;
   onEditCantoral: (id: string) => void;
+  onCancelEdit: () => void;
   onCloneCantoral: (cantoral: PublishedCantoral) => void;
   onShareCantoral: (cantoral: PublishedCantoral) => void;
   onListen: (cantoral: PublishedCantoral) => void;
@@ -1524,6 +1550,8 @@ function renderView(p: ViewProps): JSX.Element | null {
             onPublishCantoral={p.onPublishCantoral}
             parishCantorals={p.publishedCantorals}
             editingCantoralId={p.editingCantoralId}
+            editingCantoral={p.editingCantoral}
+            onCancelEdit={p.onCancelEdit}
           />
         );
       }
@@ -1559,6 +1587,8 @@ function renderView(p: ViewProps): JSX.Element | null {
           onPublishCantoral={p.onPublishCantoral}
           parishCantorals={p.publishedCantorals}
           editingCantoralId={p.editingCantoralId}
+          editingCantoral={p.editingCantoral}
+          onCancelEdit={p.onCancelEdit}
         />
       );
 

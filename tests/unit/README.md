@@ -45,6 +45,9 @@ node tests/output/cantoral-vista.mjs
 npx esbuild tests/unit/instalar-plataforma.test.ts --bundle --platform=node --format=esm --outfile=tests/output/instalar-plataforma.mjs
 node tests/output/instalar-plataforma.mjs
 
+npx esbuild tests/unit/editar-cantoral.test.ts --bundle --platform=node --format=esm --outfile=tests/output/editar-cantoral.mjs
+node tests/output/editar-cantoral.mjs
+
 npx esbuild tests/unit/pdf-texto.test.ts --bundle --platform=node --format=esm --outfile=tests/output/pdftexto.mjs
 node tests/output/pdftexto.mjs
 

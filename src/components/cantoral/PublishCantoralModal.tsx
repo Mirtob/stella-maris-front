@@ -53,6 +53,8 @@ interface PublishCantoralModalProps {
   onClose: () => void;
   onPublish: (targets: PublishTarget[]) => Promise<void> | void;
   userInstruments?: InstrumentType[];
+  /** Se está EDITANDO uno ya publicado: se guarda, no se publica de nuevo ni se avisa. */
+  isEditing?: boolean;
 }
 
 interface CustomLiturgicalDate {
@@ -85,7 +87,7 @@ function normalizeMassTime(raw: string): string {
   return `${String(displayH).padStart(2, '0')}:${min} ${period}`;
 }
 
-export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAdmin = false, initialDate, initialMassTime, initialMassType, onClose, onPublish, userInstruments = [] }: PublishCantoralModalProps) {
+export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAdmin = false, initialDate, initialMassTime, initialMassType, onClose, onPublish, userInstruments = [], isEditing = false }: PublishCantoralModalProps) {
   // Lista efectiva de parroquias (con fallback a la activa). >1 ⇒ modo multi-parroquia.
   const allParishes = parishes.length > 0 ? parishes : (parishName ? [parishName] : []);
   const isMulti = allParishes.length > 1;
@@ -412,7 +414,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <Send className="w-10 h-10" strokeWidth={2.5} />
-                  <h2 id="publish-modal-title" className="text-lg sm:text-xl md:text-2xl font-bold">Publicar Cantoral</h2>
+                  <h2 id="publish-modal-title" className="text-lg sm:text-xl md:text-2xl font-bold">{isEditing ? 'Guardar cambios' : 'Publicar Cantoral'}</h2>
                 </div>
                 <button
                   onClick={onClose}
@@ -937,12 +939,14 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                         </svg>
-                        Publicando…
+                        {isEditing ? 'Guardando…' : 'Publicando…'}
                       </>
                     ) : (
                       <>
                         <Send className="w-5 h-5" />
-                        {isMulti ? `Publicar en ${selectedParishes.size || ''} ${selectedParishes.size === 1 ? 'parroquia' : 'parroquias'}` : 'Publicar'}
+                        {isEditing
+                          ? 'Guardar cambios'
+                          : isMulti ? `Publicar en ${selectedParishes.size || ''} ${selectedParishes.size === 1 ? 'parroquia' : 'parroquias'}` : 'Publicar'}
                       </>
                     )}
                   </div>
@@ -1058,7 +1062,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
                   : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-400 cursor-not-allowed'
               }`}
             >
-              <Send className="w-5 h-5" /> Publicar
+              <Send className="w-5 h-5" /> {isEditing ? 'Guardar cambios' : 'Publicar'}
             </button>
           </div>
         </div>
