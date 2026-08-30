@@ -651,7 +651,11 @@ async function customCelebrationsOn(date: string): Promise<{ name: string; scope
 /** ¿La parroquia ya tiene un cantoral publicado para alguna de esas fechas (incluye víspera)? */
 async function parishHasCantoral(parish: string, dates: string[]): Promise<boolean> {
   const orExpr = `(${dates.map((d) => `date.eq.${d}`).join(',')})`;
-  const url = `${SUPABASE_URL}/rest/v1/published_cantorals?parish_name=eq.${encodeURIComponent(parish)}&or=${encodeURIComponent(orExpr)}&select=id&limit=1`;
+  // ilike sobre el nombre recortado, igual que listCantorals: con `eq` exacto, un
+  // espacio de más en la parroquia del perfil hacía creer que NO había cantoral y el
+  // coro recibía el recordatorio de "publica" aunque ya lo hubiera publicado.
+  const escapado = parish.trim().replace(/[\\%_]/g, (m) => `\\${m}`);
+  const url = `${SUPABASE_URL}/rest/v1/published_cantorals?parish_name=ilike.${encodeURIComponent(escapado)}&or=${encodeURIComponent(orExpr)}&select=id&limit=1`;
   const r = await fetch(url, { headers: svcHeaders });
   if (!r.ok) return false;
   const rows = await r.json();
@@ -669,24 +673,56 @@ async function querySubs(filter: string): Promise<{ endpoint: string; p256dh: st
   const r = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?select=endpoint,p256dh,auth&${filter}`, { headers: svcHeaders });
   return r.ok ? await r.json() : [];
 }
+/**
+ * urgency 'high' + TTL de 12 h. Con la urgencia por defecto, Android puede retener el
+ * aviso hasta que el teléfono despierte, y un recordatorio que llega tarde no sirve.
+ * Sin TTL el valor por defecto son cuatro semanas: llegaban recordatorios de fechas ya
+ * pasadas cuando alguien encendía un teléfono guardado.
+ */
+const PUSH_OPTS = { urgency: 'high' as const, TTL: 12 * 60 * 60 };
+
+/**
+ * Manda a cada suscriptor, con UN reintento ante fallo transitorio (429 / 5xx del push
+ * service). Sin reintento ese aviso se perdía en silencio, y es una de las razones de
+ * que "no lleguen todas". El 404/410 es otra cosa: la suscripción ya no existe.
+ */
 async function sendToSubs(subs: { endpoint: string; p256dh: string; auth: string }[], payload: object): Promise<number> {
   if (!VAPID_PRIVATE || subs.length === 0) return 0;
   const webpush = await webpushLib();
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
   const body = JSON.stringify(payload);
   let sent = 0;
-  await Promise.all(subs.map(async (s) => {
+
+  const uno = async (s: { endpoint: string; p256dh: string; auth: string }, reintento = false): Promise<void> => {
     try {
-      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body);
+      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body, PUSH_OPTS);
       sent++;
     } catch (e: any) {
-      if (e?.statusCode === 404 || e?.statusCode === 410) {
+      const code = Number(e?.statusCode) || 0;
+      if (code === 404 || code === 410) {
         await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(s.endpoint)}`, { method: 'DELETE', headers: svcHeaders }).catch(() => {});
+        return;
+      }
+      if (!reintento && (code === 429 || code >= 500)) {
+        await new Promise((r) => setTimeout(r, 800));
+        return uno(s, true);
       }
     }
-  }));
+  };
+
+  await Promise.all(subs.map((s) => uno(s)));
   return sent;
 }
+
+/**
+ * Comparación de parroquias tolerante (misma idea que listCantorals y notify-cantoral).
+ * La suscripción guarda la parroquia tal cual la trae el perfil y la celebración la
+ * guarda recortada: un espacio o una mayúscula de diferencia dejaban al suscriptor sin
+ * recordatorio, sin ningún error a la vista.
+ */
+const normParish = (x: unknown): string =>
+  String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/\s+/g, ' ').trim();
 
 /** Une una lista para el cuerpo del push, con tope (máx 3 + "y N más"). */
 function digestBody(items: string[], max = 3): string {
@@ -830,7 +866,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       for (const sub of celebSubs) {
         const seen = new Set<string>();
         const mine = celebItems
-          .filter((it) => it.scope === 'global' || (sub.parishes || []).includes(it.scope))
+          .filter((it) => it.scope === 'global'
+            || (sub.parishes || []).some((pp) => normParish(pp) === normParish(it.scope)))
           .filter((it) => (seen.has(it.name) ? false : (seen.add(it.name), true)));
         if (mine.length === 0) continue;
         generalSent += await deliver([{ endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth }], {
@@ -865,7 +902,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       for (const parish of parishes) {
         const rel = [
           ...base3,
-          ...custom3.filter((c) => c.scope === 'global' || c.scope === parish).map((c) => c.name),
+          ...custom3
+            .filter((c) => c.scope === 'global' || normParish(c.scope) === normParish(parish))
+            .map((c) => c.name),
         ];
         if (rel.length === 0) { skipped.push(`${parish}: sin celebración ese día`); continue; }
         if (await parishHasCantoral(parish, [target3, vigil])) { skipped.push(`${parish}: ya publicado`); continue; }

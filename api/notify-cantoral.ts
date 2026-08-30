@@ -75,25 +75,70 @@ async function webpushLib(): Promise<any> {
   return _webpush;
 }
 
+/**
+ * Opciones de envío.
+ *
+ *  · urgency 'high': en Android con la pantalla apagada, una notificación 'normal' se
+ *    puede quedar retenida hasta que el teléfono despierte. El aviso de un cantoral
+ *    sirve ANTES de la Misa o no sirve.
+ *  · TTL de 12 h: si el teléfono estuvo apagado más que eso, el aviso ya no aporta.
+ *    Sin TTL, el valor por defecto son cuatro semanas y llegan avisos de Misas viejas.
+ */
+const PUSH_OPTS = { urgency: 'high' as const, TTL: 12 * 60 * 60 };
+
+/**
+ * Manda a cada suscriptor, con UN reintento ante fallo transitorio.
+ *
+ * Los push services (FCM, Mozilla, Apple) devuelven 429 o 5xx cuando están saturados.
+ * Sin reintento ese aviso se perdía y nadie se enteraba: es una de las razones de que
+ * "no lleguen todas". Un 404/410 es distinto — esa suscripción ya no existe y se borra.
+ */
 async function sendToSubs(subs: { endpoint: string; p256dh: string; auth: string }[], payload: object) {
-  if (!VAPID_PRIVATE || subs.length === 0) return { sent: 0, failed: 0 };
+  if (!VAPID_PRIVATE || subs.length === 0) return { sent: 0, failed: 0, errors: [] as string[] };
   const webpush = await webpushLib();
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
   const body = JSON.stringify(payload);
   let sent = 0, failed = 0;
-  await Promise.all(subs.map(async (s) => {
+  const errors: string[] = [];
+
+  const uno = async (s: { endpoint: string; p256dh: string; auth: string }, reintento = false): Promise<void> => {
     try {
-      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body);
+      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body, PUSH_OPTS);
       sent++;
     } catch (e: any) {
-      failed++;
-      if (e?.statusCode === 404 || e?.statusCode === 410) {
+      const code = Number(e?.statusCode) || 0;
+      // Suscripción muerta: el navegador la rotó o el usuario desinstaló la app.
+      if (code === 404 || code === 410) {
+        failed++;
+        errors.push(`${code} caducada`);
         await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(s.endpoint)}`, { method: 'DELETE', headers: svcHeaders }).catch(() => {});
+        return;
       }
+      // Transitorio: se reintenta una vez tras una pausa corta.
+      if (!reintento && (code === 429 || code >= 500)) {
+        await new Promise((r) => setTimeout(r, 800));
+        return uno(s, true);
+      }
+      failed++;
+      errors.push(String(code || e?.message || 'error').slice(0, 40));
     }
-  }));
-  return { sent, failed };
+  };
+
+  await Promise.all(subs.map((s) => uno(s)));
+  return { sent, failed, errors };
 }
+
+/**
+ * Comparación de parroquias tolerante, la misma idea que usa listCantorals.
+ *
+ * El cantoral guarda `parish_name` recortado; la suscripción guarda la parroquia tal
+ * cual la tiene el perfil. Un espacio de más o una mayúscula distinta bastaban para que
+ * el suscriptor no calzara y el aviso no le llegara nunca, en silencio. Se normaliza
+ * quitando acentos, espacios sobrantes y mayúsculas.
+ */
+const normParish = (x: unknown): string =>
+  String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/\s+/g, ' ').trim();
 
 // ── Rate limit (inline; ver pdf.ts para el contexto del bundling) ────────────
 interface Hit { count: number; resetAt: number; }
@@ -234,22 +279,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       byParish.get(p)!.push(c);
     }
 
+    // Suscriptores del topic 'cantorals', UNA sola vez. El filtro por parroquia se hace
+    // aquí y no en la consulta: PostgREST solo sabe comparar el texto exacto, y con eso
+    // cualquier diferencia de espacios o mayúsculas dejaba fuera al suscriptor.
+    const allSr = await fetch(
+      `${SUPABASE_URL}/rest/v1/push_subscriptions?select=endpoint,p256dh,auth,parishes&topics=cs.${encodeURIComponent('{cantorals}')}`,
+      { headers: svcHeaders },
+    );
+    const allSubs: { endpoint: string; p256dh: string; auth: string; parishes: string[] }[] =
+      allSr.ok ? await allSr.json() : [];
+
     let totalSent = 0;
     let totalSubs = 0;
     let totalFailed = 0;
+    const errores: string[] = [];
     for (const [parish, items] of byParish) {
       // Más próximo primero (para el modo radio y el resumen).
       items.sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
       const nearest = items[0];
 
-      const topicF = `topics=cs.${encodeURIComponent('{cantorals}')}`;
-      const parishF = `parishes=cs.${encodeURIComponent(`{"${parish.replace(/"/g, '\\"')}"}`)}`;
-      const sr = await fetch(
-        `${SUPABASE_URL}/rest/v1/push_subscriptions?select=endpoint,p256dh,auth&${topicF}&${parishF}`,
-        { headers: svcHeaders },
-      );
-      const subs = sr.ok ? await sr.json() : [];
-      totalSubs += Array.isArray(subs) ? subs.length : 0;
+      const objetivo = normParish(parish);
+      const subs = allSubs.filter((s2) => (s2.parishes || []).some((x) => normParish(x) === objetivo));
+      totalSubs += subs.length;
 
       const detail = [nearest.liturgical_date, nearest.mass_time].filter(Boolean).join(' · ');
       const payload = items.length === 1
@@ -260,11 +311,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ...payload,
         // ?r=1 → la app abre PRIMERO el modo radio (genera vistas) y luego el cantoral.
         url: `/c/${nearest.id}?r=1`,
-        // Tag ESTABLE por parroquia: el aviso nuevo reemplaza al anterior (no se apilan).
-        tag: `cantoral-${parish}`,
+        // Tag por parroquia Y FECHA. Antes era solo la parroquia, así que el aviso de
+        // la Misa del domingo borraba de la bandeja el de la vespertina del sábado: la
+        // gente veía llegar una sola. Con la fecha, cada Misa tiene el suyo, y volver a
+        // avisar de la MISMA Misa sigue reemplazando en vez de apilar.
+        tag: `cantoral-${parish}-${nearest.date}`,
       });
       totalSent += result.sent;
       totalFailed += result.failed;
+      errores.push(...result.errors);
     }
 
     // `subs_total` = suscriptores que CALZABAN con la parroquia. Distinguirlo de
@@ -275,7 +330,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       subs_total: totalSubs,
       duration_ms: Date.now() - startedAt,
       ok: totalFailed === 0,
-      error: totalFailed > 0 ? `${totalFailed} envío(s) rechazado(s) por el push service` : null,
+      // Con el motivo concreto: la proxima vez que alguien diga "no me llego" se puede
+      // distinguir una suscripcion caducada de un rechazo del push service.
+      error: totalFailed > 0
+        ? `${totalFailed} envío(s) rechazado(s): ${Array.from(new Set(errores)).join(', ').slice(0, 200)}`
+        : null,
     });
 
     return res.status(200).json({ ok: true, sent: totalSent, subs: totalSubs, parishes: byParish.size });
