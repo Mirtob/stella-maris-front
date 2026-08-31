@@ -1212,7 +1212,12 @@ function AppContent() {
     return (
       <InstallApp
         parishes={userProfile ? parroquiasDelPerfil(userProfile) : []}
-        role={userProfile?.activeRole || userProfile?.role}
+        // Rol PERMANENTE, no el de la sesión: el recordatorio de los jueves ("publica
+        // el cantoral") se manda a role IN (Coro, Admin) de la suscripción. Si un Coro
+        // activaba los avisos mientras miraba la app como Pueblo fiel, la suscripción
+        // quedaba guardada con ese rol y dejaba de recibirlo. Es el mismo criterio que
+        // usan la tarjeta de Ajustes y syncPushParishes.
+        role={userProfile?.role}
         loggedIn={!!userProfile}
         onLogin={() => {
           window.history.replaceState({}, '', '/');

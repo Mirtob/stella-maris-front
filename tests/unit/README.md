@@ -48,6 +48,10 @@ node tests/output/instalar-plataforma.mjs
 npx esbuild tests/unit/editar-cantoral.test.ts --bundle --platform=node --format=esm --outfile=tests/output/editar-cantoral.mjs
 node tests/output/editar-cantoral.mjs
 
+# Este importa una función de api/, que trae los tipos de Vercel: van como external.
+npx esbuild tests/unit/avisos-automaticos.test.ts --bundle --platform=node --format=esm --external:@vercel/node --external:web-push --outfile=tests/output/avisos.mjs
+node tests/output/avisos.mjs
+
 npx esbuild tests/unit/pdf-texto.test.ts --bundle --platform=node --format=esm --outfile=tests/output/pdftexto.mjs
 node tests/output/pdftexto.mjs
 
@@ -142,3 +146,19 @@ lanzamiento (29-ago-2026):
    propia lista incompleta y ordenaba con `indexOf`: una parte que no estuviera en
    ella daba -1 y se iba ARRIBA DE TODO. Si agregas un rótulo de parte nuevo,
    agrégalo a `MASS_CATEGORY_ORDER` — no a una lista local.
+
+
+## El calendario del cron es GENERADO
+
+`api/cron/celebration-reminders.ts` lleva el calendario copiado dentro (la función de
+Vercel tiene que ser autocontenida). Esa copia se mantenía a mano y se desfasó: le
+faltaban los **23 domingos que caen en una fiesta** — Sagrada Familia, Bautismo del
+Señor, Presentación, Transfiguración, Exaltación de la Santa Cruz, Dedicación de San
+Juan de Letrán. Ninguno se llama "N.º Domingo de…" ni es solemnidad, así que el filtro
+manual los dejaba fuera, y esos domingos el coro **no recibía el recordatorio del
+jueves**, sin ningún error a la vista.
+
+Ahora lo regenera `npm run gen:calendar` (que encadena `gen:cron-celebrations`). La
+regla es **todo domingo + toda solemnidad**. `avisos-automaticos.test.ts` recorre los
+105 jueves de 2026 y 2027 y exige que cada uno apunte a un domingo que exista en el
+calendario: si vuelve a faltar alguno, la prueba lo caza.

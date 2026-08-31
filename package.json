@@ -35,6 +35,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "gen:calendar": "node scripts/genLiturgicalCalendar.mjs"
+    "gen:calendar": "node scripts/genLiturgicalCalendar.mjs && node scripts/genCronCelebrations.mjs",
+    "gen:cron-celebrations": "node scripts/genCronCelebrations.mjs"
   }
 }
