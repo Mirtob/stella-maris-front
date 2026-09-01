@@ -61,7 +61,20 @@ const GENERIC_INSTRUMENTS = ['Coro', 'Guitarra', 'Órgano'] as unknown as Instru
  * Para agregar cantos: el admin sube el video a YouTube con el bloque
  * STELLA_MARIS_META y luego usa "Sincronizar YouTube" (YouTubeSyncDialog).
  */
-export function SongManager() {
+interface SongManagerProps {
+  /**
+   * ¿Puede BORRAR cantos del catálogo? Solo el administrador principal.
+   *
+   * Los ayudantes suben y transcriben (INSERT y UPDATE); el borrado no tiene vuelta
+   * atrás y se lleva letra, acordes, partituras y etiquetas de un canto que puede
+   * estar en cantorales ya publicados. Quien manda es la policy de la base
+   * (20260902_songs_borrado_solo_principal); el botón se esconde para que nadie
+   * choque contra un error en vez de contra una explicación.
+   */
+  puedeBorrar?: boolean;
+}
+
+export function SongManager({ puedeBorrar = true }: SongManagerProps) {
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -973,14 +986,16 @@ export function SongManager() {
                     <Pencil className="w-4 h-4 flex-shrink-0" />
                     <span className="text-sm font-bold">Editar</span>
                   </button>
-                  <button
-                    onClick={() => setPendingDeleteId(song.id)}
-                    aria-label={`Eliminar ${song.title}`}
-                    className="flex-1 min-w-[110px] bg-red-600 text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-red-700 active:scale-95 transition-all"
-                  >
-                    <Trash2 className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-sm font-bold">Eliminar</span>
-                  </button>
+                  {puedeBorrar && (
+                    <button
+                      onClick={() => setPendingDeleteId(song.id)}
+                      aria-label={`Eliminar ${song.title}`}
+                      className="flex-1 min-w-[110px] bg-red-600 text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-red-700 active:scale-95 transition-all"
+                    >
+                      <Trash2 className="w-4 h-4 flex-shrink-0" />
+                      <span className="text-sm font-bold">Eliminar</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -1249,14 +1264,16 @@ export function SongManager() {
                       >
                         <Pencil className="w-4 h-4" strokeWidth={2.5} />
                       </button>
-                      <button
-                        onClick={() => handleDeleteTag(tag)}
-                        disabled={!editable}
-                        aria-label={`Eliminar ${tag.label}`}
-                        className="p-2 rounded-xl bg-red-600 text-white active:scale-95 disabled:opacity-40"
-                      >
-                        <Trash2 className="w-4 h-4" strokeWidth={2.5} />
-                      </button>
+                      {puedeBorrar && (
+                        <button
+                          onClick={() => handleDeleteTag(tag)}
+                          disabled={!editable}
+                          aria-label={`Eliminar ${tag.label}`}
+                          className="p-2 rounded-xl bg-red-600 text-white active:scale-95 disabled:opacity-40"
+                        >
+                          <Trash2 className="w-4 h-4" strokeWidth={2.5} />
+                        </button>
+                      )}
                     </li>
                   );
                 })}

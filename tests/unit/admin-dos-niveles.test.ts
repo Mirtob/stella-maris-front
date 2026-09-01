@@ -30,7 +30,11 @@ function checkTrue(name: string, cond: boolean, detalle = '') {
 }
 
 const DIR = join(process.cwd(), 'supabase', 'migrations');
-const migracion = readFileSync(join(DIR, '20260901_admin_solo_cantos.sql'), 'utf8');
+// El perfilamiento son dos migraciones: la que parte los niveles y la que le quita el
+// borrado al ayudante. Se leen juntas porque juntas definen la frontera.
+const PAQUETE = ['20260901_admin_solo_cantos.sql', '20260902_songs_borrado_solo_principal.sql'];
+const migracion = readFileSync(join(DIR, PAQUETE[0]), 'utf8');
+const borrado = readFileSync(join(DIR, PAQUETE[1]), 'utf8');
 
 console.log('\n== El correo principal es uno solo y está en los dos lados ==');
 check('el de la app', PRINCIPAL_ADMIN_EMAIL, 'gustavus.tobar@gmail.com');
@@ -78,9 +82,38 @@ checkTrue('escribir en `admins` exige ser el principal',
 console.log('\n== El resto del esquema sigue cerrado (fail-safe) ==');
 // Ninguna migración anterior debe haber usado is_song_admin: no existía. Y ninguna
 // debe conceder acceso por correo suelto en vez de por la tabla `admins`.
-const otras = readdirSync(DIR).filter((f) => f.endsWith('.sql') && !f.startsWith('20260901_'));
+const otras = readdirSync(DIR).filter((f) => f.endsWith('.sql') && !PAQUETE.includes(f));
 const conSongAdmin = otras.filter((f) => readFileSync(join(DIR, f), 'utf8').includes('is_song_admin'));
-check('ninguna migración previa abre nada al ayudante', conSongAdmin, []);
+check('ninguna otra migración abre nada al ayudante', conSongAdmin, []);
+
+console.log('\n== Borrar del catálogo es solo del principal ==');
+// El ayudante sube y transcribe: INSERT y UPDATE. Un DELETE no tiene vuelta atrás y se
+// lleva letra, acordes, partituras y etiquetas de un canto que puede estar en
+// cantorales ya publicados.
+const pols = (sql: string) =>
+  [...sql.matchAll(/CREATE POLICY "([^"]+)" ON ([\w.]+)([\s\S]*?);/g)]
+    .map((m) => ({ nombre: m[1], tabla: m[2], cuerpo: m[3] }));
+const delBorrado = pols(borrado);
+
+const porOperacion = (tabla: string, op: string) =>
+  delBorrado.find((x) => x.tabla === tabla && x.cuerpo.includes(`FOR ${op}`));
+
+checkTrue('el DELETE de songs exige ser el principal',
+  !!porOperacion('public.songs', 'DELETE')?.cuerpo.match(/is_admin/) &&
+  !porOperacion('public.songs', 'DELETE')!.cuerpo.includes('is_song_admin'));
+checkTrue('el DELETE de las etiquetas también',
+  !!porOperacion('public.song_tags', 'DELETE')?.cuerpo.match(/is_admin/) &&
+  !porOperacion('public.song_tags', 'DELETE')!.cuerpo.includes('is_song_admin'));
+
+// Subir y transcribir siguen siendo del ayudante: si esto se cerrara, no podría trabajar.
+checkTrue('el ayudante sigue pudiendo subir', !!porOperacion('public.songs', 'INSERT')?.cuerpo.includes('is_song_admin'));
+checkTrue('y transcribir', !!porOperacion('public.songs', 'UPDATE')?.cuerpo.includes('is_song_admin'));
+checkTrue('y ver los cantos aún no aprobados', !!porOperacion('public.songs', 'SELECT')?.cuerpo.includes('is_song_admin'));
+
+// Una policy FOR ALL volveria a meter el borrado por la puerta de atras.
+checkTrue('no queda ninguna policy FOR ALL sobre songs',
+  !delBorrado.some((x) => x.tabla === 'public.songs' && /FOR ALL/.test(x.cuerpo)) &&
+  borrado.includes('DROP POLICY IF EXISTS "songs_admin_all"'));
 
 const nuevaDefaultMinima = /ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'songs'/.test(migracion);
 checkTrue("quien se agregue sin decir nada entra como 'songs'", nuevaDefaultMinima);

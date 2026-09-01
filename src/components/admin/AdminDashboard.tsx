@@ -44,7 +44,8 @@ export function AdminDashboard({ soloCantos = false }: AdminDashboardProps) {
   }
 
   if (vistaEfectiva === 'songs') {
-    return <SongManager />;
+    // Borrar del catálogo es solo del principal: el ayudante sube y transcribe.
+    return <SongManager puedeBorrar={!soloCantos} />;
   }
 
   if (vistaEfectiva === 'migration') {

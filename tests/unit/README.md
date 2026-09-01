@@ -169,7 +169,8 @@ calendario: si vuelve a faltar alguno, la prueba lo caza.
 
 ## La frontera de los dos niveles de admin
 
-`admin-dos-niveles.test.ts` lee el SQL del repo, no la base. Vigila la regla que hace
+`admin-dos-niveles.test.ts` lee el SQL del repo (las dos migraciones del paquete:
+`20260901_admin_solo_cantos` y `20260902_songs_borrado_solo_principal`), no la base. Vigila la regla que hace
 segura la separación: **`is_admin()` significa admin PLENO**, y lo único que se le abre
 al ayudante de cantos es `is_song_admin()` sobre `songs` y `song_tags` (más leer
 `admins`). Está escrito así a propósito: como `is_admin()` la usan una veintena de
@@ -177,3 +178,8 @@ policies por todo el esquema, cualquier policy que se agregue mañana queda **ce
 ayudante por omisión**. Si alguien abre otra tabla con `is_song_admin`, o afloja
 `is_admin()`, la prueba lo caza. Escribir en `admins` es solo del principal — si no, un
 ayudante podría ascenderse solo.
+
+Vigila además el **borrado**: el ayudante sube (INSERT) y transcribe (UPDATE), pero el
+DELETE de `songs` y de `song_tags` es del principal. Si alguien volviera a poner una
+policy `FOR ALL` sobre `songs`, el borrado entraría por la puerta de atrás — la prueba
+también lo caza.
