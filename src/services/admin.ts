@@ -23,3 +23,35 @@ export async function isCurrentUserAdmin(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Nivel de administración de quien está conectado.
+ *
+ *   'principal' → acceso total al panel (un solo correo).
+ *   'songs'     → SOLO la gestión de cantos. Es el perfil de quien ayuda a subir y
+ *                 transcribir el catálogo: ve el panel, pero con una sola puerta.
+ *   null        → no es admin.
+ *
+ * Igual que `isCurrentUserAdmin`, esto decide únicamente QUÉ SE MUESTRA. Lo que de
+ * verdad manda son las policies de la base (migración 20260901_admin_solo_cantos):
+ * aunque alguien fuerce este valor desde el navegador, la base le va a rechazar todo
+ * lo que no sea el catálogo.
+ */
+export type AdminLevel = 'principal' | 'songs' | null;
+
+export async function getAdminLevel(): Promise<AdminLevel> {
+  try {
+    const sb = getSupabaseClient();
+    const { data, error } = await sb.rpc('admin_level');
+    if (error) {
+      // La migración todavía no está aplicada: se cae al chequeo antiguo para no
+      // dejar al administrador fuera de su propio panel.
+      console.error('Error leyendo el nivel de admin:', error.message);
+      return (await isCurrentUserAdmin()) ? 'principal' : null;
+    }
+    return data === 'principal' || data === 'songs' ? data : null;
+  } catch (err: any) {
+    console.error('Excepción leyendo el nivel de admin:', err?.message);
+    return null;
+  }
+}

@@ -52,6 +52,9 @@ node tests/output/editar-cantoral.mjs
 npx esbuild tests/unit/avisos-automaticos.test.ts --bundle --platform=node --format=esm --external:@vercel/node --external:web-push --outfile=tests/output/avisos.mjs
 node tests/output/avisos.mjs
 
+npx esbuild tests/unit/admin-dos-niveles.test.ts --bundle --platform=node --format=esm --outfile=tests/output/admin-niveles.mjs
+node tests/output/admin-niveles.mjs
+
 npx esbuild tests/unit/pdf-texto.test.ts --bundle --platform=node --format=esm --outfile=tests/output/pdftexto.mjs
 node tests/output/pdftexto.mjs
 
@@ -162,3 +165,15 @@ Ahora lo regenera `npm run gen:calendar` (que encadena `gen:cron-celebrations`).
 regla es **todo domingo + toda solemnidad**. `avisos-automaticos.test.ts` recorre los
 105 jueves de 2026 y 2027 y exige que cada uno apunte a un domingo que exista en el
 calendario: si vuelve a faltar alguno, la prueba lo caza.
+
+
+## La frontera de los dos niveles de admin
+
+`admin-dos-niveles.test.ts` lee el SQL del repo, no la base. Vigila la regla que hace
+segura la separación: **`is_admin()` significa admin PLENO**, y lo único que se le abre
+al ayudante de cantos es `is_song_admin()` sobre `songs` y `song_tags` (más leer
+`admins`). Está escrito así a propósito: como `is_admin()` la usan una veintena de
+policies por todo el esquema, cualquier policy que se agregue mañana queda **cerrada al
+ayudante por omisión**. Si alguien abre otra tabla con `is_song_admin`, o afloja
+`is_admin()`, la prueba lo caza. Escribir en `admins` es solo del principal — si no, un
+ayudante podría ascenderse solo.

@@ -12,42 +12,58 @@ import { CourseQuizEditor } from './CourseQuizEditor';
 
 type AdminView = 'menu' | 'users' | 'accounts' | 'parishes' | 'songs' | 'migration' | 'youtube-sync' | 'recovery' | 'survey' | 'quizzes';
 
-export function AdminDashboard() {
+interface AdminDashboardProps {
+  /**
+   * Admin limitado al CATÁLOGO DE CANTOS: quien ayuda a subir y transcribir.
+   *
+   * Solo esconde puertas — lo que de verdad lo limita son las policies de la base
+   * (migración 20260901_admin_solo_cantos): aunque alguien fuerce esta bandera desde
+   * el navegador, la base le rechaza todo lo que no sea el catálogo. Se esconde igual
+   * porque una puerta que al abrirse da un error no es una puerta, es una trampa.
+   */
+  soloCantos?: boolean;
+}
+
+export function AdminDashboard({ soloCantos = false }: AdminDashboardProps) {
   const [currentView, setCurrentView] = useState<AdminView>('menu');
 
-  if (currentView === 'users') {
+  // Red de seguridad: si por un enlace viejo o un estado raro se pidiera otra vista,
+  // el ayudante vuelve al menú en vez de ver una pantalla que no puede usar.
+  const vistaEfectiva: AdminView = soloCantos && currentView !== 'songs' ? 'menu' : currentView;
+
+  if (vistaEfectiva === 'users') {
     return <ProfileManager />;
   }
 
-  if (currentView === 'accounts') {
+  if (vistaEfectiva === 'accounts') {
     return <AdminUserAccounts onBack={() => setCurrentView('menu')} />;
   }
 
-  if (currentView === 'parishes') {
+  if (vistaEfectiva === 'parishes') {
     return <ParishManager />;
   }
 
-  if (currentView === 'songs') {
+  if (vistaEfectiva === 'songs') {
     return <SongManager />;
   }
 
-  if (currentView === 'migration') {
+  if (vistaEfectiva === 'migration') {
     return <CatalogMigration onBack={() => setCurrentView('menu')} />;
   }
 
-  if (currentView === 'youtube-sync') {
+  if (vistaEfectiva === 'youtube-sync') {
     return <YouTubeSyncDialog onBack={() => setCurrentView('menu')} />;
   }
 
-  if (currentView === 'recovery') {
+  if (vistaEfectiva === 'recovery') {
     return <RecoveryManager onBack={() => setCurrentView('menu')} />;
   }
 
-  if (currentView === 'survey') {
+  if (vistaEfectiva === 'survey') {
     return <SurveyResults onBack={() => setCurrentView('menu')} />;
   }
 
-  if (currentView === 'quizzes') {
+  if (vistaEfectiva === 'quizzes') {
     return <CourseQuizEditor onBack={() => setCurrentView('menu')} />;
   }
 
@@ -62,11 +78,18 @@ export function AdminDashboard() {
             </div>
           </div>
           <h1 className="text-4xl font-bold text-brand-ink mb-2">Panel Administrativo</h1>
-          <p className="text-xl text-brand-ink-soft">Gestión completa del sistema</p>
+          <p className="text-xl text-brand-ink-soft">
+            {soloCantos ? 'Tu acceso: el catálogo de cantos' : 'Gestión completa del sistema'}
+          </p>
         </div>
 
         {/* Admin Menu Cards */}
         <div className="space-y-4">
+          {/* Todo lo que sigue es del administrador PLENO. El ayudante de cantos ve
+              solo la tarjeta del catálogo: una puerta que al abrirse diera un error
+              no sería una puerta, sería una trampa. */}
+          {!soloCantos && (
+            <>
           {/* Users Management */}
           <button
             onClick={() => setCurrentView('users')}
@@ -102,6 +125,8 @@ export function AdminDashboard() {
               </div>
             </div>
           </button>
+            </>
+          )}
 
           {/* Songs Management */}
           <button
@@ -122,6 +147,8 @@ export function AdminDashboard() {
             </div>
           </button>
 
+          {!soloCantos && (
+            <>
           {/* YouTube Sync */}
           <button
             data-tour="admin-sync"
@@ -231,9 +258,25 @@ export function AdminDashboard() {
               </div>
             </div>
           </button>
+            </>
+          )}
         </div>
 
+        {/* Qué alcance tiene esta cuenta. Se dice de frente para que nadie pierda el
+            tiempo buscando una sección que no le corresponde. */}
+        {soloCantos && (
+          <div className="mt-8 bg-white/50 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/60 dark:border-white/20">
+            <h3 className="text-lg font-bold text-brand-ink mb-2">Tu acceso</h3>
+            <p className="text-base text-brand-ink-soft leading-relaxed">
+              Tu cuenta administra <strong>el catálogo de cantos</strong>: agregar, editar y
+              etiquetar. Las demás secciones del panel (usuarios, parroquias, cuentas,
+              encuesta, cursos) son del administrador principal.
+            </p>
+          </div>
+        )}
+
         {/* Aviso de Seguridad de YouTube */}
+        {!soloCantos && (
         <div className="mt-8 bg-gradient-to-br from-red-100 to-orange-100 dark:from-red-950 dark:to-orange-950 rounded-2xl p-3 sm:p-4 border-2 border-red-400 dark:border-red-700 shadow-xl">
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0">
@@ -297,6 +340,7 @@ export function AdminDashboard() {
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

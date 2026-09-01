@@ -109,7 +109,7 @@ import { esVisita, parroquiasDelPerfil, recordarVisita } from './utils/parishVis
 import { massTypeBadge } from './utils/massType';
 import { songsForBuilder } from './utils/psalmSong';
 import { generateCantoralPDF } from './utils/cantoralPDFGenerator';
-import { isCurrentUserAdmin } from './services/admin';
+import { getAdminLevel, type AdminLevel } from './services/admin';
 import { upsertCurrentUserProfile, getCurrentUserProfile } from './services/userProfiles';
 import { setCurrentUserId } from './services/currentUser';
 import { setSentryUserContext, clearSentryUserContext } from './services/sentry';
@@ -311,8 +311,21 @@ function AppContent() {
   const handleShareCantoral = (c: PublishedCantoral) => { setQrShareMode(true); setQrCantoral(c); };
   // Resumen tras publicar el mismo cantoral en varias parroquias (QR por parroquia).
   const [publishedBatch, setPublishedBatch] = useState<PublishedCantoral[] | null>(null);
-  // Server-authoritative admin check (vs. trusting the role saved in localStorage)
-  const [isVerifiedAdmin, setIsVerifiedAdmin] = useState(false);
+  /**
+   * Nivel de administración verificado contra Supabase (nunca el rol de localStorage).
+   *
+   *   'principal' → panel completo.
+   *   'songs'     → solo la gestión de cantos (quien ayuda con el catálogo).
+   *   null        → no es admin.
+   *
+   * `isVerifiedAdmin` sigue significando ADMIN PLENO en toda la app: es lo que
+   * habilita crear celebraciones globales, ver todas las parroquias y el resto del
+   * panel. Manteniendo ese significado, un ayudante de cantos no hereda nada de eso
+   * por descuido en ninguno de los sitios donde ya se usaba.
+   */
+  const [adminLevel, setAdminLevel] = useState<AdminLevel>(null);
+  const isVerifiedAdmin = adminLevel === 'principal';
+  const isSongAdmin = adminLevel === 'songs';
   // Rol/instrumento que eligió en el formulario de registro, traídos por localStorage
   // (entre medio hay un reload). Se lee una vez y se descarta al completar el alta.
   const [signupPrefs] = useState(() => readSignupPrefs());
@@ -375,15 +388,17 @@ function AppContent() {
   // the DB is the source of truth and the RLS policies enforce it server-side.
   useEffect(() => {
     if (!userProfile) {
-      setIsVerifiedAdmin(false);
+      setAdminLevel(null);
       return;
     }
     let cancelled = false;
-    isCurrentUserAdmin().then((isAdmin) => {
+    getAdminLevel().then((level) => {
       if (cancelled) return;
-      setIsVerifiedAdmin(isAdmin);
+      setAdminLevel(level);
       // If localStorage said "Admin" but Supabase says no, demote immediately.
-      if (!isAdmin && (userProfile.role === 'Admin' || userProfile.activeRole === 'Admin')) {
+      // Un ayudante de cantos ('songs') SÍ es admin: conserva el rol y entra al
+      // panel, solo que adentro encuentra una única puerta.
+      if (level === null && (userProfile.role === 'Admin' || userProfile.activeRole === 'Admin')) {
         const demoted: UserProfile = {
           ...userProfile,
           role: userProfile.role === 'Admin' ? 'Coro' : userProfile.role,
@@ -1302,7 +1317,7 @@ function AppContent() {
     // (con downgrade de Admin no verificado), no por el rol permanente.
     const claimedSettingsRole = userProfile.activeRole || userProfile.role || 'Coro';
     const settingsRole: UserRole =
-      claimedSettingsRole === 'Admin' && !isVerifiedAdmin ? 'Coro' : claimedSettingsRole;
+      claimedSettingsRole === 'Admin' && adminLevel === null ? 'Coro' : claimedSettingsRole;
     return (
       <Suspense fallback={<LoadingScreen />}>
         <ProfileSettings
@@ -1323,8 +1338,10 @@ function AppContent() {
   // Ensure effectiveRole always falls back to a valid UserRole so renderView never returns null.
   // If localStorage claims 'Admin' but Supabase hasn't verified it, downgrade to 'Coro'.
   const claimedRole = userProfile.activeRole || userProfile.role || 'Coro';
+  // Vale cualquier nivel de admin (pleno o solo cantos): los dos entran al panel.
+  // Lo que cambia es lo que hay dentro, y eso lo decide `adminLevel`.
   let effectiveRole: UserRole =
-    claimedRole === 'Admin' && !isVerifiedAdmin ? 'Coro' : claimedRole;
+    claimedRole === 'Admin' && adminLevel === null ? 'Coro' : claimedRole;
   // Solo un perfil Coro (o Admin) puede actuar como Coro y publicar. Si un perfil
   // Pueblo fiel tuviera activeRole='Coro' persistido (de antes), se fuerza a Pueblo
   // fiel — red de seguridad por si el selector de sesión no se mostró.
@@ -1461,6 +1478,7 @@ function AppContent() {
             userProfile,
             effectiveRole,
             isVerifiedAdmin,
+            isSongAdmin,
             activeParishName,
             cantoral,
             publishedCantorals,
@@ -1514,6 +1532,8 @@ interface ViewProps {
   userProfile: UserProfile;
   effectiveRole: UserRole;
   isVerifiedAdmin: boolean;
+  /** Admin limitado al catálogo de cantos (ayuda a subir y transcribir). */
+  isSongAdmin: boolean;
   activeParishName: string;
   cantoral: Song[];
   publishedCantorals: PublishedCantoral[];
@@ -1577,7 +1597,7 @@ function renderView(p: ViewProps): JSX.Element | null {
           />
         );
       }
-      if (p.effectiveRole === 'Admin') return <AdminDashboard />;
+      if (p.effectiveRole === 'Admin') return <AdminDashboard soloCantos={p.isSongAdmin} />;
       // Fallback: perfil con rol desconocido o corrupto → tratar como Coro
       return (
         <ChoirView
@@ -1624,7 +1644,7 @@ function renderView(p: ViewProps): JSX.Element | null {
           details={`Esta área incluye funcionalidades críticas como:\n• Subir nuevos cantos al sistema\n• Gestión del canal de YouTube\n• Administración de usuarios`}
           navigate={p.navigate}
         >
-          <AdminDashboard />
+          <AdminDashboard soloCantos={p.isSongAdmin} />
         </RoleGuard>
       );
 
