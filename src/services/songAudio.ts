@@ -8,6 +8,10 @@ import { detectSheets, FULL_SCORE } from '../utils/sheetParts';
  * razones: no hace falta migración ni tocar el editor de cantos, y en cuanto alguien
  * exporta los MP3 de una obra nueva aparecen solos, sin que nadie tenga que volver a
  * registrarlos a mano.
+ *
+ * Las dos URL apuntan a `/api/pdf` y no a un `/api/audio` propio porque el plan Hobby
+ * de Vercel admite 12 funciones serverless y ya estábamos en 12: la número 13 tumbaba
+ * el despliegue entero. Ver la cabecera de api/pdf.ts.
  */
 
 export interface AudioTrack {
@@ -38,7 +42,7 @@ export async function getSongTracks(driveFolderId?: string | null): Promise<Audi
   if (enCache) return enCache;
 
   try {
-    const r = await fetch(`/api/audio?folder=${encodeURIComponent(driveFolderId)}`);
+    const r = await fetch(`/api/pdf?folder=${encodeURIComponent(driveFolderId)}`);
     if (!r.ok) return [];
     const data = await r.json();
     const archivos: { id: string; name: string; size: number }[] = data.tracks ?? [];
@@ -56,7 +60,7 @@ export async function getSongTracks(driveFolderId?: string | null): Promise<Audi
       fileId: v.fileId,
       fileName: v.fileName,
       size: porId.get(v.fileId)?.size ?? 0,
-      url: `/api/audio?id=${encodeURIComponent(v.fileId)}`,
+      url: `/api/pdf?id=${encodeURIComponent(v.fileId)}&kind=audio`,
     }));
 
     cache.set(driveFolderId, pistas);

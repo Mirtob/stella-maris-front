@@ -1,9 +1,24 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// Proxy que descarga el PDF de Drive y lo sirve desde nuestro dominio.
+// Proxy de archivos de Drive: los descarga y los sirve desde nuestro dominio.
 // CORS y rate-limit van inline para evitar problemas con bundling de api/_lib
 // en Vercel (los archivos compartidos no se empaquetaban en todas las
 // funciones y daban FUNCTION_INVOCATION_FAILED).
+//
+//   GET /api/pdf?id=<fileId>              → la partitura, como application/pdf
+//   GET /api/pdf?id=<fileId>&kind=audio   → la pista, como audio/mpeg
+//   GET /api/pdf?folder=<folderId>        → JSON con los MP3 de esa carpeta
+//
+// Los audios viven AQUÍ y no en su propio /api/audio por una razón de plataforma, no
+// de diseño: el plan Hobby de Vercel admite 12 funciones serverless y ya estábamos en
+// 12. Un archivo más y el despliegue entero falla — que es exactamente lo que pasó al
+// intentarlo. Si algún día se sube de plan, esto se puede separar sin tocar el cliente
+// más que en las dos URL.
+//
+// El proxy existe porque la CSP solo permite reproducir audio y abrir PDF de nuestro
+// propio dominio, y de paso pone la caché del CDN delante de Drive: el día de Misa
+// mucha gente pide la misma partitura, y en un ensayo el coro entero pide las mismas
+// cuatro pistas.
 
 // --- CORS allow-list ---
 const STATIC_ALLOWED_ORIGINS = new Set([
@@ -128,10 +143,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // (más aún en libros grandes como el de salmos), así que 30/min se quedaba corto.
   if (!(await rateLimit(req, res, 'pdf', 150, 60_000))) return;
 
-  const { id } = req.query;
-  if (!id || typeof id !== 'string' || !/^[a-zA-Z0-9_-]{10,64}$/.test(id)) {
+  const { id, folder, kind } = req.query;
+  const idValido = (x: unknown): x is string =>
+    typeof x === 'string' && /^[a-zA-Z0-9_-]{10,64}$/.test(x);
+
+  // ── Catálogo de pistas de una obra ───────────────────────────────────────
+  // MuseScore deja un MP3 por voz en la misma carpeta que las partituras, con la misma
+  // convención de nombres. Se lista SOLO esa carpeta (una llamada a Drive, ~200 ms),
+  // no el árbol entero como /api/sheets.
+  if (folder !== undefined) {
+    if (!idValido(folder)) return res.status(400).json({ error: 'Parametro folder invalido' });
+    const apiKey = (process.env.VITE_GOOGLE_DRIVE_API_KEY || '').trim();
+    if (!apiKey) return res.status(500).json({ error: 'API key no configurada' });
+    try {
+      const params = new URLSearchParams({
+        q: `'${folder}' in parents and trashed=false`,
+        key: apiKey,
+        fields: 'files(id,name,mimeType,size)',
+        pageSize: '200',
+      });
+      const r = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`);
+      const data = await r.json();
+      if (data.error) throw new Error(data.error.message || 'Drive list error');
+      const tracks = (data.files || [])
+        .filter((f: any) => /\.mp3$/i.test(f.name || ''))
+        .map((f: any) => ({ id: f.id, name: f.name, size: Number(f.size) || 0 }));
+      // Media hora de caché: una carpeta de Drive cambia poco y en un ensayo se abre el
+      // mismo mezclador varias veces.
+      res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=1800, stale-while-revalidate=86400');
+      return res.status(200).json({ tracks });
+    } catch (err: any) {
+      console.error('audio list error:', err?.message);
+      return res.status(500).json({ error: 'No se pudieron listar los audios' });
+    }
+  }
+
+  if (!idValido(id)) {
     return res.status(400).json({ error: 'Parametro id invalido' });
   }
+  const esAudio = kind === 'audio';
 
   try {
     const driveUrl = `https://drive.usercontent.google.com/download?id=${id}&export=download&authuser=0`;
@@ -150,7 +200,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(driveRes.status).json({ error: 'No se pudo obtener el archivo' });
     }
     const buffer = Buffer.from(await driveRes.arrayBuffer());
-    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Type', esAudio ? 'audio/mpeg' : 'application/pdf');
     res.setHeader('Content-Disposition', 'inline');
     res.setHeader('Accept-Ranges', 'bytes');
     const contentRange = driveRes.headers.get('content-range');
@@ -164,14 +214,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     //                              el mismo QR y ven la misma partitura a la vez).
     //  - stale-while-revalidate  → la sigue sirviendo al instante mientras revalida.
     res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800');
-    if (driveRes.status === 206 && contentRange) {
+    // 206 si se pidió un rango Y Drive lo respetó: devolver 200 con Content-Range es
+    // contradictorio y deja al navegador sin saber si puede buscar dentro del archivo
+    // (que es justo lo que necesita el <audio> para arrastrar la barra).
+    if (range && contentRange) {
       res.setHeader('Content-Range', contentRange);
       res.status(206).send(buffer);
     } else {
       res.status(200).send(buffer);
     }
   } catch (err: any) {
-    console.error('pdf proxy error:', err?.message);
-    res.status(500).json({ error: 'Error descargando el PDF' });
+    console.error('drive proxy error:', err?.message);
+    res.status(500).json({ error: esAudio ? 'Error descargando el audio' : 'Error descargando el PDF' });
   }
 }
