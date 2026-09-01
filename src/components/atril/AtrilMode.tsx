@@ -159,6 +159,39 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
     writeAudioPref(v);
   };
 
+  const [resolviendo, setResolviendo] = useState<string | null>(null);
+
+  /**
+   * Abre el mezclador de un canto, resolviendo sus pistas si aún no se sabían.
+   *
+   * Ese caso es el de quien eligió "ahorrar datos" al entrar: no se consultó nada, pero
+   * el botón sigue ahí. Al tocarlo se pide el listado (un JSON de unos cientos de
+   * bytes, no los audios) y, si hay pistas, se abre. Ningún MP3 se descarga hasta que
+   * lo pida dentro del mezclador.
+   */
+  const abrirMezclador = async (titulo: string, clave: string, folderId?: string) => {
+    const yaConocidas = tracksPorCanto[clave];
+    if (yaConocidas) {
+      setMezclador({ titulo, tracks: yaConocidas });
+      return;
+    }
+    if (!folderId) return;
+    setResolviendo(clave);
+    try {
+      const pistas = await getSongTracks(folderId);
+      setTracksPorCanto((prev) => ({ ...prev, [clave]: pistas }));
+      if (!tieneMezclador(pistas)) {
+        toast.info('Este canto no tiene audios de ensayo', {
+          description: 'Se necesita al menos una pista por voz, exportada desde MuseScore.',
+        });
+        return;
+      }
+      setMezclador({ titulo, tracks: pistas });
+    } finally {
+      setResolviendo(null);
+    }
+  };
+
   /** Qué mostrar de cada canto según rol + instrumento. */
   const modeFor = (s: Song): ContentMode => {
     if (isPuebloFiel) return isOrdinary(s) && s.sheetMusicUrl ? 'score' : 'lyrics';
@@ -573,17 +606,29 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
                       </div>
                     )}
                     {(() => {
-                      // Solo aparece donde hay algo que mezclar: dos voces o más.
-                      const pistas = tracksPorCanto[`${s.id}::${s.category}`] ?? [];
-                      if (!tieneMezclador(pistas)) return null;
+                      const clave = `${s.id}::${s.category}`;
+                      const pistas = tracksPorCanto[clave];
+                      // Ya sabemos que este canto no tiene con qué: no se ofrece.
+                      if (pistas && !tieneMezclador(pistas)) return null;
+                      // Todavía no lo sabemos (dijo "ahorrar datos", así que no se ha
+                      // consultado nada): el botón se muestra igual, apagado. Que la
+                      // opción exista no cuesta datos, y quien ahorró al entrar puede
+                      // necesitarla más tarde — pedirle que se vaya al menú a cambiar
+                      // un ajuste para descubrir si este canto tiene audios es esconder
+                      // la función justo donde se necesita.
+                      const sinResolver = !pistas;
+                      if (sinResolver && !s.driveFolderId) return null;
                       return (
                         <button
-                          onClick={() => setMezclador({ titulo: s.title, tracks: pistas })}
+                          onClick={() => abrirMezclador(s.title, clave, s.driveFolderId)}
+                          disabled={resolviendo === clave}
                           aria-label={`Mezclador de voces de ${s.title}`}
                           title="Mezclador de voces"
-                          className={`${btn} w-9 h-9 flex-shrink-0 text-amber-300`}
+                          className={`${btn} w-9 h-9 flex-shrink-0 ${sinResolver ? 'text-white/50' : 'text-amber-300'} disabled:opacity-60`}
                         >
-                          <Headphones className="w-5 h-5" strokeWidth={2.5} />
+                          {resolviendo === clave
+                            ? <Loader className="w-5 h-5 animate-spin" />
+                            : <Headphones className="w-5 h-5" strokeWidth={2.5} />}
                         </button>
                       );
                     })()}
