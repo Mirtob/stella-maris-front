@@ -24,9 +24,10 @@
 -- Lo que se abre explícitamente al ayudante es `is_song_admin()`, y solo se usa
 -- en las policies de `songs` y `song_tags`.
 --
--- OJO — cuentas afectadas: stellamarismusicacatolica@gmail.com (agregada en
--- 20260708_add_admin_stellamaris) queda como 'songs'. Si tiene que conservar el
--- acceso total, córrele el UPDATE del final de este archivo.
+-- Cuentas afectadas: stellamarismusicacatolica@gmail.com (agregada en
+-- 20260708_add_admin_stellamaris) queda como 'songs'. Decidido así el 1-sep-2026:
+-- la cuenta de la parroquia también es de ayudante. El acceso total es de un solo
+-- correo, y punto.
 --
 -- APLICAR A MANO en el SQL Editor de Supabase.
 -- =============================================================================
