@@ -902,10 +902,20 @@ function AppContent() {
         setPublishedCantorals(prev => prev.map(x => (x.id === c.id ? { ...x, pdfUrl: url } : x)));
         setQrCantoral(prev => (prev && prev.id === c.id ? { ...prev, pdfUrl: url } : prev));
         setPublishedBatch(prev => (prev ? prev.map(x => (x.id === c.id ? { ...x, pdfUrl: url } : x)) : prev));
-      } else if (notifyOnFail) {
-        toast.warning('Cantoral publicado, pero no pudimos generar el PDF compartible.', { description: up.error });
+      } else {
+        // Se avisa SIEMPRE, no solo al publicar de a uno. Este fallo dejaba el bucket
+        // vacío y el botón "Descargar folleto" sin aparecer, sin que nadie supiera por
+        // qué. El folleto se puede armar igual desde el diálogo del QR, así que esto
+        // es un aviso, no un drama — pero tiene que decirse.
+        console.error('Subida del folleto a Storage fallida:', up.error);
+        if (notifyOnFail) {
+          toast.warning('El cantoral se publicó; el folleto no se pudo guardar', {
+            description: `${up.error ?? 'Error desconocido'} — puedes descargarlo igual desde el botón del QR.`,
+          });
+        }
       }
     } catch (err: any) {
+      console.error('Generación del folleto fallida:', err?.message);
       if (notifyOnFail) {
         toast.warning('Cantoral publicado, pero falló la generación del PDF.', { description: err?.message });
       }

@@ -4,6 +4,8 @@ import { Download, Share2, Copy, Check, X, FileDown, Printer } from 'lucide-reac
 import QRCode from 'qrcode';
 import { toast } from 'sonner';
 import { safeWindowOpen } from '../../utils/safeUrl';
+import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
+import { getCantoralById } from '../../services/cantorals';
 
 interface CantoralQRDialogProps {
   open: boolean;
@@ -35,6 +37,32 @@ export function CantoralQRDialog({
 }: CantoralQRDialogProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [generando, setGenerando] = useState(false);
+
+  /**
+   * Arma el folleto AQUÍ MISMO cuando no hay uno guardado en Storage.
+   *
+   * Antes, si la subida a Storage fallaba el botón simplemente desaparecía y el coro se
+   * quedaba sin folleto imprimible, sin saber por qué. Es el mismo PDF —se genera igual
+   * de bien en el navegador, que es justo lo que ya hace la pantalla del QR para el
+   * Pueblo fiel—, así que no hay razón para que dependa de que Storage funcione.
+   */
+  const generarFolleto = async () => {
+    if (generando) return;
+    setGenerando(true);
+    try {
+      const cantoral = await getCantoralById(cantoralId);
+      if (!cantoral) {
+        toast.error('No se pudo leer el cantoral para armar el folleto.');
+        return;
+      }
+      await generateCantoralPDF({ cantoral, download: true, booklet: true });
+    } catch (err: any) {
+      toast.error('No se pudo generar el folleto', { description: err?.message });
+    } finally {
+      setGenerando(false);
+    }
+  };
 
   const deepLink = `${window.location.origin}/c/${cantoralId}`;
 
@@ -213,7 +241,21 @@ export function CantoralQRDialog({
             <div className="w-4 h-4 border-2 border-slate-400 border-t-emerald-600 rounded-full animate-spin" />
             Generando el folleto para imprimir…
           </div>
-        ) : null}
+        ) : (
+          // Sin PDF guardado (la subida a Storage pudo fallar): se arma en el momento.
+          // El botón NO desaparece — quedarse sin folleto y sin explicación es peor que
+          // esperar unos segundos.
+          <button
+            onClick={generarFolleto}
+            disabled={generando}
+            className="w-full mb-3 py-3 px-4 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-700 text-white font-bold flex items-center justify-center gap-2 active:scale-95 hover:opacity-95 transition-all border-2 border-emerald-700 shadow-lg disabled:opacity-70"
+          >
+            {generando
+              ? <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+              : <FileDown className="w-5 h-5" />}
+            {generando ? 'Armando el folleto…' : 'Descargar folleto (cuadernillo para imprimir)'}
+          </button>
+        )}
 
         {/* Acciones secundarias */}
         <div className="grid grid-cols-3 gap-2">
