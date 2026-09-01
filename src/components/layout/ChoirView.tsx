@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Send, AlertCircle, Music } from 'lucide-react';
 import { toast } from 'sonner';
 import { CategorySearch } from '../songs/CategorySearch';
@@ -14,7 +14,7 @@ import { PsalmFromBook } from '../songs/PsalmFromBook';
 import { getLiturgicalDateForDate, getPersistedCustomDates, setPersistedCustomDates } from '../../utils/liturgicalCalendar';
 import { getSundayCycle } from '../../utils/liturgicalCycle';
 import { resolvePsalm } from '../../data/psalmIndex';
-import { buildPsalmSong, conSalmoDelLibro } from '../../utils/psalmSong';
+import { buildPsalmSong, conSalmoDelLibro, debeReponerAntifona, esAntifonaEscritaAMano } from '../../utils/psalmSong';
 import { AddSolemnityModal } from '../liturgy/AddSolemnityModal';
 import { addCustomLiturgicalDate, toLiturgicalDate } from '../../services/liturgicalDates';
 import { computeUsage, resolveAnnualTarget } from '../../utils/previousUsage';
@@ -102,7 +102,25 @@ export function ChoirView({
   // Antífona del salmo (editable): por defecto la del índice de la celebración; el coro
   // puede cambiarla si no usa la misma. Viaja al cantoral publicado (y al PDF/pueblo).
   const [psalmAntiphon, setPsalmAntiphon] = useState('');
+  /**
+   * ¿La antífona la escribió el coro a mano?
+   *
+   * Importa porque la fecha de la Misa se suele elegir DESPUÉS de escribirla, y hasta
+   * ahora cada cambio de fecha la reemplazaba por la del libro sin avisar: el coro
+   * escribía su antífona, ajustaba la fecha, y lo escrito desaparecía. Como la caja
+   * quedaba con OTRO texto (el del libro) en vez de vacía, ni siquiera se notaba —
+   * publicaba y el folleto salía con una antífona que no era la suya.
+   *
+   * Vaciar la caja la devuelve a "no escrita": así se puede volver a la del libro.
+   */
+  const antifonaEscritaAMano = useRef(false);
+  const cambiarAntifona = (v: string) => {
+    antifonaEscritaAMano.current = esAntifonaEscritaAMano(v);
+    setPsalmAntiphon(v);
+  };
   useEffect(() => {
+    // Lo escrito a mano manda sobre lo que traiga el libro para la fecha nueva.
+    if (!debeReponerAntifona(antifonaEscritaAMano.current)) return;
     const cel = getLiturgicalDateForDate(massDate);
     const p = cel ? resolvePsalm(getSundayCycle(massDate), cel) : null;
     setPsalmAntiphon(p?.antiphon ?? '');
@@ -142,6 +160,14 @@ export function ChoirView({
    */
   useEffect(() => {
     if (!editingCantoral) return;
+    // La antífona publicada vuelve a la caja: el salmo se saca del borrador al editar
+    // (lleva la fecha en el id), así que sin esto una antífona escrita a mano se
+    // perdía en cuanto se corregía cualquier otra cosa del cantoral.
+    const salmoPublicado = editingCantoral.songs.find((x) => x.category === 'Salmo');
+    if (salmoPublicado?.lyrics?.trim()) {
+      antifonaEscritaAMano.current = true;
+      setPsalmAntiphon(salmoPublicado.lyrics);
+    }
     setMassDate(editingCantoral.date);
     const hhmm = massTimeTo24h(editingCantoral.massTime);
     if (hhmm) setMassTime(hhmm);
@@ -653,7 +679,7 @@ export function ChoirView({
                     date={massDate}
                     role="Coro"
                     antiphon={psalmAntiphon}
-                    onAntiphonChange={setPsalmAntiphon}
+                    onAntiphonChange={cambiarAntifona}
                     editable
                     hideScore
                   />

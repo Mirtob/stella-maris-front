@@ -13,7 +13,7 @@ import { buildPsalmSong } from '../../src/utils/psalmSong';
 import { getLiturgicalDateForDate } from '../../src/utils/liturgicalCalendar';
 import { resolvePsalm } from '../../src/data/psalmIndex';
 import { getSundayCycle } from '../../src/utils/liturgicalCycle';
-import { conSalmoDelLibro } from '../../src/utils/psalmSong';
+import { conSalmoDelLibro, debeReponerAntifona, esAntifonaEscritaAMano } from '../../src/utils/psalmSong';
 
 let pass = 0, fail = 0;
 function check(name: string, actual: unknown, expected: unknown) {
@@ -64,6 +64,18 @@ check('es litúrgico', buildPsalmSong(enElLibro, 'x')?.isLiturgical, true);
 check('la antífona se guarda sin espacios de sobra',
   buildPsalmSong(fueraDelLibro, '  Aleluya, aleluya  ')?.lyrics, 'Aleluya, aleluya');
 
+
+console.log('\n== Cambiar la fecha no puede borrar lo que escribió el coro ==');
+// La fecha de la Misa se elige DESPUÉS de escribir la antífona. Antes, cada cambio de
+// fecha la reemplazaba por la del libro y lo escrito desaparecía — y como la caja
+// quedaba con OTRO texto en vez de vacía, ni siquiera se notaba.
+check('lo escrito a mano se conserva', debeReponerAntifona(true), false);
+check('si no se escribió nada, se pone la del libro', debeReponerAntifona(false), true);
+
+console.log('\n== Qué cuenta como escrita a mano ==');
+check('un texto cualquiera', esAntifonaEscritaAMano('Ojalá escuchen hoy la voz del Señor'), true);
+check('vaciar la caja = volver a la del libro', esAntifonaEscritaAMano(''), false);
+check('solo espacios tampoco cuenta', esAntifonaEscritaAMano('   '), false);
 console.log(`\n${pass} ok, ${fail} fallas`);
 if (fail > 0) process.exit(1);
 

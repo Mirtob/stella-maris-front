@@ -81,3 +81,22 @@ export function conSalmoDelLibro<T extends Pick<Song, 'category'>>(
   if (cantoral.some((s) => s.category === 'Salmo')) return cantoral;
   return [...cantoral, salmo];
 }
+
+/**
+ * ¿Hay que reemplazar la antífona de la caja al cambiar la fecha de la Misa?
+ *
+ * La fecha se suele elegir DESPUÉS de escribir la antífona, y cada cambio de fecha la
+ * reemplazaba por la del libro sin avisar: lo escrito a mano desaparecía. Y como la
+ * caja quedaba con OTRO texto en vez de vacía, ni siquiera se notaba — se publicaba con
+ * una antífona que no era la suya.
+ *
+ * Vaciar la caja cuenta como "no escrita": es la forma de volver a la del libro.
+ */
+export function debeReponerAntifona(escritaAMano: boolean): boolean {
+  return !escritaAMano;
+}
+
+/** ¿Este texto cuenta como escrito a mano? (vacío = no, para poder volver al libro). */
+export function esAntifonaEscritaAMano(texto: string): boolean {
+  return texto.trim().length > 0;
+}
