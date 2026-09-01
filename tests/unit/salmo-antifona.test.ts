@@ -13,6 +13,7 @@ import { buildPsalmSong } from '../../src/utils/psalmSong';
 import { getLiturgicalDateForDate } from '../../src/utils/liturgicalCalendar';
 import { resolvePsalm } from '../../src/data/psalmIndex';
 import { getSundayCycle } from '../../src/utils/liturgicalCycle';
+import { conSalmoDelLibro } from '../../src/utils/psalmSong';
 
 let pass = 0, fail = 0;
 function check(name: string, actual: unknown, expected: unknown) {
@@ -62,6 +63,45 @@ check('el título es fijo', buildPsalmSong(enElLibro, 'x')?.title, 'Salmo respon
 check('es litúrgico', buildPsalmSong(enElLibro, 'x')?.isLiturgical, true);
 check('la antífona se guarda sin espacios de sobra',
   buildPsalmSong(fueraDelLibro, '  Aleluya, aleluya  ')?.lyrics, 'Aleluya, aleluya');
+
+console.log(`\n${pass} ok, ${fail} fallas`);
+if (fail > 0) process.exit(1);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// La antífona escrita a mano tiene que llegar al FOLLETO
+//
+// Reportado el 2-sep-2026: "si agrego manualmente la antífona del salmo en una
+// celebración agregada, no la muestra en el folleto". Comprobado contra los datos
+// reales: la antífona SÍ llegaba al cantoral publicado y SÍ salía en el folleto final.
+// Lo que no la mostraba era la VISTA PREVIA de antes de publicar — que es donde el
+// coro mira. La previa armaba el folleto con el borrador, y el salmo no está en el
+// borrador: se sumaba aparte, en cada sitio que lo necesitaba, y ahí se olvidó.
+// ─────────────────────────────────────────────────────────────────────────────
+
+{
+  const canto = (id: string, category: string) => ({ id, category, title: id } as any);
+  const salmo = (texto: string) => ({ id: 'psalm-2026-09-05', category: 'Salmo', lyrics: texto } as any);
+
+  console.log('\n== El salmo del libro se suma al borrador ==');
+  const borrador = [canto('entrada', 'Entrada'), canto('comunion', 'Comunión')];
+  const conSalmo = conSalmoDelLibro(borrador, salmo('Ojalá escuchen hoy la voz del Señor'));
+  check('se agrega al repertorio', conSalmo.length, 3);
+  check('en la parte Salmo', conSalmo.map((s: any) => s.category), ['Entrada', 'Comunión', 'Salmo']);
+  check('con la antífona escrita a mano', (conSalmo[2] as any).lyrics, 'Ojalá escuchen hoy la voz del Señor');
+
+  console.log('\n== Y no se estorba con lo que ya haya ==');
+  // Un canto del catálogo puesto en la parte Salmo manda: no se le encima el del libro.
+  const conCantoPropio = [canto('entrada', 'Entrada'), canto('mi-salmo', 'Salmo')];
+  check('no se duplica la parte', conSalmoDelLibro(conCantoPropio, salmo('x')).length, 2);
+  check('gana el del coro', (conSalmoDelLibro(conCantoPropio, salmo('x'))[1] as any).id, 'mi-salmo');
+
+  console.log('\n== Sin salmo, el borrador queda intacto ==');
+  // Sin antífona y sin página del libro, buildPsalmSong devuelve null.
+  check('mismo repertorio', conSalmoDelLibro(borrador, null).length, 2);
+  check('es el mismo arreglo', conSalmoDelLibro(borrador, null) === borrador, true);
+  check('un borrador vacío sigue vacío', conSalmoDelLibro([], null).length, 0);
+  check('salmo solo, sin más cantos', conSalmoDelLibro([], salmo('sola')).length, 1);
+}
 
 console.log(`\n${pass} ok, ${fail} fallas`);
 if (fail > 0) process.exit(1);

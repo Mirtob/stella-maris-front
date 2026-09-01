@@ -59,3 +59,25 @@ export function isBookPsalm(song: Pick<Song, 'id' | 'category'>): boolean {
 export function songsForBuilder<T extends Pick<Song, 'id' | 'category'>>(songs: T[]): T[] {
   return songs.filter(s => !isBookPsalm(s));
 }
+
+/**
+ * El repertorio REAL de una Misa: el borrador del constructor MÁS el salmo del libro.
+ *
+ * El salmo no se elige del catálogo —sale de la fecha, con la antífona que escriba el
+ * coro—, así que nunca está en el borrador y hay que sumarlo aparte. Esta regla estaba
+ * escrita suelta en cada sitio que la necesitaba, y en el que se olvidó (la vista previa
+ * del folleto) salía un folleto SIN salmo: quien escribía la antífona a mano no la veía
+ * por ningún lado y daba por hecho que no había viajado. Vive aquí para que sea una y
+ * la misma en el folleto, en el Atril y en lo que se publica.
+ *
+ * Si el borrador ya trae un canto en la parte "Salmo" (uno del catálogo), ese manda: no
+ * se le encima el del libro.
+ */
+export function conSalmoDelLibro<T extends Pick<Song, 'category'>>(
+  cantoral: T[],
+  salmo: T | null,
+): T[] {
+  if (!salmo) return cantoral;
+  if (cantoral.some((s) => s.category === 'Salmo')) return cantoral;
+  return [...cantoral, salmo];
+}

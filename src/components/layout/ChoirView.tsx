@@ -14,7 +14,7 @@ import { PsalmFromBook } from '../songs/PsalmFromBook';
 import { getLiturgicalDateForDate, getPersistedCustomDates, setPersistedCustomDates } from '../../utils/liturgicalCalendar';
 import { getSundayCycle } from '../../utils/liturgicalCycle';
 import { resolvePsalm } from '../../data/psalmIndex';
-import { buildPsalmSong } from '../../utils/psalmSong';
+import { buildPsalmSong, conSalmoDelLibro } from '../../utils/psalmSong';
 import { AddSolemnityModal } from '../liturgy/AddSolemnityModal';
 import { addCustomLiturgicalDate, toLiturgicalDate } from '../../services/liturgicalDates';
 import { computeUsage, resolveAnnualTarget } from '../../utils/previousUsage';
@@ -114,6 +114,21 @@ export function ChoirView({
   const psalmSong = useMemo<Song | null>(
     () => buildPsalmSong(massDate, psalmAntiphon),
     [massDate, psalmAntiphon],
+  );
+
+  /**
+   * El repertorio REAL de la Misa: el borrador MÁS el salmo del libro.
+   *
+   * El salmo no se agrega desde el catálogo (no es un canto: sale de la fecha, con la
+   * antífona que escriba el coro), así que no está en `cantoral` y hay que sumarlo
+   * aparte. Vive aquí, en un único sitio, porque antes se calculaba suelto en cada
+   * lugar que lo necesitaba — y en el que se olvidó, la vista previa del folleto,
+   * salía un folleto SIN salmo: quien escribía la antífona a mano no la veía por
+   * ninguna parte y daba por hecho que no había viajado.
+   */
+  const songsForPublish = useMemo<Song[]>(
+    () => conSalmoDelLibro(cantoral, psalmSong),
+    [cantoral, psalmSong],
   );
   /**
    * Al ENTRAR a editar un cantoral publicado, reponer su fecha, su horario y su tipo
@@ -287,10 +302,6 @@ export function ChoirView({
 
     // Incluir el salmo del libro (canto "Salmo": antífona = letra + página del libro) para
     // que viaje al PDF y a la vista publicada. Solo si hay salmo y el draft no trae ya uno.
-    const songsForPublish: Song[] = psalmSong && !cantoral.some((s) => s.category === 'Salmo')
-      ? [...cantoral, psalmSong]
-      : cantoral;
-
     const cantorals: PublishedCantoral[] = targets.map((t) => ({
       id: newCantoralId(),
       choirId: 'current_user',
@@ -699,7 +710,7 @@ export function ChoirView({
       {/* Publish Modal */}
       {showPublishModal && (
         <PublishCantoralModal
-          cantoral={cantoral}
+          cantoral={songsForPublish}
           parishName={parishName}
           parishes={parishes}
           isAdmin={isAdmin}
@@ -716,7 +727,7 @@ export function ChoirView({
       {/* Modo Atril */}
       {showAtril && (
         <AtrilMode
-          songs={psalmSong && !cantoral.some((s) => s.category === 'Salmo') ? [...cantoral, psalmSong] : cantoral}
+          songs={songsForPublish}
           userRole="Coro"
           userInstrument={selectedInstrumentForMass}
           userVoicePart={userVoicePart}
