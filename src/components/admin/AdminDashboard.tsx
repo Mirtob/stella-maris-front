@@ -9,8 +9,9 @@ import { RecoveryManager } from '../profile/RecoveryManager';
 import { AdminUserAccounts } from './AdminUserAccounts';
 import { SurveyResults } from './SurveyResults';
 import { CourseQuizEditor } from './CourseQuizEditor';
+import { AdminTeam } from './AdminTeam';
 
-type AdminView = 'menu' | 'users' | 'accounts' | 'parishes' | 'songs' | 'migration' | 'youtube-sync' | 'recovery' | 'survey' | 'quizzes';
+type AdminView = 'menu' | 'users' | 'equipo' | 'accounts' | 'parishes' | 'songs' | 'migration' | 'youtube-sync' | 'recovery' | 'survey' | 'quizzes';
 
 interface AdminDashboardProps {
   /**
@@ -33,6 +34,10 @@ export function AdminDashboard({ soloCantos = false }: AdminDashboardProps) {
 
   if (vistaEfectiva === 'users') {
     return <ProfileManager />;
+  }
+
+  if (vistaEfectiva === 'equipo') {
+    return <AdminTeam onBack={() => setCurrentView('menu')} />;
   }
 
   if (vistaEfectiva === 'accounts') {
@@ -104,6 +109,24 @@ export function AdminDashboard({ soloCantos = false }: AdminDashboardProps) {
                 <h2 className="text-2xl font-bold text-white mb-1">Gestión de Usuarios</h2>
                 <p className="text-base text-blue-100">
                   Administra perfiles, roles y permisos
+                </p>
+              </div>
+            </div>
+          </button>
+
+          {/* Equipo de administración */}
+          <button
+            onClick={() => setCurrentView('equipo')}
+            className="w-full bg-gradient-to-br from-brand to-brand-strong rounded-2xl shadow-xl p-6 border-2 border-brand-border hover:border-blue-600 active:scale-98 transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
+                <ShieldCheck className="w-9 h-9 text-white" strokeWidth={2.5} />
+              </div>
+              <div className="text-left flex-1 min-w-0">
+                <h2 className="text-2xl font-bold text-white mb-1">Equipo de administración</h2>
+                <p className="text-base text-blue-100">
+                  Da de alta ayudantes del catálogo y quita accesos
                 </p>
               </div>
             </div>
