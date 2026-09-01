@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { X, ZoomIn, ZoomOut, ChevronUp, ChevronDown, RotateCcw, Play, Pause, Maximize2, Minimize2, Music, List, Printer, Loader, Timer, Minus, Plus, MoreVertical } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, ChevronUp, ChevronDown, RotateCcw, Play, Pause, Maximize2, Minimize2, Music, List, Printer, Loader, Timer, Minus, Plus, MoreVertical, Headphones } from 'lucide-react';
 import { toast } from 'sonner';
 import { Song, UserRole, InstrumentType } from '../../types';
 import { transposeContent, getTransposedKey, keyPrefersFlats, formatTransposition, getChordNotation, setChordNotation, type ChordNotation } from '../../utils/chordTranspose';
@@ -17,6 +17,8 @@ import { generateAtrilPrintable } from '../../utils/atrilBookletPDF';
 import { PdfPages } from './PdfPages';
 import { PsalmPageImage } from '../songs/PsalmPageImage';
 import { FavoriteButton } from '../songs/FavoriteButton';
+import { VoiceMixer } from './VoiceMixer';
+import { getSongTracks, tieneMezclador, type AudioTrack } from '../../services/songAudio';
 
 interface AtrilModeProps {
   songs: Song[];
@@ -28,6 +30,22 @@ interface AtrilModeProps {
 }
 
 type ContentMode = 'score' | 'chords' | 'lyrics';
+
+/**
+ * ¿Tener los audios de ensayo a mano en este dispositivo?
+ *
+ * Se pregunta al abrir el Atril y se recuerda, porque la respuesta depende del plan de
+ * datos de cada uno y no cambia de un día para otro. Decir que sí NO descarga ningún
+ * audio: solo hace aparecer el botón «Mezclador» en los cantos que tienen pistas. La
+ * descarga ocurre cuando se abre el mezclador de UN canto, y avisando cuánto pesa.
+ */
+const AUDIO_PREF_KEY = 'atril.audios';
+const readAudioPref = (): '1' | '0' | null => {
+  try { return (localStorage.getItem(AUDIO_PREF_KEY) as '1' | '0' | null) ?? null; } catch { return null; }
+};
+const writeAudioPref = (v: '1' | '0') => {
+  try { localStorage.setItem(AUDIO_PREF_KEY, v); } catch { /* modo privado */ }
+};
 
 /** Si el repertorio queda abierto o cerrado se recuerda entre Misas (no es una preferencia de perfil). */
 const LIST_PREF_KEY = 'atril.showList';
@@ -54,6 +72,14 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
   // Voz efectiva: la del perfil, pero se puede cambiar aquí mismo para este ensayo
   // (el que hoy dobla en trompeta no debería tener que ir a Ajustes).
   const [voicePart, setVoicePart] = useState<string>(userVoicePart || '');
+
+  // ── Audios de ensayo ──────────────────────────────────────────────────────
+  // `null` = todavía no se ha preguntado en este dispositivo.
+  const [audioPref, setAudioPref] = useState<'1' | '0' | null>(() => readAudioPref());
+  // Pistas por canto, resueltas desde su carpeta de Drive. Solo el LISTADO (un JSON
+  // pequeño); ningún audio se descarga hasta abrir el mezclador de un canto.
+  const [tracksPorCanto, setTracksPorCanto] = useState<Record<string, AudioTrack[]>>({});
+  const [mezclador, setMezclador] = useState<{ titulo: string; tracks: AudioTrack[] } | null>(null);
   // Partes disponibles en ESTE cantoral: no tiene sentido ofrecer "Bombardino" si
   // ninguno de los cantos de hoy lo trae.
   const partsInCantoral = useMemo(() => {
@@ -100,6 +126,38 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
 
   // Repertorio en orden de la Misa (Entrada → Kyrie → … → Salida).
   const orderedSongs = sortByMassOrder(songs);
+
+  /**
+   * ¿Hay algún canto que PODRÍA traer audios? Es lo único que se mira para decidir si
+   * vale la pena preguntar. No toca la red: solo mira si el canto tiene carpeta de
+   * Drive. Preguntar cuando no hay nada que ofrecer sería ruido.
+   */
+  const puedeHaberAudios = orderedSongs.some((s2) => !!s2.driveFolderId);
+
+  // Con el permiso dado, se piden los LISTADOS de pistas (JSON pequeño, uno por canto).
+  // Esto es lo que hace aparecer el botón «Mezclador» solo donde hay algo que mezclar.
+  useEffect(() => {
+    if (audioPref !== '1') return;
+    let cancelado = false;
+    (async () => {
+      for (const s2 of orderedSongs) {
+        if (cancelado || !s2.driveFolderId) continue;
+        const clave = `${s2.id}::${s2.category}`;
+        if (tracksPorCanto[clave]) continue;
+        const pistas = await getSongTracks(s2.driveFolderId);
+        if (cancelado) return;
+        setTracksPorCanto((prev) => ({ ...prev, [clave]: pistas }));
+      }
+    })();
+    return () => { cancelado = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioPref, songs]);
+
+  const responderAudios = (quiere: boolean) => {
+    const v = quiere ? '1' : '0';
+    setAudioPref(v);
+    writeAudioPref(v);
+  };
 
   /** Qué mostrar de cada canto según rol + instrumento. */
   const modeFor = (s: Song): ContentMode => {
@@ -396,6 +454,16 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
                   Metrónomo
                 </button>
               )}
+              {puedeHaberAudios && (
+                <button
+                  onClick={() => { responderAudios(audioPref !== '1'); setMenuOpen(false); }}
+                  className={`${menuItem} ${audioPref === '1' ? 'text-amber-300' : ''}`}
+                  aria-pressed={audioPref === '1'}
+                >
+                  <Headphones className="w-5 h-5" strokeWidth={2.5} />
+                  Audios de ensayo: <span className="text-amber-300">{audioPref === '1' ? 'sí' : 'no'}</span>
+                </button>
+              )}
               <button
                 onClick={() => { setMenuOpen(false); handlePrint(); }}
                 disabled={printing}
@@ -504,6 +572,21 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
                         )}
                       </div>
                     )}
+                    {(() => {
+                      // Solo aparece donde hay algo que mezclar: dos voces o más.
+                      const pistas = tracksPorCanto[`${s.id}::${s.category}`] ?? [];
+                      if (!tieneMezclador(pistas)) return null;
+                      return (
+                        <button
+                          onClick={() => setMezclador({ titulo: s.title, tracks: pistas })}
+                          aria-label={`Mezclador de voces de ${s.title}`}
+                          title="Mezclador de voces"
+                          className={`${btn} w-9 h-9 flex-shrink-0 text-amber-300`}
+                        >
+                          <Headphones className="w-5 h-5" strokeWidth={2.5} />
+                        </button>
+                      );
+                    })()}
                     <FavoriteButton songId={s.id} className="text-white/70 hover:bg-white/10 flex-shrink-0" />
                   </div>
 
@@ -608,6 +691,55 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
         />
         <span className="text-sm font-bold w-6 text-center text-amber-300 flex-shrink-0">{speed}</span>
       </div>
+      )}
+
+      {/* Audios de ensayo: se pregunta UNA vez por dispositivo, al abrir el atril.
+          Decir que sí no descarga nada todavía — solo hace aparecer el botón del
+          mezclador en los cantos que traen pistas. */}
+      {audioPref === null && puedeHaberAudios && (
+        <div className="fixed inset-0 z-[85] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full sm:max-w-md bg-slate-900 text-white rounded-3xl border-4 border-amber-500 shadow-2xl p-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <Headphones className="w-8 h-8 flex-shrink-0 text-amber-400" strokeWidth={2.5} />
+              <h2 className="text-xl font-bold leading-tight">Audios de ensayo</h2>
+            </div>
+            <p className="text-base text-white/80 leading-relaxed">
+              Varios cantos traen <strong>una pista por voz</strong>. Sirven para
+              aprenderte tu línea: subes la tuya y bajas las demás.
+            </p>
+            <p className="text-base text-white/80 leading-relaxed">
+              <strong>No se descarga nada ahora.</strong> Si dices que sí, aparece un
+              botón en los cantos que las tienen, y bajas solo el que abras (son unos
+              pocos megas por canto).
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => responderAudios(true)}
+                className="w-full bg-gradient-to-br from-amber-500 to-orange-600 text-white py-4 rounded-2xl font-bold text-lg border-2 border-orange-700 active:scale-95 transition-all"
+              >
+                Sí, tenerlos a mano
+              </button>
+              <button
+                onClick={() => responderAudios(false)}
+                className="w-full bg-white/10 text-white py-3.5 rounded-2xl font-bold border-2 border-white/20 active:scale-95 transition-all"
+              >
+                No, ahorrar datos
+              </button>
+            </div>
+            <p className="text-sm text-white/50">
+              Puedes cambiarlo cuando quieras desde el menú del atril.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {mezclador && (
+        <VoiceMixer
+          titulo={mezclador.titulo}
+          tracks={mezclador.tracks}
+          vozPropia={voicePart || undefined}
+          onClose={() => setMezclador(null)}
+        />
       )}
 
       {/* Tip contextual (F4): se muestra la 1ª vez que se abre el atril */}

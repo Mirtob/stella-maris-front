@@ -55,6 +55,9 @@ node tests/output/avisos.mjs
 npx esbuild tests/unit/admin-dos-niveles.test.ts --bundle --platform=node --format=esm --outfile=tests/output/admin-niveles.mjs
 node tests/output/admin-niveles.mjs
 
+npx esbuild tests/unit/audios-ensayo.test.ts --bundle --platform=node --format=esm --outfile=tests/output/audios.mjs
+node tests/output/audios.mjs
+
 npx esbuild tests/unit/pdf-texto.test.ts --bundle --platform=node --format=esm --outfile=tests/output/pdftexto.mjs
 node tests/output/pdftexto.mjs
 
@@ -183,3 +186,12 @@ Vigila además el **borrado**: el ayudante sube (INSERT) y transcribe (UPDATE), 
 DELETE de `songs` y de `song_tags` es del principal. Si alguien volviera a poner una
 policy `FOR ALL` sobre `songs`, el borrado entraría por la puerta de atrás — la prueba
 también lo caza.
+
+## Los audios de ensayo salen del nombre del archivo
+
+`audios-ensayo.test.ts`. MuseScore exporta un MP3 por voz en la misma carpeta de Drive
+que las partituras y con la misma convención de nombres, así que la deducción de voces
+es **la misma función** (`detectSheets`, con la extensión como parámetro). Si alguien la
+cambia pensando solo en los PDF, el mezclador se queda sin voces y **no hay ningún error
+que lo delate**: simplemente deja de aparecer el botón. De ahí que la prueba use nombres
+reales del Drive, paréntesis y espacios incluidos.

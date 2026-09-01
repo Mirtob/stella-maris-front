@@ -115,13 +115,17 @@ function cleanLabel(raw: string): string {
  * Ignora todo lo que no sea PDF (MuseScore deja .mp3 y .mscz en la misma carpeta).
  * Devuelve el full score primero y el resto en orden coral (SATB) y luego alfabético.
  */
-export function detectSheets(files: { id: string; name: string }[]): SongSheet[] {
-  const pdfs = files.filter(f => /\.pdf$/i.test(f.name));
+export function detectSheets(files: { id: string; name: string }[], ext = 'pdf'): SongSheet[] {
+  // `ext` existe para los AUDIOS de ensayo: MuseScore exporta los MP3 por voz con
+  // exactamente la misma convención de nombres que los PDF (`Obra-Soprano.mp3`), así
+  // que la deducción de voces es la misma y no tiene por qué escribirse dos veces.
+  const re = new RegExp(`\\.${ext}$`, 'i');
+  const pdfs = files.filter(f => re.test(f.name));
   if (pdfs.length === 0) return [];
 
-  const base = commonPrefix(pdfs.map(f => f.name.replace(/\.pdf$/i, '')));
+  const base = commonPrefix(pdfs.map(f => f.name.replace(re, '')));
   const sheets: SongSheet[] = pdfs.map((f) => {
-    const stem = f.name.replace(/\.pdf$/i, '');
+    const stem = f.name.replace(re, '');
     const remainder = base && stem.startsWith(base) ? stem.slice(base.length) : stem;
     const label = cleanLabel(remainder);
     const isFull = !label || FULL_SCORE_WORDS.includes(norm(label));
