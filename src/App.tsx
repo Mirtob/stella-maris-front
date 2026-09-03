@@ -1607,7 +1607,7 @@ function renderView(p: ViewProps): JSX.Element | null {
           />
         );
       }
-      if (p.effectiveRole === 'Admin') return <AdminDashboard soloCantos={p.isSongAdmin} />;
+      if (p.effectiveRole === 'Admin') return <AdminDashboard soloCantos={p.isSongAdmin} enviadoPor={p.userProfile.email} />;
       // Fallback: perfil con rol desconocido o corrupto → tratar como Coro
       return (
         <ChoirView
@@ -1654,7 +1654,7 @@ function renderView(p: ViewProps): JSX.Element | null {
           details={`Esta área incluye funcionalidades críticas como:\n• Subir nuevos cantos al sistema\n• Gestión del canal de YouTube\n• Administración de usuarios`}
           navigate={p.navigate}
         >
-          <AdminDashboard soloCantos={p.isSongAdmin} />
+          <AdminDashboard soloCantos={p.isSongAdmin} enviadoPor={p.userProfile.email} />
         </RoleGuard>
       );
 

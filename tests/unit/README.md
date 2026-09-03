@@ -58,6 +58,9 @@ node tests/output/admin-niveles.mjs
 npx esbuild tests/unit/audios-ensayo.test.ts --bundle --platform=node --format=esm --outfile=tests/output/audios.mjs
 node tests/output/audios.mjs
 
+npx esbuild tests/unit/avisos-audiencia.test.ts --bundle --platform=node --format=esm --external:@vercel/node --external:web-push --outfile=tests/output/avisos-aud.mjs
+node tests/output/avisos-aud.mjs
+
 npx esbuild tests/unit/pdf-texto.test.ts --bundle --platform=node --format=esm --outfile=tests/output/pdftexto.mjs
 node tests/output/pdftexto.mjs
 
@@ -195,3 +198,11 @@ es **la misma función** (`detectSheets`, con la extensión como parámetro). Si
 cambia pensando solo en los PDF, el mezclador se queda sin voces y **no hay ningún error
 que lo delate**: simplemente deja de aparecer el botón. De ahí que la prueba use nombres
 reales del Drive, paréntesis y espacios incluidos.
+
+## A quién le llega un aviso
+
+`avisos-audiencia.test.ts`. La diócesis **no se guarda como tal**: hay que sacarla del
+nombre de la parroquia (`"Parroquia X - Diócesis Y · Capilla Z"`). Si esa lectura falla,
+el aviso se manda a quien no era — y un push no se puede retirar — o no se manda a nadie
+sin que nada lo delate. De ahí que la prueba cubra la capilla, las arquidiócesis, los
+acentos y a quien pertenece a dos diócesis.

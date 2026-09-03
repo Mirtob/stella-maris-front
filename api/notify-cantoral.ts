@@ -67,6 +67,71 @@ async function callerCanNotify(token: string): Promise<boolean> {
   } catch { return false; }
 }
 
+/**
+ * ¿Quien llama es el administrador PRINCIPAL?
+ *
+ * Un aviso general le llega a TODOS los dispositivos, de todas las parroquias. Eso no
+ * es lo mismo que avisar de un cantoral a la propia parroquia: aquí el filtro tiene que
+ * ser el más estrecho que hay. `is_admin()` significa admin pleno desde la migración
+ * 20260901, así que basta con preguntárselo a la base con el token de quien llama.
+ */
+async function callerIsPrincipalAdmin(token: string): Promise<boolean> {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/is_admin`, {
+      method: 'POST',
+      headers: { apikey: ANON, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    if (!r.ok) return false;
+    return (await r.json()) === true;
+  } catch { return false; }
+}
+
+/**
+ * Diócesis de una parroquia guardada en una suscripción.
+ *
+ * Las parroquias se guardan como "Parroquia X - Diócesis Y · Capilla Z": la diócesis es
+ * lo que va tras el " - " y antes del " · ". Es la unidad con la que se piensa el envío
+ * cuando se suma gente de una diócesis nueva.
+ */
+export function diocesisDe(parroquia: string): string {
+  const sinCapilla = String(parroquia).split(' · ')[0];
+  const i = sinCapilla.indexOf(' - ');
+  return i === -1 ? '' : sinCapilla.slice(i + 3).trim();
+}
+
+const normTexto = (x: unknown) =>
+  String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/\s+/g, ' ').trim();
+
+export interface Suscripcion { endpoint: string; p256dh: string; auth: string; parishes: string[]; role: string | null }
+
+/** Todas las suscripciones vivas, con lo necesario para filtrar y enviar. */
+async function todasLasSuscripciones(): Promise<Suscripcion[]> {
+  const r = await fetch(
+    `${SUPABASE_URL}/rest/v1/push_subscriptions?select=endpoint,p256dh,auth,parishes,role`,
+    { headers: svcHeaders },
+  );
+  return r.ok ? await r.json() : [];
+}
+
+/** Aplica el filtro elegido. Sin filtro = todos. */
+export function filtrarAudiencia(subs: Suscripcion[], audiencia: any): Suscripcion[] {
+  const dioceses: string[] = Array.isArray(audiencia?.dioceses) ? audiencia.dioceses : [];
+  const roles: string[] = Array.isArray(audiencia?.roles) ? audiencia.roles : [];
+  if (dioceses.length === 0 && roles.length === 0) return subs;
+  const dioc = dioceses.map(normTexto);
+  const rls = roles.map(normTexto);
+  return subs.filter((s) => {
+    if (rls.length && !rls.includes(normTexto(s.role))) return false;
+    if (dioc.length) {
+      const suyas = (s.parishes || []).map((p) => normTexto(diocesisDe(p)));
+      if (!suyas.some((d) => dioc.includes(d))) return false;
+    }
+    return true;
+  });
+}
+
 let _webpush: any = null;
 async function webpushLib(): Promise<any> {
   if (_webpush) return _webpush;
@@ -239,9 +304,79 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const authHeader = (req.headers.authorization as string) || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
   if (!token) return res.status(401).json({ error: 'No autenticado' });
-  if (!(await callerCanNotify(token))) return res.status(403).json({ error: 'Solo el coro o un administrador pueden avisar' });
 
   const body = typeof req.body === 'string' ? safeParse(req.body) : (req.body || {});
+
+  // ── Avisos y promociones ────────────────────────────────────────────────
+  //
+  // Viven en este archivo y no en su propio endpoint por el tope de 12 funciones
+  // serverless del plan Hobby de Vercel (ya estamos en 12: la 13 tumba el despliegue
+  // entero, comprobado). Aquí encajan bien de todos modos: es el mismo VAPID, el mismo
+  // envío con reintento y la misma tabla de suscripciones.
+  if (body.action === 'audience' || body.action === 'broadcast') {
+    if (!(await callerIsPrincipalAdmin(token))) {
+      return res.status(403).json({ error: 'Solo el administrador principal puede mandar avisos' });
+    }
+    const subs = await todasLasSuscripciones();
+
+    // Cuántos hay y cómo se reparten: es lo que deja elegir a quién escribir SABIENDO
+    // a cuánta gente se le va a sonar el teléfono.
+    if (body.action === 'audience') {
+      const porDiocesis: Record<string, number> = {};
+      const porRol: Record<string, number> = {};
+      for (const s2 of subs) {
+        const suyas = new Set((s2.parishes || []).map(diocesisDe).filter(Boolean));
+        for (const d of suyas) porDiocesis[d] = (porDiocesis[d] ?? 0) + 1;
+        if (suyas.size === 0) porDiocesis['(sin parroquia)'] = (porDiocesis['(sin parroquia)'] ?? 0) + 1;
+        const rol = s2.role || '(sin rol)';
+        porRol[rol] = (porRol[rol] ?? 0) + 1;
+      }
+      return res.status(200).json({ ok: true, total: subs.length, porDiocesis, porRol });
+    }
+
+    const titulo = String(body.title ?? '').trim();
+    const texto = String(body.body ?? '').trim();
+    if (!titulo || !texto) return res.status(400).json({ error: 'Falta el título o el texto' });
+    // Solo rutas internas: un aviso no puede mandar a la gente fuera de la app.
+    const destino = String(body.url ?? '/').trim();
+    const url = destino.startsWith('/') ? destino : '/';
+
+    const destinatarios = filtrarAudiencia(subs, body.audience);
+    if (destinatarios.length === 0) {
+      return res.status(200).json({ ok: true, sent: 0, subs: 0, aviso: 'Nadie calza con ese filtro' });
+    }
+
+    const resultado = await sendToSubs(destinatarios, {
+      title: titulo,
+      body: texto,
+      url,
+      // Tag único: un aviso NO puede tapar al anterior en la bandeja. Son mensajes
+      // distintos, a diferencia del "nuevo cantoral" de una misma Misa.
+      tag: `aviso-${Date.now()}`,
+    });
+
+    // Queda registrado: un push no se puede retirar, y sin registro no hay forma de
+    // saber qué se dijo ya ni de notar que se está avisando demasiado.
+    await fetch(`${SUPABASE_URL}/rest/v1/push_broadcasts`, {
+      method: 'POST',
+      headers: { ...svcHeaders, Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        title: titulo,
+        body: texto,
+        url,
+        audience: body.audience ?? {},
+        subs_total: destinatarios.length,
+        sent: resultado.sent,
+        failed: resultado.failed,
+        sent_by: String(body.sentBy ?? '').slice(0, 120) || null,
+      }),
+    }).catch(() => { /* el aviso ya salió; el registro es best-effort */ });
+
+    return res.status(200).json({ ok: true, sent: resultado.sent, subs: destinatarios.length, failed: resultado.failed });
+  }
+
+  if (!(await callerCanNotify(token))) return res.status(403).json({ error: 'Solo el coro o un administrador pueden avisar' });
+
   // Acepta cantoralIds (varios, misma sesión) o cantoralId (uno, retrocompat).
   const ids: string[] = (Array.isArray(body.cantoralIds) ? body.cantoralIds : [body.cantoralId])
     .map((x: any) => String(x || '').replace(/[(),"]/g, '').trim())

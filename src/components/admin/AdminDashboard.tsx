@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, Church, Music, ShieldCheck, Lock, AlertTriangle, Database, Youtube, LifeBuoy, KeyRound, BarChart3, GraduationCap } from 'lucide-react';
+import { Users, Church, Music, ShieldCheck, Lock, AlertTriangle, Database, Youtube, LifeBuoy, KeyRound, BarChart3, GraduationCap, Megaphone } from 'lucide-react';
 import { ProfileManager } from '../profile/ProfileManager';
 import { ParishManager } from '../profile/ParishManager';
 import { SongManager } from '../songs/SongManager';
@@ -10,8 +10,9 @@ import { AdminUserAccounts } from './AdminUserAccounts';
 import { SurveyResults } from './SurveyResults';
 import { CourseQuizEditor } from './CourseQuizEditor';
 import { AdminTeam } from './AdminTeam';
+import { BroadcastManager } from './BroadcastManager';
 
-type AdminView = 'menu' | 'users' | 'equipo' | 'accounts' | 'parishes' | 'songs' | 'migration' | 'youtube-sync' | 'recovery' | 'survey' | 'quizzes';
+type AdminView = 'menu' | 'users' | 'equipo' | 'avisos' | 'accounts' | 'parishes' | 'songs' | 'migration' | 'youtube-sync' | 'recovery' | 'survey' | 'quizzes';
 
 interface AdminDashboardProps {
   /**
@@ -23,9 +24,11 @@ interface AdminDashboardProps {
    * porque una puerta que al abrirse da un error no es una puerta, es una trampa.
    */
   soloCantos?: boolean;
+  /** Correo de quien administra, para dejarlo anotado al enviar un aviso. */
+  enviadoPor?: string;
 }
 
-export function AdminDashboard({ soloCantos = false }: AdminDashboardProps) {
+export function AdminDashboard({ soloCantos = false, enviadoPor }: AdminDashboardProps) {
   const [currentView, setCurrentView] = useState<AdminView>('menu');
 
   // Red de seguridad: si por un enlace viejo o un estado raro se pidiera otra vista,
@@ -38,6 +41,10 @@ export function AdminDashboard({ soloCantos = false }: AdminDashboardProps) {
 
   if (vistaEfectiva === 'equipo') {
     return <AdminTeam onBack={() => setCurrentView('menu')} />;
+  }
+
+  if (vistaEfectiva === 'avisos') {
+    return <BroadcastManager onBack={() => setCurrentView('menu')} enviadoPor={enviadoPor} />;
   }
 
   if (vistaEfectiva === 'accounts') {
@@ -127,6 +134,24 @@ export function AdminDashboard({ soloCantos = false }: AdminDashboardProps) {
                 <h2 className="text-2xl font-bold text-white mb-1">Equipo de administración</h2>
                 <p className="text-base text-blue-100">
                   Da de alta ayudantes del catálogo y quita accesos
+                </p>
+              </div>
+            </div>
+          </button>
+
+          {/* Avisos y promociones */}
+          <button
+            onClick={() => setCurrentView('avisos')}
+            className="w-full bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl shadow-xl p-6 border-2 border-orange-700 hover:border-orange-400 active:scale-98 transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
+                <Megaphone className="w-9 h-9 text-white" strokeWidth={2.5} />
+              </div>
+              <div className="text-left flex-1 min-w-0">
+                <h2 className="text-2xl font-bold text-white mb-1">Avisos y promociones</h2>
+                <p className="text-base text-orange-50">
+                  Un mensaje a los telefonos de la comunidad
                 </p>
               </div>
             </div>
