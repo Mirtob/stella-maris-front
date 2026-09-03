@@ -152,10 +152,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const webpush = await webpushLib();
     webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
+    // Se puede mandar un texto propio: es lo que permite PROBAR UN AVISO en el
+    // teléfono de uno antes de mandárselo a toda la comunidad. Sin esto, la única
+    // forma de ver cómo queda un aviso era enviárselo a todo el mundo — y un push no
+    // se puede retirar. Sin texto propio, la prueba de siempre.
+    const titulo = String(body.title ?? '').trim();
+    const texto = String(body.body ?? '').trim();
+    const destino = String(body.url ?? '/').trim();
     const payload = JSON.stringify({
-      title: '¡Notificaciones activas! ✅',
-      body: 'Esta es una prueba. Así recibirás los avisos de Stella Maris.',
-      url: '/',
+      title: titulo || '¡Notificaciones activas! ✅',
+      body: texto || 'Esta es una prueba. Así recibirás los avisos de Stella Maris.',
+      url: destino.startsWith('/') ? destino : '/',
+      // Tag fijo: una prueba reemplaza a la anterior en la bandeja, que es lo que se
+      // quiere al ir ajustando el texto.
       tag: 'push-test',
     });
 

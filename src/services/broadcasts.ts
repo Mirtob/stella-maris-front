@@ -116,3 +116,29 @@ export function describirAudiencia(a: Audiencia): string {
   if (a.roles?.length) partes.push(`rol ${a.roles.join(' y ')}`);
   return partes.length ? partes.join(' · ') : 'Toda la comunidad';
 }
+
+/**
+ * Manda el aviso SOLO a los dispositivos de quien lo escribe.
+ *
+ * Es el paso que faltaba: hasta ahora, la única forma de ver cómo queda un aviso en un
+ * teléfono de verdad era mandárselo a toda la comunidad — y eso no se puede retirar.
+ * También sirve de diagnóstico: si la prueba no llega, el problema es la suscripción de
+ * ESTE dispositivo, no el envío.
+ */
+export async function enviarPrueba(aviso: { title: string; body: string; url?: string }):
+  Promise<{ ok: boolean; sent?: number; sinSuscripciones?: boolean; error?: string }> {
+  const t = await token();
+  if (!t) return { ok: false, error: 'Tu sesión expiró. Vuelve a entrar.' };
+  try {
+    const r = await fetch('/api/push-test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
+      body: JSON.stringify(aviso),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) return { ok: false, error: d?.error || `Error ${r.status}` };
+    return { ok: true, sent: d.sent ?? 0, sinSuscripciones: (d.sent ?? 0) === 0 };
+  } catch (e: any) {
+    return { ok: false, error: e?.message };
+  }
+}

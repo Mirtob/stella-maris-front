@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, Megaphone, Send, Loader, Users, Church, AlertTriangle, History, Check } from 'lucide-react';
+import { ArrowLeft, Megaphone, Send, Loader, Users, Church, AlertTriangle, History, Check, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  getResumenAudiencia, enviarAviso, listarAvisos, describirAudiencia,
+  getResumenAudiencia, enviarAviso, enviarPrueba, listarAvisos, describirAudiencia,
   type ResumenAudiencia, type AvisoEnviado, type Audiencia,
 } from '../../services/broadcasts';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -56,6 +56,28 @@ export function BroadcastManager({ onBack, enviadoPor }: Props) {
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
+  const [probando, setProbando] = useState(false);
+
+  /** Se lo manda solo a los teléfonos de quien escribe, para verlo antes de soltarlo. */
+  const probar = async () => {
+    if (probando) return;
+    setProbando(true);
+    try {
+      const r = await enviarPrueba({ title: titulo.trim(), body: texto.trim(), url: destino });
+      if (!r.ok) { toast.error('No se pudo enviar la prueba', { description: r.error }); return; }
+      if (r.sinSuscripciones) {
+        toast.warning('No tienes ningún dispositivo suscrito', {
+          description: 'Activa las notificaciones en Ajustes de este teléfono y vuelve a probar.',
+        });
+        return;
+      }
+      toast.success(`Prueba enviada a ${r.sent} de tus dispositivos`, {
+        description: 'Si no llega en unos segundos, el problema es la suscripción de ese teléfono.',
+      });
+    } finally {
+      setProbando(false);
+    }
+  };
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -261,6 +283,15 @@ export function BroadcastManager({ onBack, enviadoPor }: Props) {
               llegan los cantorales.
             </p>
           </div>
+          {/* Probar en el teléfono propio ANTES de soltarlo a toda la comunidad. */}
+          <button
+            onClick={probar}
+            disabled={!puedeEnviar}
+            className="w-full mb-3 bg-white dark:bg-slate-800 text-brand-ink py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 border-2 border-brand/30 active:scale-95 transition-all disabled:opacity-50"
+          >
+            {probando ? <Loader className="w-5 h-5 animate-spin" /> : <Smartphone className="w-5 h-5" strokeWidth={2.5} />}
+            {probando ? 'Enviando la prueba…' : 'Enviármelo solo a mí primero'}
+          </button>
           <button
             onClick={() => setConfirmando(true)}
             disabled={!puedeEnviar}
