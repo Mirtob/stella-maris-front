@@ -783,6 +783,24 @@ const normParish = (x: unknown): string =>
   String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '')
     .toLowerCase().replace(/\s+/g, ' ').trim();
 
+/**
+ * Rol con el que se decide si a alguien le toca el recordatorio del jueves.
+ *
+ * Manda el perfil; la suscripción es solo el respaldo para quien activó los avisos sin
+ * tener cuenta. Ver el bloque del digest al coro para el porqué.
+ */
+export function rolParaRecordatorio(
+  sub: { role: string | null; user_id: string | null },
+  rolDelPerfil: Map<string, string | null>,
+): string | null {
+  return (sub.user_id ? rolDelPerfil.get(sub.user_id) : null) ?? sub.role;
+}
+
+/** ¿A esta persona le toca el recordatorio de "publica el cantoral"? */
+export function leTocaRecordatorioDeCoro(rol: string | null): boolean {
+  return rol === 'Coro' || rol === 'Admin';
+}
+
 /** Une una lista para el cuerpo del push, con tope (máx 3 + "y N más"). */
 export function digestBody(items: string[], max = 3): string {
   if (items.length <= max) return items.join(' · ');
@@ -962,16 +980,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const base3 = baseCelebrationsOn(target3);           // domingos + solemnidades (globales)
     const custom3 = await customCelebrationsOn(target3);
 
-    // role IN (Coro, Admin): ambos arman y publican cantorales. El Admin también debe
-    // recibir el recordatorio de "publica el cantoral" (antes solo iba a role=eq.Coro,
-    // por lo que un Admin —o un Coro que quedó con la suscripción en otro rol— no lo recibía).
-    // El `role` de la suscripción es el rol PERMANENTE del perfil, no el de la sesión:
-    // un Coro que entra como Pueblo fiel tiene que seguir recibiendo este recordatorio.
-    const cr = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?role=in.(Coro,Admin)&select=endpoint,p256dh,auth,parishes`, { headers: svcHeaders });
-    const coroSubs: { endpoint: string; p256dh: string; auth: string; parishes: string[] }[] = cr.ok ? await cr.json() : [];
+    // ── A quién va este recordatorio ────────────────────────────────────────
+    //
+    // SOLO a los coros (y a los administradores, que también publican). Al Pueblo fiel
+    // no le sirve de nada que le digan que publique un cantoral: a ellos les llega el
+    // aviso cuando el coro lo PUBLICA, que va por parroquia y sin filtro de rol.
+    //
+    // El rol se toma del PERFIL, no del que quedó congelado en la suscripción. La
+    // suscripción guarda el rol que tenía la persona el día que activó los avisos, y
+    // ese dato envejece: quien activó las notificaciones siendo Pueblo fiel y después
+    // pasó a Coro no volvía a recibir este aviso hasta que la app resincronizara su
+    // suscripción — es decir, podía pasarse semanas sin el recordatorio del jueves sin
+    // que nada lo delatara. Preguntando por el perfil, el reparto es siempre el de hoy.
+    //
+    // Para una suscripción sin cuenta asociada (se activó sin sesión) no hay perfil que
+    // consultar: ahí se respeta lo que guardó la propia suscripción.
+    const [cr, pr] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?select=endpoint,p256dh,auth,parishes,role,user_id`, { headers: svcHeaders }),
+      fetch(`${SUPABASE_URL}/rest/v1/user_profiles?select=id,role`, { headers: svcHeaders }),
+    ]);
+    const todasLasSubs: { endpoint: string; p256dh: string; auth: string; parishes: string[]; role: string | null; user_id: string | null }[] =
+      cr.ok ? await cr.json() : [];
+    const perfiles: { id: string; role: string | null }[] = pr.ok ? await pr.json() : [];
+    const rolDelPerfil = new Map(perfiles.map((x) => [x.id, x.role]));
+    const coroSubs = todasLasSubs.filter((s) => leTocaRecordatorioDeCoro(rolParaRecordatorio(s, rolDelPerfil)));
 
     // Diagnóstico: por qué cada suscriptor Coro/Admin recibe o no el aviso.
-    const coroDetail: { device: string; parishes: string[]; pending: string[]; skipped: string }[] = [];
+    const coroDetail: { device: string; rol: string; parishes: string[]; pending: string[]; skipped: string }[] = [];
 
     for (const sub of coroSubs) {
       const parishes = Array.from(new Set(sub.parishes || []));
@@ -996,6 +1031,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (dry) {
         coroDetail.push({
           device: maskEndpoint(sub.endpoint),
+          // El rol EFECTIVO (el del perfil), que es el que decidió incluirlo. Sin esto,
+          // al preguntarse "¿por qué a este no le llega?" no había forma de saber si el
+          // motivo era el rol o la parroquia.
+          rol: `${rolParaRecordatorio(sub, rolDelPerfil) ?? '(sin rol)'}${sub.role !== rolParaRecordatorio(sub, rolDelPerfil) ? ` (la suscripcion decia ${sub.role ?? 'nada'})` : ''}`,
           parishes,
           pending,
           skipped: parishes.length === 0 ? 'suscripción sin parroquias' : skipped.join(' | '),

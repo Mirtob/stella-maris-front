@@ -14,6 +14,7 @@
  */
 import {
   addDays, baseCelebrationsOn, solemnitiesOn, todayInSantiago, leadLabel, digestBody,
+  rolParaRecordatorio, leTocaRecordatorioDeCoro,
 } from '../../api/cron/celebration-reminders';
 
 let pass = 0, fail = 0;
@@ -116,6 +117,41 @@ const hoyChile = todayInSantiago();
 checkTrue('tiene forma YYYY-MM-DD', /^\d{4}-\d{2}-\d{2}$/.test(hoyChile), hoyChile);
 const enChile = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });
 check('coincide con el reloj de Chile', hoyChile, enChile);
+
+
+console.log('\n== Quién recibe el recordatorio del jueves ==');
+// Regla pedida el 3-sep-2026: el "publica el cantoral" es SOLO para los coros. Al
+// Pueblo fiel le llega otro aviso distinto —el de "cantoral nuevo"— cuando el coro
+// publica, y ese va por parroquia, sin mirar el rol.
+const perfiles = new Map<string, string | null>([
+  ['u-coro', 'Coro'],
+  ['u-pueblo', 'Pueblo fiel'],
+  ['u-admin', 'Admin'],
+  ['u-ascendido', 'Coro'],   // se suscribió como Pueblo fiel y despues paso a Coro
+  ['u-bajado', 'Pueblo fiel'], // era Coro y ya no
+]);
+const sub = (user_id: string | null, role: string | null) => ({ user_id, role });
+const rolDe = (s: { user_id: string | null; role: string | null }) => rolParaRecordatorio(s, perfiles);
+
+check('un coro lo recibe', leTocaRecordatorioDeCoro(rolDe(sub('u-coro', 'Coro'))), true);
+check('un administrador también (publica igual)', leTocaRecordatorioDeCoro(rolDe(sub('u-admin', 'Admin'))), true);
+check('el Pueblo fiel NO lo recibe', leTocaRecordatorioDeCoro(rolDe(sub('u-pueblo', 'Pueblo fiel'))), false);
+
+console.log('\n== Manda el perfil de HOY, no el del día que se suscribió ==');
+// La suscripción congela el rol del día que se activaron los avisos, y ese dato
+// envejece sin que nada lo delate.
+check('se suscribió como Pueblo fiel y hoy es Coro: lo recibe',
+  leTocaRecordatorioDeCoro(rolDe(sub('u-ascendido', 'Pueblo fiel'))), true);
+check('se suscribió como Coro y hoy es Pueblo fiel: ya no',
+  leTocaRecordatorioDeCoro(rolDe(sub('u-bajado', 'Coro'))), false);
+
+console.log('\n== Suscripciones sin cuenta ==');
+// Se activaron los avisos sin sesión: no hay perfil que consultar, así que vale lo
+// que guardó la propia suscripción.
+check('sin cuenta, vale lo guardado (Coro)', leTocaRecordatorioDeCoro(rolDe(sub(null, 'Coro'))), true);
+check('sin cuenta, vale lo guardado (Pueblo fiel)', leTocaRecordatorioDeCoro(rolDe(sub(null, 'Pueblo fiel'))), false);
+check('sin cuenta y sin rol: no se le molesta', leTocaRecordatorioDeCoro(rolDe(sub(null, null))), false);
+check('cuenta borrada del perfil: cae a lo guardado', leTocaRecordatorioDeCoro(rolDe(sub('u-fantasma', 'Coro'))), true);
 
 console.log(`\n${fail === 0 ? 'TODO OK' : 'HAY FALLAS'} — ${pass} ok, ${fail} fallidas\n`);
 process.exit(fail === 0 ? 0 : 1);
