@@ -62,11 +62,41 @@ const EQUIVALENTS: string[][] = [
  * El organista lee la línea de soprano (la melodía) cuando la obra no trae una parte de
  * órgano escrita: es lo que hace en la práctica, y es más útil que la partitura general
  * con todas las voces apiladas.
+ *
+ * LOS CANTOS A DOS VOCES no se llaman SATB: en el repertorio real las partes son
+ * "Mujeres" y "Hombres" (19 de los 20 cantos a dos voces). Sin esta tabla NADIE recibía
+ * su parte en esos cantos —ni el organista ni las voces— y todos terminaban leyendo el
+ * full score con las dos líneas apiladas. Reportado el 3-sep-2026 por el organista.
+ *
+ * Es una tabla DIRIGIDA a propósito, no una lista de sinónimos: decir que "Mujeres" es
+ * lo mismo que "Soprano" sería falso en una obra a cuatro voces, donde conviven Soprano
+ * y Alto. Aquí solo se dice "si no está la tuya, esta otra te sirve".
  */
 const PART_FALLBACKS: Record<string, string[]> = {
-  organo: ['soprano'],
-  piano: ['organo', 'soprano'],
+  // La melodía. En un canto a dos voces la lleva la línea de mujeres; y en el único
+  // canto rotulado "Voz 1"/"Voz 2", la de arriba — comprobado sobre la partitura
+  // general: el rótulo "Voz 1" va en el pentagrama superior de cada sistema.
+  organo: ['soprano', 'mujeres', 'voz 1'],
+  piano: ['organo', 'soprano', 'mujeres', 'voz 1'],
+  // Voces: en un canto a dos voces cada una lee la línea de su cuerda.
+  soprano: ['mujeres'],
+  contralto: ['mujeres'],
+  tenor: ['hombres'],
+  bajo: ['hombres'],
+  // Y al revés: quien tenga puesto "Mujeres" u "Hombres" en una obra a cuatro voces.
+  // Se le da la línea de arriba de su grupo, que es la que se canta por defecto.
+  mujeres: ['soprano'],
+  hombres: ['tenor'],
 };
+
+/** Los respaldos de una parte, buscándolos también por sus sinónimos ('Bass' → 'bajo'). */
+function fallbacksFor(part: string): string[] {
+  for (const t of synonymsOf(part)) {
+    const fb = PART_FALLBACKS[t];
+    if (fb) return fb;
+  }
+  return [];
+}
 
 /** Textos que identifican la partitura general cuando el archivo no se llama como la obra. */
 const FULL_SCORE_WORDS = [
@@ -135,7 +165,9 @@ export function detectSheets(files: { id: string; name: string }[], ext = 'pdf')
   // Un único PDF en la carpeta es, por definición, la partitura del canto.
   if (sheets.length === 1) return [{ ...sheets[0], part: FULL_SCORE }];
 
-  const ORDER = ['soprano', 'contralto', 'alto', 'tenor', 'bajo'];
+  // Voz aguda primero, como se apilan los pentagramas. 'Mujeres'/'Hombres' entran en
+  // el lugar de la cuerda que les corresponde y no al final por orden alfabético.
+  const ORDER = ['soprano', 'mujeres', 'contralto', 'alto', 'tenor', 'hombres', 'bajo'];
   const rank = (p: string) => {
     if (p === FULL_SCORE) return -1;
     const n = norm(p);
@@ -199,7 +231,7 @@ export function sheetForPart(sheets: SongSheet[], part?: string): SongSheet | un
   if (part) {
     const own = findByTerms(sheets, synonymsOf(part));
     if (own) return own;
-    for (const fb of PART_FALLBACKS[norm(part)] ?? []) {
+    for (const fb of fallbacksFor(part)) {
       const alt = findByTerms(sheets, synonymsOf(fb));
       if (alt) return alt;
     }

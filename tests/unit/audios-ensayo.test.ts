@@ -42,10 +42,13 @@ check('nombre con paréntesis (Panis angelicus)', partes([
   'Panis angelicus (Lambillote) .mp3',
 ]), [FULL_SCORE, 'Soprano', 'Bajo']);
 
-check('voces que no son SATB (Hombres/Mujeres)', partes([
+// La aguda primero, como se apilan los pentagramas. Antes salían al reves, por orden
+// alfabetico, que era un accidente y no una decision (3-sep-2026: al dar a Mujeres y
+// Hombres su lugar en la cuerda que les toca, tambien quedan bien ordenadas aqui).
+check('voces que no son SATB (Mujeres/Hombres)', partes([
   'Oh Maria, madre mia-Hombres.mp3',
   'Oh Maria, madre mia-Mujeres.mp3',
-]), ['Hombres', 'Mujeres']);
+]), ['Mujeres', 'Hombres']);
 
 console.log('\n== Los PDF de la misma carpeta no se cuelan como pistas ==');
 // La carpeta trae PDF, .mscz y .mp3 mezclados: filtrar por extensión es lo que separa
