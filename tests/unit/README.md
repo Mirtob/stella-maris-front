@@ -36,6 +36,9 @@ node tests/output/sugerencias.mjs
 npx esbuild tests/unit/salmo-antifona.test.ts --bundle --platform=node --format=esm --outfile=tests/output/salmo.mjs
 node tests/output/salmo.mjs
 
+npx esbuild tests/unit/publicar-cantoral.test.ts --bundle --platform=node --format=esm --outfile=tests/output/publicar.mjs
+node tests/output/publicar.mjs
+
 npx esbuild tests/unit/perfil-admin.test.ts --bundle --platform=node --format=esm --outfile=tests/output/perfil.mjs
 node tests/output/perfil.mjs
 

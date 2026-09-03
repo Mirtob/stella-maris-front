@@ -7,6 +7,7 @@ import { formatActiveParishLabel } from '../../utils/parish';
 import { MassType } from '../../types';
 import { MASS_TYPE_LABEL, MASS_TYPE_RANGE, MASS_TIME_BY_TYPE } from '../../utils/massType';
 import { getLiturgicalDateForDate, getDateForLiturgicalName, isSunday, getLiturgicalDateNames } from '../../utils/liturgicalCalendar';
+import { celebracionInicial, motivoParaNoPublicar } from '../../utils/publishGate';
 import { LiturgicalColorBadge } from '../liturgy/LiturgicalColorBadge';
 import { validateCantoral, LiturgicalWarning } from '../../utils/liturgicalValidation';
 import { AddSolemnityModal } from '../liturgy/AddSolemnityModal';
@@ -96,7 +97,20 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
   // Use local-timezone today to avoid the user in a negative-offset TZ
   // (Chile, México, Argentina) publishing for "tomorrow" when it's 22:00.
   const [selectedDate, setSelectedDate] = useState(initialDate || getTodayLocal());
-  const [liturgicalDate, setLiturgicalDate] = useState('');
+  /**
+   * La celebración se siembra AL ABRIR, a partir de la fecha que traiga el constructor.
+   *
+   * Antes arrancaba vacía y solo se rellenaba dentro del efecto de "cambió la fecha",
+   * que únicamente corre si el usuario toca el campo de fecha AQUÍ. Pero cuando los
+   * datos vienen del constructor ese campo ni se dibuja: se muestra un resumen. O sea
+   * que la celebración se quedaba vacía para siempre, `canPublish` la exige, y el botón
+   * de publicar quedaba muerto sin decir por qué.
+   *
+   * Solo lo sufría quien tiene UNA parroquia: el modo multi ya sembraba su propio
+   * horario con `getLiturgicalDateForDate` al inicializar `schedules`. Por eso no se vio
+   * hasta que publicó un coro nuevo — con varias parroquias funcionaba.
+   */
+  const [liturgicalDate, setLiturgicalDate] = useState(() => celebracionInicial(initialDate));
   const [massTime, setMassTime] = useState(initialMassTime || '');
   // Tipo de horario litúrgico: I Vísperas (tarde del día anterior), Misa del día
   // (mismo día 00–15h) o II Vísperas (mismo día 15:01–23:59). Para I Vísperas la
@@ -280,6 +294,24 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
     }
     return !!selectedDate && !!liturgicalDate && !!massTime;
   })();
+
+  /**
+   * Por qué no se puede publicar todavía.
+   *
+   * Un botón gris que no explica nada es una pared: quien lo encuentra no tiene forma
+   * de saber si le falta un canto, una parroquia o la celebración. Esto es lo que
+   * convierte esa pared en una instrucción.
+   */
+  const motivoBloqueo = motivoParaNoPublicar({
+    cantos: cantoral.length,
+    publicando: isPublishing,
+    multi: isMulti,
+    fecha: selectedDate,
+    horario: massTime,
+    celebracion: liturgicalDate,
+    parroquiasMarcadas: Array.from(selectedParishes),
+    horarioPorParroquia: schedules,
+  });
 
   const handlePublish = async () => {
     if (!canPublish || isPublishing) return;
@@ -607,6 +639,24 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
                         {liturgicalDate ? ` · ${liturgicalDate}` : ''}
                       </p>
                       <p className="text-xs text-brand-ink-soft mt-1">Elegiste estos datos al inicio. Para cambiarlos, vuelve al constructor.</p>
+
+                      {/* Sin celebración no se puede publicar, y desde aquí el campo no
+                          se ve. Antes eso era un callejón sin salida: se decía "elegiste
+                          estos datos" y el botón no respondía. Ahora se dice qué falta y
+                          se puede resolver sin volver atrás. */}
+                      {!liturgicalDate && (
+                        <div className="mt-3 pt-3 border-t-2 border-blue-200 dark:border-blue-700">
+                          <p className="text-sm font-bold text-amber-800 dark:text-amber-300 mb-2">
+                            Esta fecha no tiene celebración en el calendario, y hace falta para publicar.
+                          </p>
+                          <button
+                            onClick={() => setShowAddSolemnityModal(true)}
+                            className="bg-gradient-to-br from-amber-500 to-orange-600 text-white py-2.5 px-4 rounded-xl font-bold text-sm border-2 border-orange-700 active:scale-95 transition-all"
+                          >
+                            Agregar la celebración
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ) : (<>
                   {/* Date Selection */}
@@ -952,6 +1002,11 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
                   </div>
                 </button>
               </div>
+              {motivoBloqueo && (
+                <p className="mt-2 text-sm font-bold text-amber-800 dark:text-amber-300 text-center">
+                  {motivoBloqueo}
+                </p>
+              )}
             </div>
           </div>
         </div>
