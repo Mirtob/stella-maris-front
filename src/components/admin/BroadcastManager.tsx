@@ -21,7 +21,16 @@ const DESTINOS: { valor: string; etiqueta: string }[] = [
 ];
 
 const TOPE_TITULO = 60;
-const TOPE_TEXTO = 160;
+/**
+ * 240 y no 160.
+ *
+ * El primer aviso real —dar el correo de contacto a quien no encuentra su parroquia—
+ * son 205 caracteres, y el tope de 160 lo cortaba justo encima del correo: quedaba
+ * "puedes escribir a stellamaris". Un limite elegido a ojo que se comia lo unico
+ * accionable del mensaje. Los servicios de push admiten mucho mas; lo que manda de
+ * verdad es cuanto se lee sin desplegar el aviso, y de eso avisa el texto de abajo.
+ */
+const TOPE_TEXTO = 240;
 
 /**
  * Avisos y promociones a los suscriptores.
@@ -156,9 +165,10 @@ export function BroadcastManager({ onBack, enviadoPor }: Props) {
               placeholder="Escríbenos y cargamos las parroquias de tu diócesis."
               className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-slate-800 text-brand-ink border-2 border-brand/30 focus:border-brand outline-none resize-y"
             />
-            {/* El teléfono recorta lo que no cabe: mejor saberlo antes de mandarlo. */}
+            {/* Lo primero es lo que se lee de un vistazo: conviene saberlo al escribir. */}
             <p className="text-xs text-brand-ink-soft mt-1">
-              En el teléfono se ven unas dos líneas; lo demás queda cortado.
+              Sin desplegar el aviso se leen unas dos líneas. Pon al principio lo que
+              quieres que vean sí o sí.
             </p>
           </div>
           <div>
