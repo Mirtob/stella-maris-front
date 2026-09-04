@@ -39,6 +39,9 @@ node tests/output/salmo.mjs
 npx esbuild tests/unit/voces-dos-partes.test.ts --bundle --platform=node --format=esm --outfile=tests/output/voces.mjs
 node tests/output/voces.mjs
 
+npx esbuild tests/unit/calendario-celebraciones.test.ts --bundle --platform=node --format=esm --outfile=tests/output/calendario.mjs
+node tests/output/calendario.mjs
+
 npx esbuild tests/unit/publicar-cantoral.test.ts --bundle --platform=node --format=esm --outfile=tests/output/publicar.mjs
 node tests/output/publicar.mjs
 

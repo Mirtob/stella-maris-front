@@ -165,11 +165,8 @@ export function getPersistedCustomDates(): LiturgicalDate[] { return _persistedC
 /** Fusiona las persistidas (caché) con las que pase el llamador (sesión). */
 const mergeCustom = (cd?: LiturgicalDate[]): LiturgicalDate[] => [..._persistedCustom, ...(cd || [])];
 
-/** Nombre de la celebración de una fecha; '' si no se encuentra (permite agregar custom). */
-export function getLiturgicalDateForDate(date: string, customDates?: LiturgicalDate[]): string {
-  const custom = mergeCustom(customDates).find((d) => d.date === date);
-  if (custom) return custom.name;
-
+/** La celebración del CALENDARIO para una fecha (sin mirar las añadidas a mano). */
+function celebracionDelCalendario(date: string): string {
   const hit = byDate.get(date);
   if (hit) return hit.name;
 
@@ -179,6 +176,47 @@ export function getLiturgicalDateForDate(date: string, customDates?: LiturgicalD
     if (found) return found.name;
   }
   return '';
+}
+
+/** Lo que se celebra un día: la del calendario y, además, las agregadas a mano. */
+export interface CelebracionesDelDia {
+  /** La que da identidad al día. Es la del calendario; si el día no tenía, la agregada. */
+  principal: string;
+  /** Las agregadas que se celebran ADEMÁS, sin desplazar a la principal. */
+  ademas: string[];
+}
+
+/**
+ * Todo lo que se celebra en una fecha.
+ *
+ * UN DOMINGO NO SE PIERDE. Antes, agregar una celebración a mano la ponía en lugar de
+ * la del calendario: al marcar el "Día de Oración por Chile" en el 26.º Domingo del
+ * Tiempo Ordinario, el domingo desaparecía de la app. Y no era solo el rótulo — el
+ * salmo del libro se busca por (ciclo, celebración), así que ese domingo se quedaba
+ * también sin su salmo. Reportado el 4-sep-2026.
+ *
+ * Ahora la del calendario manda y la agregada se suma. Solo cuando el día no tiene
+ * nada (un martes cualquiera) la agregada pasa a ser la principal, que es justo para
+ * lo que se creó la función de agregar celebraciones.
+ */
+export function getCelebrationsForDate(date: string, customDates?: LiturgicalDate[]): CelebracionesDelDia {
+  const agregadas = mergeCustom(customDates).filter((d) => d.date === date).map((d) => d.name);
+  const delCalendario = celebracionDelCalendario(date);
+
+  if (delCalendario) {
+    // Sin repetir la principal si alguien la agregó a mano con el mismo nombre, y sin
+    // repetir dos veces la misma agregada (la caché persistida y la de sesión se
+    // solapan cuando se acaba de crear una).
+    const vistas = new Set([delCalendario]);
+    const ademas = agregadas.filter((n) => !vistas.has(n) && (vistas.add(n), true));
+    return { principal: delCalendario, ademas };
+  }
+  return { principal: agregadas[0] ?? '', ademas: [...new Set(agregadas.slice(1))] };
+}
+
+/** Nombre de la celebración de una fecha; '' si no se encuentra (permite agregar custom). */
+export function getLiturgicalDateForDate(date: string, customDates?: LiturgicalDate[]): string {
+  return getCelebrationsForDate(date, customDates).principal;
 }
 
 /** Fecha 'YYYY-MM-DD' de una celebración por nombre, dentro (o cerca) de un año. */

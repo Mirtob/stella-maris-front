@@ -95,13 +95,13 @@ import { uploadCantoralPDF } from './services/cantoralPDF';
 import { cacheCantoralsForOffline, getOfflineCantorals } from './services/offlineCache';
 import { listChapels } from './services/chapels';
 import { listCustomLiturgicalDates, toLiturgicalDate } from './services/liturgicalDates';
-import { setPersistedCustomDates } from './utils/liturgicalCalendar';
 import { syncPushParishes } from './services/push';
 import { PrelaunchDemo } from './components/survey/PrelaunchDemo';
 import { InstallApp } from './components/install/InstallApp';
 import { isStandalone as isStandaloneApp } from './utils/installPrompt';
 import { readSignupPrefs, clearSignupPrefs } from './config/signupPrefs';
 import { effectiveVoicePart } from './utils/sheetParts';
+import { getLiturgicalDateForDate, setPersistedCustomDates } from './utils/liturgicalCalendar';
 import { getTodayLocal, addDaysLocal, isWithinInclusive, formatYmdForDisplay } from './utils/dateLocal';
 import { mergeProfile } from './utils/profileMerge';
 import { splitActiveParish, formatActiveParishLabel } from './utils/parish';
@@ -297,6 +297,10 @@ function AppContent() {
   const [publishedCantorals, setPublishedCantorals] = useState<PublishedCantoral[]>([]);
   // Si está editando un cantoral publicado, su id; al republicar se ACTUALIZA en vez de crear.
   const [editingCantoralId, setEditingCantoralId] = useState<string | null>(null);
+  // Fecha con la que abrir el constructor cuando se llega desde el calendario litúrgico.
+  // Se consume al montar el constructor y se limpia, para que volver a entrar por el
+  // menú no reviva una fecha vieja.
+  const [fechaParaConstructor, setFechaParaConstructor] = useState<string | null>(null);
   // Catálogo global de capillas (parishFull → capillas) para el selector de sesión.
   const [chapelsByParish, setChapelsByParish] = useState<Record<string, { id: string; name: string }[]>>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -1502,6 +1506,9 @@ function AppContent() {
             onPlaySong: handlePlaySong,
             onPublishCantoral: handlePublishCantoral,
             navigate,
+            fechaParaConstructor,
+            onPickCantoralDate: setFechaParaConstructor,
+            onConsumeCantoralDate: () => setFechaParaConstructor(null),
             onDeleteCantoral: handleDeleteCantoral,
             onEditCantoral: handleEditCantoral,
             onCancelEdit: handleCancelEdit,
@@ -1564,6 +1571,10 @@ interface ViewProps {
   onCloneCantoral: (cantoral: PublishedCantoral) => void;
   onShareCantoral: (cantoral: PublishedCantoral) => void;
   onListen: (cantoral: PublishedCantoral) => void;
+  /** Fecha elegida en el calendario litúrgico, para abrir el constructor en ella. */
+  fechaParaConstructor: string | null;
+  onPickCantoralDate: (date: string) => void;
+  onConsumeCantoralDate: () => void;
 }
 
 function renderView(p: ViewProps): JSX.Element | null {
@@ -1587,6 +1598,8 @@ function renderView(p: ViewProps): JSX.Element | null {
             editingCantoralId={p.editingCantoralId}
             editingCantoral={p.editingCantoral}
             onCancelEdit={p.onCancelEdit}
+            initialMassDate={p.fechaParaConstructor ?? undefined}
+            onConsumeInitialDate={p.onConsumeCantoralDate}
           />
         );
       }
@@ -1730,18 +1743,31 @@ function renderView(p: ViewProps): JSX.Element | null {
           publishedCantorals={p.publishedCantorals}
           onViewCantoral={() => p.navigate('cantorals')}
           onCreateCantoral={(liturgicalDate, date) => {
-            if (p.effectiveRole === 'Coro') {
-              p.navigate('main');
-              toast.success(`Crear cantoral para: ${liturgicalDate}`, {
-                description: `Fecha: ${formatYmdForDisplay(date, { day: '2-digit', month: '2-digit', year: 'numeric' })}`,
-                duration: 5000,
+            // El constructor vive en el perfil de Coro. Para un Admin, 'main' es su
+            // panel: llevarlo ahí no es llevarlo al constructor, y antes era justo lo
+            // que pasaba (un aviso y nada más).
+            if (p.effectiveRole !== 'Coro') {
+              toast.info('El constructor de cantorales está en el perfil de Coro', {
+                description: 'Cambia a Coro desde tu perfil para armar el cantoral de esta celebración.',
+                duration: 6000,
               });
-            } else {
-              toast.info(liturgicalDate, {
-                description: formatYmdForDisplay(date, { day: '2-digit', month: '2-digit', year: 'numeric' }),
-                duration: 3000,
-              });
+              return;
             }
+            // La fecha viaja al constructor. Sin esto se llegaba en blanco, con la
+            // fecha de hoy, y había que volver a buscar el domingo a mano.
+            //
+            // Ojo con el NOMBRE: el calendario visual escribe "26° Domingo…" y el motor
+            // "26.º Domingo…". De 67 celebraciones, 54 se escriben distinto en los dos
+            // sitios. Por eso no se arrastra la etiqueta: manda la FECHA, y la
+            // celebración la resuelve el motor, que es de donde salen el salmo del
+            // libro, los avisos y el historial.
+            p.onPickCantoralDate(date);
+            p.navigate('main');
+            const cel = getLiturgicalDateForDate(date) || liturgicalDate;
+            toast.success(`Cantoral para ${cel}`, {
+              description: formatYmdForDisplay(date, { weekday: 'long', day: 'numeric', month: 'long' }),
+              duration: 5000,
+            });
           }}
         />
       );

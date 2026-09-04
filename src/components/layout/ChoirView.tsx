@@ -11,7 +11,7 @@ import { Tour } from '../tour/Tour';
 import { constructorTips, hasSeenTip, markTipSeen } from '../tour/tours';
 import { Song, InstrumentType, PublishedCantoral, MassType } from '../../types';
 import { PsalmFromBook } from '../songs/PsalmFromBook';
-import { getLiturgicalDateForDate, getPersistedCustomDates, setPersistedCustomDates } from '../../utils/liturgicalCalendar';
+import { getCelebrationsForDate, getLiturgicalDateForDate, getPersistedCustomDates, setPersistedCustomDates } from '../../utils/liturgicalCalendar';
 import { getSundayCycle } from '../../utils/liturgicalCycle';
 import { resolvePsalm } from '../../data/psalmIndex';
 import { buildPsalmSong, conSalmoDelLibro, debeReponerAntifona, esAntifonaEscritaAMano } from '../../utils/psalmSong';
@@ -47,6 +47,12 @@ interface ChoirViewProps {
   editingCantoral?: PublishedCantoral | null;
   /** Salir de la edición sin tocar el cantoral publicado. */
   onCancelEdit?: () => void;
+  /** Fecha con la que abrir el constructor, cuando se llega desde el calendario
+   *  litúrgico ("Agregar Cantoral" en una celebración). Sin esto se llegaba al
+   *  constructor en blanco y había que volver a buscar la fecha a mano. */
+  initialMassDate?: string;
+  /** Avisa que la fecha de entrada ya se usó, para que no reviva al volver a entrar. */
+  onConsumeInitialDate?: () => void;
 }
 
 // Horarios de Misa seleccionables cada 30 min (06:00–22:00). Valor 'HH:MM' (24h).
@@ -74,6 +80,8 @@ export function ChoirView({
   editingCantoralId,
   editingCantoral,
   onCancelEdit,
+  initialMassDate,
+  onConsumeInitialDate,
 }: ChoirViewProps) {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showInstrumentModal, setShowInstrumentModal] = useState(false);
@@ -92,7 +100,10 @@ export function ChoirView({
   const [celebTick, setCelebTick] = useState(0);
   // Fecha de la Misa para la que se arma el cantoral: fija la celebración/ciclo desde el
   // inicio (para cargar el salmo del libro) y pre-llena la fecha al publicar.
-  const [massDate, setMassDate] = useState(getTodayLocal());
+  const [massDate, setMassDate] = useState(initialMassDate || getTodayLocal());
+  // La fecha que llega del calendario se usa UNA vez. Si se dejara puesta, salir del
+  // constructor y volver por el menú reabriría aquel domingo en vez de hoy.
+  useEffect(() => { if (initialMassDate) onConsumeInitialDate?.(); }, []);
   // Todo lo litúrgico (tiempo, rótulo del Aleluya, aspersión) se decide contra la
   // fecha de la MISA, no contra la de hoy: el cantoral se arma con anticipación y
   // puede cruzar de un tiempo litúrgico a otro.
@@ -260,6 +271,12 @@ export function ChoirView({
   // Celebración y ciclo (A/B/C) derivados de la fecha de la Misa, para el salmo del libro.
   // `celebTick` fuerza recomputar tras agregar una celebración custom.
   const massCelebration = useMemo(() => getLiturgicalDateForDate(massDate), [massDate, celebTick]);
+  // Lo que se celebra ADEMÁS ese día. Un domingo puede llevar encima una jornada o un
+  // aniversario sin dejar de ser ese domingo: se nombran los dos.
+  const tambienSeCelebra = useMemo(
+    () => getCelebrationsForDate(massDate).ademas,
+    [massDate, celebTick],
+  );
   const massCycle = getSundayCycle(massDate);
 
   // Mostrar modal de selección de instrumento siempre al inicio
@@ -457,6 +474,11 @@ export function ChoirView({
               ? <>{formatYmdForDisplay(massDate, { weekday: 'long', day: 'numeric', month: 'long' })} · <strong className="text-brand-ink">{massCelebration}</strong> · Año {massCycle}</>
               : <>{formatYmdForDisplay(massDate, { weekday: 'long', day: 'numeric', month: 'long' })} — esta fecha no tiene una celebración en el calendario.</>}
           </p>
+          {tambienSeCelebra.length > 0 && (
+            <p className="text-sm text-brand-ink-soft mt-1">
+              También se celebra: <strong className="text-brand-ink">{tambienSeCelebra.join(' · ')}</strong>
+            </p>
+          )}
           {!massCelebration && (
             <button
               onClick={() => setShowAddSolemnity(true)}

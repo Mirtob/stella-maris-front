@@ -10,7 +10,12 @@ import {
   GLOBAL_SCOPE,
   type CustomLiturgicalDate,
 } from '../../services/liturgicalDates';
-import { setPersistedCustomDates, getPersistedCustomDates } from '../../utils/liturgicalCalendar';
+import { setPersistedCustomDates, getPersistedCustomDates, getCelebrationsForDate } from '../../utils/liturgicalCalendar';
+
+/** Para comparar "26° Domingo…" con "26.º Domingo…" sin que la ortografía estorbe. */
+const normalizaNombre = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ').trim();
 import { toast } from 'sonner';
 
 /** Convierte una celebración persistida (BD) en un evento del calendario visual. */
@@ -219,6 +224,19 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false
       c.date === event.date ||
       c.date === addDaysLocal(event.date, -1)
     );
+
+  /**
+   * Lo demás que se celebra el mismo día que este evento.
+   *
+   * Se compara SIN el nombre, por fecha: el calendario visual escribe "26° Domingo…" y
+   * el motor litúrgico "26.º Domingo…" — de 67 celebraciones, 54 se escriben distinto en
+   * los dos sitios. Emparejar por nombre no funcionaría.
+   */
+  const otrasCelebraciones = (event: LiturgicalEvent): string[] => {
+    const c = getCelebrationsForDate(event.date);
+    const mismo = (a: string, b: string) => normalizaNombre(a) === normalizaNombre(b);
+    return [c.principal, ...c.ademas].filter((n) => n && !mismo(n, event.name));
+  };
 
   const handleAddCantoral = (event: LiturgicalEvent) => {
     if (onCreateCantoral) {
@@ -648,6 +666,15 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false
                             <p className="text-lg font-bold opacity-90">
                               {formatDate(event.date)} • {event.type}
                             </p>
+                            {/* Lo que se celebra ADEMÁS ese día. Un domingo del Tiempo
+                                Ordinario puede llevar encima una jornada o un aniversario
+                                sin dejar de ser ese domingo, y hay que ver las dos cosas
+                                antes de armar el cantoral. */}
+                            {otrasCelebraciones(event).length > 0 && (
+                              <p className="text-base opacity-80 mt-1">
+                                También: <strong>{otrasCelebraciones(event).join(' · ')}</strong>
+                              </p>
+                            )}
                           </div>
                         </div>
                         {event.description && (
