@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { registrarCapa } from '../../utils/navegacionAtras';
+import { useState, useEffect } from 'react';
 import { BookOpen, Calendar, Church, Play, Music as MusicIcon, Clock, BookText, ChevronDown, ChevronUp, Filter, Search, Headphones, Edit2, Trash2, QrCode, Archive, SearchX, FileText, Copy } from 'lucide-react';
 import { EmptyState } from '../common/EmptyState';
 import { ParishQRDialog } from './ParishQRDialog';
@@ -178,7 +179,15 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
     const isExpandedCantoral = expandedId === cantoral.id;
     const categories = groupSongsByCategory(cantoral.songs);
 
-    return (
+  
+  // El Modo Atril ocupa toda la pantalla: el botón "atrás" del teléfono debe CERRARLO,
+  // no sacar de esta pantalla. Se apunta como capa mientras está abierto.
+  useEffect(() => {
+    if (!atrilCantoral) return;
+    return registrarCapa(() => setAtrilCantoral(null));
+  }, [atrilCantoral]);
+
+  return (
       <div
         key={cantoral.id}
         data-tour="pf-misas"

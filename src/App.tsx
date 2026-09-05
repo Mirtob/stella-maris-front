@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense, type ComponentType, type ReactElement } from 'react';
+import { useState, useEffect, lazy, Suspense, type ComponentType, type ReactElement, useRef } from 'react';
 import { Toaster, toast } from 'sonner';
 import { Login } from './components/auth/Login';
 import { AuthCallback } from './components/auth/AuthCallback';
@@ -105,6 +105,7 @@ import { isStandalone as isStandaloneApp } from './utils/installPrompt';
 import { readSignupPrefs, clearSignupPrefs } from './config/signupPrefs';
 import { effectiveVoicePart } from './utils/sheetParts';
 import { getLiturgicalDateForDate, setPersistedCustomDates } from './utils/liturgicalCalendar';
+import { destinoAlVolver, hayCapaAbierta, cerrarCapaDeArriba } from './utils/navegacionAtras';
 import { getTodayLocal, addDaysLocal, isWithinInclusive, formatYmdForDisplay } from './utils/dateLocal';
 import { mergeProfile } from './utils/profileMerge';
 import { splitActiveParish, formatActiveParishLabel } from './utils/parish';
@@ -377,6 +378,72 @@ function AppContent() {
   function currentView(): ViewState {
     return route.screen === 'app' ? route.view : 'main';
   }
+
+  // ── El botón "atrás" del teléfono ────────────────────────────────────────
+  //
+  // Antes SACABA de la app: la app cambia de pantalla con estado propio y nunca tocaba
+  // el historial del navegador, así que para el teléfono esto era una sola página y
+  // atrás significaba salir.
+  //
+  // La táctica es dejar SIEMPRE una entrada de más en el historial mientras haya a
+  // dónde volver. Al pulsar atrás, el navegador consume esa entrada, nosotros movemos
+  // la pantalla y volvemos a poner otra. Así el número de entradas no crece: queda una
+  // sola de repuesto, en vez de acumular una por cada pantalla visitada.
+  const salidaPendiente = useRef(0);
+  // Marca de que el propio manejador provocó el `history.back()` de salida, para no
+  // reaccionar a él y encadenar retrocesos por todo el historial del navegador.
+  const saliendo = useRef(false);
+
+  useEffect(() => {
+    const rearmar = () => {
+      // Solo si no hay ya una de repuesto puesta por nosotros. Sin esta comprobación se
+      // acumulaba una entrada por cada cambio de pantalla (5 nada más abrir), y salir de
+      // la app pedía pulsar atrás muchas veces.
+      if ((window.history.state as { smAtras?: boolean } | null)?.smAtras) return;
+      try { window.history.pushState({ smAtras: true }, ''); } catch { /* noop */ }
+    };
+
+    const alVolver = () => {
+      if (saliendo.current) { saliendo.current = false; return; }
+
+      const destino = destinoAlVolver({
+        screen: route.screen,
+        view: route.screen === 'app' ? route.view : undefined,
+        returnView: 'returnView' in route ? route.returnView : undefined,
+        hayCapaAbierta: hayCapaAbierta(),
+      });
+
+      if (destino.tipo === 'cerrar-capa') { cerrarCapaDeArriba(); rearmar(); return; }
+      if (destino.tipo === 'vista') {
+        // Por `navigate` a propósito: es quien pregunta antes de abandonar un borrador
+        // a medio armar. Atrás no puede ser un atajo para perder el cantoral.
+        navigate(destino.vista);
+        rearmar();
+        return;
+      }
+
+      // Nada a lo que volver. Se avisa una vez y solo la SEGUNDA pulsación seguida
+      // sale, que es lo que hace cualquier app de teléfono: salir sin querer de un
+      // cantoral a medio armar por un roce en el borde es demasiado fácil.
+      const ahora = Date.now();
+      if (ahora - salidaPendiente.current < 2500) {
+        // Segunda pulsación seguida: se sale de verdad. Hay que retroceder OTRA vez,
+        // porque la pulsación que llega aquí solo consumió nuestra entrada de repuesto.
+        saliendo.current = true;
+        window.history.back();
+        return;
+      }
+      salidaPendiente.current = ahora;
+      toast('Pulsa atrás otra vez para salir');
+      rearmar();
+    };
+
+    rearmar();
+    window.addEventListener('popstate', alVolver);
+    return () => window.removeEventListener('popstate', alVolver);
+    // `route` entra en las dependencias para que el manejador vea siempre la pantalla
+    // actual; al re-crearse vuelve a dejar su entrada de repuesto.
+  }, [route]);
 
   // ── Effects ──────────────────────────────────────────────────────────────
 

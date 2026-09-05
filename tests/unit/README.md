@@ -20,6 +20,9 @@ eso significaba que en la práctica nunca se corrían todas. El corredor está e
 anterior (la Misa del sábado por la tarde), mientras la celebración sigue siendo la
 del domingo. Lo litúrgico —salmo, ciclo, tiempo, color— se saca siempre de `date`.
 
+`boton-atras` fija qué es "volver" en cada pantalla: primero se cierra la capa de
+arriba (el Modo Atril), después se sube un nivel, y solo en la raíz se sale.
+
 ## Chequeo de tipos
 
 ```bash

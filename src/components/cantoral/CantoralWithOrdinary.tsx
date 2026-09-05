@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { registrarCapa } from '../../utils/navegacionAtras';
+import { useState, useEffect } from 'react';
 import { parseYmdLocal } from '../../utils/dateLocal';
 import { ArrowLeft, Play, ChevronDown, ChevronUp, X, Music, FileText, ExternalLink } from 'lucide-react';
 import { PublishedCantoral, Song, UserRole, InstrumentType } from '../../types';
@@ -103,7 +104,15 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
         return null; // No renderizar si no hay canto para esta parte
       }
 
-      return (
+    
+  // El Modo Atril ocupa toda la pantalla: el botón "atrás" del teléfono debe CERRARLO,
+  // no sacar de esta pantalla. Se apunta como capa mientras está abierto.
+  useEffect(() => {
+    if (!showAtril) return;
+    return registrarCapa(() => setShowAtril(false));
+  }, [showAtril]);
+
+  return (
         <div key={section.id} className="bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-900/40 dark:to-blue-900/40 rounded-2xl sm:rounded-3xl p-3 sm:p-6 border-2 sm:border-4 border-purple-300 dark:border-purple-600 transition-colors">
           {/* Posture Indicator */}
           <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">

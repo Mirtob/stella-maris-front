@@ -1,3 +1,4 @@
+import { registrarCapa } from '../../utils/navegacionAtras';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Send, AlertCircle, Music } from 'lucide-react';
 import { toast } from 'sonner';
@@ -381,6 +382,14 @@ export function ChoirView({
     // Cerrar modal solo después del flujo completo
     setShowPublishModal(false);
   };
+
+
+  // El Modo Atril ocupa toda la pantalla: el botón "atrás" del teléfono debe CERRARLO,
+  // no sacar de esta pantalla. Se apunta como capa mientras está abierto.
+  useEffect(() => {
+    if (!showAtril) return;
+    return registrarCapa(() => setShowAtril(false));
+  }, [showAtril]);
 
   return (
     <>
