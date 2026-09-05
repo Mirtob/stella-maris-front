@@ -122,8 +122,16 @@ export async function getSession() {
 }
 
 export async function getSessionFromUrl() {
-  if (typeof supabaseClient.auth.getSessionFromUrl === 'function') {
-    return supabaseClient.auth.getSessionFromUrl({ storeSession: true });
+  // El helper no está en los tipos de supabase-js (no todas las versiones lo exponen),
+  // por eso se consulta con un tipo laxo. El guardia de abajo sigue siendo el que manda.
+  const auth = supabaseClient.auth as unknown as {
+    // Misma forma que `getSession()`, que es el respaldo de abajo: quien llama
+    // desestructura { data, error } y las dos ramas tienen que encajar.
+    getSessionFromUrl?: (opts: { storeSession: boolean })
+      => ReturnType<typeof supabaseClient.auth.getSession>;
+  };
+  if (typeof auth.getSessionFromUrl === 'function') {
+    return auth.getSessionFromUrl({ storeSession: true });
   }
 
   // Fallback para algunas versiones/entornos donde Supabase ya detectó la sesión

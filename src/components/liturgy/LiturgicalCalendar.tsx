@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Church, ChevronDown, ChevronUp, Bell, Plus, BookOpen, X } from 'lucide-react';
 import { liturgicalCalendar2026, LiturgicalEvent } from '../../data/liturgicalCalendar';
-import { getLiturgicalCardClasses, getLiturgicalSolidColor, getLiturgicalColorId } from '../../utils/liturgicalColors';
+import { getLiturgicalCardClasses, getLiturgicalColorId } from '../../utils/liturgicalColors';
 import { parseYmdLocal, formatYmdForDisplay, addDaysLocal } from '../../utils/dateLocal';
 import {
   listCustomLiturgicalDates,

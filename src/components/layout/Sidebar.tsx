@@ -1,4 +1,4 @@
-import { X, Home, BookOpen, GraduationCap, ShieldCheck, Music, LogOut, User, Settings, List, History, Calendar, Church, Book, Cross, ChevronDown, Check, Heart, Compass, Download } from 'lucide-react';
+import { X, BookOpen, GraduationCap, ShieldCheck, Music, LogOut, User, Settings, History, Calendar, Church, Book, ChevronDown, Check, Heart, Compass, Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { UserProfile, UserRole } from '../../types';
 import { esVisita, parroquiasDelPerfil } from '../../utils/parishVisit';

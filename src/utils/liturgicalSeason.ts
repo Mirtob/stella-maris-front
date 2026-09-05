@@ -90,7 +90,6 @@ export function getCurrentLiturgicalSeason(date: Date = new Date()): string {
   }
   
   // Epifanía (tradicionalmente el 6 de enero)
-  const epiphany = new Date(year, 0, 6);
   
   // Normalizar fecha actual
   const currentDate = new Date(year, month, day);

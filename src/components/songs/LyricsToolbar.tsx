@@ -2,7 +2,9 @@ import { type RefObject } from 'react';
 import { Bold, Italic, Underline, AlignCenter } from 'lucide-react';
 
 interface Props {
-  textareaRef: RefObject<HTMLTextAreaElement>;
+  // `| null` no sobra: desde React 19, `useRef<HTMLTextAreaElement>(null)` produce
+  // `RefObject<HTMLTextAreaElement | null>`, y sin esto ninguna llamada encajaba.
+  textareaRef: RefObject<HTMLTextAreaElement | null>;
   value: string;
   onChange: (v: string) => void;
 }

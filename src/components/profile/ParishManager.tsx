@@ -1,4 +1,4 @@
-import { Church, Search, Edit2, Trash2, MapPin, Users, Plus, Building2, ArrowLeft, Activity, RefreshCw, Loader } from 'lucide-react';
+import { Church, Search, Edit2, Trash2, MapPin, Users, Plus, Building2, Activity, RefreshCw, Loader } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Diocese, Parish, Chapel } from '../../data/chileDioceses';
 import { americanCountries, getCountry, getDiocesesByCountry } from '../../data/countries';
@@ -127,8 +127,6 @@ export function ParishManager() {
   const [newParishDiocese, setNewParishDiocese] = useState('');
   
   // Estado local de parroquias (simulando backend)
-  const [localParishes, setLocalParishes] = useState<Map<string, Parish[]>>(new Map());
-  const [localChapels, setLocalChapels] = useState<Map<string, Chapel[]>>(new Map());
 
   // Diócesis del país elegido (filtro de la UI; no cambia el string canónico).
   const country = getCountry(selectedCountry);

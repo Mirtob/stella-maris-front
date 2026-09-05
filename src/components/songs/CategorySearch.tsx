@@ -1,16 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, ChevronDown, ChevronUp, Music, Cross, CheckCircle, Play, AlertCircle, Sparkles, X } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, Music, Cross, CheckCircle, Play, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Song, InstrumentType } from '../../types';
 import { useSongs } from '../../hooks/useSongs';
 import { getCategoryColors } from '../../utils/colors';
-import { getCurrentLiturgicalColor, getLiturgicalCrossColor } from '../../utils/liturgicalColors';
 import { matchesSearch } from '../../utils/textSearch';
 import { songMatchesSeason } from '../../utils/songSeason';
 import { estaEnParte, partesUsadas as usadoEnPartes, ordenarSugerencias } from '../../utils/cantoralParts';
 import { AddGloriaDialog } from '../cantoral/AddGloriaDialog';
 import { AddPadreNuestroDialog, PadreNuestroLanguage } from '../cantoral/AddPadreNuestroDialog';
-import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji } from '../../utils/specialLiturgicalDays';
 import { getCurrentLiturgicalSeason, isAlleluiaTitleInLent } from '../../utils/liturgicalSeason';
 import { categoryToMoment } from '../../utils/category';
 import { filterByInstrument } from '../../utils/instrument';
@@ -424,8 +422,6 @@ export function CategorySearch({
   };
 
   const colors = getCategoryColors(category);
-  const liturgicalColor = getCurrentLiturgicalColor();
-  const crossColor = getLiturgicalCrossColor(liturgicalColor);
 
   // Q31 — Scroll-into-view del header al expandir esta categoría.
   // Evita que el coro pierda referencia visual cuando la lista expandida

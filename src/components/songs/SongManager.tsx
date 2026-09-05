@@ -266,7 +266,7 @@ export function SongManager({ puedeBorrar = true }: SongManagerProps) {
       songTitle={form.title}
       value={form.driveFileId}
       onPick={(id) => setForm(prev => ({ ...prev, driveFileId: id }))}
-      onRefresh={() => loadSheets(true)}
+      onRefresh={() => { void loadSheets(true); }}
       // Con carpeta de voces enlazada, quitar este PDF NO deja al canto sin partitura:
       // sigue saliendo la de la carpeta. Se avisa para no dejar a nadie dando vueltas.
       hasVoiceFolder={!!form.driveFolderId}

@@ -164,7 +164,6 @@ export function InstallApp({ onBack, parishes = [], role, loggedIn = false, onLo
   // En iPhone el push solo existe con la app instalada y abierta desde el ícono.
   const iosFaltaInstalar = plataforma.os === 'ios' && !instalada;
   const iosVersionCorta = plataforma.os === 'ios' && plataforma.iosVersion !== null && plataforma.iosVersion < 16;
-  const avisosPosibles = pushSupported() && !iosFaltaInstalar && !iosVersionCorta;
 
   const activarAvisos = async () => {
     if (activandoAvisos) return;

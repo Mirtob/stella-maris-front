@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense, type ComponentType, type ReactElement } from 'react';
 import { Toaster, toast } from 'sonner';
 import { Login } from './components/auth/Login';
 import { AuthCallback } from './components/auth/AuthCallback';
@@ -22,8 +22,11 @@ import { SolemnityAlerts } from './components/liturgy/SolemnityAlerts';
 // assets frescos. Evita el "no puedo entrar a esta pantalla / Algo salió mal" cuando la
 // pestaña estaba abierta durante un despliegue (p. ej. Configuración, que es lazy). Si
 // tras recargar sigue fallando, propaga el error real.
-function lazyWithReload(factory: () => Promise<{ default: any }>) {
-  return lazy(async () => {
+// El genérico NO es adorno: con `{ default: any }` TypeScript daba por buena cualquier
+// prop de TODAS las pantallas cargadas así (14 componentes), porque el componente
+// resultante no declaraba ninguna. Pasarle mal las props no se notaba.
+function lazyWithReload<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>) {
+  return lazy<T>(async () => {
     try {
       return await factory();
     } catch (err) {
@@ -33,7 +36,7 @@ function lazyWithReload(factory: () => Promise<{ default: any }>) {
         if (Date.now() - last > 20000) {           // como máx. una recarga cada 20 s
           sessionStorage.setItem(KEY, String(Date.now()));
           window.location.reload();
-          return await new Promise<{ default: any }>(() => { /* la recarga toma el control */ });
+          return await new Promise<{ default: T }>(() => { /* la recarga toma el control */ });
         }
       } catch { /* sessionStorage no disponible (modo privado) */ }
       throw err;
@@ -1305,7 +1308,8 @@ function AppContent() {
           // El instrumento con el que se toca hoy manda sobre el del perfil: decide
           // qué versión del video (órgano/guitarra) se reproduce y cómo se ve la letra.
           userInstrument={route.instrument ?? userProfile?.instrument}
-          userVoicePart={effectiveVoicePart(userProfile?.voicePart, userProfile?.instrument)}
+          /* Aquí NO va la voz: SongPlayer no la recibe ni la usa — muestra siempre la
+             partitura general. La voz manda en el Modo Atril y en el cuadernillo. */
           userRole={userProfile?.role}
           userId={userProfile?.id}
         />
@@ -1577,7 +1581,7 @@ interface ViewProps {
   onConsumeCantoralDate: () => void;
 }
 
-function renderView(p: ViewProps): JSX.Element | null {
+function renderView(p: ViewProps): ReactElement | null {
   switch (p.view) {
     case 'main':
       if (p.effectiveRole === 'Coro') {

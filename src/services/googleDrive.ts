@@ -138,7 +138,7 @@ export async function uploadFile(
     };
   }
 
-  if (!GOOGLE_DRIVE_CONFIG.upload.allowedTypes.includes(file.type)) {
+  if (!(GOOGLE_DRIVE_CONFIG.upload.allowedTypes as readonly string[]).includes(file.type)) {
     return {
       success: false,
       error: `Tipo de archivo no permitido: ${file.type}`,

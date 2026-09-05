@@ -23,7 +23,6 @@ const WORKER_URL = '/pdf.worker.min.mjs';
 const HALF_W = 139.7;   // 5.5"
 const HALF_H = 215.9;   // 8.5"
 // Carta horizontal (landscape) — la hoja física (2 páginas lógicas por cara).
-const SHEET_W = 279.4;  // 11"
 const SHEET_H = 215.9;  // 8.5"
 
 /** Solo Latin-1 (jsPDF con fuentes estándar). */

@@ -1,11 +1,12 @@
-import { Guitar, Music2, Users, PlayCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Guitar, PlayCircle } from 'lucide-react';
 import { getChannelUrl } from '../../services/youtube';
 
 interface MusicalInstrumentsProps {
   onBack?: () => void;
 }
 
-export function MusicalInstruments({ onBack }: MusicalInstrumentsProps) {
+// OJO: `onBack` llega pero esta pantalla no lo usa — no tiene botón de volver.
+export function MusicalInstruments({ onBack: _onBack }: MusicalInstrumentsProps) {
   const courses = [
     {
       id: 1,

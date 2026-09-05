@@ -145,7 +145,7 @@ export function FormacionRoadmap({ userId, userName, userParish }: { userId: str
     );
   };
 
-  const renderTrack = (track: Track, index: number) => {
+  const renderTrack = (track: Track, _index: number) => {
     const caps = trackCapsules(track);
     const open = trackOpen(track);
     const doneCount = caps.filter((c) => completed.has(c.id)).length;

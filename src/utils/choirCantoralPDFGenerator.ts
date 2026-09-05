@@ -27,7 +27,9 @@ export const generateChoirCantoralPDF = async (
   celebration?: string,
   massTime?: string,
   userInstruments: InstrumentType[] = [],
-  voiceSelection: VoiceSelection = 'Full Score',
+  // Se recibe pero no se aplica. Este módulo NO lo importa nadie (el cuadernillo
+  // real es utils/atrilBookletPDF.ts, que sí reparte por voz).
+  _voiceSelection: VoiceSelection = 'Full Score',
   options: GenerateOptions = { download: true }
 ): Promise<{ blob: Blob; fileName: string }> => {
   const pdf = new jsPDF({
@@ -239,7 +241,6 @@ export const generateChoirCantoralPDF = async (
       
       // Procesar acordes [X] en la línea
       const chordRegex = /\[([^\]]+)\]/g;
-      let processedLine = line;
       let hasChords = chordRegex.test(line);
       
       if (hasChords) {
@@ -285,23 +286,6 @@ export const generateChoirCantoralPDF = async (
     return y;
   };
 
-  // Función para renderizar letra simple (sin acordes)
-  const renderPlainLyrics = (lyrics: string, yStart: number): number => {
-    let y = yStart;
-    const lines = stripLyricsFormatting(lyrics).split('\n');
-    
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(0, 0, 0);
-    
-    for (const line of lines) {
-      checkNewPage(6);
-      pdf.text(line, margin + 5, y);
-      y += 5;
-    }
-    
-    return y;
-  };
 
   // Renderizar cantos por categoría
   for (const category of sortedCategories) {

@@ -30,7 +30,6 @@ export function CantoralPDFPreview({
   date,
   celebration,
   massTime,
-  userInstruments = [],
   garland = DEFAULT_GARLAND_ID,
   pdfFont = DEFAULT_PDF_FONT,
   pdfSize = DEFAULT_PDF_SIZE,

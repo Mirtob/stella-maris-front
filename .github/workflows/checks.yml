@@ -1,0 +1,35 @@
+# Chequeo de tipos y pruebas unitarias en cada push.
+#
+# Por qué existe: el proyecto tenía `tsconfig.json` en modo `strict` desde el principio,
+# pero NUNCA tuvo instalado el compilador — `npm run build` era solo esbuild, que borra
+# los tipos sin comprobarlos. Al encenderlo aparecieron 149 errores acumulados, uno de
+# ellos un `ReferenceError` que reventaba al borrar un cantoral del historial.
+#
+# `npm run build` ya corre `tsc --noEmit` antes de empaquetar, así que un error de tipos
+# tumba también el despliegue de Vercel. Esto de aquí lo repite en GitHub para que se
+# vea el fallo en el propio push, sin tener que ir a mirar a Vercel.
+
+name: Tipos y pruebas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Chequeo de tipos
+        run: npm run typecheck
+      - name: Pruebas unitarias
+        run: npm run test:unit

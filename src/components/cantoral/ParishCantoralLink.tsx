@@ -105,6 +105,12 @@ export function ParishCantoralLink({ parish, onOpenInApp, onExit }: ParishCantor
   }
 
   // choose — varias Misas vigentes en la fecha más próxima.
+  //
+  // El caso 'one' ya salió arriba por `activeId`, pero eso TypeScript no puede seguirlo:
+  // `activeId` es un valor calculado, no un guardia de tipo. Se estrecha a mano, y de
+  // paso deja de ser posible leer `state.options` de un estado que no lo tiene.
+  if (state.kind !== 'choose') return null;
+
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 p-4 sm:p-6">
       <div className="max-w-md mx-auto pt-10">

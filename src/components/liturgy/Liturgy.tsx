@@ -1,11 +1,12 @@
-import { Cross, BookOpen, PlayCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Cross, PlayCircle, CheckCircle2 } from 'lucide-react';
 import { getChannelUrl } from '../../services/youtube';
 
 interface LiturgyProps {
   onBack?: () => void;
 }
 
-export function Liturgy({ onBack }: LiturgyProps) {
+// OJO: `onBack` llega pero esta pantalla no lo usa — no tiene botón de volver.
+export function Liturgy({ onBack: _onBack }: LiturgyProps) {
   const lessons = [
     {
       id: 1,

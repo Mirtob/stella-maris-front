@@ -1,9 +1,9 @@
-import { ArrowLeft, FileText, Music, ZoomIn, ZoomOut, Download, Printer, ChevronUp, ChevronDown, RotateCcw, ExternalLink } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { ArrowLeft, FileText, Music, Download, ChevronUp, ChevronDown, RotateCcw, ExternalLink } from 'lucide-react';
+import { useState } from 'react';
 import { Song, InstrumentType, UserRole } from '../../types';
 import { PDFViewer } from '../common/PDFViewer';
 import { parseDurationToSeconds } from '../../services/youtube';
-import { safeUrl, safeWindowOpen } from '../../utils/safeUrl';
+import { safeUrl } from '../../utils/safeUrl';
 
 // Extrae el Drive file ID de una URL de Drive y construye la URL del proxy
 function getDriveProxyUrl(sheetMusicUrl: string): { proxyUrl: string; driveViewUrl: string } | null {
@@ -15,7 +15,6 @@ function getDriveProxyUrl(sheetMusicUrl: string): { proxyUrl: string; driveViewU
     driveViewUrl: `https://drive.google.com/file/d/${fileId}/view`,
   };
 }
-import { getCategoryColors, getCategoryHeaderGradient } from '../../utils/colors';
 import { transposeContent, getTransposedKey, keyPrefersFlats, formatTransposition, getChordNotation, setChordNotation, type ChordNotation } from '../../utils/chordTranspose';
 import { LyricsWithChords } from './LyricsWithChords';
 import { LyricsOnly } from './LyricsOnly';
@@ -33,15 +32,14 @@ interface SongPlayerProps {
 
 export function SongPlayer({ song, onBack, userInstrument, userRole, userId }: SongPlayerProps) {
   const [showSheetMusic, setShowSheetMusic] = useState(false);
-  const [sheetMusicScale, setSheetMusicScale] = useState(1);
+  // Escala fija: los botones de zoom de la partitura nunca llegaron a conectarse
+  // (sus manejadores no los llamaba nadie), así que esto siempre valió 1.
+  const sheetMusicScale = 1;
   const [transposition, setTransposition] = useState(0); // Semitonos de transposición
   const [notation, setNotation] = useState<ChordNotation>(() => getChordNotation());
   const changeNotation = (n: ChordNotation) => { setNotation(n); setChordNotation(n); };
   const [showLyrics, setShowLyrics] = useState(true); // Mostrar letras por defecto
   
-  const colors = getCategoryColors(song.category);
-  const headerGradient = getCategoryHeaderGradient(song.category);
-
   // El canto está grabado en versión órgano y versión guitarra: se reproduce la
   // del instrumento del usuario. Si esa aún no existe, se cae a la otra y se
   // avisa, para que nadie ensaye creyendo que es su acompañamiento.
@@ -63,20 +61,12 @@ export function SongPlayer({ song, onBack, userInstrument, userRole, userId }: S
   const activeTransposition = canTranspose ? transposition : 0;
   const displayedLyrics = song.lyrics
     ? transposeContent(song.lyrics, activeTransposition, notation, keyPrefersFlats(song.originalKey || '', activeTransposition))
-    : song.lyrics;
+    : (song.lyrics ?? '');
 
   // Calcular tonalidad transpuesta
   const displayedKey = song.originalKey
     ? getTransposedKey(song.originalKey, canTranspose ? transposition : 0, notation)
     : song.originalKey;
-
-  const handleZoomIn = () => {
-    setSheetMusicScale(prev => Math.min(prev + 0.2, 2));
-  };
-
-  const handleZoomOut = () => {
-    setSheetMusicScale(prev => Math.max(prev - 0.2, 0.5));
-  };
 
   const handleTransposeUp = () => {
     setTransposition(prev => (prev + 1) % 12);
@@ -88,29 +78,6 @@ export function SongPlayer({ song, onBack, userInstrument, userRole, userId }: S
 
   const handleResetTransposition = () => {
     setTransposition(0);
-  };
-
-  const handleDownload = () => {
-    if (song.sheetMusicUrl) {
-      const link = document.createElement('a');
-      link.href = song.sheetMusicUrl;
-      link.download = `${song.title} - Partitura.pdf`;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  };
-
-  const handlePrint = () => {
-    if (song.sheetMusicUrl) {
-      const printWindow = safeWindowOpen(song.sheetMusicUrl);
-      if (printWindow) {
-        printWindow.onload = () => {
-          printWindow.print();
-        };
-      }
-    }
   };
 
   return (

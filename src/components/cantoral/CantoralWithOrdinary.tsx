@@ -8,7 +8,6 @@ import { getOrdinaryForCantoral } from '../../data/massOrdinaryVariants';
 import { PDFViewer } from '../common/PDFViewer';
 import { LyricsOnly } from '../songs/LyricsOnly';
 import { LyricsReadingControls } from '../songs/LyricsReadingControls';
-import { PdfPages } from '../atril/PdfPages';
 import { cycleForBookId } from '../../data/psalmIndex';
 import { PsalmPageImage } from '../songs/PsalmPageImage';
 import { FavoriteButton } from '../songs/FavoriteButton';

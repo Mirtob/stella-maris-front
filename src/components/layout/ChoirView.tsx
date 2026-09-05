@@ -20,7 +20,7 @@ import { addCustomLiturgicalDate, toLiturgicalDate } from '../../services/liturg
 import { computeUsage, resolveAnnualTarget } from '../../utils/previousUsage';
 import { getTodayLocal, formatYmdForDisplay, parseYmdLocal } from '../../utils/dateLocal';
 import { massTimeTo24h, massTimeTo12h } from '../../utils/massType';
-import { getGospelAcclamationName, getGospelAcclamationIcon, getCurrentLiturgicalSeason, displayCategoryForDate } from '../../utils/liturgicalSeason';
+import { getGospelAcclamationName, getCurrentLiturgicalSeason, displayCategoryForDate } from '../../utils/liturgicalSeason';
 import { getSpecialLiturgicalDay, getCategoriesForSpecialDay, getSpecialDayName, getSpecialDayEmoji, getBuildableCelebrations, SpecialLiturgicalDay } from '../../utils/specialLiturgicalDays';
 import { useSongs } from '../../hooks/useSongs';
 
@@ -187,7 +187,8 @@ export function ChoirView({
 
   // Tip contextual del constructor (F4): 1ª vez que se abre una categoría.
   const [showConstructorTip, setShowConstructorTip] = useState(false);
-  const { songs: allSongs } = useSongs();
+  // El hook se llama por su carga de cantos; la lista completa no se usa aquí.
+  useSongs();
   const currentSeason = getCurrentLiturgicalSeason(massDateObj);
 
   // Celebraciones que se pueden armar ahora. En Cuaresma/Semana Santa surgen los
@@ -227,7 +228,6 @@ export function ChoirView({
 
   // Nombre dinámico del Aleluya: "Aclamación al Evangelio" si la Misa cae en Cuaresma.
   const gospelAcclamationName = getGospelAcclamationName(massDateObj);
-  const gospelAcclamationIcon = getGospelAcclamationIcon(massDateObj);
 
   // Día litúrgico especial = la celebración elegida en el constructor.
   const specialDayName = getSpecialDayName(specialDay);

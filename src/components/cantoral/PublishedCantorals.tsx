@@ -8,12 +8,11 @@ import { PublishedCantoral, Song } from '../../types';
 import { getCategoryColors } from '../../utils/colors';
 import { CantoralWithOrdinary } from './CantoralWithOrdinary';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-import { addDaysLocal, getWeekRangeLocal, isWithinInclusive, parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
+import { parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
 import { massTypeBadge, cantoralYaPaso } from '../../utils/massType';
 import { groupSongsByMassPart, massCategoryIcon } from '../../utils/ordinary';
 import { parseParishChapel, splitActiveParish } from '../../utils/parish';
 import { LiturgicalColorBadge } from '../liturgy/LiturgicalColorBadge';
-import { toast } from 'sonner';
 
 interface PublishedCantoralsProps {
   cantorals: PublishedCantoral[];
@@ -39,7 +38,6 @@ interface PublishedCantoralsProps {
 }
 
 // Pueblo fiel solo ve hasta 2 semanas adelante en el dashboard.
-const PUEBLO_FIEL_WINDOW_DAYS = 14;
 
 // Estilo de las acciones SECUNDARIAS de la tarjeta (nivel 2): tarjeta clara con ícono
 // de color. Recede frente a la acción primaria a todo color, pero mantiene el objetivo
@@ -628,12 +626,13 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                 compact
                 Icon={Calendar}
                 title="No hay cantorales vigentes"
+                // Este bloque va dentro de `{isCoro && …}`: aquí el Pueblo fiel no
+                // llega nunca, así que su mensaje era código muerto (lo ve en su propia
+                // lista, más arriba).
                 description={
                   visiting
                     ? 'Cuando el coro de esta parroquia publique una Misa próxima, aparecerá aquí.'
-                    : userRole === 'Pueblo fiel'
-                      ? 'Cuando tu coro publique una misa próxima, aparecerá aquí.'
-                      : 'Arma y publica un cantoral desde el Inicio para que aparezca aquí.'
+                    : 'Arma y publica un cantoral desde el Inicio para que aparezca aquí.'
                 }
               />
             )}

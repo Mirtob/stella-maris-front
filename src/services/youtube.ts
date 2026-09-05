@@ -224,21 +224,9 @@ const videoCache = {
  * NOTA: Esta función requiere YouTube Data API key.
  * En modo mock, retorna datos simulados.
  */
-function hasRealYouTubeApiKey(): boolean {
-  return Boolean(
-    YOUTUBE_CONFIG.apiKey &&
-    !YOUTUBE_CONFIG.apiKey.includes('XXXXXXXXXXXXXXXX') &&
-    !YOUTUBE_CONFIG.apiKey.includes('xxxxx')
-  );
-}
-
-function hasValidYouTubeChannelId(): boolean {
-  return Boolean(
-    YOUTUBE_CONFIG.channelId &&
-    !YOUTUBE_CONFIG.channelId.includes('UCxxxxxxxx') &&
-    !YOUTUBE_CONFIG.channelId.includes('xxxxx')
-  );
-}
+// Aquí vivía hasRealYouTubeApiKey(): comprobaba si la key estaba puesta en el bundle.
+// Desde que la key es server-only (se resuelve por /api/youtube), `apiKey` es siempre ''
+// y la función no la llamaba nadie. Se quita en vez de dejarla mintiendo.
 
 export async function getVideoMetadata(videoId: string): Promise<YouTubeVideoMetadata | null> {
   if (!isValidVideoId(videoId)) {

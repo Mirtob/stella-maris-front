@@ -207,7 +207,7 @@ async function loadSheets(): Promise<DriveFile[]> {
     if (!r.ok) return [];
     const data = await r.json();
     cachedSheets = (data.files || []).filter((f: DriveFile) => f.mimeType?.includes('pdf') || f.mimeType?.includes('image'));
-    return cachedSheets;
+    return cachedSheets ?? [];
   } catch {
     return [];
   }

@@ -1,11 +1,12 @@
-import { Music2, BookOpen, PlayCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Music2, PlayCircle, CheckCircle2 } from 'lucide-react';
 import { getChannelUrl } from '../../services/youtube';
 
 interface MusicalTheoryProps {
   onBack?: () => void;
 }
 
-export function MusicalTheory({ onBack }: MusicalTheoryProps) {
+// OJO: `onBack` llega pero esta pantalla no lo usa — no tiene botón de volver.
+export function MusicalTheory({ onBack: _onBack }: MusicalTheoryProps) {
   const lessons = [
     {
       id: 1,

@@ -166,7 +166,10 @@ export async function enablePush(parishes: string[], role?: string): Promise<{ o
   if (!sub) {
     sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC),
+      // `.buffer as ArrayBuffer`: desde TS 5.7 un Uint8Array puede respaldarse en un
+      // SharedArrayBuffer, que `applicationServerKey` no acepta. En el navegador
+      // siempre es un ArrayBuffer normal.
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC).buffer as ArrayBuffer,
     });
   }
 
@@ -261,7 +264,10 @@ export async function syncPushParishes(parishes: string[], role?: string): Promi
     if (!sub) {
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC),
+        // `.buffer as ArrayBuffer`: desde TS 5.7 un Uint8Array puede respaldarse en un
+      // SharedArrayBuffer, que `applicationServerKey` no acepta. En el navegador
+      // siempre es un ArrayBuffer normal.
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC).buffer as ArrayBuffer,
       });
     }
     await callSubscribeApi({ action: 'subscribe', subscription: subToRow(sub), parishes, topics: TOPICS, role });

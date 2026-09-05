@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LogIn, User, Lock, Church, Loader, UserPlus, Mail, Music, Users, Check, X, Info } from 'lucide-react';
+import { LogIn, User, Lock, Loader, UserPlus, Mail, Music, Users, Check, X, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { loginWithGoogle } from '../../services/googleAuth';
 import { signInWithUsernamePassword, signUpUsernameAccount, checkUsernameAvailable } from '../../services/supabaseClient';

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Sparkles, Radio, BookOpen, Music, PartyPopper, Loader, Check } from 'lucide-react';
-import { toast } from 'sonner';
 import { submitSurvey, PRELAUNCH, type UsefulMode } from '../../services/survey';
 
 interface Props {

@@ -76,7 +76,7 @@ function rowToSong(row: Record<string, unknown>): Song {
     youtubeIdGuitarra:     (row.youtube_id_guitarra as string) ?? undefined,
     liturgicalSeasons:     (row.liturgical_seasons as LiturgicalSeason[]) ?? [],
     liturgicalSeason:      ((row.liturgical_seasons as string[]) ?? [])[0], // backwards compat
-    instruments:           (row.instruments as string[]) ?? [],
+    instruments:           ((row.instruments as string[]) ?? []) as Song['instruments'],
     version:               ((row.instruments as string[]) ?? [])[0] as Song['version'],
     instrument:            ((row.instruments as string[]) ?? [])[0] as Song['instrument'],
     driveFileId:           row.drive_file_id as string | undefined,

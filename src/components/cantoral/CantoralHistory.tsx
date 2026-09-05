@@ -48,7 +48,7 @@ function metaOf(parishName?: string | null) {
   return { parishFull, chapel: chapel || '', parish, diocese, country };
 }
 
-export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, onClone, isAdmin, managedParishes, defaultParish, userVoicePart}: CantoralHistoryProps) {
+export function CantoralHistory({ onPlaySong, onDeleteCantoral, onClone, isAdmin, managedParishes, defaultParish, userVoicePart}: CantoralHistoryProps) {
   // Borrar solo se permite en cantorales gestionables (los de la propia parroquia; el
   // admin puede todos). Refleja lo que hace la RLS.
   const managedSet = new Set(managedParishes ?? []);
@@ -205,14 +205,6 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, onClo
   });
 
   // Agrupar por parroquia y luego por mes (para el título de la descripción)
-  const groupedByParish = sortedCantorals.reduce((acc, cantoral) => {
-    const parish = cantoral.parishName;
-    if (!acc[parish]) {
-      acc[parish] = [];
-    }
-    acc[parish].push(cantoral);
-    return acc;
-  }, {} as Record<string, PublishedCantoral[]>);
 
   // Agrupar por año y mes (TZ-safe: parseYmdLocal evita el corrimiento de día)
   const groupedByMonth = sortedCantorals.reduce((acc, cantoral) => {
@@ -679,8 +671,12 @@ export function CantoralHistory({ cantorals, onPlaySong, onDeleteCantoral, onClo
         onConfirm={() => {
           if (pendingDeleteId && onDeleteCantoral) {
             onDeleteCantoral(pendingDeleteId);
-            // Reflejar el borrado en la lista global local (el prop no la controla).
-            setAllCantorals(prev => prev.filter(c => c.id !== pendingDeleteId));
+            // Reflejar el borrado en la lista cargada (el prop no la controla).
+            // Ojo: esto llamaba a `setAllCantorals`, que NO EXISTE — la lista se llama
+            // `yearCantorals` desde que el historial pasó a cargar un año a la vez.
+            // Borrar desde el historial borraba en el servidor y acto seguido reventaba
+            // con ReferenceError. Encontrado al encender el chequeo de tipos (4-sep-2026).
+            setYearCantorals(prev => prev.filter(c => c.id !== pendingDeleteId));
           }
           setPendingDeleteId(null);
         }}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Cross, Music, Users, ShieldCheck, Church } from 'lucide-react';
+import { Music, Users, ShieldCheck, Church } from 'lucide-react';
 import { UserRole, InstrumentType } from '../../types';
 import { ParishPicker } from './ParishPicker';
 import { isCurrentUserAdmin } from '../../services/admin';

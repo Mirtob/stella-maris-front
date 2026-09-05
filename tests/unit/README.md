@@ -1,96 +1,29 @@
-# Pruebas unitarias — reglas litúrgicas e instrumento
+# Pruebas unitarias — reglas litúrgicas, partituras y publicación
 
-Prueban lógica pura (sin navegador ni base de datos): cálculo de Cuaresma, rótulo
-de la tarjeta del Aleluya, exclusión de Aleluyas en Cuaresma y compatibilidad de
-instrumento. Corren en segundos y no necesitan `.env`.
+Prueban lógica pura (sin navegador ni base de datos). Corren en segundos y no
+necesitan `.env`.
 
 ## Cómo correrlas
 
-Desde la carpeta del proyecto:
-
 ```bash
-npx esbuild tests/unit/liturgia-instrumento.test.ts --bundle --platform=node --format=esm --outfile=tests/output/unit.mjs
-node tests/output/unit.mjs
-
-npx esbuild tests/unit/video-por-instrumento.test.ts --bundle --platform=node --format=esm --outfile=tests/output/video-instrumento.mjs
-node tests/output/video-instrumento.mjs
-
-npx esbuild tests/unit/reporteria-cantos.test.ts --bundle --platform=node --format=esm --outfile=tests/output/reporteria.mjs
-node tests/output/reporteria.mjs
-
-npx esbuild tests/unit/etiquetas-canto.test.ts --bundle --platform=node --format=esm --outfile=tests/output/etiquetas.mjs
-node tests/output/etiquetas.mjs
-
-npx esbuild tests/unit/buscador-carpetas.test.ts --bundle --platform=node --format=esm --outfile=tests/output/buscador-carpetas.mjs
-node tests/output/buscador-carpetas.mjs
-
-npx esbuild tests/unit/editar-canto.test.ts --bundle --platform=node --format=esm --outfile=tests/output/editar-canto.mjs
-node tests/output/editar-canto.mjs
-
-npx esbuild tests/unit/fechas.test.ts --bundle --platform=node --format=esm --outfile=tests/output/fechas.mjs
-node tests/output/fechas.mjs
-
-npx esbuild tests/unit/sugerencias-temporada.test.ts --bundle --platform=node --format=esm --outfile=tests/output/sugerencias.mjs
-node tests/output/sugerencias.mjs
-
-npx esbuild tests/unit/salmo-antifona.test.ts --bundle --platform=node --format=esm --outfile=tests/output/salmo.mjs
-node tests/output/salmo.mjs
-
-npx esbuild tests/unit/voces-dos-partes.test.ts --bundle --platform=node --format=esm --outfile=tests/output/voces.mjs
-node tests/output/voces.mjs
-
-npx esbuild tests/unit/calendario-celebraciones.test.ts --bundle --platform=node --format=esm --outfile=tests/output/calendario.mjs
-node tests/output/calendario.mjs
-
-npx esbuild tests/unit/publicar-cantoral.test.ts --bundle --platform=node --format=esm --outfile=tests/output/publicar.mjs
-node tests/output/publicar.mjs
-
-npx esbuild tests/unit/perfil-admin.test.ts --bundle --platform=node --format=esm --outfile=tests/output/perfil.mjs
-node tests/output/perfil.mjs
-
-npx esbuild tests/unit/cantoral-vista-completa.test.ts --bundle --platform=node --format=esm --outfile=tests/output/cantoral-vista.mjs
-node tests/output/cantoral-vista.mjs
-
-npx esbuild tests/unit/instalar-plataforma.test.ts --bundle --platform=node --format=esm --outfile=tests/output/instalar-plataforma.mjs
-node tests/output/instalar-plataforma.mjs
-
-npx esbuild tests/unit/editar-cantoral.test.ts --bundle --platform=node --format=esm --outfile=tests/output/editar-cantoral.mjs
-node tests/output/editar-cantoral.mjs
-
-# Este importa una función de api/, que trae los tipos de Vercel: van como external.
-npx esbuild tests/unit/avisos-automaticos.test.ts --bundle --platform=node --format=esm --external:@vercel/node --external:web-push --outfile=tests/output/avisos.mjs
-node tests/output/avisos.mjs
-
-npx esbuild tests/unit/admin-dos-niveles.test.ts --bundle --platform=node --format=esm --outfile=tests/output/admin-niveles.mjs
-node tests/output/admin-niveles.mjs
-
-npx esbuild tests/unit/audios-ensayo.test.ts --bundle --platform=node --format=esm --outfile=tests/output/audios.mjs
-node tests/output/audios.mjs
-
-npx esbuild tests/unit/avisos-audiencia.test.ts --bundle --platform=node --format=esm --external:@vercel/node --external:web-push --outfile=tests/output/avisos-aud.mjs
-node tests/output/avisos-aud.mjs
-
-npx esbuild tests/unit/pdf-texto.test.ts --bundle --platform=node --format=esm --outfile=tests/output/pdftexto.mjs
-node tests/output/pdftexto.mjs
-
-npx esbuild tests/unit/cantoral-partes.test.ts --bundle --platform=node --format=esm --outfile=tests/output/cantoral-partes.mjs
-node tests/output/cantoral-partes.mjs
-
-npx esbuild tests/unit/visita-parroquia.test.ts --bundle --platform=node --format=esm --outfile=tests/output/visita.mjs
-node tests/output/visita.mjs
-
-npx esbuild tests/unit/folleto-columnas.test.ts --bundle --platform=node --format=esm --outfile=tests/output/columnas.mjs
-node tests/output/columnas.mjs
+npm run test:unit              # todas
+npm run test:unit calendario   # solo las que contengan "calendario" en el nombre
 ```
 
-Salida esperada: `45`, `37`, `109`, `33`, `51`, `19`, `27`, `38`, `19`, `16`, `12`, `23`, `25` y `18` ok, con 0 fallas. Si alguna falla, imprime el
-caso con lo esperado y lo obtenido.
+Antes había que copiar el comando de cada archivo, uno por uno: con 24 archivos
+eso significaba que en la práctica nunca se corrían todas. El corredor está en
+`scripts/run-unit-tests.mjs`.
 
-> Ojo al importar en una prueba: `services/supabaseClient.ts` **crea el cliente al importarse**
-> y revienta sin variables de entorno. Por eso la lógica pura vive en `utils/` (p. ej.
-> `utils/songTags.ts`) y las pruebas importan de ahí, nunca del `services/` equivalente.
+## Chequeo de tipos
 
-### Validar el Excel de verdad
+```bash
+npm run typecheck
+```
+
+`npm run build` ya lo corre antes de empaquetar, así que un error de tipos tumba
+también el despliegue. En GitHub lo repite `.github/workflows/checks.yml`.
+
+## Validar el Excel de verdad
 
 Los tests comprueban la estructura del `.xlsx` (firma ZIP, hojas, escapes), pero el archivo
 generado conviene abrirlo con un lector real. Con el `.venv` del proyecto:
