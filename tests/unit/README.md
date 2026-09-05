@@ -14,6 +14,12 @@ Antes había que copiar el comando de cada archivo, uno por uno: con 24 archivos
 eso significaba que en la práctica nunca se corrían todas. El corredor está en
 `scripts/run-unit-tests.mjs`.
 
+## Notas
+
+`fecha-visperas` fija que en I Vísperas la fecha que se MUESTRA es la del día
+anterior (la Misa del sábado por la tarde), mientras la celebración sigue siendo la
+del domingo. Lo litúrgico —salmo, ciclo, tiempo, color— se saca siempre de `date`.
+
 ## Chequeo de tipos
 
 ```bash

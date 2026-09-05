@@ -9,7 +9,7 @@ import { getCategoryColors } from '../../utils/colors';
 import { CantoralWithOrdinary } from './CantoralWithOrdinary';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
-import { massTypeBadge, cantoralYaPaso } from '../../utils/massType';
+import { massTypeBadge, cantoralYaPaso, fechaEnQueSeCanta } from '../../utils/massType';
 import { groupSongsByMassPart, massCategoryIcon } from '../../utils/ordinary';
 import { parseParishChapel, splitActiveParish } from '../../utils/parish';
 import { LiturgicalColorBadge } from '../liturgy/LiturgicalColorBadge';
@@ -194,7 +194,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
               <div className="min-w-0">
                 {showDate && (
                   <div className="text-xs opacity-90 mb-0.5 capitalize">
-                    {formatDateShort(cantoral.date)} · {cantoral.liturgicalDate}
+                    {formatDateShort(fechaEnQueSeCanta(cantoral))} · {cantoral.liturgicalDate}
                   </div>
                 )}
                 <div className="text-lg sm:text-2xl font-bold mb-1 flex items-center gap-2 flex-wrap">

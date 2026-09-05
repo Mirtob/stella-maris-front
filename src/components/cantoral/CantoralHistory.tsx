@@ -6,7 +6,7 @@ import { listCantorals, listCantoralYears } from '../../services/cantorals';
 import { americanCountries } from '../../data/countries';
 import { splitActiveParish } from '../../utils/parish';
 import { parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
-import { massTypeBadge } from '../../utils/massType';
+import { massTypeBadge, fechaEnQueSeCanta } from '../../utils/massType';
 import { LiturgicalColorBadge } from '../liturgy/LiturgicalColorBadge';
 import { EmptyState } from '../common/EmptyState';
 import { toast } from 'sonner';
@@ -503,7 +503,9 @@ export function CantoralHistory({ onPlaySong, onDeleteCantoral, onClone, isAdmin
                             {/* Fecha Calendario */}
                             <div className="flex items-center gap-2 text-lg text-gray-700 dark:text-gray-300 mb-2">
                               <Calendar className="w-6 h-6" strokeWidth={2.5} />
-                              <span className="capitalize font-bold">{formatDate(cantoral.date)}</span>
+                              {/* El día EN QUE SE CANTA. En I Vísperas la Misa es la tarde anterior a la
+                                  celebración, y esta "Fecha Calendario" mostraba la del domingo. */}
+                              <span className="capitalize font-bold">{formatDate(fechaEnQueSeCanta(cantoral))}</span>
                             </div>
 
                             {/* Calendario Litúrgico */}

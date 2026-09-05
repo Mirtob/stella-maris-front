@@ -1,3 +1,4 @@
+import { fechaEnQueSeCanta } from '../../utils/massType';
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Bell, Headphones, X } from 'lucide-react';
@@ -97,7 +98,7 @@ export function NotificationBell({ cantorals, onListen }: NotificationBellProps)
                   {recent.map((c) => (
                     <div key={c.id} className="p-4">
                       <div className="text-xs text-blue-700 dark:text-blue-300 capitalize mb-0.5">
-                        {formatYmdForDisplay(c.date, { weekday: 'short', day: 'numeric', month: 'short' })} · {c.massTime}
+                        {formatYmdForDisplay(fechaEnQueSeCanta(c), { weekday: 'short', day: 'numeric', month: 'short' })} · {c.massTime}
                       </div>
                       <div className="text-sm font-bold text-brand-ink mb-2">{c.liturgicalDate}</div>
                       <button

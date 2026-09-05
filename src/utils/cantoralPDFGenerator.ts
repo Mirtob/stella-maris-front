@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import { PublishedCantoral, Song } from '../types';
 import { getCurrentLiturgicalSeason } from './liturgicalSeason';
 import { parseYmdLocal, formatYmdForDisplay } from './dateLocal';
+import { fechaEnQueSeCanta, MASS_TYPE_LABEL, resolveMassType } from './massType';
 import { recortarConElipsis } from './pdfText';
 import { getChannelUrl } from '../services/youtube';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
@@ -448,7 +449,14 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   // verticalmente en el espacio entre ambas.
   // parseYmdLocal, no new Date(): 'YYYY-MM-DD' se parsea como medianoche UTC y en
   // Chile (UTC-4) eso cae el día anterior — la portada salía con la fecha de ayer.
-  const formattedDate = formatYmdForDisplay(cantoral.date);
+  //
+  // Y la fecha que se imprime es la del día EN QUE SE CANTA, no la de la celebración.
+  // No son la misma en I Vísperas: el sábado 5 por la tarde se canta el 23.º Domingo,
+  // que cae el domingo 6. La portada ponía "domingo 6" en el folleto de una Misa del
+  // sábado. El nombre de la celebración sí sigue siendo el del domingo, y el color y
+  // el tiempo litúrgico se siguen sacando de `cantoral.date`.
+  const formattedDate = formatYmdForDisplay(fechaEnQueSeCanta(cantoral));
+  const tipoMisa = MASS_TYPE_LABEL[resolveMassType(cantoral)];
 
   let coverTop = margin;
   let coverBottom = pageH - margin;
@@ -467,6 +475,10 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     { t: `Tiempo: ${colors.seasonName}`, s: 11, b: false, c: colors.primary, h: 9 },
     { t: cleanText(cantoral.liturgicalDate), s: 16, b: false, c: [80, 80, 80], h: 11 },
     { t: cleanText(formattedDate), s: 12, b: false, c: [100, 100, 100], h: 9 },
+    // Se nombra el tipo cuando no es la Misa del día: sin esto, la portada de una Misa
+    // del sábado por la tarde no explica por qué la celebración es la del domingo.
+    // Cadena vacía (no null) para que la quite el .filter de abajo, como la del coro.
+    { t: resolveMassType(cantoral) !== 'dia' ? cleanText(tipoMisa) : '', s: 11, b: false, c: [120, 120, 120] as [number, number, number], h: 8 },
     { t: cleanText(cantoral.massTime), s: 14, b: true, c: [60, 60, 60], h: 14 },
     { t: cleanText(cantoral.parishName), s: 12, b: false, c: [80, 80, 80], h: 8 },
     { t: cantoral.choirName ? `Coro: ${cleanText(cantoral.choirName)}` : '', s: 11, b: false, c: [80, 80, 80], h: 8 },

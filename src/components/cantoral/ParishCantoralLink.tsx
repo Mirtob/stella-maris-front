@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Church, Calendar, Clock, ChevronRight } from 'lucide-react';
 import { PublishedCantoral } from '../../types';
 import { listCantorals } from '../../services/cantorals';
-import { cantoralYaPaso, massTypeBadge } from '../../utils/massType';
+import { cantoralYaPaso, massTypeBadge, fechaEnQueSeCanta } from '../../utils/massType';
 import { formatYmdForDisplay } from '../../utils/dateLocal';
 import { splitActiveParish } from '../../utils/parish';
 import { CantoralDeepLink } from './CantoralDeepLink';
@@ -140,7 +140,7 @@ export function ParishCantoralLink({ parish, onOpenInApp, onExit }: ParishCantor
                     {badge ? ` · ${badge}` : ''}
                   </div>
                   <div className="text-sm text-brand-ink-soft truncate flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5" /> {c.liturgicalDate || formatYmdForDisplay(c.date)}
+                    <Calendar className="w-3.5 h-3.5" /> {c.liturgicalDate || formatYmdForDisplay(fechaEnQueSeCanta(c))}
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-brand flex-shrink-0" />

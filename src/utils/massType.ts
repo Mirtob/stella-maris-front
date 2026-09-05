@@ -91,6 +91,26 @@ export function cantoralActivoAhora(c: CantoralLike, now: Date = new Date()): bo
   return t >= cantoralWindowStart(c).getTime() && t <= cantoralWindowEnd(c).getTime();
 }
 
+/**
+ * La fecha del CALENDARIO en que se canta esta Misa.
+ *
+ * `date` guarda siempre la fecha de la CELEBRACIÓN, no la del día en que se canta, y
+ * para I Vísperas no son la misma: el sábado 5 de septiembre por la tarde se canta el
+ * 23.º Domingo del Tiempo Ordinario, que es el domingo 6. La celebración es la del
+ * domingo; el día es el sábado.
+ *
+ * Esa diferencia hay que respetarla al MOSTRAR la fecha —el folleto de esa Misa decía
+ * "domingo 6 de septiembre" para una Misa del sábado— pero NO al resolver nada
+ * litúrgico: el salmo, el ciclo, el tiempo y el color se sacan de `date`, que es la
+ * fecha de la celebración. Reportado el 5-sep-2026.
+ */
+export function fechaEnQueSeCanta(c: CantoralLike): string {
+  const [y, m, d] = ymd(c.date);
+  const dia = new Date(y, m - 1, resolveMassType(c) === 'visperas_i' ? d - 1 : d);
+  const p2 = (n: number) => String(n).padStart(2, '0');
+  return `${dia.getFullYear()}-${p2(dia.getMonth() + 1)}-${p2(dia.getDate())}`;
+}
+
 // ──────────────────────────────────────────────────────────────────────────
 // Conversión del horario de la Misa.
 //
