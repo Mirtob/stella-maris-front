@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Church, ChevronDown, ChevronUp, Bell, Plus, BookOpen, X } from 'lucide-react';
 import { liturgicalCalendar2026, LiturgicalEvent } from '../../data/liturgicalCalendar';
-import { getLiturgicalCardClasses, getLiturgicalSolidColor } from '../../utils/liturgicalColors';
+import { getLiturgicalCardClasses, getLiturgicalSolidColor, getLiturgicalColorId } from '../../utils/liturgicalColors';
 import { parseYmdLocal, formatYmdForDisplay, addDaysLocal } from '../../utils/dateLocal';
 import {
   listCustomLiturgicalDates,
@@ -19,15 +19,34 @@ const normalizaNombre = (s: string) =>
 import { toast } from 'sonner';
 
 /** Convierte una celebración persistida (BD) en un evento del calendario visual. */
+/**
+ * Color guardado ('red') → etiqueta que se muestra ('Rojo'). Sin color propio se usa el
+ * que le toca a la fecha: poner 'Blanco' por defecto hacía que una jornada en un domingo
+ * del Tiempo Ordinario se anunciara en blanco cuando ese día es verde.
+ */
+const colorLabelDe = (id: string | undefined, fecha: string): ColorLabel => {
+  const efectivo = id ?? getLiturgicalColorId(fecha);
+  return (Object.keys(COLOR_IDS) as ColorLabel[]).find((k) => COLOR_IDS[k] === efectivo) ?? 'Blanco';
+};
+
 const persistedToEvent = (c: CustomLiturgicalDate): LiturgicalEvent => ({
   id: c.id ?? `persist_${c.date}_${c.name}`,
   name: c.name,
   date: c.date,
   type: c.type === 'feast' ? 'Fiesta' : 'Solemnidad',
-  color: 'Blanco',
+  color: colorLabelDe(c.color, c.date),
+  replacesDefault: c.replacesDefault === true,
   season: 'Tiempo Ordinario',
   importance: 'medium',
 });
+
+/** Etiqueta que ve el usuario → color litúrgico que se guarda (utils/liturgicalColors). */
+const COLOR_IDS = {
+  'Blanco': 'white', 'Rojo': 'red', 'Verde': 'green',
+  'Morado': 'violet', 'Rosa': 'rose', 'Dorado': 'gold', 'Negro': 'black',
+} as const;
+type ColorLabel = keyof typeof COLOR_IDS;
+const COLOR_LABELS = Object.keys(COLOR_IDS) as ColorLabel[];
 
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -63,7 +82,10 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false
   const [newEventDay, setNewEventDay] = useState('');
   const [newEventMonth, setNewEventMonth] = useState('');
   const [newEventType, setNewEventType] = useState<'Solemnidad' | 'Fiesta'>('Fiesta');
-  const [newEventColor, setNewEventColor] = useState<'Blanco' | 'Rojo' | 'Verde' | 'Morado' | 'Rosa'>('Blanco');
+  const [newEventColor, setNewEventColor] = useState<ColorLabel>('Blanco');
+  // ¿Desplaza a la celebración del calendario ese día? Por defecto NO: sumar es lo que
+  // no pierde el domingo ni su salmo. Solo se pregunta si ese día ya tiene celebración.
+  const [newEventReplaces, setNewEventReplaces] = useState(false);
   const [newEventDescription, setNewEventDescription] = useState('');
   // Alcance: Admin → 'global' (todos); Coro → una de sus parroquias/capillas.
   const [newEventScope, setNewEventScope] = useState<string>(
@@ -113,6 +135,13 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false
     return null;
   };
 
+  // La fecha que se está eligiendo en el formulario, para poder decir qué hay ya ese
+  // día y preguntar si la nueva lo reemplaza.
+  const fechaElegida = newEventDay && newEventMonth
+    ? `2026-${newEventMonth}-${String(newEventDay).padStart(2, '0')}`
+    : '';
+  const yaSeCelebra = fechaElegida ? getCelebrationsForDate(fechaElegida).principal : '';
+
   const handleAddEvent = () => {
     if (!puedeAgregarCelebracion) return;   // el botón no existe para el Pueblo fiel
     if (!newEventName || !newEventDay || !newEventMonth) {
@@ -134,6 +163,7 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false
       season: 'Tiempo Ordinario', // Por defecto
       importance: 'medium',
       description: newEventDescription || undefined,
+      replacesDefault: yaSeCelebra ? newEventReplaces : false,
     };
 
     // Guardar evento pendiente y mostrar diálogo de alertas
@@ -161,6 +191,7 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false
     setNewEventMonth('');
     setNewEventType('Fiesta');
     setNewEventColor('Blanco');
+    setNewEventReplaces(false);
     setNewEventDescription('');
     setNewEventScope(isAdmin ? GLOBAL_SCOPE : (parishes.length === 1 ? parishes[0] : ''));
     setAlertDaysBefore(7);
@@ -175,6 +206,10 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false
       date: finalEvent.date,
       type: finalEvent.type === 'Fiesta' ? 'feast' : 'solemnity',
       scope,
+      replacesDefault: finalEvent.replacesDefault === true,
+      // El color se elegía en el formulario pero NO se guardaba: al recargar volvía al
+      // del calendario. Ahora viaja a la BD.
+      color: COLOR_IDS[finalEvent.color as ColorLabel],
     });
     if (r.ok && r.row) {
       setPersistedCustomDates([...getPersistedCustomDates(), toLiturgicalDate(r.row)]);
@@ -226,16 +261,32 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false
     );
 
   /**
-   * Lo demás que se celebra el mismo día que este evento.
+   * La nota que acompaña a una tarjeta, según el papel que juega ese día.
    *
-   * Se compara SIN el nombre, por fecha: el calendario visual escribe "26° Domingo…" y
-   * el motor litúrgico "26.º Domingo…" — de 67 celebraciones, 54 se escriben distinto en
-   * los dos sitios. Emparejar por nombre no funcionaría.
+   * Se compara SIN el nombre literal, por fecha y nombre normalizado: el calendario
+   * visual escribe "26° Domingo…" y el motor "26.º Domingo…" — de 67 celebraciones, 54
+   * se escriben distinto en los dos sitios. Emparejar por nombre exacto no funcionaría.
    */
-  const otrasCelebraciones = (event: LiturgicalEvent): string[] => {
+  const notaDelDia = (event: LiturgicalEvent): string | null => {
     const c = getCelebrationsForDate(event.date);
-    const mismo = (a: string, b: string) => normalizaNombre(a) === normalizaNombre(b);
-    return [c.principal, ...c.ademas].filter((n) => n && !mismo(n, event.name));
+    const es = (a: string, b: string) => normalizaNombre(a) === normalizaNombre(b);
+
+    // Esta es la que manda ese día.
+    if (es(c.principal, event.name)) {
+      const partes: string[] = [];
+      if (c.desplazada) partes.push(`En lugar de ${c.desplazada}, que este año no se celebra.`);
+      if (c.ademas.length) partes.push(`También: ${c.ademas.join(' · ')}`);
+      return partes.join(' ') || null;
+    }
+    // Esta quedó desplazada por una fiesta patronal o una solemnidad propia.
+    if (c.desplazada && es(c.desplazada, event.name)) {
+      return `Este año no se celebra: ese día manda ${c.principal}.`;
+    }
+    // Esta se celebra además de la del día.
+    if (c.ademas.some((n) => es(n, event.name))) {
+      return `Se celebra además de ${c.principal}.`;
+    }
+    return null;
   };
 
   const handleAddCantoral = (event: LiturgicalEvent) => {
@@ -394,18 +445,65 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false
                     <option value="Solemnidad">Solemnidad</option>
                   </select>
                 </div>
+                {/*
+                  La elección que NO se puede deducir: una fiesta patronal o una
+                  solemnidad desplaza al domingo, pero una ordenación o una jornada en
+                  domingo no lo desplaza — sigue siendo ese domingo, con su salmo. Como
+                  el nombre no lo dice, lo elige quien la crea. Solo se pregunta cuando
+                  ese día YA tiene celebración; en un día libre no hay nada que decidir.
+                */}
+                {yaSeCelebra && (
+                  <div className="sm:col-span-2 p-4 rounded-2xl border-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
+                    <p className="text-base font-bold text-gray-800 dark:text-gray-100 mb-1">
+                      Ese día ya se celebra: {yaSeCelebra}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                      ¿Qué pasa con esa celebración?
+                    </p>
+                    <label className="flex items-start gap-3 p-3 rounded-xl cursor-pointer hover:bg-white/60 dark:hover:bg-black/20">
+                      <input
+                        type="radio"
+                        name="reemplaza"
+                        checked={!newEventReplaces}
+                        onChange={() => setNewEventReplaces(false)}
+                        className="mt-1 w-5 h-5"
+                      />
+                      <span>
+                        <span className="block font-bold text-gray-800 dark:text-gray-100">Se celebra además</span>
+                        <span className="block text-sm text-gray-600 dark:text-gray-300">
+                          El día sigue siendo {yaSeCelebra}, con su salmo y sus lecturas, y
+                          se menciona también la nueva. Es lo habitual en una ordenación,
+                          una jornada o un aniversario.
+                        </span>
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-3 p-3 rounded-xl cursor-pointer hover:bg-white/60 dark:hover:bg-black/20">
+                      <input
+                        type="radio"
+                        name="reemplaza"
+                        checked={newEventReplaces}
+                        onChange={() => setNewEventReplaces(true)}
+                        className="mt-1 w-5 h-5"
+                      />
+                      <span>
+                        <span className="block font-bold text-gray-800 dark:text-gray-100">Reemplaza a {yaSeCelebra}</span>
+                        <span className="block text-sm text-gray-600 dark:text-gray-300">
+                          Ese día no se celebra {yaSeCelebra}: manda la nueva, con su
+                          propio salmo. Es lo que corresponde a una fiesta patronal o a
+                          una solemnidad propia.
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+                )}
                 <div>
                   <label className="block text-lg font-bold text-gray-700 dark:text-gray-300 mb-2">Color Litúrgico *</label>
                   <select
                     value={newEventColor}
-                    onChange={(e) => setNewEventColor(e.target.value as 'Blanco' | 'Rojo' | 'Verde' | 'Morado' | 'Rosa')}
+                    onChange={(e) => setNewEventColor(e.target.value as ColorLabel)}
                     className="w-full p-4 border-2 border-gray-300 dark:border-gray-700 dark:bg-gray-700 dark:text-white rounded-xl text-lg focus:outline-none focus:border-purple-500 dark:focus:border-purple-400"
                   >
-                    <option value="Blanco">Blanco</option>
-                    <option value="Rojo">Rojo</option>
-                    <option value="Verde">Verde</option>
-                    <option value="Morado">Morado</option>
-                    <option value="Rosa">Rosa</option>
+                    {COLOR_LABELS.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
@@ -670,10 +768,8 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false
                                 Ordinario puede llevar encima una jornada o un aniversario
                                 sin dejar de ser ese domingo, y hay que ver las dos cosas
                                 antes de armar el cantoral. */}
-                            {otrasCelebraciones(event).length > 0 && (
-                              <p className="text-base opacity-80 mt-1">
-                                También: <strong>{otrasCelebraciones(event).join(' · ')}</strong>
-                              </p>
+                            {notaDelDia(event) && (
+                              <p className="text-base opacity-80 mt-1 font-semibold">{notaDelDia(event)}</p>
                             )}
                           </div>
                         </div>

@@ -16,6 +16,10 @@ export interface LiturgicalDate {
   date: string; // 'YYYY-MM-DD'
   type: 'sunday' | 'solemnity' | 'feast' | 'weekday';
   season: string;
+  /** Solo en las agregadas a mano: desplaza a la celebración del calendario ese día. */
+  replacesDefault?: boolean;
+  /** Solo en las agregadas a mano: color litúrgico impuesto ('red', 'white'…). */
+  color?: string;
 }
 
 export interface LiturgicalInfo {
@@ -180,38 +184,68 @@ function celebracionDelCalendario(date: string): string {
 
 /** Lo que se celebra un día: la del calendario y, además, las agregadas a mano. */
 export interface CelebracionesDelDia {
-  /** La que da identidad al día. Es la del calendario; si el día no tenía, la agregada. */
+  /** La que da identidad al día: manda para el salmo, el ciclo y el rótulo. */
   principal: string;
-  /** Las agregadas que se celebran ADEMÁS, sin desplazar a la principal. */
+  /** Las que se celebran ADEMÁS, sin desplazar a la principal. */
   ademas: string[];
+  /**
+   * La celebración del calendario que quedó desplazada, cuando una agregada la
+   * reemplaza. Se conserva para poder DECIRLO ("en lugar del 26.º Domingo…"): un
+   * domingo que desaparece sin explicación se lee como un error de la app.
+   */
+  desplazada?: string;
+  /** Color litúrgico impuesto por la celebración que manda; sin él, el del calendario. */
+  color?: string;
 }
 
 /**
  * Todo lo que se celebra en una fecha.
  *
- * UN DOMINGO NO SE PIERDE. Antes, agregar una celebración a mano la ponía en lugar de
- * la del calendario: al marcar el "Día de Oración por Chile" en el 26.º Domingo del
- * Tiempo Ordinario, el domingo desaparecía de la app. Y no era solo el rótulo — el
- * salmo del libro se busca por (ciclo, celebración), así que ese domingo se quedaba
- * también sin su salmo. Reportado el 4-sep-2026.
+ * UN DOMINGO NO SE PIERDE POR ACCIDENTE. Antes, agregar una celebración a mano la
+ * ponía siempre en lugar de la del calendario: al marcar el "Día de Oración por Chile"
+ * en el 26.º Domingo del Tiempo Ordinario, el domingo desaparecía — y con él su salmo,
+ * porque el salmo del libro se busca por (ciclo, celebración). Reportado el 4-sep-2026.
  *
- * Ahora la del calendario manda y la agregada se suma. Solo cuando el día no tiene
- * nada (un martes cualquiera) la agregada pasa a ser la principal, que es justo para
- * lo que se creó la función de agregar celebraciones.
+ * Pero tampoco vale sumar siempre: una fiesta patronal o una solemnidad SÍ desplaza al
+ * domingo del Tiempo Ordinario, y ese día se canta lo de la solemnidad. Las dos cosas
+ * ocurren y no se distinguen por el nombre ni por el tipo, así que lo elige quien crea
+ * la celebración (`replacesDefault`). Por defecto se SUMA, que es lo que no pierde nada.
  */
 export function getCelebrationsForDate(date: string, customDates?: LiturgicalDate[]): CelebracionesDelDia {
-  const agregadas = mergeCustom(customDates).filter((d) => d.date === date).map((d) => d.name);
+  const agregadas = mergeCustom(customDates).filter((d) => d.date === date);
   const delCalendario = celebracionDelCalendario(date);
 
-  if (delCalendario) {
-    // Sin repetir la principal si alguien la agregó a mano con el mismo nombre, y sin
-    // repetir dos veces la misma agregada (la caché persistida y la de sesión se
-    // solapan cuando se acaba de crear una).
-    const vistas = new Set([delCalendario]);
-    const ademas = agregadas.filter((n) => !vistas.has(n) && (vistas.add(n), true));
-    return { principal: delCalendario, ademas };
+  // Sin repetidas: la caché persistida y la de sesión se solapan justo después de crear
+  // una, y el mismo nombre aparecería dos veces.
+  const vistos = new Set<string>();
+  const unicas = agregadas.filter((d) => !vistos.has(d.name) && (vistos.add(d.name), true));
+
+  const manda = unicas.find((d) => d.replacesDefault === true);
+  if (manda && delCalendario) {
+    return {
+      principal: manda.name,
+      ademas: unicas.filter((d) => d !== manda).map((d) => d.name),
+      desplazada: delCalendario,
+      color: manda.color,
+    };
   }
-  return { principal: agregadas[0] ?? '', ademas: [...new Set(agregadas.slice(1))] };
+
+  if (delCalendario) {
+    return {
+      principal: delCalendario,
+      ademas: unicas.filter((d) => d.name !== delCalendario).map((d) => d.name),
+      // Sin desplazar a nadie, el color lo puede fijar igual la agregada: una
+      // ordenación en domingo se celebra en rojo sin dejar de ser ese domingo.
+      color: unicas.find((d) => d.color)?.color,
+    };
+  }
+
+  const primera = manda ?? unicas[0];
+  return {
+    principal: primera?.name ?? '',
+    ademas: unicas.filter((d) => d !== primera).map((d) => d.name),
+    color: primera?.color,
+  };
 }
 
 /** Nombre de la celebración de una fecha; '' si no se encuentra (permite agregar custom). */

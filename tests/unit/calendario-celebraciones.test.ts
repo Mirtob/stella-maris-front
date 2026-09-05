@@ -18,6 +18,7 @@ import {
   getLiturgicalDateForDate,
   setPersistedCustomDates,
 } from '../../src/utils/liturgicalCalendar';
+import { getLiturgicalColorId } from '../../src/utils/liturgicalColors';
 import { resolvePsalm } from '../../src/data/psalmIndex';
 import { getSundayCycle } from '../../src/utils/liturgicalCycle';
 
@@ -27,7 +28,8 @@ function check(name: string, actual: unknown, expected: unknown) {
   if (ok) { pass++; console.log(`  ok   ${name}`); }
   else { fail++; console.log(`  FAIL ${name}\n       esperado: ${JSON.stringify(expected)}\n       obtenido: ${JSON.stringify(actual)}`); }
 }
-const cel = (n: string, f: string) => ({ name: n, date: f, type: 'feast', season: 'Tiempo Ordinario' } as any);
+const cel = (n: string, f: string, extra: object = {}) =>
+  ({ name: n, date: f, type: 'feast', season: 'Tiempo Ordinario', ...extra } as any);
 
 // El 26.º Domingo del T.O. de 2026 cae el domingo 27 de septiembre (el 26 es sábado).
 const domingo = '2026-09-27';
@@ -82,6 +84,48 @@ console.log('\n== Un día sin nada ==');
 setPersistedCustomDates([]);
 check('principal vacía', getCelebrationsForDate(martes).principal, '');
 check('sin nada además', getCelebrationsForDate(martes).ademas, []);
+
+
+console.log('\n== Elección del usuario: reemplazar al domingo ==');
+// Una fiesta patronal o una solemnidad propia SÍ desplaza al domingo del T.O. No se
+// puede deducir del nombre ni del tipo, así que lo marca quien crea la celebración.
+setPersistedCustomDates([cel('San Alberto Hurtado, patrono', domingo, { replacesDefault: true })]);
+const r = getCelebrationsForDate(domingo);
+check('manda la agregada', r.principal, 'San Alberto Hurtado, patrono');
+check('y se dice a quién desplazó', r.desplazada, NOMBRE_DOMINGO);
+check('el domingo no figura como que se celebra además', r.ademas, []);
+check('la celebración del día es la nueva', getLiturgicalDateForDate(domingo), 'San Alberto Hurtado, patrono');
+check('y toma el salmo de la nueva, no el del domingo',
+  !!resolvePsalm(getSundayCycle(domingo), getLiturgicalDateForDate(domingo)), false);
+
+console.log('\n== Reemplazar y sumar el mismo día ==');
+setPersistedCustomDates([
+  cel('San Alberto Hurtado, patrono', domingo, { replacesDefault: true }),
+  cel('Día de Oración por Chile', domingo),
+]);
+const r2 = getCelebrationsForDate(domingo);
+check('manda la que reemplaza', r2.principal, 'San Alberto Hurtado, patrono');
+check('la otra se suma', r2.ademas, ['Día de Oración por Chile']);
+check('el domingo desplazado se conserva', r2.desplazada, NOMBRE_DOMINGO);
+
+console.log('\n== Por defecto NO reemplaza ==');
+// Es lo que no pierde nada: quien no marque nada, suma.
+setPersistedCustomDates([cel('Ordenación diaconal', domingo)]);
+check('sigue mandando el domingo', getCelebrationsForDate(domingo).principal, NOMBRE_DOMINGO);
+check('sin desplazada', getCelebrationsForDate(domingo).desplazada, undefined);
+
+console.log('\n== Color litúrgico elegido ==');
+setPersistedCustomDates([]);
+check('un domingo del T.O. es verde', getLiturgicalColorId(domingo), 'green');
+// Una ordenación en domingo: se celebra el domingo, pero de rojo.
+setPersistedCustomDates([cel('Ordenación diaconal', domingo, { color: 'red' })]);
+check('la agregada impone el color', getLiturgicalColorId(domingo), 'red');
+check('sin dejar de ser el domingo', getLiturgicalDateForDate(domingo), NOMBRE_DOMINGO);
+setPersistedCustomDates([cel('Dedicación del templo', domingo, { replacesDefault: true, color: 'white' })]);
+check('la que reemplaza impone su color', getLiturgicalColorId(domingo), 'white');
+setPersistedCustomDates([cel('Algo', domingo, { color: 'fucsia' })]);
+check('un color desconocido se ignora', getLiturgicalColorId(domingo), 'green');
+setPersistedCustomDates([]);
 
 console.log(`\n${pass} ok, ${fail} fallas`);
 if (fail > 0) process.exit(1);

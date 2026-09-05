@@ -4,12 +4,15 @@ export interface LiturgicalEvent {
   name: string;
   date: string; // Formato: YYYY-MM-DD
   type: 'Solemnidad' | 'Fiesta' | 'Domingo' | 'Feria';
-  color: 'Blanco' | 'Rojo' | 'Verde' | 'Morado' | 'Rosa';
+  color: 'Blanco' | 'Rojo' | 'Verde' | 'Morado' | 'Rosa' | 'Dorado' | 'Negro';
   season: 'Adviento' | 'Navidad' | 'Cuaresma' | 'Pascua' | 'Tiempo Ordinario';
   importance: 'high' | 'medium' | 'low';
   description?: string;
   alertEnabled?: boolean; // Si se debe alertar sobre este evento
   alertDaysBefore?: number; // Días de anticipación para la alerta
+  /** Solo en las agregadas a mano: desplaza a la celebración del calendario ese día
+   *  (fiesta patronal, solemnidad propia). Por defecto se suma sin desplazar. */
+  replacesDefault?: boolean;
 }
 
 // Calendario Litúrgico 2026

@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { X, Plus, Calendar, Sparkles, Church } from 'lucide-react';
+import { X, Plus, Calendar, Sparkles, Church, Palette } from 'lucide-react';
 import { formatYmdForDisplay } from '../../utils/dateLocal';
 import { GLOBAL_SCOPE } from '../../services/liturgicalDates';
+import { getCelebrationsForDate } from '../../utils/liturgicalCalendar';
+import { LITURGICAL_COLOR_OPTIONS, type LiturgicalColorId } from '../../utils/liturgicalColors';
 
 interface AddSolemnityModalProps {
   selectedDate: string;
@@ -10,7 +12,13 @@ interface AddSolemnityModalProps {
   /** Parroquias/capillas del perfil (para que el coro elija a cuál publica la celebración). */
   parishes?: string[];
   onClose: () => void;
-  onAdd: (name: string, date: string, scope: string, type: 'solemnity' | 'feast') => void;
+  onAdd: (
+    name: string, date: string, scope: string, type: 'solemnity' | 'feast',
+    /** true = desplaza a la celebración del calendario ese día. */
+    replacesDefault: boolean,
+    /** Color litúrgico impuesto; `undefined` = el del calendario. */
+    color?: LiturgicalColorId,
+  ) => void;
 }
 
 export function AddSolemnityModal({ selectedDate, isAdmin = false, parishes = [], onClose, onAdd }: AddSolemnityModalProps) {
@@ -23,10 +31,20 @@ export function AddSolemnityModal({ selectedDate, isAdmin = false, parishes = []
     if (isAdmin) return GLOBAL_SCOPE;
     return parishes.length === 1 ? parishes[0] : '';
   });
+  // ¿Desplaza a lo que ya se celebra ese día? Por defecto NO: sumar es lo que no pierde
+  // el domingo ni su salmo. Solo se pregunta si ese día ya tiene celebración.
+  const [reemplaza, setReemplaza] = useState(false);
+  // Color litúrgico. Sin elegir, el que corresponda a la fecha.
+  const [color, setColor] = useState<LiturgicalColorId | undefined>(undefined);
+  const yaSeCelebra = getCelebrationsForDate(selectedDate).principal;
 
   const handleSave = () => {
     if (solemnityName.trim() && scope) {
-      onAdd(solemnityName.trim(), selectedDate, scope, solemnityType);
+      onAdd(
+        solemnityName.trim(), selectedDate, scope, solemnityType,
+        yaSeCelebra ? reemplaza : false,
+        color,
+      );
       onClose();
     }
   };
@@ -122,6 +140,85 @@ export function AddSolemnityModal({ selectedDate, isAdmin = false, parishes = []
               >
                 🎉 Fiesta
               </button>
+            </div>
+          </div>
+
+          {/*
+            La elección que no se puede deducir: una fiesta patronal o una solemnidad
+            propia desplaza al domingo, pero una ordenación o una jornada en domingo no
+            lo desplaza — sigue siendo ese domingo, con su salmo. Como el nombre no lo
+            dice, lo elige quien la crea. Solo aparece si ese día ya tiene celebración.
+          */}
+          {yaSeCelebra && (
+            <div className="bg-amber-50/80 dark:bg-amber-950/30 rounded-2xl p-5 border-2 border-amber-300 dark:border-amber-700">
+              <p className="text-base font-bold text-brand-ink mb-1">Ese día ya se celebra: {yaSeCelebra}</p>
+              <p className="text-sm text-brand-ink-soft mb-3">¿Qué pasa con esa celebración?</p>
+              <button
+                type="button"
+                onClick={() => setReemplaza(false)}
+                className={`w-full text-left p-4 rounded-xl mb-2 border-2 transition-all ${
+                  !reemplaza ? 'bg-white dark:bg-slate-800 border-purple-600 shadow' : 'bg-white/50 dark:bg-white/10 border-white/40'
+                }`}
+              >
+                <span className="block font-bold text-brand-ink">Se celebra además</span>
+                <span className="block text-sm text-brand-ink-soft">
+                  El día sigue siendo {yaSeCelebra}, con su salmo, y se menciona también la
+                  nueva. Es lo habitual en una ordenación, una jornada o un aniversario.
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setReemplaza(true)}
+                className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                  reemplaza ? 'bg-white dark:bg-slate-800 border-purple-600 shadow' : 'bg-white/50 dark:bg-white/10 border-white/40'
+                }`}
+              >
+                <span className="block font-bold text-brand-ink">Reemplaza a {yaSeCelebra}</span>
+                <span className="block text-sm text-brand-ink-soft">
+                  Ese día no se celebra {yaSeCelebra}: manda la nueva, con su propio salmo.
+                  Es lo que corresponde a una fiesta patronal o a una solemnidad propia.
+                </span>
+              </button>
+            </div>
+          )}
+
+          {/* Color litúrgico */}
+          <div className="bg-white/30 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-5 border-2 border-white/40 dark:border-white/20 transition-colors">
+            <label className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center border-2 border-purple-800">
+                <Palette className="w-6 h-6 text-white" strokeWidth={2.5} />
+              </div>
+              <span className="text-xl font-bold text-brand-ink">Color Litúrgico</span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {/* Sin elegir = el del calendario. Es lo correcto casi siempre, así que va
+                  primero y viene marcado. */}
+              <button
+                type="button"
+                onClick={() => setColor(undefined)}
+                className={`py-3 px-4 rounded-xl text-sm font-bold border-2 transition-all ${
+                  color === undefined
+                    ? 'bg-gradient-to-br from-purple-600 to-purple-700 text-white border-purple-800'
+                    : 'bg-white/60 dark:bg-white/20 text-brand-ink-soft border-white/40'
+                }`}
+              >
+                El del calendario
+              </button>
+              {LITURGICAL_COLOR_OPTIONS.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setColor(c.id)}
+                  className={`py-3 px-4 rounded-xl text-sm font-bold border-2 flex items-center gap-2 transition-all ${
+                    color === c.id
+                      ? 'bg-gradient-to-br from-purple-600 to-purple-700 text-white border-purple-800'
+                      : 'bg-white/60 dark:bg-white/20 text-brand-ink-soft border-white/40'
+                  }`}
+                >
+                  <span className={`w-4 h-4 rounded-full ${c.dot}`} />
+                  {c.label}
+                </button>
+              ))}
             </div>
           </div>
 

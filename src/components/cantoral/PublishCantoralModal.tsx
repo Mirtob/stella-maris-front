@@ -1017,13 +1017,17 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
           isAdmin={isAdmin}
           parishes={allParishes}
           onClose={() => setShowAddSolemnityModal(false)}
-          onAdd={async (name, date, scope, type) => {
+          onAdd={async (name, date, scope, type, replacesDefault, color) => {
             // Uso inmediato en esta sesión (aunque el guardado tarde/falle).
             setCustomDates([...customDates, { name, date }]);
-            setLiturgicalDate(name);
+            // La celebración del cantoral pasa a ser la nueva SOLO si desplaza a la del
+            // calendario, o si ese día no tenía ninguna. Si se agregó "además" —una
+            // ordenación en domingo—, el cantoral sigue siendo el de ese domingo: poner
+            // la nueva aquí le quitaría su salmo y su rótulo.
+            if (replacesDefault || !liturgicalDate) setLiturgicalDate(name);
             setShowAddSolemnityModal(false);
             // Persistir: Admin → global (todos); Coro → su parroquia/capilla.
-            const r = await addCustomLiturgicalDate({ name, date, type, scope });
+            const r = await addCustomLiturgicalDate({ name, date, type, scope, replacesDefault, color });
             if (r.ok && r.row) {
               // Reflejar en el caché del calendario → aparece en toda la app.
               setPersistedCustomDates([...getPersistedCustomDates(), toLiturgicalDate(r.row)]);

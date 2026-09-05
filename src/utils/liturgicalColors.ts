@@ -1,4 +1,4 @@
-import { getLiturgicalInfoForDate } from './liturgicalCalendar';
+import { getLiturgicalInfoForDate, getCelebrationsForDate } from './liturgicalCalendar';
 import { getCurrentLiturgicalSeason } from './liturgicalSeason';
 import { parseYmdLocal, getTodayLocal } from './dateLocal';
 
@@ -138,6 +138,9 @@ const PALETTE: Record<LiturgicalColorId, LiturgicalColorStyle> = {
   },
 };
 
+/** Los siete colores, para ofrecerlos en un selector (id + etiqueta + punto de color). */
+export const LITURGICAL_COLOR_OPTIONS: LiturgicalColorStyle[] = Object.values(PALETTE);
+
 /** Temporada (string español) → color litúrgico por defecto. */
 export function seasonToColorId(season: string): LiturgicalColorId {
   const s = (season || '').toLowerCase();
@@ -147,9 +150,19 @@ export function seasonToColorId(season: string): LiturgicalColorId {
   return 'green'; // Tiempo Ordinario
 }
 
+/** ¿Es uno de los siete colores litúrgicos? (lo guardado en BD es texto libre). */
+export const esColorLiturgico = (c?: string): c is LiturgicalColorId =>
+  !!c && c in PALETTE;
+
 /** Id de color litúrgico de una fecha 'YYYY-MM-DD' (romcal; fallback por temporada). */
 export function getLiturgicalColorId(date?: string): LiturgicalColorId {
   if (!date) return 'green';
+  // Una celebración agregada a mano puede fijar el color: rojo en una ordenación o en
+  // un mártir patrono, blanco en una dedicación. Manda sobre el del calendario porque
+  // se puso a propósito para ese día.
+  const impuesto = getCelebrationsForDate(date).color;
+  if (esColorLiturgico(impuesto)) return impuesto;
+
   const info = getLiturgicalInfoForDate(date);
   if (info?.color && info.color in PALETTE) return info.color as LiturgicalColorId;
   const season = info?.season || getCurrentLiturgicalSeason(parseYmdLocal(date));

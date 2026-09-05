@@ -273,10 +273,14 @@ export function ChoirView({
   const massCelebration = useMemo(() => getLiturgicalDateForDate(massDate), [massDate, celebTick]);
   // Lo que se celebra ADEMÁS ese día. Un domingo puede llevar encima una jornada o un
   // aniversario sin dejar de ser ese domingo: se nombran los dos.
-  const tambienSeCelebra = useMemo(
-    () => getCelebrationsForDate(massDate).ademas,
+  const celebracionesDelDia = useMemo(
+    () => getCelebrationsForDate(massDate),
     [massDate, celebTick],
   );
+  const tambienSeCelebra = celebracionesDelDia.ademas;
+  // La del calendario que quedó desplazada por una fiesta patronal o solemnidad propia.
+  // Se DICE: un domingo que desaparece sin explicación se lee como un error de la app.
+  const enLugarDe = celebracionesDelDia.desplazada;
   const massCycle = getSundayCycle(massDate);
 
   // Mostrar modal de selección de instrumento siempre al inicio
@@ -474,19 +478,27 @@ export function ChoirView({
               ? <>{formatYmdForDisplay(massDate, { weekday: 'long', day: 'numeric', month: 'long' })} · <strong className="text-brand-ink">{massCelebration}</strong> · Año {massCycle}</>
               : <>{formatYmdForDisplay(massDate, { weekday: 'long', day: 'numeric', month: 'long' })} — esta fecha no tiene una celebración en el calendario.</>}
           </p>
+          {enLugarDe && (
+            <p className="text-sm text-brand-ink-soft mt-1">
+              En lugar de <strong className="text-brand-ink">{enLugarDe}</strong>, que este año no se celebra.
+            </p>
+          )}
           {tambienSeCelebra.length > 0 && (
             <p className="text-sm text-brand-ink-soft mt-1">
               También se celebra: <strong className="text-brand-ink">{tambienSeCelebra.join(' · ')}</strong>
             </p>
           )}
-          {!massCelebration && (
-            <button
-              onClick={() => setShowAddSolemnity(true)}
-              className="mt-2 inline-flex items-center gap-1.5 text-sm font-bold text-purple-800 dark:text-purple-200 active:opacity-70"
-            >
-              <span className="text-base">➕</span> Agregar celebración para esta fecha
-            </button>
-          )}
+          {/* También cuando el día YA tiene celebración: una ordenación, una jornada o
+              una fiesta patronal caen en domingo, y hasta ahora no había forma de
+              anotarlas desde el constructor porque el botón solo salía en los días
+              vacíos. */}
+          <button
+            onClick={() => setShowAddSolemnity(true)}
+            className="mt-2 inline-flex items-center gap-1.5 text-sm font-bold text-purple-800 dark:text-purple-200 active:opacity-70"
+          >
+            <span className="text-base">➕</span>
+            {massCelebration ? 'Agregar otra celebración a este día' : 'Agregar celebración para esta fecha'}
+          </button>
         </div>
 
         {/* Modo Atril — leer el repertorio durante la Misa */}
@@ -790,9 +802,9 @@ export function ChoirView({
           isAdmin={isAdmin}
           parishes={parishes}
           onClose={() => setShowAddSolemnity(false)}
-          onAdd={async (name, date, scope, type) => {
+          onAdd={async (name, date, scope, type, replacesDefault, color) => {
             setShowAddSolemnity(false);
-            const r = await addCustomLiturgicalDate({ name, date, type, scope });
+            const r = await addCustomLiturgicalDate({ name, date, type, scope, replacesDefault, color });
             if (r.ok && r.row) {
               setPersistedCustomDates([...getPersistedCustomDates(), toLiturgicalDate(r.row)]);
               toast.success('Celebración agregada', { description: name });
