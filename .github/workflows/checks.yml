@@ -30,8 +30,21 @@ jobs:
           # del runner de que Node 20 está obsoleto y las acciones se fuerzan a 24.
           node-version: '22'
           cache: npm
+      # El registro completo de una ejecución solo se lee con sesión iniciada. Las
+      # ANOTACIONES, en cambio, son públicas: si `npm ci` falla, su error se publica
+      # como anotación para poder diagnosticarlo desde fuera.
       - name: Instalar dependencias
-        run: npm ci
+        id: instalar
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          npm ci 2>&1 | tee /tmp/npm-ci.log
+      - name: Publicar el error de instalación
+        if: steps.instalar.outcome == 'failure'
+        run: |
+          echo "::error::npm ci falló — $(tail -c 900 /tmp/npm-ci.log | tr '
+' ' ' | tr -s ' ')"
+          exit 1
       - name: Chequeo de tipos
         run: npm run typecheck
       - name: Pruebas unitarias
