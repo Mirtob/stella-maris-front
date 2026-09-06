@@ -5,7 +5,8 @@ import QRCode from 'qrcode';
 import { toast } from 'sonner';
 import { safeWindowOpen } from '../../utils/safeUrl';
 import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
-import { getCantoralById } from '../../services/cantorals';
+import { getCantoralById, updateCantoralPdfUrl } from '../../services/cantorals';
+import { uploadCantoralPDF } from '../../services/cantoralPDF';
 
 interface CantoralQRDialogProps {
   open: boolean;
@@ -38,6 +39,15 @@ export function CantoralQRDialog({
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [generando, setGenerando] = useState(false);
+  /**
+   * Por qué NO se pudo dejar el folleto guardado en el servidor.
+   *
+   * Hasta ahora este fallo solo iba a la consola, y en un teléfono nadie la ve: el
+   * bucket llevaba meses vacío —ni un solo cantoral con su PDF— sin que nadie supiera
+   * la razón. Enseñarlo aquí convierte un fallo invisible en algo que se puede contar.
+   */
+  const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
+  const [guardadoOk, setGuardadoOk] = useState(false);
 
   /**
    * Arma el folleto AQUÍ MISMO cuando no hay uno guardado en Storage.
@@ -56,7 +66,22 @@ export function CantoralQRDialog({
         toast.error('No se pudo leer el cantoral para armar el folleto.');
         return;
       }
-      await generateCantoralPDF({ cantoral, download: true, booklet: true });
+      const { blob } = await generateCantoralPDF({ cantoral, download: true, booklet: true });
+
+      // Y de paso se deja guardado en el servidor, si todavía no lo está. Así el
+      // siguiente que lo abra —en el teléfono que sea— se lo descarga hecho, en vez de
+      // tener que construirlo. Es en segundo plano: el folleto ya se entregó.
+      if (!pdfUrl) {
+        setErrorGuardado(null);
+        const up = await uploadCantoralPDF(cantoralId, blob);
+        if (up.ok && up.publicUrl) {
+          const r = await updateCantoralPdfUrl(cantoralId, up.publicUrl);
+          if (r.ok) setGuardadoOk(true);
+          else setErrorGuardado(`Se subió el archivo pero no se pudo anotar: ${r.error ?? 'error desconocido'}`);
+        } else {
+          setErrorGuardado(up.error ?? 'error desconocido');
+        }
+      }
     } catch (err: any) {
       toast.error('No se pudo generar el folleto', { description: err?.message });
     } finally {
@@ -255,6 +280,31 @@ export function CantoralQRDialog({
               : <FileDown className="w-5 h-5" />}
             {generando ? 'Armando el folleto…' : 'Descargar folleto (cuadernillo para imprimir)'}
           </button>
+        )}
+
+        {/* Cómo fue lo de dejarlo guardado en el servidor. Se dice SIEMPRE, porque este
+            fallo llevaba meses siendo invisible: el bucket estaba vacío y nadie sabía
+            por qué. Con el motivo delante, se puede arreglar. */}
+        {errorGuardado && (
+          <div className="w-full mb-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-700 text-left">
+            <p className="text-sm font-bold text-amber-900 dark:text-amber-200">
+              El folleto se descargó, pero no quedó guardado en el servidor
+            </p>
+            <p className="text-xs text-amber-800 dark:text-amber-300 mt-1">
+              Los demás tendrán que armarlo en su teléfono. Motivo:
+            </p>
+            <p className="text-[11px] font-mono text-amber-900 dark:text-amber-200 mt-1 break-all">{errorGuardado}</p>
+          </div>
+        )}
+        {guardadoOk && (
+          <div className="w-full mb-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border-2 border-emerald-300 dark:border-emerald-700">
+            <p className="text-sm font-bold text-emerald-900 dark:text-emerald-200">
+              Folleto guardado en el servidor
+            </p>
+            <p className="text-xs text-emerald-800 dark:text-emerald-300 mt-1">
+              Quien lo abra ahora se lo descarga hecho, sin que su teléfono tenga que armarlo.
+            </p>
+          </div>
         )}
 
         {/* Acciones secundarias */}
