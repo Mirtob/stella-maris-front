@@ -1145,9 +1145,21 @@ function AppContent() {
         warn(result?.error || 'No se pudo enviar la notificación push.');
         return;
       }
-      // subs = suscriptores de esa parroquia. 0 es normal (nadie las activó todavía);
-      // lo anómalo es que hubiera destinatarios y no saliera ninguno.
-      if ((result?.subs ?? 0) > 0 && (result?.sent ?? 0) === 0) {
+      // `subs` = destinatarios que calzaban con la parroquia; `sent`, los que de verdad
+      // recibieron. Los dos casos malos se dicen, y hasta ahora uno era MUDO:
+      //
+      //   · subs = 0 → no había a quién avisar. Se daba por "normal" y no se decía nada,
+      //     así que el coro publicaba convencido de haber avisado a su parroquia cuando
+      //     no le llegó a nadie, ni a él mismo.
+      //   · subs > 0 y sent = 0 → había destinatarios y no salió ninguno.
+      const subs = result?.subs ?? 0;
+      const sent = result?.sent ?? 0;
+      if (subs === 0) {
+        toast.warning('El cantoral se publicó, pero nadie recibió aviso', {
+          description: 'Nadie tiene los avisos activados para esta parroquia. Se activan en Ajustes → Notificaciones.',
+          duration: 9000,
+        });
+      } else if (sent === 0) {
         warn('Nadie recibió la notificación. Revísalo en Ajustes → Notificaciones.');
       }
     } catch {

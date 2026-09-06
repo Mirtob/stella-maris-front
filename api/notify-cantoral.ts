@@ -106,6 +106,33 @@ const normTexto = (x: unknown) =>
 
 export interface Suscripcion { endpoint: string; p256dh: string; auth: string; parishes: string[]; role: string | null }
 
+export interface SubDeCantoral { endpoint: string; p256dh: string; auth: string; parishes: string[]; user_id?: string | null }
+export interface PerfilParaAviso { id: string; parishes: string[] | null; parish_name: string | null }
+
+/**
+ * A qué parroquias pertenece un suscriptor, HOY.
+ *
+ * `push_subscriptions.parishes` es una FOTO del momento en que la persona activó los
+ * avisos, y no se vuelve a tocar nunca. Quien después se cambia de parroquia, o entra
+ * a una nueva, deja de calzar y no recibe ni un aviso — en silencio, porque "cero
+ * destinatarios" no se distinguía de "nadie los tiene activados".
+ *
+ * Se unen las dos listas (la foto y la del perfil actual) en vez de reemplazar una por
+ * otra: unir solo puede SUMAR destinatarios, nunca dejar a nadie fuera. Es la misma
+ * solución que ya se aplicó al ROL en el recordatorio de los jueves.
+ */
+export function parroquiasDelSuscriptor(
+  sub: SubDeCantoral,
+  perfiles: Map<string, PerfilParaAviso>,
+): string[] {
+  const perfil = sub.user_id ? perfiles.get(sub.user_id) : undefined;
+  return [
+    ...(sub.parishes || []),
+    ...(perfil?.parishes || []),
+    ...(perfil?.parish_name ? [perfil.parish_name] : []),
+  ].filter(Boolean);
+}
+
 /** Todas las suscripciones vivas, con lo necesario para filtrar y enviar. */
 async function todasLasSuscripciones(): Promise<Suscripcion[]> {
   const r = await fetch(
@@ -417,12 +444,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Suscriptores del topic 'cantorals', UNA sola vez. El filtro por parroquia se hace
     // aquí y no en la consulta: PostgREST solo sabe comparar el texto exacto, y con eso
     // cualquier diferencia de espacios o mayúsculas dejaba fuera al suscriptor.
-    const allSr = await fetch(
-      `${SUPABASE_URL}/rest/v1/push_subscriptions?select=endpoint,p256dh,auth,parishes&topics=cs.${encodeURIComponent('{cantorals}')}`,
-      { headers: svcHeaders },
-    );
-    const allSubs: { endpoint: string; p256dh: string; auth: string; parishes: string[] }[] =
-      allSr.ok ? await allSr.json() : [];
+    const [allSr, perfilesR] = await Promise.all([
+      fetch(
+        `${SUPABASE_URL}/rest/v1/push_subscriptions?select=endpoint,p256dh,auth,parishes,user_id&topics=cs.${encodeURIComponent('{cantorals}')}`,
+        { headers: svcHeaders },
+      ),
+      // La parroquia ACTUAL de cada perfil. Ver `parroquiasDelSuscriptor`.
+      fetch(`${SUPABASE_URL}/rest/v1/user_profiles?select=id,parishes,parish_name`, { headers: svcHeaders }),
+    ]);
+    const allSubs: SubDeCantoral[] = allSr.ok ? await allSr.json() : [];
+    const perfiles: PerfilParaAviso[] = perfilesR.ok ? await perfilesR.json() : [];
+    const porUsuario = new Map(perfiles.map((x) => [x.id, x]));
 
     let totalSent = 0;
     let totalSubs = 0;
@@ -434,7 +466,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const nearest = items[0];
 
       const objetivo = normParish(parish);
-      const subs = allSubs.filter((s2) => (s2.parishes || []).some((x) => normParish(x) === objetivo));
+      const subs = allSubs.filter((s2) =>
+        parroquiasDelSuscriptor(s2, porUsuario).some((x) => normParish(x) === objetivo));
       totalSubs += subs.length;
 
       const detail = [nearest.liturgical_date, nearest.mass_time].filter(Boolean).join(' · ');

@@ -997,19 +997,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // consultar: ahí se respeta lo que guardó la propia suscripción.
     const [cr, pr] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?select=endpoint,p256dh,auth,parishes,role,user_id`, { headers: svcHeaders }),
-      fetch(`${SUPABASE_URL}/rest/v1/user_profiles?select=id,role`, { headers: svcHeaders }),
+      fetch(`${SUPABASE_URL}/rest/v1/user_profiles?select=id,role,parishes,parish_name`, { headers: svcHeaders }),
     ]);
     const todasLasSubs: { endpoint: string; p256dh: string; auth: string; parishes: string[]; role: string | null; user_id: string | null }[] =
       cr.ok ? await cr.json() : [];
-    const perfiles: { id: string; role: string | null }[] = pr.ok ? await pr.json() : [];
+    const perfiles: { id: string; role: string | null; parishes: string[] | null; parish_name: string | null }[] =
+      pr.ok ? await pr.json() : [];
     const rolDelPerfil = new Map(perfiles.map((x) => [x.id, x.role]));
+    const perfilPorId = new Map(perfiles.map((x) => [x.id, x]));
     const coroSubs = todasLasSubs.filter((s) => leTocaRecordatorioDeCoro(rolParaRecordatorio(s, rolDelPerfil)));
 
     // Diagnóstico: por qué cada suscriptor Coro/Admin recibe o no el aviso.
     const coroDetail: { device: string; rol: string; parishes: string[]; pending: string[]; skipped: string }[] = [];
 
     for (const sub of coroSubs) {
-      const parishes = Array.from(new Set(sub.parishes || []));
+      // Las parroquias de la suscripción SON UNA FOTO del momento en que se activaron
+      // los avisos, y no se vuelven a tocar: quien se cambia de parroquia deja de
+      // recibir el recordatorio de la suya, en silencio. Se une con la del perfil
+      // actual, igual que ya se hace con el rol. Unir solo puede sumar destinatarios.
+      const perfilDeSub = sub.user_id ? perfilPorId.get(sub.user_id) : undefined;
+      const parishes = Array.from(new Set([
+        ...(sub.parishes || []),
+        ...(perfilDeSub?.parishes || []),
+        ...(perfilDeSub?.parish_name ? [perfilDeSub.parish_name] : []),
+      ].filter(Boolean)));
       const pending: string[] = [];
       const skipped: string[] = [];
       for (const parish of parishes) {
