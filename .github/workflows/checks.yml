@@ -25,25 +25,34 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          # Node 22 (LTS). Con '20' el chequeo empezó a fallar en `npm ci` sin ningún
-          # cambio en el código ni en el candado, coincidiendo con el aviso del runner
-          # de que Node 20 está obsoleto.
+          # Node 22 (LTS), como el resto del proyecto.
           node-version: '22'
           cache: npm
 
-      # El registro completo de una ejecución solo se lee con sesión iniciada. Las
-      # ANOTACIONES, en cambio, son públicas, así que si `npm ci` falla su error se
-      # publica como anotación y se puede diagnosticar desde fuera.
+      # `npm install`, NO `npm ci`, y esto tiene una razón concreta.
+      #
+      # Con `npm ci` el chequeo de tipos fallaba aquí diciendo que no encontraba
+      # @types/node ni @vercel/node, estando los dos en package.json y en el candado.
+      # El MISMO chequeo, sobre el MISMO commit y también en Linux, pasa en Vercel — que
+      # instala con `npm install`. Y en un clon limpio con `npm ci` pasa igualmente.
+      #
+      # No llegué a la causa de fondo. Se usa `npm install` porque es exactamente lo que
+      # hace el entorno que de verdad importa (el que compila y despliega), y porque una
+      # red de seguridad que no corre no protege de nada. Si algún día se quiere volver a
+      # `npm ci`, hay que resolver antes ese misterio.
       - name: Instalar dependencias
         id: instalar
         continue-on-error: true
-        run: npm ci 2>&1 | tee /tmp/npm-ci.log
+        run: npm install --no-audit --no-fund 2>&1 | tee /tmp/npm.log
 
+      # El registro completo de una ejecución solo se lee con sesión iniciada. Las
+      # ANOTACIONES, en cambio, son públicas: si la instalación falla, su error se
+      # publica como anotación y se puede diagnosticar desde fuera.
       - name: Publicar el error de instalación
         if: steps.instalar.outcome == 'failure'
         run: |
-          resumen=$(tail -c 900 /tmp/npm-ci.log | tr -d '\r' | tr '\n' ' ')
-          echo "::error::npm ci falló: $resumen"
+          resumen=$(tail -c 900 /tmp/npm.log | tr -d '\r' | tr '\n' ' ')
+          echo "::error::La instalación falló: $resumen"
           exit 1
 
       - name: Chequeo de tipos
