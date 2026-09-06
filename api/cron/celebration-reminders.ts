@@ -672,7 +672,6 @@ export function addDays(ymd: string, days: number): string {
   return dt.toISOString().slice(0, 10);
 }
 export const leadLabel = (lead: number) => (lead === 1 ? 'mañana' : `en ${lead} días`);
-const encParish = (p: string) => encodeURIComponent(`{"${p.replace(/"/g, '\\"')}"}`);
 
 /** Celebraciones "por defecto" en una fecha: domingos + solemnidades (a todas las parroquias). */
 export function baseCelebrationsOn(date: string): string[] {

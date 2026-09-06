@@ -2,7 +2,7 @@ import { getSupabaseClient } from './supabaseClient';
 
 /**
  * Notificaciones push (Web Push / PWA). Suscribe el dispositivo con PushManager y
- * guarda la suscripción vía /api/push-subscribe (service role). El envío lo hacen las
+ * guarda la suscripción vía /api/push (service role). El envío lo hacen las
  * funciones serverless: recordatorio de celebraciones (cron) y "nuevo cantoral".
  *
  * iOS: solo funciona con la PWA INSTALADA en pantalla de inicio (iOS 16.4+); en la
@@ -63,7 +63,9 @@ async function accessToken(): Promise<string | undefined> {
 
 async function callSubscribeApi(body: object): Promise<Response> {
   const token = await accessToken();
-  return fetch('/api/push-subscribe', {
+  // `/api/push` reúne alta, baja y prueba en una sola función serverless (el plan
+  // Hobby de Vercel solo permite doce). La ruta vieja sigue reescrita hacia aquí.
+  return fetch('/api/push', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -205,10 +207,10 @@ export async function sendTestPush(endpoint?: string): Promise<{ ok: boolean; se
   }
   try {
     const token = await accessToken();
-    const r = await fetch('/api/push-test', {
+    const r = await fetch('/api/push', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ endpoint: ep }),
+      body: JSON.stringify({ action: 'test', endpoint: ep }),
     });
     const data = await r.json().catch(() => ({} as any));
     return { ok: r.ok && (data.sent ?? 0) > 0, sent: data.sent ?? 0 };

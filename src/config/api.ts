@@ -153,6 +153,10 @@ export const YOUTUBE_CONFIG = {
 // ==========================================
 
 export const GOOGLE_DRIVE_CONFIG = {
+  // OJO: `/api/pdf` y `/api/sheets` ya no son archivos: los dos los atiende
+  // `api/drive.ts`, que vercel.json reescribe. Se conservan las rutas porque la
+  // caché sin conexión guarda URLs `/api/pdf?id=...` y cambiarlas la invalidaría
+  // para todo el mundo. Ver el comentario de cabecera de api/drive.ts.
   // La API key de Drive vive SOLO en el servidor (/api/sheets, /api/pdf).
   // No se inyecta al bundle. Las lecturas del cliente pasan por esos endpoints.
   apiKey: '',

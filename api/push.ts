@@ -1,8 +1,22 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// Envía una notificación de PRUEBA a la(s) suscripción(es) del solicitante, para
-// verificar la entrega end-to-end. Recibe el `endpoint` del propio dispositivo (o, si
-// viene token, usa las suscripciones del usuario). AUTOCONTENIDO (sin imports hermanos).
+/**
+ * Todo lo que un DISPOSITIVO hace con sus avisos push: darse de alta, darse de baja y
+ * mandarse una prueba a sí mismo.
+ *
+ * Eran dos funciones (`push-subscribe` y `push-test`) que compartían más de la mitad
+ * del código: el mismo control de tope, el mismo `userIdFromToken`, las mismas
+ * cabeceras de servicio. Juntarlas quita esa repetición y, de paso, libera un hueco de
+ * los DOCE que permite el plan Hobby de Vercel — pasado ese número no falla la función
+ * nueva: falla el despliegue ENTERO. Ya ocurrió una vez, con el mezclador de voces.
+ *
+ * Las rutas viejas siguen funcionando: `vercel.json` reescribe `/api/push-subscribe` y
+ * `/api/push-test` hacia aquí. Eso importa porque hay teléfonos con la app abierta y
+ * el código anterior en memoria, que seguirán llamando a las de antes.
+ *
+ * AUTOCONTENIDO a propósito (sin imports hermanos): Vercel empaqueta cada archivo de
+ * `api/` por separado y un import a `api/_lib` rompe el build.
+ */
 
 const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || '').trim();
 const ANON = (process.env.VITE_SUPABASE_ANON_KEY || '').trim();
@@ -16,6 +30,20 @@ const svcHeaders = { apikey: SERVICE, Authorization: `Bearer ${SERVICE}`, 'Conte
 
 function safeParse(s: string): any { try { return JSON.parse(s); } catch { return {}; } }
 
+async function userIdFromToken(token: string): Promise<string | null> {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: ANON, Authorization: `Bearer ${token}` } });
+    if (!r.ok) return null;
+    return (await r.json())?.id ?? null;
+  } catch { return null; }
+}
+
+/** El token de quien llama, si viene. Cadena vacía si la petición es anónima. */
+function tokenDe(req: VercelRequest): string {
+  const cabecera = (req.headers.authorization as string) || '';
+  return cabecera.startsWith('Bearer ') ? cabecera.slice(7) : '';
+}
+
 let _webpush: any = null;
 async function webpushLib(): Promise<any> {
   if (_webpush) return _webpush;
@@ -24,12 +52,12 @@ async function webpushLib(): Promise<any> {
   return _webpush;
 }
 
-async function userIdFromToken(token: string): Promise<string | null> {
-  try {
-    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: ANON, Authorization: `Bearer ${token}` } });
-    if (!r.ok) return null;
-    return (await r.json())?.id ?? null;
-  } catch { return null; }
+/** Una suscripción muerta (404/410) se borra: si no, se reintenta para siempre. */
+async function olvidarSuscripcion(endpoint: string): Promise<void> {
+  await fetch(
+    `${SUPABASE_URL}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(endpoint)}`,
+    { method: 'DELETE', headers: svcHeaders },
+  ).catch(() => {});
 }
 
 // ── Rate limit (inline; ver pdf.ts para el contexto del bundling) ────────────
@@ -118,44 +146,128 @@ async function rateLimit(
   }
   return true;
 }
+/**
+ * Qué acción se pide.
+ *
+ * Se mira primero la query (`?action=`), que es por donde llega cuando la petición
+ * viene reescrita desde una ruta antigua, y después el cuerpo, que es como lo mandaba
+ * `push-subscribe` desde el principio.
+ */
+export function accionPedida(query: unknown, body: unknown): string {
+  const q = (query as any)?.action;
+  const b = (body as any)?.action;
+  return String((Array.isArray(q) ? q[0] : q) || b || '').trim();
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Manda notificaciones: con tope para que no se use como timbre ajeno.
-  if (!(await rateLimit(req, res, 'push-test', 10, 60_000))) return;
-
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método no permitido' });
+
+  const body = typeof req.body === 'string' ? safeParse(req.body) : (req.body || {});
+
+  if (accionPedida(req.query, body) === 'test') {
+    // Manda notificaciones: con tope para que no se use como timbre ajeno.
+    if (!(await rateLimit(req, res, 'push-test', 10, 60_000))) return;
+    return enviarPrueba(req, res, body);
+  }
+
+  // Alta y baja. Es público a propósito (el Pueblo fiel se suscribe sin login), así
+  // que necesita tope: si no, se llena la tabla de suscripciones basura.
+  if (!(await rateLimit(req, res, 'push-subscribe', 20, 60_000))) return;
+  return altaOBaja(req, res, body);
+}
+
+/** Alta y baja de la suscripción de ESTE dispositivo. */
+async function altaOBaja(req: VercelRequest, res: VercelResponse, body: any) {
+  if (!SUPABASE_URL || !ANON || !SERVICE) {
+    return res.status(500).json({ error: 'Configuración del servidor incompleta' });
+  }
+
+  try {
+    if (body.action === 'unsubscribe') {
+      const endpoint = String(body.endpoint || '');
+      if (!endpoint) return res.status(400).json({ error: 'Falta endpoint' });
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(endpoint)}`,
+        { method: 'DELETE', headers: svcHeaders },
+      );
+      if (!r.ok) return res.status(400).json({ error: 'No se pudo cancelar la suscripción' });
+      return res.status(200).json({ ok: true });
+    }
+
+    if (body.action === 'subscribe') {
+      const sub = body.subscription || {};
+      const endpoint = String(sub.endpoint || '');
+      const p256dh = String(sub.p256dh || '');
+      const auth = String(sub.auth || '');
+      if (!endpoint || !p256dh || !auth) {
+        return res.status(400).json({ error: 'Suscripción inválida' });
+      }
+      const parishes: string[] = Array.isArray(body.parishes) ? body.parishes.filter(Boolean) : [];
+      const topics: string[] = Array.isArray(body.topics) && body.topics.length
+        ? body.topics
+        : ['celebrations', 'cantorals'];
+      const role: string | null = typeof body.role === 'string' && body.role ? body.role : null;
+
+      // user_id si viene token (opcional): sin sesión igual se pueden recibir avisos.
+      const token = tokenDe(req);
+      const userId = token ? await userIdFromToken(token) : null;
+
+      // Upsert por endpoint (unique). merge-duplicates actualiza parishes/topics/etc.
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions`, {
+        method: 'POST',
+        headers: { ...svcHeaders, Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({
+          endpoint, p256dh, auth,
+          user_id: userId,
+          parishes, topics, role,
+          updated_at: new Date().toISOString(),
+        }),
+      });
+      if (!r.ok) {
+        const t = await r.text().catch(() => '');
+        return res.status(400).json({ error: 'No se pudo guardar la suscripción', detail: t.slice(0, 200) });
+      }
+      return res.status(200).json({ ok: true });
+    }
+
+    return res.status(400).json({ error: 'Acción no reconocida' });
+  } catch (e: any) {
+    return res.status(500).json({ error: e?.message || 'Error del servidor' });
+  }
+}
+
+/**
+ * Aviso de prueba a los dispositivos de quien lo pide.
+ *
+ * Acepta un texto propio: es lo que permite VER cómo queda un aviso en el teléfono de
+ * uno antes de mandárselo a toda la comunidad. Un push no se puede retirar.
+ */
+async function enviarPrueba(req: VercelRequest, res: VercelResponse, body: any) {
   if (!SUPABASE_URL || !SERVICE) return res.status(500).json({ error: 'Config incompleta' });
   if (!VAPID_PRIVATE) return res.status(200).json({ ok: true, sent: 0, skipped: 'push no configurado (VAPID)' });
 
-  const body = typeof req.body === 'string' ? safeParse(req.body) : (req.body || {});
+  // A quién: al dispositivo que manda su propio endpoint, o a todos los de la sesión.
   const endpoint = String(body.endpoint || '');
-
-  const authHeader = (req.headers.authorization as string) || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-
-  // Selección de suscripciones: por endpoint propio, o por user_id si viene token.
-  let query = '';
+  const token = tokenDe(req);
+  let filtro = '';
   if (endpoint) {
-    query = `endpoint=eq.${encodeURIComponent(endpoint)}`;
+    filtro = `endpoint=eq.${encodeURIComponent(endpoint)}`;
   } else if (token) {
     const uid = await userIdFromToken(token);
     if (!uid) return res.status(401).json({ error: 'No autenticado' });
-    query = `user_id=eq.${uid}`;
+    filtro = `user_id=eq.${uid}`;
   } else {
     return res.status(400).json({ error: 'Falta endpoint o sesión' });
   }
 
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?select=endpoint,p256dh,auth&${query}`, { headers: svcHeaders });
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?select=endpoint,p256dh,auth&${filtro}`, { headers: svcHeaders });
     const subs: { endpoint: string; p256dh: string; auth: string }[] = r.ok ? await r.json() : [];
     if (subs.length === 0) return res.status(200).json({ ok: true, sent: 0, note: 'sin suscripciones' });
 
     const webpush = await webpushLib();
     webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
-    // Se puede mandar un texto propio: es lo que permite PROBAR UN AVISO en el
-    // teléfono de uno antes de mandárselo a toda la comunidad. Sin esto, la única
-    // forma de ver cómo queda un aviso era enviárselo a todo el mundo — y un push no
-    // se puede retirar. Sin texto propio, la prueba de siempre.
+
     const titulo = String(body.title ?? '').trim();
     const texto = String(body.body ?? '').trim();
     const destino = String(body.url ?? '/').trim();
@@ -175,9 +287,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         sent++;
       } catch (e: any) {
         failed++;
-        if (e?.statusCode === 404 || e?.statusCode === 410) {
-          await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(s.endpoint)}`, { method: 'DELETE', headers: svcHeaders }).catch(() => {});
-        }
+        if (e?.statusCode === 404 || e?.statusCode === 410) await olvidarSuscripcion(s.endpoint);
       }
     }));
     return res.status(200).json({ ok: true, sent, failed });

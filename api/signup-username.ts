@@ -177,7 +177,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Rol e instrumentos elegidos en el propio formulario de registro.
   const role = String(body.role || '');
   const instruments: string[] = Array.isArray(body.instruments)
-    ? body.instruments.map((i: unknown) => String(i)).filter((i) => INSTRUMENTS.includes(i))
+    ? body.instruments.map((i: unknown) => String(i)).filter((i: string) => INSTRUMENTS.includes(i))
     : [];
 
   if (!USERNAME_RE.test(username)) {

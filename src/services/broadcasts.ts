@@ -130,10 +130,10 @@ export async function enviarPrueba(aviso: { title: string; body: string; url?: s
   const t = await token();
   if (!t) return { ok: false, error: 'Tu sesión expiró. Vuelve a entrar.' };
   try {
-    const r = await fetch('/api/push-test', {
+    const r = await fetch('/api/push', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
-      body: JSON.stringify(aviso),
+      body: JSON.stringify({ action: 'test', ...aviso }),
     });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) return { ok: false, error: d?.error || `Error ${r.status}` };

@@ -1,13 +1,20 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// Proxy de archivos de Drive: los descarga y los sirve desde nuestro dominio.
+// TODO lo que la app pide a Google Drive, en un solo sitio. La API key vive aquí y
+// nunca llega al navegador.
+//
+//   GET /api/drive?id=<fileId>              → la partitura, como application/pdf
+//   GET /api/drive?id=<fileId>&kind=audio   → la pista, como audio/mpeg
+//   GET /api/drive?folder=<folderId>        → JSON con los MP3 de esa carpeta
+//   GET /api/drive?list=1                   → JSON con el árbol de partituras
+//
+// LAS RUTAS VIEJAS SIGUEN VIVAS. `vercel.json` reescribe `/api/pdf` y `/api/sheets`
+// hacia aquí, y el cliente las sigue usando a propósito: la caché sin conexión guarda
+// URLs `/api/pdf?id=...` y renombrarlas la invalidaría para todo el mundo.
+//
 // CORS y rate-limit van inline para evitar problemas con bundling de api/_lib
 // en Vercel (los archivos compartidos no se empaquetaban en todas las
 // funciones y daban FUNCTION_INVOCATION_FAILED).
-//
-//   GET /api/pdf?id=<fileId>              → la partitura, como application/pdf
-//   GET /api/pdf?id=<fileId>&kind=audio   → la pista, como audio/mpeg
-//   GET /api/pdf?folder=<folderId>        → JSON con los MP3 de esa carpeta
 //
 // Los audios viven AQUÍ y no en su propio /api/audio por una razón de plataforma, no
 // de diseño: el plan Hobby de Vercel admite 12 funciones serverless y ya estábamos en
@@ -137,6 +144,124 @@ async function rateLimit(req: VercelRequest, res: VercelResponse, endpoint: stri
 }
 
 // --- Handler ---
+// ── Listado del árbol de partituras (antes /api/sheets) ───────────────────────
+//
+// Recorre la carpeta raíz entera y devuelve archivos y subcarpetas. Es caro (muchas
+// llamadas a Drive), por eso se cachea una hora; `?fresh=1` lo salta.
+
+const FOLDER_ID = process.env.VITE_GOOGLE_DRIVE_SHEET_MUSIC_FOLDER || '1AIUOrDiruV6_H8kPnBUEMONSdS91Ubhv';
+// Preferir GOOGLE_API_KEY (server-only, sin VITE_ → no entra al bundle).
+// Fallback a las VITE_ por compatibilidad mientras se migra la env var.
+const API_KEY = (process.env.GOOGLE_API_KEY || process.env.VITE_GOOGLE_DRIVE_API_KEY || process.env.VITE_YOUTUBE_API_KEY || '').trim();
+
+const FOLDER_MIME = 'application/vnd.google-apps.folder';
+// Cotas de seguridad para que un Drive enorme (o un ciclo de atajos) no
+// dispare cientos de llamadas ni agote la quota de la API. Si se alcanzan, la
+// respuesta lo dice (`truncated`) en vez de mentir con un árbol a medias: era
+// justo el modo de falla de "subí la partitura y la app no la encuentra".
+const MAX_FOLDERS = 400;
+const MAX_FILES = 5000;
+
+/**
+ * Carpetas que NO se recorren. `.mscbackup` son los respaldos que MuseScore deja al
+ * lado de cada partitura: no traen ningún PDF, ensucian el selector y se comían un
+ * cuarto del cupo de carpetas (34 de 131 en el Drive real).
+ */
+const isSkippableFolder = (name: string) => name.startsWith('.');
+
+interface SheetFile { id: string; name: string; mimeType: string; path?: string; parentId?: string }
+interface SheetFolder { id: string; name: string; path: string }
+
+/** Lista TODOS los hijos directos de una carpeta, paginando hasta agotar. */
+async function listFolderChildren(folderId: string, apiKey: string): Promise<any[]> {
+  const out: any[] = [];
+  let pageToken: string | undefined;
+  do {
+    const params = new URLSearchParams({
+      q: `'${folderId}' in parents and trashed=false`,
+      key: apiKey,
+      fields: 'nextPageToken,files(id,name,mimeType)',
+      pageSize: '1000',
+    });
+    if (pageToken) params.set('pageToken', pageToken);
+    const r = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`);
+    const data = await r.json();
+    if (data.error) throw new Error(data.error.message || 'Drive list error');
+    out.push(...(data.files || []));
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+  return out;
+}
+
+/**
+ * Cuántas carpetas se piden a Drive a la vez.
+ *
+ * De a una, el Drive real tardaba ~8,3 s en producción: pegado al tope de 10 s de la
+ * función serverless, o sea un 504 esperando a que el catálogo creciera un poco más.
+ * Medido sobre el Drive real (97 carpetas útiles, 612 archivos): 28,7 s en serie,
+ * 4,3 s con 8 y 3,5 s con 16. Se queda en 8 porque el salto grande ya está ahí y
+ * varios administradores actualizando a la vez no deben agotar la cuota de Drive.
+ */
+const CONCURRENCY = 8;
+
+/**
+ * Recorre recursivamente (BFS) el árbol de carpetas desde `rootId` y devuelve
+ * todos los archivos NO-carpeta encontrados, con su ruta relativa en `path`.
+ * Protegido contra ciclos (set `seen`) y con cotas MAX_FOLDERS / MAX_FILES.
+ *
+ * Se exporta para poder medirlo y probarlo fuera de la función serverless.
+ */
+export async function walkDrive(rootId: string, apiKey: string): Promise<{ files: SheetFile[]; folders: SheetFolder[]; truncated: boolean }> {
+  const files: SheetFile[] = [];
+  // Las carpetas se devuelven aparte: la ficha del canto enlaza UNA carpeta (la del
+  // canto polifónico) y de ahí deduce sus voces. Sin esto habría que adivinar la
+  // carpeta por la ruta de los archivos, que se rompe al renombrarla.
+  const folders: SheetFolder[] = [];
+  const queue: { id: string; path: string }[] = [{ id: rootId, path: '' }];
+  const seen = new Set<string>();
+  let foldersVisited = 0;
+
+  while (queue.length > 0 && foldersVisited < MAX_FOLDERS && files.length < MAX_FILES) {
+    // Se toma un nivel de a tandas: las carpetas hermanas se piden en paralelo.
+    const batch: { id: string; path: string }[] = [];
+    while (queue.length > 0 && batch.length < CONCURRENCY && foldersVisited + batch.length < MAX_FOLDERS) {
+      const next = queue.shift()!;
+      if (seen.has(next.id)) continue;
+      seen.add(next.id);
+      batch.push(next);
+    }
+    if (batch.length === 0) break;
+    foldersVisited += batch.length;
+
+    const listings = await Promise.all(
+      batch.map(async (folder) => ({ folder, children: await listFolderChildren(folder.id, apiKey) })),
+    );
+
+    for (const { folder: { id, path }, children } of listings) {
+      for (const child of children) {
+        if (child.mimeType === FOLDER_MIME) {
+          if (isSkippableFolder(child.name)) continue;
+          const childPath = path ? `${path}/${child.name}` : child.name;
+          if (!seen.has(child.id)) {
+            queue.push({ id: child.id, path: childPath });
+            folders.push({ id: child.id, name: child.name, path: childPath });
+          }
+        } else {
+          files.push({
+            id: child.id, name: child.name, mimeType: child.mimeType,
+            path: path || undefined, parentId: id,
+          });
+          if (files.length >= MAX_FILES) break;
+        }
+      }
+    }
+  }
+  // Quedó algo sin recorrer: el árbol que se devuelve está incompleto y quien lo
+  // consuma tiene que poder avisarlo.
+  const truncated = queue.length > 0 || files.length >= MAX_FILES;
+  return { files, folders, truncated };
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!applyCors(req, res)) return;
   // Límite alto: pdf.js hace VARIAS peticiones por rango para una misma partitura
@@ -144,6 +269,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!(await rateLimit(req, res, 'pdf', 150, 60_000))) return;
 
   const { id, folder, kind } = req.query;
+
+  // ── Árbol completo de partituras (lo que servía /api/sheets) ───────────────
+  if (req.query.list !== undefined) {
+    if (!API_KEY) return res.status(500).json({ error: 'API key no configurada' });
+    try {
+      const { files, folders, truncated } = await walkDrive(FOLDER_ID, API_KEY);
+      // Una hora de caché (recorrer el Drive entero es caro), salvo `?fresh=1`: es lo
+      // que usa "Actualizar desde Drive" cuando alguien acaba de subir una partitura.
+      const fresh = req.query.fresh !== undefined;
+      res.setHeader('Cache-Control', fresh ? 'no-store' : 'public, max-age=3600, s-maxage=3600');
+      return res.status(200).json({ files, folders, truncated });
+    } catch (err: any) {
+      console.error('drive list error:', err?.message);
+      return res.status(500).json({ error: 'No se pudo listar partituras' });
+    }
+  }
   const idValido = (x: unknown): x is string =>
     typeof x === 'string' && /^[a-zA-Z0-9_-]{10,64}$/.test(x);
 
