@@ -13,11 +13,16 @@ export const MASS_TYPE_LABEL: Record<MassType, string> = {
   visperas_ii: 'II Vísperas',
 };
 
-/** Texto de ayuda del rango horario de cada tipo. */
+/**
+ * Texto de ayuda: CUÁNDO se celebra cada tipo. Es una guía para elegir bien, no una
+ * regla — una Misa de aniversario un sábado a las 18:00 es "Misa del día" aunque sea
+ * de tarde. La vigencia del cantoral NO sale de aquí: se calcula con la hora real de
+ * la Misa (ver más abajo).
+ */
 export const MASS_TYPE_RANGE: Record<MassType, string> = {
-  visperas_i: 'Día anterior · 15:00 a 23:59',
-  dia: 'Mismo día · 00:00 a 15:00',
-  visperas_ii: 'Mismo día · 15:01 a 23:59',
+  visperas_i: 'La tarde del día anterior',
+  dia: 'El mismo día de la celebración',
+  visperas_ii: 'La tarde del mismo día',
 };
 
 /** Horarios sugeridos por tipo (formato canónico 'HH:MM AM/PM'). */
@@ -40,44 +45,67 @@ export function massTypeBadge(c: { massType?: MassType; vigil?: boolean }): stri
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Ventana de vigencia (fecha + HORA local) según el tipo de Misa.
-// `date` es SIEMPRE la fecha propia de la celebración (la que elige el usuario).
-//   · I Vísperas  → el DÍA ANTERIOR a la celebración, 15:00 a 23:59.
-//   · Misa del día → la fecha de la celebración, 00:00 a 15:00.
-//   · II Vísperas → la fecha de la celebración, 15:01 a 23:59.
-// Aplica igual a domingos y a solemnidades agregadas manualmente.
+// Ventana de vigencia: hasta cuándo un cantoral sigue a la vista antes de irse
+// al historial.
+//
+// La regla es UNA y mira la hora de la Misa: **hasta 4 horas después de que empieza**.
+//
+// Antes no miraba la hora en absoluto: la "Misa del día" cerraba a las 15:00 fijas,
+// vinieran de donde vinieran. Un cantoral publicado para una Misa de las 18:00 —una
+// Misa de aniversario, un sábado por la tarde— desaparecía a las 15:00, TRES HORAS
+// ANTES de empezar, y el coro se quedaba sin cantoral en plena celebración.
+// Reportado el 6-sep-2026.
+//
+// Cuatro horas dan de sobra para la Misa y para lo que venga después sin que el
+// cantoral se quede semanas ocupando la pantalla.
 // ──────────────────────────────────────────────────────────────────────────
 
-type CantoralLike = { date: string; massType?: MassType; vigil?: boolean };
+type CantoralLike = { date: string; massType?: MassType; vigil?: boolean; massTime?: string };
 
 const ymd = (date: string): [number, number, number] => {
   const [y, m, d] = date.split('-').map(Number);
   return [y, m, d];
 };
 
+/** Horas que un cantoral sigue vigente después de que empieza su Misa. */
+export const HORAS_VIGENTE_TRAS_LA_MISA = 4;
+
+/**
+ * Momento exacto en que empieza la Misa (día + hora local).
+ *
+ * El día NO es siempre `date`: en I Vísperas la Misa se canta la tarde ANTERIOR a la
+ * celebración. `null` si no se puede saber la hora, para que quien llame decida.
+ */
+export function inicioDeLaMisa(c: CantoralLike): Date | null {
+  const hhmm = massTimeTo24h(c.massTime ?? '');
+  if (!hhmm) return null;
+  const [y, m, d] = ymd(fechaEnQueSeCanta(c));
+  const [h, min] = hhmm.split(':').map(Number);
+  return new Date(y, m - 1, d, h, min, 0, 0);
+}
+
 /** Inicio de la ventana de vigencia (Date local). */
 export function cantoralWindowStart(c: CantoralLike): Date {
-  const [y, m, d] = ymd(c.date);
-  switch (resolveMassType(c)) {
-    // I Vísperas se canta la tarde del día anterior a la celebración (d - 1).
-    case 'visperas_i':  return new Date(y, m - 1, d - 1, 15, 0, 0, 0);
-    case 'visperas_ii': return new Date(y, m - 1, d, 15, 1, 0, 0);
-    case 'dia':
-    default:            return new Date(y, m - 1, d, 0, 0, 0, 0);
-  }
+  const [y, m, d] = ymd(fechaEnQueSeCanta(c));
+  // Desde el comienzo del día en que se canta: quien va a la Misa de las 8 tiene que
+  // poder abrir el cantoral al levantarse.
+  return new Date(y, m - 1, d, 0, 0, 0, 0);
 }
 
 /** Fin de la ventana de vigencia (Date local). */
 export function cantoralWindowEnd(c: CantoralLike): Date {
-  const [y, m, d] = ymd(c.date);
-  switch (resolveMassType(c)) {
-    // I Vísperas: hasta las 23:59 del día anterior a la celebración.
-    case 'visperas_i':  return new Date(y, m - 1, d - 1, 23, 59, 59, 999);
-    // Misa del día: cierra a las 15:00 (cede a II Vísperas).
-    case 'dia':         return new Date(y, m - 1, d, 15, 0, 59, 999);
-    case 'visperas_ii':
-    default:            return new Date(y, m - 1, d, 23, 59, 59, 999);
+  const inicio = inicioDeLaMisa(c);
+  if (inicio) {
+    // Se suman horas REALES, no números de reloj: la noche en que entra o sale el
+    // horario de verano, `setHours(+4)` daría 3 o 5 horas de verdad. En Chile el
+    // cambio cae de madrugada, justo cuando puede estar corriendo la ventana de una
+    // Misa de la tarde-noche.
+    return new Date(inicio.getTime() + HORAS_VIGENTE_TRAS_LA_MISA * 60 * 60 * 1000);
   }
+  // Sin hora legible no se adivina: se deja hasta el final del día en que se canta.
+  // Es preferible que sobre a que un cantoral se esfume en mitad de la Misa.
+  const [y, m, d] = ymd(fechaEnQueSeCanta(c));
+  return new Date(y, m - 1, d, 23, 59, 59, 999);
 }
 
 /** ¿La Misa ya pasó? (ahora superó el fin de su ventana). */
