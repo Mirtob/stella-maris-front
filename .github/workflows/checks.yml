@@ -25,27 +25,29 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          # Node 22 (LTS). Con '20' el chequeo empezó a fallar de golpe en `npm ci`,
-          # sin ningún cambio en el código ni en el candado — coincidiendo con el aviso
-          # del runner de que Node 20 está obsoleto y las acciones se fuerzan a 24.
+          # Node 22 (LTS). Con '20' el chequeo empezó a fallar en `npm ci` sin ningún
+          # cambio en el código ni en el candado, coincidiendo con el aviso del runner
+          # de que Node 20 está obsoleto.
           node-version: '22'
           cache: npm
+
       # El registro completo de una ejecución solo se lee con sesión iniciada. Las
-      # ANOTACIONES, en cambio, son públicas: si `npm ci` falla, su error se publica
-      # como anotación para poder diagnosticarlo desde fuera.
+      # ANOTACIONES, en cambio, son públicas, así que si `npm ci` falla su error se
+      # publica como anotación y se puede diagnosticar desde fuera.
       - name: Instalar dependencias
         id: instalar
         continue-on-error: true
-        run: |
-          set -o pipefail
-          npm ci 2>&1 | tee /tmp/npm-ci.log
+        run: npm ci 2>&1 | tee /tmp/npm-ci.log
+
       - name: Publicar el error de instalación
         if: steps.instalar.outcome == 'failure'
         run: |
-          echo "::error::npm ci falló — $(tail -c 900 /tmp/npm-ci.log | tr '
-' ' ' | tr -s ' ')"
+          resumen=$(tail -c 900 /tmp/npm-ci.log | tr -d '\r' | tr '\n' ' ')
+          echo "::error::npm ci falló: $resumen"
           exit 1
+
       - name: Chequeo de tipos
         run: npm run typecheck
+
       - name: Pruebas unitarias
         run: npm run test:unit
