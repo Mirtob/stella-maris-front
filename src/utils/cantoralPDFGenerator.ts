@@ -8,6 +8,7 @@ import { recortarConElipsis } from './pdfText';
 import { getChannelUrl } from '../services/youtube';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
 import { getGarland } from '../data/garlands';
+import { guardarPdf } from './descargarPdf';
 import { getPdfFont, getPdfScale } from '../data/pdfStyle';
 import { renderPdfToImages, imposeBooklet } from './atrilBookletPDF';
 import { repartirEnColumnas, type Pieza } from './pdfColumns';
@@ -26,17 +27,17 @@ interface PDFGeneratorOptions {
   booklet?: boolean;
 }
 
-/** Descarga un blob con el nombre dado (para el cuadernillo, que no es el `pdf` de jsPDF). */
-function saveBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  // El object URL se libera tras dar tiempo al navegador a iniciar la descarga.
-  setTimeout(() => URL.revokeObjectURL(url), 4000);
+/**
+ * Ancho al que se rasteriza cada página para imponer el cuadernillo.
+ *
+ * En un teléfono se baja: a 1400 px, un cantoral de seis páginas son unos 15 megapíxeles
+ * en lienzos (~60 MB) y ahí es donde reventaba el folleto en los móviles —la vista
+ * previa, que NO rasteriza, se generaba bien en el mismo teléfono—. A 1000 px la mitad,
+ * y para un folleto de texto impreso en media carta la diferencia no se ve.
+ */
+function anchoDeRasterizado(): number {
+  const anchoPantalla = Math.min(window.screen?.width || 1024, window.screen?.height || 1024);
+  return anchoPantalla <= 820 ? 1000 : 1400;
 }
 
 interface GarlandImg { dataUrl: string; w: number; h: number }
@@ -841,15 +842,19 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   // entrega el folleto tal cual.
   const paginas = 1 + mejor!.hojas;
   if (booklet && paginas > 2) {
-    const images = await renderPdfToImages({ data: pdf.output('arraybuffer') }, 1400);
+    const images = await renderPdfToImages({ data: pdf.output('arraybuffer') }, anchoDeRasterizado());
     const bookletBlob = imposeBooklet(images);
-    if (download) saveBlob(bookletBlob, `Cantoral_${safeFileName}_cuadernillo.pdf`);
+    if (download) guardarPdf(bookletBlob, `Cantoral_${safeFileName}_cuadernillo.pdf`);
     return { blob: bookletBlob, url: URL.createObjectURL(bookletBlob) };
   }
 
   // Descargar (o solo devolver el blob para previsualización, sin descargar). El
   // nombre dice "cuadernillo" solo cuando de verdad hubo que doblarlo.
-  if (download) pdf.save(`Cantoral_${safeFileName}.pdf`);
+  //
+  // NO se usa `pdf.save()`: por dentro es un enlace con el atributo `download`, y Safari
+  // en iPhone lo IGNORA para blobs — el botón parecía no hacer nada. `guardarPdf` abre
+  // el PDF en iPhone, que es desde donde se guarda y se imprime de verdad.
   const blob = pdf.output('blob');
+  if (download) guardarPdf(blob, `Cantoral_${safeFileName}.pdf`);
   return { blob, url: URL.createObjectURL(blob) };
 }

@@ -1,3 +1,4 @@
+import { abrirOGuardarPdf } from '../../utils/descargarPdf';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, ZoomIn, ZoomOut, ChevronUp, ChevronDown, RotateCcw, Play, Pause, Maximize2, Minimize2, Music, List, Printer, Loader, Timer, Minus, Plus, MoreVertical, Headphones } from 'lucide-react';
 import { toast } from 'sonner';
@@ -312,13 +313,9 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
         transpositions,
         notation,
       });
-      const w = window.open(url, '_blank');
-      if (!w) {
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'cantoral-atril.pdf';
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      }
+      // En iPhone la ventana se bloquea (el toque se perdió mientras se generaba) y el
+      // atributo `download` Safari lo ignora: el botón parecía no hacer nada.
+      abrirOGuardarPdf(url, 'cantoral-atril.pdf');
       toast.success('PDF listo para imprimir', {
         description: 'Sale en vertical (carta), tal cual se ve en el atril.',
       });

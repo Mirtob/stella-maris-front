@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Loader, RefreshCw } from 'lucide-react';
+import { Download, Loader, RefreshCw } from 'lucide-react';
 
 // Worker servido desde nuestro propio dominio (igual que PDFViewer). El CSP permite
 // worker-src 'self' blob:.
@@ -27,10 +27,15 @@ const PRESUPUESTO_PX = 6_000_000; // ~24 MB en lienzos
  * blob: URL, así esquiva el CSP (frame-src no permite blob:) y funciona también en
  * móvil, donde los iframes de PDF suelen fallar.
  */
-export function PdfBlobViewer({ blob }: { blob: Blob }) {
+export function PdfBlobViewer({ blob, onDescargar }: { blob: Blob; onDescargar?: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  // El error DE VERDAD, para poder decirlo. Antes se tragaba y la pantalla inventaba una
+  // explicación —"le queda poca memoria"— que mandaba a la gente a cerrar aplicaciones
+  // para nada: un usuario lo comprobó y tenía el 42% del teléfono libre. Sin el error
+  // real, cada reporte obliga a adivinar de nuevo.
+  const [detalle, setDetalle] = useState('');
   // Cambiar este número vuelve a lanzar el render (botón "Reintentar").
   const [intento, setIntento] = useState(0);
 
@@ -117,9 +122,13 @@ export function PdfBlobViewer({ blob }: { blob: Blob }) {
           await new Promise((r) => setTimeout(r, 400));
           await dibujar(1);
           if (!cancelled) setLoading(false);
-        } catch (e2) {
+        } catch (e2: any) {
           console.error('La vista previa falló también en el reintento:', e2);
-          if (!cancelled) { setError(true); setLoading(false); }
+          if (!cancelled) {
+            setDetalle(`${e2?.name || 'Error'}: ${String(e2?.message || e2).slice(0, 140)}`);
+            setError(true);
+            setLoading(false);
+          }
         }
       }
     })();
@@ -137,18 +146,33 @@ export function PdfBlobViewer({ blob }: { blob: Blob }) {
       )}
       {error && !loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center text-gray-600 dark:text-gray-300 text-sm">
-          <p>
-            No se pudo mostrar la vista previa. Suele pasar cuando al teléfono le queda
-            poca memoria: cierra otras aplicaciones y vuelve a intentarlo.
+          <p className="font-bold text-gray-700 dark:text-gray-200">
+            No se pudo dibujar la vista previa en pantalla.
           </p>
-          <button
-            onClick={() => setIntento((n) => n + 1)}
-            className="inline-flex items-center gap-2 bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl active:scale-95 transition-all"
-          >
-            <RefreshCw className="w-5 h-5" strokeWidth={2.5} />
-            Reintentar
-          </button>
-          <p className="text-xs">Si sigue sin verse, usa «Imprimir folleto» para descargarlo.</p>
+          {/* El cantoral SÍ está listo: lo que falló es dibujarlo aquí. Decirlo importa,
+              porque el botón de descargar sigue funcionando y antes nadie lo sabía. */}
+          <p>El cantoral está listo de todas formas: puedes descargarlo y abrirlo con tu lector de PDF.</p>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {onDescargar && (
+              <button
+                onClick={onDescargar}
+                className="inline-flex items-center gap-2 bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl active:scale-95 transition-all"
+              >
+                <Download className="w-5 h-5" strokeWidth={2.5} />
+                Descargar el cantoral
+              </button>
+            )}
+            <button
+              onClick={() => setIntento((n) => n + 1)}
+              className="inline-flex items-center gap-2 bg-white/70 dark:bg-white/10 border-2 border-gray-300 dark:border-white/20 font-bold px-4 py-2.5 rounded-xl active:scale-95 transition-all"
+            >
+              <RefreshCw className="w-5 h-5" strokeWidth={2.5} />
+              Reintentar
+            </button>
+          </div>
+          {/* El motivo real, en pequeño. No es para el usuario: es para que, cuando lo
+              reporte, se sepa qué pasó en vez de volver a adivinar. */}
+          {detalle && <p className="text-[11px] opacity-60 break-all max-w-xs">{detalle}</p>}
         </div>
       )}
       <div ref={containerRef} />

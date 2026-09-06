@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { History, Calendar, Church, ChevronDown, ChevronUp, Play, Clock, Trash2, Filter, Download, Loader, Search, Copy } from 'lucide-react';
 import { PublishedCantoral, Song } from '../../types';
 import { generateChoirBooklet, voicesInCantoral } from '../../utils/atrilBookletPDF';
+import { abrirOGuardarPdf } from '../../utils/descargarPdf';
 import { listCantorals, listCantoralYears } from '../../services/cantorals';
 import { americanCountries } from '../../data/countries';
 import { splitActiveParish } from '../../utils/parish';
@@ -114,13 +115,10 @@ export function CantoralHistory({ onPlaySong, onDeleteCantoral, onClone, isAdmin
       // por canto, carta horizontal. Se abre para imprimir (o descarga si el popup falla).
       const voice = bookletVoice[cantoral.id] ?? userVoicePart ?? '';
       const { url } = await generateChoirBooklet(cantoral.songs, voice || undefined);
-      const w = window.open(url, '_blank');
-      if (!w) {
-        const a = document.createElement('a');
-        const slug = voice ? `-${voice.toLowerCase().replace(/\s+/g, '-')}` : '';
-        a.href = url; a.download = `cantoral-coro-cuadernillo${slug}.pdf`;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      }
+      // En iPhone la ventana se bloquea (el toque se perdió mientras se generaba) y el
+      // atributo `download` Safari lo ignora: el botón parecía no hacer nada.
+      const slug = voice ? `-${voice.toLowerCase().replace(/\s+/g, '-')}` : '';
+      abrirOGuardarPdf(url, `cantoral-coro-cuadernillo${slug}.pdf`);
       toast.success(voice ? `Cuadernillo de ${voice} listo` : 'Cuadernillo del coro listo', {
         description: 'Imprime a doble faz y dobla al medio. Si no calzan, cambia el volteo a "borde corto".'
       });

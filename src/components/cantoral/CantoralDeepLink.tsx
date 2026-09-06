@@ -1,3 +1,4 @@
+import { abrirOGuardarPdf } from '../../utils/descargarPdf';
 import { useEffect, useState } from 'react';
 import { Download, ArrowLeft, FileX, Share, Plus, Smartphone, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
@@ -84,12 +85,9 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onOpenInstall, onCan
     setGeneratingPdf(true);
     try {
       const { url } = await generateCantoralPDF({ cantoral, download: false, booklet: true });
-      const w = window.open(url, '_blank');
-      if (!w) {
-        const a = document.createElement('a');
-        a.href = url; a.download = 'cantoral-cuadernillo.pdf';
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      }
+      // En iPhone la ventana se bloquea (el toque se perdió mientras se generaba) y el
+      // atributo `download` Safari lo ignora: el botón parecía no hacer nada.
+      abrirOGuardarPdf(url, 'cantoral-cuadernillo.pdf');
       toast.success('Cuadernillo listo', {
         description: 'Imprime a doble faz y dobla al medio.',
       });
