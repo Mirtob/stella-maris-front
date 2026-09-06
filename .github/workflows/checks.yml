@@ -25,7 +25,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Node 22 (LTS). Con '20' el chequeo empezó a fallar de golpe en `npm ci`,
+          # sin ningún cambio en el código ni en el candado — coincidiendo con el aviso
+          # del runner de que Node 20 está obsoleto y las acciones se fuerzan a 24.
+          node-version: '22'
           cache: npm
       - name: Instalar dependencias
         run: npm ci
