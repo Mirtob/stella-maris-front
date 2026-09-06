@@ -16,6 +16,7 @@ import { LyricsWithChords } from '../songs/LyricsWithChords';
 import { transposeContent, getChordNotation, keyPrefersFlats } from '../../utils/chordTranspose';
 import { AtrilMode } from '../atril/AtrilMode';
 import { groupSongsByMassPart, massCategoryIcon } from '../../utils/ordinary';
+import { esAleluyaDeCanto } from '../../utils/aleluyaEstrofa';
 
 // Extrae el Drive file ID de una URL de Drive y arma la URL del proxy (PDF embebido).
 function getDriveProxyUrl(sheetMusicUrl?: string): { proxyUrl: string; driveViewUrl: string } | null {
@@ -477,7 +478,17 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
                     <div className="bg-white dark:bg-gray-900 rounded-xl p-4 max-h-[40vh] overflow-auto transition-colors">
                       {showChords
                         ? <LyricsWithChords lyrics={transposeContent(selectedSong.lyrics, 0, getChordNotation(), keyPrefersFlats(selectedSong.originalKey || '', 0))} />
-                        : <LyricsOnly lyrics={selectedSong.lyrics} />}
+                        : <LyricsOnly lyrics={selectedSong.lyrics} esAleluya={esAleluyaDeCanto(selectedSong)} />}
+                      {/* Al coro NO se le quita la estrofa: con los acordes encima, es lo
+                          que enseña dónde va cada uno y con qué música se canta. Pero se
+                          dice que es un ejemplo, para que nadie la cante como si fuera la
+                          del domingo. */}
+                      {showChords && esAleluyaDeCanto(selectedSong) && (
+                        <p className="mt-3 pt-3 border-t border-gray-200 dark:border-white/15 text-xs italic text-gray-600 dark:text-gray-400">
+                          La estrofa escrita es solo un ejemplo, para ver la música y los acordes.
+                          La del domingo es propia del día y la canta el cantor.
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}

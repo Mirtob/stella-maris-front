@@ -20,6 +20,7 @@ import { PsalmPageImage } from '../songs/PsalmPageImage';
 import { FavoriteButton } from '../songs/FavoriteButton';
 import { VoiceMixer } from './VoiceMixer';
 import { getSongTracks, tieneMezclador, type AudioTrack } from '../../services/songAudio';
+import { esAleluyaDeCanto } from '../../utils/aleluyaEstrofa';
 
 interface AtrilModeProps {
   songs: Song[];
@@ -638,7 +639,7 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
                       <>
                         {s.lyrics && (
                           <div style={{ zoom: fontScale } as any}>
-                            <LyricsOnly lyrics={s.lyrics} applyReadingPrefs={false} />
+                            <LyricsOnly lyrics={s.lyrics} applyReadingPrefs={false} esAleluya={esAleluyaDeCanto(s)} />
                           </div>
                         )}
                         {!isPuebloFiel && cycleForBookId(s.psalmBookId) && s.psalmPage != null && (

@@ -7,6 +7,7 @@ import { getCantoralById } from '../../services/cantorals';
 import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
 import { PlaylistPlayer } from '../songs/PlaylistPlayer';
 import { LyricsOnly } from '../songs/LyricsOnly';
+import { esAleluyaDeCanto } from '../../utils/aleluyaEstrofa';
 import { groupSongsByMassPart, massCategoryIcon } from '../../utils/ordinary';
 import { hasAnyVideo } from '../../utils/songVideo';
 import {
@@ -246,7 +247,7 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onOpenInstall, onCan
                               <span className="text-sm font-normal text-blue-700 dark:text-blue-300"> · {song.author}</span>
                             )}
                           </h3>
-                          <LyricsOnly lyrics={song.lyrics ?? ''} />
+                          <LyricsOnly lyrics={song.lyrics ?? ''} esAleluya={esAleluyaDeCanto(song)} />
                         </div>
                       ))}
                     </div>

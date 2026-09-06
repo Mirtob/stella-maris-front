@@ -20,6 +20,7 @@ import { LyricsWithChords } from './LyricsWithChords';
 import { LyricsOnly } from './LyricsOnly';
 import { FavoriteButton } from './FavoriteButton';
 import { pickSongVideo, videoVersionLabel } from '../../utils/songVideo';
+import { esAleluyaDeCanto } from '../../utils/aleluyaEstrofa';
 
 interface SongPlayerProps {
   song: Song;
@@ -303,7 +304,7 @@ export function SongPlayer({ song, onBack, userInstrument, userRole, userId }: S
                   Tablet/desktop: 600px fixed cap. */}
             <div className="bg-white dark:bg-gray-900 p-4 sm:p-6 overflow-auto transition-colors max-h-[50vh] sm:max-h-[600px]">
               {/* Pueblo Fiel: Solo letra sin acordes */}
-              {isPuebloFiel && <LyricsOnly lyrics={displayedLyrics} />}
+              {isPuebloFiel && <LyricsOnly lyrics={displayedLyrics} esAleluya={esAleluyaDeCanto(song)} />}
               
               {/* Coro/Admin con Guitarra: Letra con acordes */}
               {isCoroOrAdmin && userInstrument === 'Guitarra' && (

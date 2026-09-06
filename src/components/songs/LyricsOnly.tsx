@@ -1,9 +1,18 @@
 import { FormattedText } from './FormattedText';
 import { isCenteredLine, stripCenterMarker } from '../../utils/lyricsFormat';
 import { useReadingPrefs } from '../../hooks/useReadingPrefs';
+import { soloLaAclamacion, AVISO_ESTROFA } from '../../utils/aleluyaEstrofa';
 
 interface LyricsOnlyProps {
   lyrics: string;
+  /**
+   * Este canto es el Aleluya (o la Aclamación al Evangelio).
+   *
+   * Cambia lo que se muestra: la estrofa que trae el canto en el catálogo está ahí
+   * como EJEMPLO, para poder escribir los acordes. La de verdad es propia de cada
+   * domingo y la canta el cantor. Enseñada tal cual, el pueblo la lee y la canta.
+   */
+  esAleluya?: boolean;
   /** Aplica la preferencia de lectura (tamaño + alto contraste). El Atril lo desactiva
    *  porque tiene su propio zoom y fondo oscuro. */
   applyReadingPrefs?: boolean;
@@ -16,10 +25,15 @@ interface LyricsOnlyProps {
  * Este componente elimina todos los acordes [X] y muestra únicamente el texto.
  * El tamaño de letra y el alto contraste se controlan con `useReadingPrefs`.
  */
-export function LyricsOnly({ lyrics, applyReadingPrefs = true }: LyricsOnlyProps) {
+export function LyricsOnly({ lyrics, applyReadingPrefs = true, esAleluya = false }: LyricsOnlyProps) {
   const { prefs } = useReadingPrefs();
   const scale = applyReadingPrefs ? prefs.scale : 1;
   const hc = applyReadingPrefs && prefs.highContrast;
+
+  const { letra, seQuitoLaEstrofa } = esAleluya
+    ? soloLaAclamacion(lyrics)
+    : { letra: lyrics, seQuitoLaEstrofa: false };
+  lyrics = letra;
 
   if (!lyrics) {
     return (
@@ -72,6 +86,13 @@ export function LyricsOnly({ lyrics, applyReadingPrefs = true }: LyricsOnlyProps
       <div className="space-y-1">
         {lines.map((line, index) => processLine(line, index))}
       </div>
+      {/* Se explica el hueco: sin esto, quien conocía el canto puede pensar que falta
+          la letra, o buscar en el papel una estrofa que no está. */}
+      {seQuitoLaEstrofa && (
+        <p className="mt-3 pt-3 border-t border-gray-200 dark:border-white/15 text-[0.8em] italic text-gray-600 dark:text-gray-400">
+          {AVISO_ESTROFA}
+        </p>
+      )}
     </div>
   );
 }

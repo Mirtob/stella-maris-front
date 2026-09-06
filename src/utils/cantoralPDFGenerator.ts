@@ -8,6 +8,7 @@ import { recortarConElipsis } from './pdfText';
 import { getChannelUrl } from '../services/youtube';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
 import { getGarland } from '../data/garlands';
+import { soloLaAclamacion, AVISO_ESTROFA } from './aleluyaEstrofa';
 import { guardarPdf } from './descargarPdf';
 import { getPdfFont, getPdfScale } from '../data/pdfStyle';
 import { renderPdfToImages, imposeBooklet } from './atrilBookletPDF';
@@ -725,7 +726,17 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
       byCategory[category].forEach((song, idx) => {
         const iCanto = els.length;
         titulo(song);
-        const lyrics = cleanLyrics(song.lyrics || '');
+        // En el Aleluya se imprime SOLO la aclamación. La estrofa que trae el canto en
+        // el catálogo está ahí como ejemplo, para poder escribir los acordes: la de
+        // verdad es propia de cada domingo y la canta el cantor. Impresa como si fuera
+        // la del día, confunde al pueblo —que la lee y la canta— y al coro.
+        const esAleluya = (song.massMoment ?? '') === 'aleluya'
+          || /^(aleluya|aclamaci[oó]n al evangelio)$/i.test((song.category ?? '').trim());
+        const crudo = song.lyrics || '';
+        const { letra: letraAleluya, seQuitoLaEstrofa } = esAleluya
+          ? soloLaAclamacion(crudo)
+          : { letra: crudo, seQuitoLaEstrofa: false };
+        const lyrics = cleanLyrics(letraAleluya);
         if (lyrics) {
           const estrofas = parseStanzas(lyrics);
           estrofas.forEach((estrofa, i) => {
@@ -740,6 +751,20 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
               pdf.setFontSize(9);
               pdf.setTextColor(160, 160, 160);
               pdf.text('(Letra no disponible)', x, y + BASE);
+            },
+          });
+        }
+        // Se explica el hueco: sin esto, alguien puede pensar que falta la letra.
+        if (seQuitoLaEstrofa) {
+          els.push({
+            h: adv(5),
+            draw: (x, y) => {
+              pdf.setFont('helvetica', 'italic');
+              // Sin multiplicar por la escala: esta instancia de jsPDF ya intercepta
+              // setFontSize y la aplica sola (ver la portada).
+              pdf.setFontSize(8.5);
+              pdf.setTextColor(130, 130, 130);
+              pdf.text(AVISO_ESTROFA, x, y + BASE);
             },
           });
         }
