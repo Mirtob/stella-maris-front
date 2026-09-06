@@ -6,6 +6,8 @@ import {
   type ResumenAudiencia, type AvisoEnviado, type Audiencia,
 } from '../../services/broadcasts';
 import { ConfirmDialog } from '../common/ConfirmDialog';
+import { listCantorals } from '../../services/cantorals';
+import { parroquiasSinAvisos } from '../../utils/saludPush';
 
 interface Props {
   onBack: () => void;
@@ -51,6 +53,8 @@ export function BroadcastManager({ onBack, enviadoPor }: Props) {
   const [roles, setRoles] = useState<string[]>([]);
 
   const [resumen, setResumen] = useState<ResumenAudiencia | null>(null);
+  /** Parroquias que publican cantorales pero no tienen ni un dispositivo suscrito. */
+  const [sinAvisos, setSinAvisos] = useState<string[]>([]);
   const [errorResumen, setErrorResumen] = useState<string | null>(null);
   const [historial, setHistorial] = useState<AvisoEnviado[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -81,9 +85,16 @@ export function BroadcastManager({ onBack, enviadoPor }: Props) {
 
   const cargar = useCallback(async () => {
     setCargando(true);
-    const [r, h] = await Promise.all([getResumenAudiencia(), listarAvisos()]);
-    if ('error' in r) { setErrorResumen(r.error); setResumen(null); }
-    else { setResumen(r); setErrorResumen(null); }
+    const [r, h, cantorales] = await Promise.all([
+      getResumenAudiencia(), listarAvisos(), listCantorals(),
+    ]);
+    if ('error' in r) { setErrorResumen(r.error); setResumen(null); setSinAvisos([]); }
+    else {
+      setResumen(r); setErrorResumen(null);
+      // Las parroquias que de verdad publican, cruzadas con las que tienen a alguien
+      // suscrito: lo que queda fuera es un coro avisando al vacío.
+      setSinAvisos(parroquiasSinAvisos(r.porParroquia, cantorales.map((c) => c.parishName)));
+    }
     setHistorial(h);
     setCargando(false);
   }, []);
@@ -249,6 +260,43 @@ export function BroadcastManager({ onBack, enviadoPor }: Props) {
                     </button>
                   ))}
               </div>
+
+              {/* El aviso de "nuevo cantoral" filtra POR PARROQUIA, no por diócesis:
+                  este es el número que de verdad decide a quién le suena el teléfono.
+                  Una parroquia en 0 significa que su coro publica y no se entera nadie,
+                  que es exactamente lo que pasó en Valdivia de Paine el 6-sep-2026 sin
+                  que hubiera forma de verlo. */}
+              <p className="text-sm font-bold text-brand-ink-soft mb-2 flex items-center gap-1">
+                <Church className="w-4 h-4" /> Parroquias
+              </p>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {Object.entries(resumen.porParroquia).length === 0 ? (
+                  <p className="text-sm text-brand-ink-soft">Todavía nadie tiene los avisos activados.</p>
+                ) : Object.entries(resumen.porParroquia)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([p, n]) => (
+                    <span key={p} className="px-3 py-1.5 rounded-lg text-sm font-bold bg-white/60 dark:bg-white/10 border-2 border-blue-200 dark:border-white/20 text-brand-ink">
+                      {p.split(' - ')[0]} · {n}
+                    </span>
+                  ))}
+              </div>
+
+              {sinAvisos.length > 0 && (
+                <div className="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-700">
+                  <p className="text-sm font-bold text-amber-900 dark:text-amber-200 mb-1">
+                    {sinAvisos.length === 1
+                      ? 'Una parroquia publica cantorales y no le llega a nadie'
+                      : `${sinAvisos.length} parroquias publican cantorales y no les llega a nadie`}
+                  </p>
+                  <ul className="text-xs text-amber-800 dark:text-amber-300 list-disc pl-5">
+                    {sinAvisos.map((p) => <li key={p}>{p.split(' - ')[0]}</li>)}
+                  </ul>
+                  <p className="text-xs text-amber-800 dark:text-amber-300 mt-2">
+                    Nadie de esas parroquias tiene los avisos activados. Se activan desde
+                    Ajustes → Notificaciones, en el teléfono de cada persona.
+                  </p>
+                </div>
+              )}
 
               <p className="text-sm font-bold text-brand-ink-soft mb-2">Rol</p>
               <div className="flex flex-wrap gap-2">

@@ -349,16 +349,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Cuántos hay y cómo se reparten: es lo que deja elegir a quién escribir SABIENDO
     // a cuánta gente se le va a sonar el teléfono.
     if (body.action === 'audience') {
+      // Se cuenta POR PARROQUIA además de por diócesis, y con la MISMA resolución que
+      // usa el envío (`parroquiasDelSuscriptor`, que mira también el perfil actual).
+      // Si aquí saliera un número distinto al que recibe el aviso, el diagnóstico
+      // mentiría justo cuando más falta hace.
+      const pr = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?select=id,parishes,parish_name`, { headers: svcHeaders });
+      const perfiles: PerfilParaAviso[] = pr.ok ? await pr.json() : [];
+      const porUsuario = new Map(perfiles.map((x) => [x.id, x]));
+
       const porDiocesis: Record<string, number> = {};
+      const porParroquia: Record<string, number> = {};
       const porRol: Record<string, number> = {};
       for (const s2 of subs) {
-        const suyas = new Set((s2.parishes || []).map(diocesisDe).filter(Boolean));
+        const misParroquias = new Set(parroquiasDelSuscriptor(s2 as any, porUsuario));
+        for (const p of misParroquias) porParroquia[p] = (porParroquia[p] ?? 0) + 1;
+
+        const suyas = new Set([...misParroquias].map(diocesisDe).filter(Boolean));
         for (const d of suyas) porDiocesis[d] = (porDiocesis[d] ?? 0) + 1;
         if (suyas.size === 0) porDiocesis['(sin parroquia)'] = (porDiocesis['(sin parroquia)'] ?? 0) + 1;
         const rol = s2.role || '(sin rol)';
         porRol[rol] = (porRol[rol] ?? 0) + 1;
       }
-      return res.status(200).json({ ok: true, total: subs.length, porDiocesis, porRol });
+      return res.status(200).json({ ok: true, total: subs.length, porDiocesis, porParroquia, porRol });
     }
 
     const titulo = String(body.title ?? '').trim();

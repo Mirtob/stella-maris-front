@@ -23,6 +23,9 @@ export interface Audiencia {
 export interface ResumenAudiencia {
   total: number;
   porDiocesis: Record<string, number>;
+  /** Dispositivos que recibirían un aviso de CADA parroquia. Es el número que importa:
+   *  el aviso de "nuevo cantoral" filtra por parroquia, no por diócesis. */
+  porParroquia: Record<string, number>;
   porRol: Record<string, number>;
 }
 
@@ -61,7 +64,12 @@ async function llamar(cuerpo: object): Promise<any> {
 export async function getResumenAudiencia(): Promise<ResumenAudiencia | { error: string }> {
   const d = await llamar({ action: 'audience' });
   if (d.error) return { error: d.error };
-  return { total: d.total ?? 0, porDiocesis: d.porDiocesis ?? {}, porRol: d.porRol ?? {} };
+  return {
+    total: d.total ?? 0,
+    porDiocesis: d.porDiocesis ?? {},
+    porParroquia: d.porParroquia ?? {},
+    porRol: d.porRol ?? {},
+  };
 }
 
 /** Manda el aviso. No se puede deshacer. */
