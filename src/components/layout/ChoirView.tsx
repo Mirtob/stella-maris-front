@@ -743,6 +743,8 @@ export function ChoirView({
                 cantoral={cantoral}
                 onPlaySong={playSongForThisMass}
                 preferredInstrument={preferredInstrument}
+                userInstrument={selectedInstrumentForMass}
+                userVoicePart={userVoicePart}
                 previousUsage={previousUsage}
                 massDate={massDate}
               />

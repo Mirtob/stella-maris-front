@@ -1,14 +1,19 @@
 import { useState } from 'react';
 import { Music, Search, ChevronDown, ChevronUp, Play, Calendar, FileText, SearchX } from 'lucide-react';
-import { Song } from '../../types';
+import { Song, InstrumentType, UserRole } from '../../types';
 import { useSongs } from '../../hooks/useSongs';
 import { LyricsWithChords } from './LyricsWithChords';
 import { matchesSearch } from '../../utils/textSearch';
 import { EmptyState } from '../common/EmptyState';
 import { FavoriteButton } from './FavoriteButton';
+import { AtrilSongButton } from '../atril/AtrilSongButton';
 
 interface SheetMusicLibraryProps {
   onPlaySong: (song: Song) => void;
+  /** Rol/instrumento/voz de quien mira: definen qué muestra el Atril de cada canto. */
+  userRole?: UserRole;
+  userInstrument?: InstrumentType;
+  userVoicePart?: string;
 }
 
 const MASS_PARTS = [
@@ -43,7 +48,7 @@ const NON_LITURGICAL_CATEGORIES = [
   { id: 'Otro', name: 'Otros', icon: '🎶' },
 ];
 
-export function SheetMusicLibrary({ onPlaySong }: SheetMusicLibraryProps) {
+export function SheetMusicLibrary({ onPlaySong, userRole, userInstrument, userVoicePart }: SheetMusicLibraryProps) {
   const { songs } = useSongs();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedPart, setExpandedPart] = useState<string | null>(null);
@@ -314,6 +319,12 @@ export function SheetMusicLibrary({ onPlaySong }: SheetMusicLibraryProps) {
                                       <Play className="w-4 h-4" fill="currentColor" />
                                       Ver Partitura y Audio
                                     </button>
+                                    <AtrilSongButton
+                                      song={song}
+                                      userRole={userRole}
+                                      userInstrument={userInstrument}
+                                      userVoicePart={userVoicePart}
+                                    />
                                     {song.lyrics && (
                                       <button
                                         onClick={() => handleToggleLyrics(song.id)}
@@ -440,6 +451,12 @@ export function SheetMusicLibrary({ onPlaySong }: SheetMusicLibraryProps) {
                             <Play className="w-4 h-4" fill="currentColor" />
                             Ver Partitura y Audio
                           </button>
+                          <AtrilSongButton
+                            song={song}
+                            userRole={userRole}
+                            userInstrument={userInstrument}
+                            userVoicePart={userVoicePart}
+                          />
                           {song.lyrics && (
                             <button
                               onClick={() => handleToggleLyrics(song.id)}

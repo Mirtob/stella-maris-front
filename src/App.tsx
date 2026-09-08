@@ -1887,7 +1887,12 @@ function renderView(p: ViewProps): ReactElement | null {
           backView="cantorals"
           navigate={p.navigate}
         >
-          <SheetMusicLibrary onPlaySong={p.onPlaySong} />
+          <SheetMusicLibrary
+            onPlaySong={p.onPlaySong}
+            userRole={p.effectiveRole}
+            userInstrument={p.userProfile.instrument}
+            userVoicePart={effectiveVoicePart(p.userProfile.voicePart, p.userProfile.instrument)}
+          />
         </RoleGuard>
       );
 

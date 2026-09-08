@@ -18,6 +18,7 @@ import { resolveOrdinarySheetMusic } from '../../utils/ordinarySheetMusic';
 import { previousUseOf, type PreviousUsage, type UsageOccurrence } from '../../utils/previousUsage';
 import { RepeatSongDialog } from '../cantoral/RepeatSongDialog';
 import { FavoriteButton } from './FavoriteButton';
+import { AtrilSongButton } from '../atril/AtrilSongButton';
 
 interface CategorySearchProps {
   category: string;
@@ -30,6 +31,11 @@ interface CategorySearchProps {
   cantoral: Song[];
   onPlaySong: (song: Song) => void;
   preferredInstrument?: InstrumentType;
+  /** Voz del corista (SATB, viento…): el Atril de un canto abre SU partitura. */
+  userVoicePart?: string;
+  /** Instrumento con el que se toca ESTA Misa (puede no ser el del perfil).
+   *  Manda en el Atril de un canto: órgano → partitura, guitarra → acordes. */
+  userInstrument?: InstrumentType;
   /** Uso de cantos en el cantoral anterior (la "semana pasada"), para avisar repeticiones. */
   previousUsage?: PreviousUsage | null;
   /** Fecha de la Misa que se está armando (YYYY-MM-DD). El tiempo litúrgico y el
@@ -49,6 +55,8 @@ export function CategorySearch({
   cantoral,
   onPlaySong,
   preferredInstrument,
+  userVoicePart,
+  userInstrument,
   previousUsage,
   massDate,
 }: CategorySearchProps) {
@@ -494,6 +502,12 @@ export function CategorySearch({
               >
                 <Play className="w-4 h-4" fill="currentColor" />
               </button>
+              <AtrilSongButton
+                song={s}
+                userInstrument={userInstrument ?? preferredInstrument}
+                userVoicePart={userVoicePart}
+                iconOnly
+              />
               <button
                 onClick={() => onRemoveFromCantoral(s.id, s.category)}
                 aria-label={`Quitar ${s.title}`}
@@ -698,26 +712,36 @@ export function CategorySearch({
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => onPlaySong(song)}
-                      className={`flex-1 ${colors.gradient} text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold border-2 border-brand-border shadow-md hover:shadow-lg`}
-                      aria-label={`Ver detalles de ${song.title}`}
-                    >
-                      <Play className="w-5 h-5" strokeWidth={2.5} fill="currentColor" />
-                      Ver Detalles
-                    </button>
-                    
-                    {!isInCantoral(song.id) && (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-2">
                       <button
-                        onClick={() => handleAddSong(song)}
-                        className="bg-gradient-to-br from-green-600 to-green-700 text-white py-3 px-5 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold border-2 border-green-800 shadow-md hover:shadow-lg hover:from-green-700 hover:to-green-800"
-                        aria-label={`Añadir ${song.title} al cantoral`}
+                        onClick={() => onPlaySong(song)}
+                        className={`flex-1 ${colors.gradient} text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold border-2 border-brand-border shadow-md hover:shadow-lg`}
+                        aria-label={`Ver detalles de ${song.title}`}
                       >
-                        <Cross className="w-5 h-5" strokeWidth={3} />
-                        {song.massName && isMassPart(song.category) ? 'Agregar Misa' : 'Agregar'}
+                        <Play className="w-5 h-5" strokeWidth={2.5} fill="currentColor" />
+                        Ver Detalles
                       </button>
-                    )}
+
+                      {!isInCantoral(song.id) && (
+                        <button
+                          onClick={() => handleAddSong(song)}
+                          className="bg-gradient-to-br from-green-600 to-green-700 text-white py-3 px-5 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold border-2 border-green-800 shadow-md hover:shadow-lg hover:from-green-700 hover:to-green-800"
+                          aria-label={`Añadir ${song.title} al cantoral`}
+                        >
+                          <Cross className="w-5 h-5" strokeWidth={3} />
+                          {song.massName && isMassPart(song.category) ? 'Agregar Misa' : 'Agregar'}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Ensayo: abrir SOLO este canto en el atril (zoom, transpositor,
+                        metrónomo y, en la polifonía, la partitura de cada voz). */}
+                    <AtrilSongButton
+                      song={song}
+                      userInstrument={userInstrument ?? preferredInstrument}
+                      userVoicePart={userVoicePart}
+                    />
                   </div>
                 </div>
               ))
