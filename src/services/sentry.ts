@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/react';
+import { entornoDeEntrada, type MotivoAtasco } from '../utils/diagnosticoEntrada';
 
 /**
  * Inicializa Sentry para monitoreo de errores en producción.
@@ -105,6 +106,34 @@ export function reportError(error: unknown, context?: Record<string, unknown>) {
     Sentry.captureException(error, { extra: context });
   } else {
     console.error('[reportError]', error, context);
+  }
+}
+
+/**
+ * Alguien se quedó atascado ENTRANDO.
+ *
+ * Va aparte de `reportError` a propósito: no es una excepción, es una espera que no
+ * terminó, y mezclarla con los fallos reales la escondería. Con nivel `warning` y su
+ * propia etiqueta se puede contar: cuántas veces al día, en qué aparatos y con qué red.
+ *
+ * Sin esto no había forma de saberlo. El caso del 8-sep-2026 —un teléfono que no podía
+ * entrar mientras la tablet sí— no dejaba rastro alguno: no era un error, era silencio.
+ */
+export function reportarAtascoAlEntrar(motivo: MotivoAtasco, segundos: number) {
+  const entorno = entornoDeEntrada();
+  if (import.meta.env?.MODE === 'production') {
+    Sentry.captureMessage(`Atasco al entrar: ${motivo}`, {
+      level: 'warning',
+      tags: {
+        atasco: motivo,
+        plataforma: entorno.plataforma,
+        instalada: String(entorno.instalada),
+        conexion: entorno.conexion,
+      },
+      extra: { ...entorno, segundos },
+    });
+  } else {
+    console.warn('[atasco al entrar]', motivo, segundos + 's', entorno);
   }
 }
 

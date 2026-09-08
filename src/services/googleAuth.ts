@@ -15,6 +15,7 @@ import {
   getSessionFromUrl as supabaseGetSessionFromUrl,
   signOut as supabaseSignOut,
 } from './supabaseClient';
+import { reportarAtascoAlEntrar } from './sentry';
 
 // ==========================================
 // Tipos
@@ -128,6 +129,9 @@ export async function getStoredSession(): Promise<GoogleAuthSession | null> {
 
   if (resultado === 'agotado') {
     console.error('Leer la sesión tardó demasiado; se sigue como si no hubiera.');
+    // Se avisa para poder CONTARLO: es la única forma de saber a cuánta gente le pasa,
+    // porque quien lo sufre normalmente cierra la app sin decir nada.
+    reportarAtascoAlEntrar('sesion-lenta', TOPE_LEER_SESION_MS / 1000);
     return null;
   }
 

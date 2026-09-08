@@ -116,7 +116,7 @@ import { generateCantoralPDF } from './utils/cantoralPDFGenerator';
 import { getAdminLevel, type AdminLevel } from './services/admin';
 import { upsertCurrentUserProfile, getCurrentUserProfile } from './services/userProfiles';
 import { setCurrentUserId } from './services/currentUser';
-import { setSentryUserContext, clearSentryUserContext } from './services/sentry';
+import { setSentryUserContext, clearSentryUserContext, reportarAtascoAlEntrar } from './services/sentry';
 
 const PENDING_CANTORAL_KEY = 'stella_maris_pending_cantoral_id';
 const ONBOARDING_SEEN_KEY = 'stella_maris_onboarding_seen';
@@ -766,7 +766,13 @@ function AppContent() {
      * comprueba el estado actual para no echar a nadie que ya haya entrado.
      */
     const vigilante = setTimeout(() => {
-      setRoute((actual) => (actual.screen === 'loading' ? { screen: 'login' } : actual));
+      setRoute((actual) => {
+        if (actual.screen !== 'loading') return actual;
+        // Se avisa para poder contarlo: cuántas veces al día, en qué aparatos y con qué
+        // red. Sin esto solo nos enteramos cuando alguien se queja.
+        reportarAtascoAlEntrar('arranque-colgado', 10);
+        return { screen: 'login' };
+      });
     }, 10_000);
 
     initializeAuth();
