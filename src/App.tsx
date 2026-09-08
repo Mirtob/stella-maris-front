@@ -753,8 +753,24 @@ function AppContent() {
       timer = setTimeout(() => setRoute({ screen: 'login' }), 2500);
     }
 
+    /**
+     * Vigilante del arranque.
+     *
+     * El temporizador de arriba solo se pone AL FINAL de `initializeAuth`, en la rama
+     * de "no hay sesión". Si algo se cuelga antes —leer la sesión sale a la red a
+     * renovar el token— no se llegaba nunca a ponerlo, y la app se quedaba en la
+     * pantalla de carga girando para siempre, sin login y sin salida. Es lo que le
+     * pasaba a un teléfono con la sesión vencida mientras la tablet entraba bien.
+     *
+     * Esto lo corta: pasados 10 s, si SEGUIMOS cargando, a la pantalla de entrar. Se
+     * comprueba el estado actual para no echar a nadie que ya haya entrado.
+     */
+    const vigilante = setTimeout(() => {
+      setRoute((actual) => (actual.screen === 'loading' ? { screen: 'login' } : actual));
+    }, 10_000);
+
     initializeAuth();
-    return () => { if (timer) clearTimeout(timer); };
+    return () => { if (timer) clearTimeout(timer); clearTimeout(vigilante); };
   }, []);
 
   // Aviso EN VIVO (Supabase Realtime) cuando se publica un cantoral de la

@@ -104,8 +104,34 @@ export function clearUserProfile(): void {
 // Session lookup
 // ==========================================
 
+/**
+ * Tope de espera al leer la sesión guardada.
+ *
+ * `supabaseGetSession()` no solo lee: si el token ya venció, sale a la RED a renovarlo,
+ * y esa llamada no tiene límite de tiempo. Si se queda colgada —red mala, token
+ * inservible— la promesa nunca se resuelve y el arranque de la app se detiene ahí: la
+ * pantalla de carga se queda girando para siempre, sin login y sin forma de salir.
+ *
+ * Reportado el 8-sep-2026: "no puedo entrar, solo en mi celular". En la tablet la sesión
+ * estaba fresca y se resolvía al instante; en el teléfono estaba vencida.
+ *
+ * Ante la duda se responde "no hay sesión": lleva a la pantalla de entrar, que siempre
+ * es mejor que un aro girando.
+ */
+const TOPE_LEER_SESION_MS = 7000;
+
 export async function getStoredSession(): Promise<GoogleAuthSession | null> {
-  const { data, error } = await supabaseGetSession();
+  const resultado = await Promise.race([
+    supabaseGetSession(),
+    new Promise<'agotado'>((r) => setTimeout(() => r('agotado'), TOPE_LEER_SESION_MS)),
+  ]);
+
+  if (resultado === 'agotado') {
+    console.error('Leer la sesión tardó demasiado; se sigue como si no hubiera.');
+    return null;
+  }
+
+  const { data, error } = resultado;
   if (error) {
     console.error('Error recuperando sesión:', error?.message);
     return null;
