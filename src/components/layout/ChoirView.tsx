@@ -811,7 +811,10 @@ export function ChoirView({
         <AddSolemnityModal
           selectedDate={massDate}
           isAdmin={isAdmin}
-          parishes={parishes}
+          // Mismo respaldo que al publicar: sin lista de parroquias en el perfil, vale la
+          // activa. Sin esto el coro se quedaba con el botón "Agregar celebración"
+          // apagado y sin nada que elegir para encenderlo.
+          parishes={parishes?.length ? parishes : (parishName ? [parishName] : [])}
           onClose={() => setShowAddSolemnity(false)}
           onAdd={async (name, date, scope, type, replacesDefault, color) => {
             setShowAddSolemnity(false);
@@ -819,6 +822,8 @@ export function ChoirView({
             if (r.ok && r.row) {
               setPersistedCustomDates([...getPersistedCustomDates(), toLiturgicalDate(r.row)]);
               toast.success('Celebración agregada', { description: name });
+              // Se guardó, pero recortada porque falta correr una migración.
+              if (r.warning) toast.warning('Guardada sin color ni reemplazo', { description: r.warning, duration: 8000 });
             } else {
               toast.warning('No se pudo guardar la celebración', { description: r.error });
             }

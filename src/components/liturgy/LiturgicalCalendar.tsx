@@ -219,6 +219,7 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false
           : `Guardada para ${scope}.`)
           + (enableAlert ? ` Alerta ${alertDaysBefore} ${alertDaysBefore === 1 ? 'día' : 'días'} antes.` : ''),
       });
+      if (r.warning) toast.warning('Guardada sin color ni reemplazo', { description: r.warning, duration: 8000 });
     } else if (/row-level security|permission|42501|no autorizado|forbidden/i.test(r.error || '')) {
       // Rechazo por permisos: NO tiene sentido dejarla "solo en esta sesión", porque no
       // se va a guardar nunca. Se quita de la lista y se dice claro por qué.

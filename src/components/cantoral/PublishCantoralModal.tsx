@@ -1036,6 +1036,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
                   ? 'Guardada para todos los usuarios.'
                   : `Guardada para ${scope}.`,
               });
+              if (r.warning) toast.warning('Guardada sin color ni reemplazo', { description: r.warning, duration: 8000 });
             } else {
               toast.warning('Celebración agregada solo en esta sesión', {
                 description: r.error || 'No se pudo guardar en el servidor.',
