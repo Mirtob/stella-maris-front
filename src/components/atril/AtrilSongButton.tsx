@@ -24,6 +24,9 @@ interface AtrilSongButtonProps {
  * transpositor, el metrónomo, el autoscroll, los audios de ensayo y —lo que más pesa
  * en la polifonía— el selector de voz, que hace que cada corista lea SU partitura.
  * Es el mismo componente de siempre, con un repertorio de un solo canto.
+ *
+ * El atril se monta en <body> por su cuenta (portal dentro de AtrilMode), así que da lo
+ * mismo lo anidado que esté este botón dentro de una tarjeta.
  */
 export function AtrilSongButton({
   song,

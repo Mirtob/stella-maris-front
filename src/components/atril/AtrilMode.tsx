@@ -1,5 +1,6 @@
 import { abrirOGuardarPdf } from '../../utils/descargarPdf';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, ZoomIn, ZoomOut, ChevronUp, ChevronDown, RotateCcw, Play, Pause, Maximize2, Minimize2, Music, List, Printer, Loader, Timer, Minus, Plus, MoreVertical, Headphones } from 'lucide-react';
 import { toast } from 'sonner';
 import { Song, UserRole, InstrumentType } from '../../types';
@@ -331,12 +332,17 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
   const menuItem = 'w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-white text-left hover:bg-white/10 active:scale-[0.98] transition-all';
   const activeSong = orderedSongs[activeIndex];
 
-  return (
+  // El atril se monta SIEMPRE en <body>, no donde lo pusieron. Basta que un ancestro
+  // lleve `backdrop-blur`, `hover:scale` o `contain: layout` —cosa habitual en las
+  // tarjetas de canto— para que ese ancestro pase a ser el marco de referencia de sus
+  // hijos `fixed`: el atril quedaba encerrado en la tarjeta y su barra de arriba se
+  // salía por el lado, dejando fuera Pantalla completa y el menú "⋮".
+  return createPortal(
     <div className="fixed inset-0 z-[100] flex flex-col bg-slate-900 text-white">
       {/* Barra superior. En el teléfono solo queda lo imprescindible —Salir, Repertorio,
           Zoom y Pantalla completa—; el resto vive en el menú "⋮", para que ningún botón
           se salga de la pantalla. Desde `sm` se ve todo en línea, como siempre. */}
-      <div className="relative flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 bg-slate-950 border-b border-white/10 flex-shrink-0">
+      <div className="relative flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 bg-slate-950 border-b border-white/10 flex-shrink-0 min-w-0">
         <button onClick={onClose} className={`${btn} w-10 h-10 sm:w-auto sm:h-11 sm:px-3 sm:gap-2 flex-shrink-0`} aria-label="Salir del atril">
           <X className="w-5 h-5" strokeWidth={2.5} />
           <span className="font-bold text-sm hidden sm:inline">Salir</span>
@@ -371,7 +377,7 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
             value={voicePart}
             onChange={(e) => setVoicePart(e.target.value)}
             aria-label="Voz o instrumento"
-            className="hidden sm:block flex-shrink-0 bg-white/10 border border-white/25 rounded-lg px-2 py-1.5 text-sm font-bold text-white focus:outline-none focus:border-amber-400"
+            className="hidden md:block flex-shrink-0 max-w-[7.5rem] truncate bg-white/10 border border-white/25 rounded-lg px-2 py-1.5 text-sm font-bold text-white focus:outline-none focus:border-amber-400"
           >
             <option value="" className="text-black">Partitura general</option>
             {partsInCantoral.map(p => (
@@ -393,7 +399,7 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
         {hasChords && (
           <button
             onClick={() => changeNotation(notation === 'latin' ? 'american' : 'latin')}
-            className={`${btn} hidden sm:flex px-2 h-11 flex-shrink-0 text-xs font-bold`}
+            className={`${btn} hidden md:flex px-2 h-11 flex-shrink-0 text-xs font-bold`}
             aria-label="Cambiar cifrado de acordes (latino/americano)"
             title="Cifrado latino / americano"
           >
@@ -405,7 +411,7 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
         {hasChords && (
           <button
             onClick={() => setShowMetro((s) => !s)}
-            className={`${btn} hidden sm:flex w-11 h-11 flex-shrink-0 ${showMetro || metro.running ? 'bg-amber-500/30 border-amber-400' : ''}`}
+            className={`${btn} hidden md:flex w-11 h-11 flex-shrink-0 ${showMetro || metro.running ? 'bg-amber-500/30 border-amber-400' : ''}`}
             aria-label="Metrónomo"
             aria-pressed={showMetro}
             title="Metrónomo"
@@ -415,7 +421,7 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
         )}
 
         {/* Imprimir el atril (PDF vertical, tal cual se ve) */}
-        <button onClick={handlePrint} disabled={printing} className={`${btn} hidden sm:flex w-11 h-11 flex-shrink-0 disabled:opacity-60`} aria-label="Imprimir" title="Imprimir (PDF vertical, tal cual se ve)">
+        <button onClick={handlePrint} disabled={printing} className={`${btn} hidden md:flex w-11 h-11 flex-shrink-0 disabled:opacity-60`} aria-label="Imprimir" title="Imprimir (PDF vertical, tal cual se ve)">
           {printing ? <Loader className="w-6 h-6 animate-spin" /> : <Printer className="w-6 h-6" strokeWidth={2.5} />}
         </button>
 
@@ -427,7 +433,7 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
         {/* Menú "⋮" — solo en pantalla chica: lo que no cabe en la barra */}
         <button
           onClick={() => setMenuOpen(o => !o)}
-          className={`${btn} sm:hidden w-10 h-10 flex-shrink-0 ${menuOpen ? 'bg-white/25' : ''}`}
+          className={`${btn} md:hidden w-10 h-10 flex-shrink-0 ${menuOpen ? 'bg-white/25' : ''}`}
           aria-label="Más opciones"
           aria-expanded={menuOpen}
         >
@@ -437,12 +443,12 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
         {menuOpen && (
           <>
             <button
-              className="fixed inset-0 z-40 cursor-default sm:hidden"
+              className="fixed inset-0 z-40 cursor-default md:hidden"
               onClick={() => setMenuOpen(false)}
               aria-label="Cerrar el menú"
               tabIndex={-1}
             />
-            <div className="absolute right-2 top-full mt-1 z-50 w-60 rounded-2xl bg-slate-900 border border-white/20 shadow-2xl p-2 space-y-1 sm:hidden">
+            <div className="absolute right-2 top-full mt-1 z-50 w-60 rounded-2xl bg-slate-900 border border-white/20 shadow-2xl p-2 space-y-1 md:hidden">
               <div className="px-2 pb-1">
                 <div className="font-bold truncate leading-tight">{activeSong?.title ?? 'Atril'}</div>
                 <div className="text-xs text-amber-300/90 truncate">{instrumentLabel}</div>
@@ -792,6 +798,7 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
           onClose={() => { markTipSeen('atril'); setShowTip(false); }}
         />
       )}
-    </div>
+    </div>,
+    document.body,
   );
 }
