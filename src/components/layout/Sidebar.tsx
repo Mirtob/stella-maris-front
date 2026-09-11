@@ -1,4 +1,4 @@
-import { X, BookOpen, GraduationCap, ShieldCheck, Music, LogOut, User, Settings, History, Calendar, Church, Book, ChevronDown, Check, Heart, Compass, Download } from 'lucide-react';
+import { X, BookOpen, GraduationCap, ShieldCheck, Music, LogOut, User, Settings, History, Calendar, Church, Book, ChevronDown, Check, Heart, Compass, Download, Ticket } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { UserProfile, UserRole } from '../../types';
 import { esVisita, parroquiasDelPerfil } from '../../utils/parishVisit';
@@ -64,6 +64,7 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
     { id: 'liturgical-calendar', label: 'Calendario Litúrgico', icon: Calendar, roles: ['Coro', 'Pueblo fiel', 'Admin'] },
     { id: 'favorites', label: 'Mis Cantos', icon: Heart, roles: ['Coro', 'Pueblo fiel', 'Admin'] },
     { id: 'manage-cantorals', label: 'Mis Cantorales', icon: BookOpen, roles: ['Coro'] },
+    { id: 'choir-invitations', label: 'Coros Invitados', icon: Ticket, roles: ['Coro', 'Admin'] },
     { id: 'courses', label: 'Cursos', icon: GraduationCap, roles: ['Coro', 'Pueblo fiel', 'Admin'] },
     { id: 'admin', label: 'Panel Admin', icon: ShieldCheck, roles: ['Admin'] },
   ];

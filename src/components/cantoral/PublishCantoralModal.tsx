@@ -19,6 +19,7 @@ import { PdfBlobViewer } from './PdfBlobViewer';
 import { GARLANDS, DEFAULT_GARLAND_ID } from '../../data/garlands';
 import { PDF_FONTS, PDF_SIZES, DEFAULT_PDF_FONT, DEFAULT_PDF_SIZE } from '../../data/pdfStyle';
 import { toast } from 'sonner';
+import { type ChoirInvitation } from '../../utils/choirInvitations';
 
 /** Destino de publicación: una parroquia con su propia fecha/celebración/horario. */
 export interface PublishTarget {
@@ -45,6 +46,14 @@ interface PublishCantoralModalProps {
   parishName: string;
   /** Conjunto completo de parroquias del coro. Si tiene >1, se habilita el modo multi-parroquia. */
   parishes?: string[];
+  /**
+   * Invitaciones VIGENTES para la fecha de este cantoral: parroquias ajenas donde este
+   * coro fue invitado a cantar (la fiesta patronal de Valdivia de Paine, por ejemplo).
+   * Se suman a las propias como destino posible. La RLS del servidor exige que la
+   * fecha del cantoral sea exactamente la invitada, así que la fecha de esas
+   * parroquias no se deja editar. Ver utils/choirInvitations.
+   */
+  invitations?: ChoirInvitation[];
   /** Admin verificado: sus celebraciones agregadas son globales (para todos los usuarios). */
   isAdmin?: boolean;
   /** Datos pre-seleccionados al inicio del constructor (fecha/hora/tipo de Misa). */
@@ -88,10 +97,16 @@ function normalizeMassTime(raw: string): string {
   return `${String(displayH).padStart(2, '0')}:${min} ${period}`;
 }
 
-export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAdmin = false, initialDate, initialMassTime, initialMassType, onClose, onPublish, userInstruments = [], isEditing = false }: PublishCantoralModalProps) {
+export function PublishCantoralModal({ cantoral, parishName, parishes = [], invitations = [], isAdmin = false, initialDate, initialMassTime, initialMassType, onClose, onPublish, userInstruments = [], isEditing = false }: PublishCantoralModalProps) {
   // Lista efectiva de parroquias (con fallback a la activa). >1 ⇒ modo multi-parroquia.
-  const allParishes = parishes.length > 0 ? parishes : (parishName ? [parishName] : []);
+  const propias = parishes.length > 0 ? parishes : (parishName ? [parishName] : []);
+  // Las anfitrionas se suman al final: primero la casa, después donde te invitaron.
+  const invitadas = invitations.map(i => i.hostParish).filter(h => !propias.includes(h));
+  const allParishes = [...propias, ...invitadas];
   const isMulti = allParishes.length > 1;
+  /** ¿Aquí se publica por invitación (y no por ser la parroquia propia)? */
+  const invitacionDe = (parish: string): ChoirInvitation | undefined =>
+    invitations.find(i => i.hostParish === parish);
 
   // ── Estado modo una sola parroquia ────────────────────────────────────────
   // Use local-timezone today to avoid the user in a negative-offset TZ
@@ -136,6 +151,19 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
     const type: MassType = initialMassType || 'dia';
     const init: Record<string, ParishSchedule> = {};
     allParishes.forEach(p => { init[p] = { date, liturgicalDate: liturgical, massTime: time, massType: type, vigil: type === 'visperas_i' }; });
+    // La parroquia que te invitó manda la fecha Y el tipo: te invitaron a ESA Misa
+    // («el domingo 11, I Vísperas» = el sábado por la tarde), no a ese día en general.
+    invitations.forEach(i => {
+      if (!init[i.hostParish]) return;
+      init[i.hostParish] = {
+        ...init[i.hostParish],
+        date: i.date,
+        liturgicalDate: getLiturgicalDateForDate(i.date) || liturgical,
+        massType: i.massType,
+        vigil: i.massType === 'visperas_i',
+        massTime: '',
+      };
+    });
     return init;
   });
 
@@ -221,6 +249,9 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
   // Cambiar la fecha de una parroquia auto-deriva su celebración litúrgica (si existe
   // en el calendario). Sin toasts para no spamear cuando hay varias parroquias.
   const setParishDate = (parish: string, date: string) => {
+    // Una invitación es para un día concreto; moverle la fecha la invalida y el
+    // servidor rechazaría la publicación con un error incomprensible.
+    if (invitacionDe(parish)) return;
     const derived = getLiturgicalDateForDate(date);
     updateSchedule(parish, { date, liturgicalDate: derived || schedules[parish]?.liturgicalDate || '' });
   };
@@ -519,6 +550,11 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
                               className="w-5 h-5 rounded border-2 border-blue-600 dark:border-blue-400 accent-blue-600 cursor-pointer flex-shrink-0"
                             />
                             <span className="text-base font-bold text-brand-ink break-words">{formatActiveParishLabel(parish)}</span>
+                            {invitacionDe(parish) && (
+                              <span className="flex-shrink-0 inline-flex items-center gap-1 bg-amber-500 text-white px-2 py-0.5 rounded-full text-xs font-bold">
+                                🎟 Invitados
+                              </span>
+                            )}
                           </label>
 
                           {/* Fecha/hora/tipo por parroquia: la parroquia activa usa los datos
@@ -530,7 +566,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
                           )}
                           {checked && (!prefilled || parish !== parishName) && (
                             <div className="px-3 pb-4 pt-1 space-y-3 border-t-2 border-white/50 dark:border-white/10">
-                              {/* Fecha */}
+                              {/* Fecha. De invitados no se toca: el permiso es para ESE día. */}
                               <div>
                                 <label className="flex items-center gap-2 mb-1 text-sm font-bold text-brand-ink">
                                   <Calendar className="w-4 h-4" /> Fecha de la Misa
@@ -538,9 +574,17 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
                                 <input
                                   type="date"
                                   value={s.date}
+                                  disabled={!!invitacionDe(parish)}
                                   onChange={(e) => setParishDate(parish, e.target.value)}
-                                  className="w-full px-3 py-3 text-base rounded-lg border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 bg-white/70 dark:bg-white/10 text-brand-ink font-bold"
+                                  className="w-full px-3 py-3 text-base rounded-lg border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 bg-white/70 dark:bg-white/10 text-brand-ink font-bold disabled:opacity-70"
                                 />
+                                {invitacionDe(parish) && (
+                                  <p className="mt-1.5 text-xs text-amber-800 dark:text-amber-300">
+                                    Los invitaron a la Misa del <strong>{formatYmdForDisplay(invitacionDe(parish)!.date, { weekday: 'long', day: 'numeric', month: 'long' })}</strong>
+                                    {invitacionDe(parish)!.massType !== 'dia' ? ` (${MASS_TYPE_LABEL[invitacionDe(parish)!.massType]})` : ''}
+                                    {invitacionDe(parish)!.note ? ` · ${invitacionDe(parish)!.note}` : ''}. La invitación vale solo esa celebración.
+                                  </p>
+                                )}
                               </div>
                               {/* Celebración litúrgica */}
                               <div>
@@ -558,7 +602,8 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
                                   ))}
                                 </select>
                               </div>
-                              {/* Tipo de horario litúrgico */}
+                              {/* Tipo de horario litúrgico. De invitados tampoco se
+                                  toca: te invitaron a esa Misa, no a ese día. */}
                               <div>
                                 <label className="flex items-center gap-2 mb-1 text-sm font-bold text-brand-ink">
                                   🕯️ Tipo de Misa
@@ -568,8 +613,9 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], isAd
                                     <button
                                       key={t}
                                       type="button"
+                                      disabled={!!invitacionDe(parish)}
                                       onClick={() => updateSchedule(parish, { massType: t, vigil: t === 'visperas_i', massTime: '' })}
-                                      className={`px-2 py-2 rounded-lg text-xs font-bold border-2 transition-all active:scale-95 leading-tight ${
+                                      className={`px-2 py-2 rounded-lg text-xs font-bold border-2 transition-all active:scale-95 leading-tight disabled:opacity-60 disabled:active:scale-100 ${
                                         s.massType === t
                                           ? 'bg-gradient-to-br from-blue-700 to-blue-900 text-white border-brand-border'
                                           : 'bg-white/60 dark:bg-white/10 text-brand-ink border-blue-200 dark:border-white/20'

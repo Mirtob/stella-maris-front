@@ -18,6 +18,8 @@ import { resolvePsalm } from '../../data/psalmIndex';
 import { buildPsalmSong, conSalmoDelLibro, debeReponerAntifona, esAntifonaEscritaAMano } from '../../utils/psalmSong';
 import { AddSolemnityModal } from '../liturgy/AddSolemnityModal';
 import { addCustomLiturgicalDate, toLiturgicalDate } from '../../services/liturgicalDates';
+import { listInvitacionesRecibidas } from '../../services/choirInvitations';
+import { invitacionesVigentesPara, type ChoirInvitation } from '../../utils/choirInvitations';
 import { computeUsage, resolveAnnualTarget } from '../../utils/previousUsage';
 import { getTodayLocal, formatYmdForDisplay, parseYmdLocal } from '../../utils/dateLocal';
 import { massTimeTo24h, massTimeTo12h } from '../../utils/massType';
@@ -109,6 +111,26 @@ export function ChoirView({
   // fecha de la MISA, no contra la de hoy: el cantoral se arma con anticipación y
   // puede cruzar de un tiempo litúrgico a otro.
   const massDateObj = useMemo(() => parseYmdLocal(massDate), [massDate]);
+
+  /**
+   * Invitaciones para ESTE día: parroquias ajenas donde el coro fue invitado a cantar
+   * (la fiesta patronal de la parroquia vecina). Habilitan publicar allá, y solo ese
+   * día — lo mismo que exige la RLS. Ver utils/choirInvitations.
+   */
+  const parroquiasPropias = useMemo(
+    () => (parishes?.length ? parishes : (parishName ? [parishName] : [])),
+    [parishes, parishName],
+  );
+  const [invitaciones, setInvitaciones] = useState<ChoirInvitation[]>([]);
+  useEffect(() => {
+    let cancelado = false;
+    if (!massDate || parroquiasPropias.length === 0) { setInvitaciones([]); return; }
+    listInvitacionesRecibidas(parroquiasPropias, massDate).then((filas) => {
+      if (cancelado) return;
+      setInvitaciones(invitacionesVigentesPara(filas, parroquiasPropias, massDate));
+    });
+    return () => { cancelado = true; };
+  }, [massDate, parroquiasPropias]);
   const [massTime, setMassTime] = useState('10:00');
   const [massType, setMassType] = useState<MassType>('dia');
   // Antífona del salmo (editable): por defecto la del índice de la celebración; el coro
@@ -784,6 +806,7 @@ export function ChoirView({
           cantoral={songsForPublish}
           parishName={parishName}
           parishes={parishes}
+          invitations={invitaciones}
           isAdmin={isAdmin}
           initialDate={massDate}
           initialMassTime={massTimeTo12h(massTime)}

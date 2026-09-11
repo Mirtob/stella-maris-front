@@ -57,6 +57,7 @@ const ProfileSettings = lazyWithReload(() => import('./components/profile/Profil
 const CantoralHistory = lazyWithReload(() => import('./components/cantoral/CantoralHistory').then(m => ({ default: m.CantoralHistory })));
 const LiturgicalCalendar = lazyWithReload(() => import('./components/liturgy/LiturgicalCalendar').then(m => ({ default: m.LiturgicalCalendar })));
 const SheetMusicLibrary = lazyWithReload(() => import('./components/songs/SheetMusicLibrary').then(m => ({ default: m.SheetMusicLibrary })));
+const ChoirInvitations = lazyWithReload(() => import('./components/cantoral/ChoirInvitations').then(m => ({ default: m.ChoirInvitations })));
 import { LoadingScreen } from './components/common/LoadingScreen';
 import { SelectActiveParishDialog } from './components/profile/SelectActiveParishDialog';
 import { VisitParishDialog } from './components/profile/VisitParishDialog';
@@ -228,6 +229,7 @@ type ViewState =
   | 'history'
   | 'liturgical-calendar'
   | 'favorites'
+  | 'choir-invitations'
   | 'sheet-music';
 
 /**
@@ -1778,6 +1780,25 @@ function renderView(p: ViewProps): ReactElement | null {
 
     case 'favorites':
       return <Favorites userId={p.userProfile.id} onPlaySong={p.onPlaySong} />;
+
+    // Coros invitados: la fiesta patronal en la que canta el coro de otra parroquia.
+    // Es cosa de coros (el pueblo fiel solo ve el cantoral publicado).
+    case 'choir-invitations':
+      return (
+        <RoleGuard
+          allowed={p.effectiveRole === 'Coro' || p.effectiveRole === 'Admin'}
+          message="Las invitaciones entre coros son para coros y administradores."
+          details="Sirven para que el coro invitado a una fiesta patronal pueda publicar el cantoral de esa Misa."
+          buttonLabel="Ver Cantorales Publicados"
+          backView="cantorals"
+          navigate={p.navigate}
+        >
+          <ChoirInvitations
+            parishes={p.userProfile.parishes ?? []}
+            activeParish={p.activeParishName || p.userProfile.parishName || ''}
+          />
+        </RoleGuard>
+      );
 
     case 'courses':
       return <FormacionRoadmap userId={p.userProfile.id} userName={p.userProfile.name} userParish={p.activeParishName || p.userProfile.parishName} />;

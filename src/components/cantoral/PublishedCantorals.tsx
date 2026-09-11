@@ -89,11 +89,10 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
   }
 
   // ── Ventanas temporales ────────────────────────────────────────────────────
-  // Un cantoral está VIGENTE hasta el FIN de su ventana horaria según el tipo de
-  // Misa: I Vísperas hasta 23:59 de la víspera; Misa del día hasta las 15:00;
-  // II Vísperas hasta 23:59. Pasado ese momento va al archivo. Así, una tarde de
-  // domingo la "Misa del día" cede su lugar a las II Vísperas. (Aplica igual a
-  // domingos y a solemnidades agregadas manualmente.)
+  // Un cantoral está VIGENTE hasta 4 horas después de que EMPIEZA su Misa (ver
+  // HORAS_VIGENTE_TRAS_LA_MISA en utils/massType). La hora es la publicada, y el día
+  // el que se canta de verdad: en I Vísperas, la tarde anterior. Pasado ese momento
+  // se va al archivo. (Aplica igual a domingos y a celebraciones agregadas a mano.)
   const now = new Date();
   const esVigente = (c: PublishedCantoral) => !cantoralYaPaso(c, now);
 
