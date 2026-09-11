@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Ticket, Calendar, Church, Trash2, Plus, Loader, Inbox, XCircle } from 'lucide-react';
+import { Ticket, Calendar, Church, Trash2, Plus, Loader, Inbox, XCircle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ParishPicker } from '../profile/ParishPicker';
 import { EmptyState } from '../common/EmptyState';
@@ -10,12 +10,13 @@ import { getLiturgicalDateForDate } from '../../utils/liturgicalCalendar';
 import { MASS_TYPE_LABEL } from '../../utils/massType';
 import type { MassType } from '../../types';
 import {
-  parroquiasMadre, meInvitaron, inviteYo, estaVigente, type ChoirInvitation,
+  parroquiasMadre, meInvitaron, inviteYo, estaVigente, estadoInvitacion,
+  type ChoirInvitation,
 } from '../../utils/choirInvitations';
 import { listChapels, type Chapel } from '../../services/chapels';
 import {
   listInvitacionesRecibidas, listInvitacionesEnviadas, invitarCoro,
-  retirarInvitacion, rechazarInvitacion,
+  retirarInvitacion, responderInvitacion, avisarInvitacion, avisarRechazo,
 } from '../../services/choirInvitations';
 
 interface ChoirInvitationsProps {
@@ -23,6 +24,12 @@ interface ChoirInvitationsProps {
   parishes: string[];
   /** Parroquia (o capilla) activa: la casa desde la que se invita. */
   activeParish: string;
+  /**
+   * Aceptar lleva derecho a armar el cantoral de esa fecha. La pantalla no sabe
+   * navegar: avisa con la fecha y App abre el constructor en ella, igual que hace el
+   * calendario litúrgico.
+   */
+  onBuildCantoral?: (date: string) => void;
 }
 
 /**
@@ -41,7 +48,7 @@ interface ChoirInvitationsProps {
  * ofrecieron: eso lo hace cumplir la RLS (migración 20260910_coros_invitados), no esta
  * pantalla, que solo evita ofrecer botones que el servidor va a rechazar.
  */
-export function ChoirInvitations({ parishes, activeParish }: ChoirInvitationsProps) {
+export function ChoirInvitations({ parishes, activeParish, onBuildCantoral }: ChoirInvitationsProps) {
   const propias = useMemo(
     () => (parishes.length > 0 ? parishes : (activeParish ? [activeParish] : [])),
     [parishes, activeParish],
@@ -62,7 +69,11 @@ export function ChoirInvitations({ parishes, activeParish }: ChoirInvitationsPro
   const [motivo, setMotivo] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [porRetirar, setPorRetirar] = useState<ChoirInvitation | null>(null);
-  const [porRechazar, setPorRechazar] = useState<ChoirInvitation | null>(null);
+  // Rechazo: se pide el motivo antes de mandarlo. La anfitriona necesita saber por qué
+  // para decidir si busca otro coro.
+  const [rechazando, setRechazando] = useState<ChoirInvitation | null>(null);
+  const [motivoRechazo, setMotivoRechazo] = useState('');
+  const [respondiendo, setRespondiendo] = useState(false);
 
   /**
    * Dónde puede invitar este coro: sus parroquias Y las capillas de esas parroquias.
@@ -128,6 +139,9 @@ export function ChoirInvitations({ parishes, activeParish }: ChoirInvitationsPro
     setAbierto(false);
     setInvitada(''); setFecha(''); setMotivo(''); setTipo('dia');
     setEnviadas(prev => [...prev, r.invitation!].sort((a, b) => a.date.localeCompare(b.date)));
+    // Que les suene el teléfono: sin esto la invitación se queda esperando a que a
+    // alguien se le ocurra entrar a mirar. En segundo plano y sin bloquear.
+    void avisarInvitacion(r.invitation!.id);
   };
 
   const retirar = async (inv: ChoirInvitation) => {
@@ -140,16 +154,47 @@ export function ChoirInvitations({ parishes, activeParish }: ChoirInvitationsPro
     setEnviadas(prev => prev.filter(i => i.id !== inv.id));
   };
 
-  const rechazar = async (inv: ChoirInvitation) => {
-    const r = await rechazarInvitacion(inv.id);
+  /** Aceptar: queda constancia y se va derecho a armar el cantoral de esa fecha. */
+  const aceptar = async (inv: ChoirInvitation) => {
+    setRespondiendo(true);
+    const r = await responderInvitacion(inv.id, true);
+    setRespondiendo(false);
+    if (!r.ok) {
+      toast.error('No se pudo aceptar la invitación', { description: r.error });
+      return;
+    }
+    setRecibidas(prev => prev.map(i => (
+      i.id === inv.id ? { ...i, acceptedAt: new Date().toISOString(), rejectedAt: undefined, rejectedReason: undefined } : i
+    )));
+    toast.success('Invitación aceptada', {
+      description: `A armar el cantoral del ${fechaLarga(inv.date)} para ${formatActiveParishLabel(inv.hostParish)}.`,
+    });
+    onBuildCantoral?.(inv.date);
+  };
+
+  /** Rechazar: con el motivo, que es lo que le sirve a la anfitriona. */
+  const rechazar = async () => {
+    const inv = rechazando;
+    if (!inv) return;
+    setRespondiendo(true);
+    const r = await responderInvitacion(inv.id, false, motivoRechazo);
+    setRespondiendo(false);
     if (!r.ok) {
       toast.error('No se pudo rechazar la invitación', { description: r.error });
       return;
     }
+    setRecibidas(prev => prev.map(i => (
+      i.id === inv.id
+        ? { ...i, rejectedAt: new Date().toISOString(), rejectedReason: motivoRechazo.trim() || undefined, acceptedAt: undefined }
+        : i
+    )));
+    setRechazando(null);
+    setMotivoRechazo('');
     toast.success('Invitación rechazada', {
       description: `${formatActiveParishLabel(inv.hostParish)} verá que su coro no puede ir.`,
     });
-    setRecibidas(prev => prev.map(i => (i.id === inv.id ? { ...i, rejectedAt: new Date().toISOString() } : i)));
+    // El motivo vuelve a quien invitó, para que busque otro coro a tiempo.
+    void avisarRechazo(inv.id);
   };
 
   const etiquetaTipo = (i: ChoirInvitation) =>
@@ -216,26 +261,93 @@ export function ChoirInvitations({ parishes, activeParish }: ChoirInvitationsPro
                     )}
                   </div>
 
-                  {estaVigente(inv) ? (
+                  {estadoInvitacion(inv) === 'rechazada' ? (
                     <>
-                      <p className="text-xs text-brand-ink-soft mt-2">
-                        Al armar el cantoral de ese día, esta parroquia les aparecerá entre las
-                        opciones para publicar.
+                      <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">
+                        La rechazaron — ya no pueden publicar el cantoral de ese día.
                       </p>
-                      {meInvitaron(inv, propias) && (
+                      {inv.rejectedReason && (
+                        <p className="text-sm text-brand-ink-soft mt-1">Motivo: {inv.rejectedReason}</p>
+                      )}
+                    </>
+                  ) : estadoInvitacion(inv) === 'aceptada' ? (
+                    <>
+                      <p className="mt-2 text-sm font-bold text-green-700 dark:text-green-300">
+                        Aceptada — van a cantar. Cualquiera del coro puede armar y publicar
+                        el cantoral de esa Misa.
+                      </p>
+                      {onBuildCantoral && (
                         <button
-                          onClick={() => setPorRechazar(inv)}
-                          className="mt-3 w-full bg-white/70 dark:bg-white/10 text-red-700 dark:text-red-300 py-2 px-3 rounded-lg flex items-center justify-center gap-2 active:scale-95 transition-all text-sm font-bold border-2 border-red-300 dark:border-red-700"
+                          onClick={() => onBuildCantoral(inv.date)}
+                          className="mt-3 w-full bg-gradient-to-br from-green-600 to-green-700 text-white py-2 px-3 rounded-lg flex items-center justify-center gap-2 active:scale-95 transition-all text-sm font-bold border-2 border-green-800"
                         >
-                          <XCircle className="w-4 h-4" strokeWidth={2.5} />
-                          No podemos ir · rechazar
+                          <Calendar className="w-4 h-4" strokeWidth={2.5} />
+                          Armar el cantoral de ese día
                         </button>
                       )}
                     </>
+                  ) : rechazando?.id === inv.id ? (
+                    /* Formulario del motivo: corto, porque la anfitriona solo necesita
+                       saber si tiene que buscar otro coro. */
+                    <div className="mt-3 bg-white/80 dark:bg-white/10 rounded-xl p-3 border-2 border-red-300 dark:border-red-700">
+                      <label className="block text-sm font-bold text-brand-ink mb-1">
+                        ¿Por qué no pueden ir?
+                      </label>
+                      <textarea
+                        value={motivoRechazo}
+                        onChange={(e) => setMotivoRechazo(e.target.value)}
+                        rows={2}
+                        maxLength={500}
+                        autoFocus
+                        placeholder="Ej: ese día tenemos Misa a la misma hora"
+                        className="w-full px-3 py-2 text-base rounded-lg border-2 border-red-200 dark:border-white/20 bg-white dark:bg-white/10 text-brand-ink focus:outline-none focus:border-red-500 placeholder:text-gray-500"
+                      />
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          onClick={() => { setRechazando(null); setMotivoRechazo(''); }}
+                          className="flex-1 bg-white/70 dark:bg-white/10 text-brand-ink py-2 px-3 rounded-lg text-sm font-bold border-2 border-white/60 dark:border-white/20"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={rechazar}
+                          disabled={respondiendo}
+                          className="flex-1 bg-gradient-to-br from-red-600 to-red-700 text-white py-2 px-3 rounded-lg text-sm font-bold border-2 border-red-800 active:scale-95 transition-all disabled:opacity-60"
+                        >
+                          {respondiendo ? 'Enviando…' : 'Rechazar'}
+                        </button>
+                      </div>
+                      <p className="text-xs text-brand-ink-soft mt-2">
+                        El motivo lo verá {formatActiveParishLabel(inv.hostParish)}.
+                      </p>
+                    </div>
                   ) : (
-                    <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">
-                      Rechazada — ya no pueden publicar el cantoral de ese día.
-                    </p>
+                    <>
+                      <p className="text-xs text-brand-ink-soft mt-2">
+                        Hasta que alguien del coro acepte no se puede publicar el cantoral de
+                        esa Misa. Con que acepte uno, basta para todo el coro.
+                      </p>
+                      {meInvitaron(inv, propias) && (
+                        <div className="flex gap-2 mt-3">
+                          <button
+                            onClick={() => aceptar(inv)}
+                            disabled={respondiendo}
+                            className="flex-1 bg-gradient-to-br from-green-600 to-green-700 text-white py-2.5 px-3 rounded-lg flex items-center justify-center gap-2 active:scale-95 transition-all text-sm font-bold border-2 border-green-800 disabled:opacity-60"
+                          >
+                            <CheckCircle2 className="w-4 h-4" strokeWidth={2.5} />
+                            Aceptar
+                          </button>
+                          <button
+                            onClick={() => { setRechazando(inv); setMotivoRechazo(''); }}
+                            disabled={respondiendo}
+                            className="flex-1 bg-white/70 dark:bg-white/10 text-red-700 dark:text-red-300 py-2.5 px-3 rounded-lg flex items-center justify-center gap-2 active:scale-95 transition-all text-sm font-bold border-2 border-red-300 dark:border-red-700 disabled:opacity-60"
+                          >
+                            <XCircle className="w-4 h-4" strokeWidth={2.5} />
+                            Rechazar
+                          </button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               ))}
@@ -389,9 +501,24 @@ export function ChoirInvitations({ parishes, activeParish }: ChoirInvitationsPro
                     <p className="text-xs text-brand-ink-soft mt-2 break-words">
                       Cantan en {formatActiveParishLabel(inv.hostParish)}
                     </p>
-                    {!estaVigente(inv) && (
-                      <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">
-                        Ese coro rechazó la invitación: no puede ir.
+                    {estadoInvitacion(inv) === 'rechazada' && (
+                      <>
+                        <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">
+                          Ese coro rechazó la invitación: no puede ir.
+                        </p>
+                        {inv.rejectedReason && (
+                          <p className="text-sm text-brand-ink-soft mt-1">Motivo: {inv.rejectedReason}</p>
+                        )}
+                      </>
+                    )}
+                    {estadoInvitacion(inv) === 'aceptada' && (
+                      <p className="mt-2 text-sm font-bold text-green-700 dark:text-green-300">
+                        Aceptada: ese coro confirmó que va.
+                      </p>
+                    )}
+                    {estadoInvitacion(inv) === 'pendiente' && (
+                      <p className="mt-2 text-sm text-amber-800 dark:text-amber-300">
+                        Sin responder todavía.
                       </p>
                     )}
                   </div>
@@ -423,18 +550,6 @@ export function ChoirInvitations({ parishes, activeParish }: ChoirInvitationsPro
           onCancel={() => setPorRetirar(null)}
         />
 
-        <ConfirmDialog
-          open={!!porRechazar}
-          title="¿Rechazar la invitación?"
-          message={porRechazar
-            ? `Se avisará a ${formatActiveParishLabel(porRechazar.hostParish)} de que su coro no puede ir el ${fechaLarga(porRechazar.date)}, y dejarán de poder publicar el cantoral de esa Misa.`
-            : ''}
-          confirmLabel="Sí, rechazar"
-          cancelLabel="Cancelar"
-          variant="warning"
-          onConfirm={() => { const i = porRechazar; setPorRechazar(null); if (i) rechazar(i); }}
-          onCancel={() => setPorRechazar(null)}
-        />
       </div>
     </div>
   );

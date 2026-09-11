@@ -34,7 +34,27 @@ export interface ChoirInvitation {
   note?: string;
   /** El coro invitado dijo que no puede. `undefined` = sigue en pie. */
   rejectedAt?: string;
+  /** Por qué no pueden ir. Lo escribe el invitado; lo lee la anfitriona. */
+  rejectedReason?: string;
+  /** El coro invitado confirmó que va. */
+  acceptedAt?: string;
   createdBy?: string;
+}
+
+/**
+ * En qué va la invitación.
+ *
+ * `pendiente` es la que hay que responder; es la única que muestra los botones.
+ * ACEPTAR ES LA LLAVE: hasta que alguien del coro invitado acepta, no se puede publicar
+ * en la parroquia anfitriona (lo mismo exige la BD). Y basta con UNO: la invitación es
+ * al coro, así que en cuanto uno acepta, cualquiera de ese coro puede armar y publicar.
+ */
+export type EstadoInvitacion = 'pendiente' | 'aceptada' | 'rechazada';
+
+export function estadoInvitacion(i: ChoirInvitation): EstadoInvitacion {
+  if (i.rejectedAt) return 'rechazada';
+  if (i.acceptedAt) return 'aceptada';
+  return 'pendiente';
 }
 
 /**
@@ -74,11 +94,17 @@ export function estaVigente(i: ChoirInvitation): boolean {
   return !i.rejectedAt;
 }
 
+/** ¿Hay que responderla? Es lo que decide si se muestran Aceptar/Rechazar. */
+export function estaPendiente(i: ChoirInvitation): boolean {
+  return estadoInvitacion(i) === 'pendiente';
+}
+
 /**
  * De las invitaciones recibidas, las parroquias donde este coro puede publicar ese día.
  *
- * La parroquia propia nunca sale en esta lista — ahí se publica por derecho, no por
- * invitación. Las rechazadas tampoco: rechazar apaga el permiso.
+ * Solo las ACEPTADAS: publicar en la casa de otro empieza por decir que sí, y es lo que
+ * exige la RLS — ofrecer la parroquia antes de aceptar sería ofrecer una puerta que el
+ * servidor cierra. La propia nunca sale en esta lista: ahí se publica por derecho.
  */
 export function invitacionesVigentesPara(
   invitaciones: ChoirInvitation[],
@@ -91,7 +117,7 @@ export function invitacionesVigentesPara(
   if (madres.length === 0) return [];
   const vistas = new Set<string>();
   return invitaciones
-    .filter((i) => i.date === dia && estaVigente(i))
+    .filter((i) => i.date === dia && estadoInvitacion(i) === 'aceptada')
     .filter((i) => madres.some((m) => esParaMiCoro(i.guestParish, m)))
     .filter((i) => !madres.some((m) => cubre(m, i.hostParish)))
     .filter((i) => {

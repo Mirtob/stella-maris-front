@@ -186,6 +186,8 @@ function classifyPath(): { kind: 'ok' } | { kind: 'invalid-link' | 'unknown-rout
   if (path === '/demo' || path.startsWith('/demo/')) return { kind: 'ok' };
   // Módulo "Instalar aplicación" (sin login: se llega desde el QR de la parroquia)
   if (path === '/instalar' || path === '/instalar/') return { kind: 'ok' };
+  // Destino del aviso push de una invitación a cantar.
+  if (path === '/invitaciones' || path === '/invitaciones/') return { kind: 'ok' };
   // Deep link de cantoral
   if (path.startsWith('/c/')) {
     const id = getCantoralIdFromPath();
@@ -602,6 +604,10 @@ function AppContent() {
       return;
     }
 
+    // El aviso push de una invitación abre /invitaciones. Se anota para entrar ahí
+    // cuando la sesión esté lista (antes de eso no se sabe ni quién es).
+    const abrirInvitaciones = window.location.pathname.replace(/\/$/, '') === '/invitaciones';
+
     // Detect /c/:id deep link from QR scan
     const deepLinkCantoralId = getCantoralIdFromPath();
     // Detect /i/{parroquia} — enlace permanente de parroquia (QR pegado en la iglesia)
@@ -692,7 +698,8 @@ function AppContent() {
           if (!isAdminProfile && !profile.activeRole) {
             setShowParishSelector(true);
           }
-          setRoute({ screen: 'app', view: 'main' });
+          // Si se entró desde el aviso de una invitación, ahí es donde hay que caer.
+          setRoute({ screen: 'app', view: abrirInvitaciones ? 'choir-invitations' : 'main' });
         } else {
           const baseProfile = sessionToUserProfile(storedSession);
 
@@ -726,7 +733,7 @@ function AppContent() {
             }
             // Admin entra directo; el resto elige rol + parroquia de la sesión.
             if (remoteProfile.role !== 'Admin') setShowParishSelector(true);
-            setRoute({ screen: 'app', view: 'main' });
+            setRoute({ screen: 'app', view: abrirInvitaciones ? 'choir-invitations' : 'main' });
             return;
           }
 
@@ -1796,6 +1803,9 @@ function renderView(p: ViewProps): ReactElement | null {
           <ChoirInvitations
             parishes={p.userProfile.parishes ?? []}
             activeParish={p.activeParishName || p.userProfile.parishName || ''}
+            // Aceptar lleva al constructor con la fecha puesta, igual que elegir un
+            // día en el calendario litúrgico.
+            onBuildCantoral={(date) => { p.onPickCantoralDate(date); p.navigate('main'); }}
           />
         </RoleGuard>
       );

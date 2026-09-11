@@ -416,6 +416,98 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (!(await callerCanNotify(token))) return res.status(403).json({ error: 'Solo el coro o un administrador pueden avisar' });
 
+  // ── Invitación a cantar en otra parroquia ───────────────────────────────
+  //
+  // Se avisa al CORO INVITADO, no a la parroquia entera: los destinatarios son los
+  // suscriptores cuya parroquia calza con `guest_parish`. Vive aquí por el mismo tope
+  // de 12 funciones serverless que explica el bloque de avisos.
+  //
+  // La invitación se lee con la service key y se comprueba que quien avisa sea quien
+  // la creó: si no, cualquiera con cuenta de Coro podría hacer sonar el teléfono de
+  // cualquier coro pasando un id ajeno.
+  if (body.action === 'invitation' || body.action === 'invitation-rejected') {
+    const esRechazo = body.action === 'invitation-rejected';
+    const invId = String(body.invitationId || '').replace(/[(),"]/g, '').trim();
+    if (!invId) return res.status(400).json({ error: 'Falta invitationId' });
+
+    const ur = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: ANON, Authorization: `Bearer ${token}` } });
+    const uid = ur.ok ? (await ur.json())?.id : null;
+    if (!uid) return res.status(401).json({ error: 'No autenticado' });
+
+    const ir = await fetch(
+      `${SUPABASE_URL}/rest/v1/choir_invitations?id=eq.${encodeURIComponent(invId)}&select=id,host_parish,guest_parish,date,mass_type,note,created_by,rejected_at,rejected_by,rejected_reason`,
+      { headers: svcHeaders },
+    );
+    const invs = ir.ok ? await ir.json() : [];
+    const inv = Array.isArray(invs) ? invs[0] : null;
+    if (!inv) return res.status(404).json({ error: 'Invitación no encontrada' });
+
+    // Cada aviso lo dispara quien tiene derecho a hacerlo, y se comprueba contra la
+    // fila real: sin esto, cualquiera con cuenta de Coro haría sonar el teléfono de
+    // cualquier parroquia pasando un id ajeno.
+    if (esRechazo) {
+      // El rechazo lo devuelve quien rechazó, y solo si de verdad está rechazada.
+      if (!inv.rejected_at) return res.status(400).json({ error: 'Esa invitación no está rechazada' });
+      if (inv.rejected_by && inv.rejected_by !== uid) {
+        return res.status(403).json({ error: 'Ese rechazo no es tuyo' });
+      }
+    } else if (inv.created_by && inv.created_by !== uid) {
+      return res.status(403).json({ error: 'Esa invitación no la creaste tú' });
+    }
+
+    const [subsR, perfR] = await Promise.all([
+      fetch(
+        `${SUPABASE_URL}/rest/v1/push_subscriptions?select=endpoint,p256dh,auth,parishes,user_id`,
+        { headers: svcHeaders },
+      ),
+      fetch(`${SUPABASE_URL}/rest/v1/user_profiles?select=id,parishes,parish_name`, { headers: svcHeaders }),
+    ]);
+    const subs: SubDeCantoral[] = subsR.ok ? await subsR.json() : [];
+    const perfiles: PerfilParaAviso[] = perfR.ok ? await perfR.json() : [];
+    const porUsuario = new Map(perfiles.map((x) => [x.id, x]));
+
+    // A quién le suena el teléfono: al coro INVITADO cuando lo invitan, y a la
+    // parroquia ANFITRIONA cuando le devuelven el "no podemos".
+    //
+    // La unidad puede estar declarada como la parroquia o como una capilla suya, y la
+    // invitación puede nombrar cualquiera de las dos. Se compara en los dos sentidos,
+    // igual que `esParaMiCoro` en el cliente y `user_covers_parish` en la BD.
+    const objetivo = normParish(esRechazo ? inv.host_parish : inv.guest_parish);
+    const calza = (p2: string) => {
+      const x = normParish(p2);
+      return x === objetivo || x.startsWith(objetivo + ' · ') || objetivo.startsWith(x + ' · ');
+    };
+    const destinatarios = subs.filter((s2) => parroquiasDelSuscriptor(s2, porUsuario).some(calza));
+    if (destinatarios.length === 0) return res.status(200).json({ ok: true, sent: 0, subs: 0 });
+
+    const cuando = String(inv.date || '');
+    const payload = esRechazo
+      ? {
+          title: 'No pueden venir a cantar',
+          // El motivo ES el mensaje: es lo que deja decidir si hay que buscar otro coro.
+          body: [
+            `${inv.guest_parish} · ${cuando}`,
+            String(inv.rejected_reason || '').trim() || 'Sin motivo indicado.',
+          ].join(' — '),
+        }
+      : {
+          title: 'Los invitan a cantar 🎵',
+          body: inv.note
+            ? `${inv.host_parish} · ${cuando} — ${inv.note}`
+            : `${inv.host_parish} · ${cuando}`,
+        };
+
+    const r2 = await sendToSubs(destinatarios, {
+      ...payload,
+      // Abre la pantalla de invitaciones: con Aceptar / Rechazar para el invitado, y
+      // con el motivo a la vista para la anfitriona.
+      url: '/invitaciones',
+      // Una invitación por tag, y el rechazo aparte: ninguno tapa al otro en la bandeja.
+      tag: esRechazo ? `invitacion-no-${inv.id}` : `invitacion-${inv.id}`,
+    });
+    return res.status(200).json({ ok: true, sent: r2.sent, subs: destinatarios.length, failed: r2.failed });
+  }
+
   // Acepta cantoralIds (varios, misma sesión) o cantoralId (uno, retrocompat).
   const ids: string[] = (Array.isArray(body.cantoralIds) ? body.cantoralIds : [body.cantoralId])
     .map((x: any) => String(x || '').replace(/[(),"]/g, '').trim())

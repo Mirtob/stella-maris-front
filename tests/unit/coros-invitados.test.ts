@@ -17,7 +17,8 @@
  */
 import {
   cubre, esParaMiCoro, parroquiasMadre, parroquiasInvitadasPara, invitacionesVigentesPara,
-  estaVigente, meInvitaron, inviteYo, type ChoirInvitation,
+  estaVigente, estaPendiente, estadoInvitacion, meInvitaron, inviteYo,
+  type ChoirInvitation,
 } from '../../src/utils/choirInvitations';
 
 let pass = 0, fail = 0;
@@ -39,6 +40,13 @@ const inv = (extra: Partial<ChoirInvitation> = {}): ChoirInvitation => ({
   id: 'i1', hostParish: VALDIVIA, guestParish: PIRQUE, date: FIESTA, massType: 'dia', ...extra,
 });
 
+/**
+ * Invitación ya ACEPTADA por alguien del coro invitado. Es el estado que habilita a
+ * publicar: sin aceptar, la anfitriona no se ofrece como destino.
+ */
+const aceptada = (extra: Partial<ChoirInvitation> = {}): ChoirInvitation =>
+  inv({ acceptedAt: '2026-10-01T12:00:00Z', ...extra });
+
 console.log('\n== Qué cubre una parroquia ==');
 check('la parroquia se cubre a sí misma', cubre(PIRQUE, PIRQUE), true);
 check('la parroquia cubre a sus capillas', cubre(VALDIVIA, VALDIVIA_CAPILLA), true);
@@ -59,52 +67,52 @@ check('de una capilla se saca su parroquia', parroquiasMadre([PIRQUE_CAPILLA]), 
 check('no repite', parroquiasMadre([PIRQUE, PIRQUE_CAPILLA]), [PIRQUE]);
 check('descarta vacías', parroquiasMadre(['', PIRQUE]), [PIRQUE]);
 
-console.log('\n== Dónde puedo publicar ese domingo ==');
-check('invitado ese día: aparece la anfitriona',
-  parroquiasInvitadasPara([inv()], [PIRQUE], FIESTA), [VALDIVIA]);
+console.log('\n== Dónde puedo publicar ese domingo (ya aceptada) ==');
+check('aceptada ese día: aparece la anfitriona',
+  parroquiasInvitadasPara([aceptada()], [PIRQUE], FIESTA), [VALDIVIA]);
 check('otro día: no aparece nada',
-  parroquiasInvitadasPara([inv()], [PIRQUE], '2026-10-18'), []);
+  parroquiasInvitadasPara([aceptada()], [PIRQUE], '2026-10-18'), []);
 check('la invitación es a OTRO coro: no me sirve',
-  parroquiasInvitadasPara([inv({ guestParish: BUIN })], [PIRQUE], FIESTA), []);
+  parroquiasInvitadasPara([aceptada({ guestParish: BUIN })], [PIRQUE], FIESTA), []);
 check('una capilla invita: se publica en la capilla',
-  parroquiasInvitadasPara([inv({ hostParish: VALDIVIA_CAPILLA })], [PIRQUE], FIESTA), [VALDIVIA_CAPILLA]);
+  parroquiasInvitadasPara([aceptada({ hostParish: VALDIVIA_CAPILLA })], [PIRQUE], FIESTA), [VALDIVIA_CAPILLA]);
 check('una capilla invita a otra capilla',
-  parroquiasInvitadasPara([inv({ hostParish: VALDIVIA_CAPILLA, guestParish: PIRQUE_CAPILLA })], [PIRQUE], FIESTA),
+  parroquiasInvitadasPara([aceptada({ hostParish: VALDIVIA_CAPILLA, guestParish: PIRQUE_CAPILLA })], [PIRQUE], FIESTA),
   [VALDIVIA_CAPILLA]);
 check('entré por mi capilla, pero el invitado es mi coro',
-  parroquiasInvitadasPara([inv()], [PIRQUE_CAPILLA], FIESTA), [VALDIVIA]);
+  parroquiasInvitadasPara([aceptada()], [PIRQUE_CAPILLA], FIESTA), [VALDIVIA]);
 check('la propia nunca sale como invitación',
-  parroquiasInvitadasPara([inv({ hostParish: PIRQUE })], [PIRQUE], FIESTA), []);
+  parroquiasInvitadasPara([aceptada({ hostParish: PIRQUE })], [PIRQUE], FIESTA), []);
 check('mi propia capilla tampoco',
-  parroquiasInvitadasPara([inv({ hostParish: PIRQUE_CAPILLA })], [PIRQUE], FIESTA), []);
+  parroquiasInvitadasPara([aceptada({ hostParish: PIRQUE_CAPILLA })], [PIRQUE], FIESTA), []);
 check('sin parroquia en el perfil no hay invitaciones que valgan',
-  parroquiasInvitadasPara([inv()], [], FIESTA), []);
+  parroquiasInvitadasPara([aceptada()], [], FIESTA), []);
 check('sin fecha no se ofrece nada',
-  parroquiasInvitadasPara([inv()], [PIRQUE], ''), []);
+  parroquiasInvitadasPara([aceptada()], [PIRQUE], ''), []);
 check('dos anfitrionas el mismo día se ofrecen las dos',
-  parroquiasInvitadasPara([inv(), inv({ id: 'i2', hostParish: BUIN })], [PIRQUE], FIESTA),
+  parroquiasInvitadasPara([aceptada(), aceptada({ id: 'i2', hostParish: BUIN })], [PIRQUE], FIESTA),
   [VALDIVIA, BUIN]);
 check('la misma anfitriona dos veces no se duplica',
-  parroquiasInvitadasPara([inv(), inv({ id: 'i2' })], [PIRQUE], FIESTA), [VALDIVIA]);
+  parroquiasInvitadasPara([aceptada(), aceptada({ id: 'i2' })], [PIRQUE], FIESTA), [VALDIVIA]);
 
 console.log('\n== Rechazada = apagada ==');
 check('en pie', estaVigente(inv()), true);
 check('rechazada', estaVigente(inv({ rejectedAt: '2026-10-01T12:00:00Z' })), false);
 check('rechazada no habilita a publicar',
   parroquiasInvitadasPara([inv({ rejectedAt: '2026-10-01T12:00:00Z' })], [PIRQUE], FIESTA), []);
-check('si hay otra en pie, esa sí',
+check('si hay otra aceptada, esa sí',
   parroquiasInvitadasPara(
-    [inv({ rejectedAt: '2026-10-01T12:00:00Z' }), inv({ id: 'i2', hostParish: BUIN })],
+    [inv({ rejectedAt: '2026-10-01T12:00:00Z' }), aceptada({ id: 'i2', hostParish: BUIN })],
     [PIRQUE], FIESTA,
   ),
   [BUIN]);
 
 console.log('\n== El tipo de Misa viaja en la invitación ==');
 check('I Vísperas: el sábado por la tarde, para el domingo',
-  invitacionesVigentesPara([inv({ massType: 'visperas_i' })], [PIRQUE], FIESTA).map(i => [i.date, i.massType]),
+  invitacionesVigentesPara([aceptada({ massType: 'visperas_i' })], [PIRQUE], FIESTA).map(i => [i.date, i.massType]),
   [[FIESTA, 'visperas_i']]);
 check('la fecha sigue siendo la de la celebración',
-  invitacionesVigentesPara([inv({ massType: 'visperas_i' })], [PIRQUE], '2026-10-10'), []);
+  invitacionesVigentesPara([aceptada({ massType: 'visperas_i' })], [PIRQUE], '2026-10-10'), []);
 
 console.log('\n== Cada parte deshace su lado ==');
 check('el invitado puede rechazar', meInvitaron(inv(), [PIRQUE]), true);
@@ -113,6 +121,33 @@ check('el anfitrión no rechaza: no lo invitaron', meInvitaron(inv(), [VALDIVIA]
 check('el anfitrión puede retirar', inviteYo(inv(), [VALDIVIA]), true);
 check('retirar la de su capilla también', inviteYo(inv({ hostParish: VALDIVIA_CAPILLA }), [VALDIVIA]), true);
 check('el invitado no retira: no invitó él', inviteYo(inv(), [PIRQUE]), false);
+
+console.log('\n== Aceptar, rechazar, o todavía sin responder ==');
+check('recién invitada: pendiente', estadoInvitacion(inv()), 'pendiente');
+check('aceptada', estadoInvitacion(inv({ acceptedAt: '2026-10-01T12:00:00Z' })), 'aceptada');
+check('rechazada', estadoInvitacion(inv({ rejectedAt: '2026-10-01T12:00:00Z' })), 'rechazada');
+// El rechazo manda: si se aceptó y después se dijo que no, no van.
+check('rechazar después de aceptar manda el rechazo',
+  estadoInvitacion(inv({ acceptedAt: '2026-10-01T12:00:00Z', rejectedAt: '2026-10-02T12:00:00Z' })),
+  'rechazada');
+check('solo la pendiente pide respuesta', estaPendiente(inv()), true);
+check('la aceptada ya no', estaPendiente(inv({ acceptedAt: '2026-10-01T12:00:00Z' })), false);
+check('la aceptada sigue vigente', estaVigente(inv({ acceptedAt: '2026-10-01T12:00:00Z' })), true);
+
+console.log('\n== Aceptar es la llave, y basta con uno del coro ==');
+check('sin responder NO habilita a publicar',
+  parroquiasInvitadasPara([inv()], [PIRQUE], FIESTA), []);
+check('aceptada habilita',
+  parroquiasInvitadasPara([aceptada()], [PIRQUE], FIESTA), [VALDIVIA]);
+check('rechazada no habilita',
+  parroquiasInvitadasPara([inv({ rejectedAt: '2026-10-01T12:00:00Z' })], [PIRQUE], FIESTA), []);
+// La aceptación vive en la fila de la INVITACIÓN, que es del coro entero: no hay
+// nada por usuario que consultar, así que a otro corista —aquí, uno que entró por la
+// capilla— le aparece habilitada igual sin haber tocado "Aceptar".
+check('la aceptó un compañero: al resto del coro le sirve igual',
+  parroquiasInvitadasPara([aceptada()], [PIRQUE_CAPILLA], FIESTA), [VALDIVIA]);
+check('aceptada y despues rechazada: se apaga',
+  parroquiasInvitadasPara([aceptada({ rejectedAt: '2026-10-02T12:00:00Z' })], [PIRQUE], FIESTA), []);
 
 console.log(`\n${pass} ok, ${fail} fallas`);
 if (fail > 0) process.exit(1);

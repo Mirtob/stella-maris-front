@@ -28,12 +28,14 @@ interface Row {
   date: string;
   mass_type?: string | null;
   rejected_at?: string | null;
+  rejected_reason?: string | null;
+  accepted_at?: string | null;
   note?: string | null;
   created_by?: string | null;
 }
 
 const TABLE = 'choir_invitations';
-const COLS = 'id,host_parish,guest_parish,date,mass_type,rejected_at,note,created_by';
+const COLS = 'id,host_parish,guest_parish,date,mass_type,rejected_at,rejected_reason,accepted_at,note,created_by';
 
 const rowToInvitation = (r: Row): ChoirInvitation => ({
   id: r.id,
@@ -42,6 +44,8 @@ const rowToInvitation = (r: Row): ChoirInvitation => ({
   date: String(r.date).slice(0, 10),
   massType: (r.mass_type === 'visperas_i' || r.mass_type === 'visperas_ii' ? r.mass_type : 'dia') as MassType,
   rejectedAt: r.rejected_at ?? undefined,
+  rejectedReason: r.rejected_reason ?? undefined,
+  acceptedAt: r.accepted_at ?? undefined,
   note: r.note ?? undefined,
   createdBy: r.created_by ?? undefined,
 });
@@ -118,18 +122,71 @@ export async function invitarCoro(
 }
 
 /**
- * El coro invitado RECHAZA: no puede ir. No la borra —eso es cosa de quien invitó—,
- * queda marcada para que la anfitriona se entere en vez de verla desaparecer.
+ * El coro invitado responde: ACEPTA (va) o RECHAZA diciendo por qué.
+ *
+ * No borra nada —eso es cosa de quien invitó—: queda la respuesta, para que la
+ * anfitriona sepa si tiene coro o si tiene que buscar otro. Se puede cambiar: aceptar
+ * hoy y avisar el jueves que al final no pueden es justo lo que pasa.
  */
-export async function rechazarInvitacion(id: string): Promise<{ ok: boolean; error?: string }> {
+export async function responderInvitacion(
+  id: string, aceptar: boolean, motivo?: string,
+): Promise<{ ok: boolean; error?: string }> {
   try {
     const sb = getSupabaseClient();
-    const { data, error } = await sb.rpc('rechazar_invitacion', { p_id: id });
+    const { data, error } = await sb.rpc('responder_invitacion', {
+      p_id: id, p_aceptar: aceptar, p_motivo: motivo ?? null,
+    });
     if (error) return { ok: false, error: mensajeDeError(error) };
-    if (data !== true) return { ok: false, error: 'Esa invitación no es de tu coro, o ya estaba rechazada.' };
+    if (data !== true) return { ok: false, error: 'Esa invitación no es de tu coro.' };
     return { ok: true };
   } catch (err) {
     return { ok: false, error: (err as Error).message };
+  }
+}
+
+/**
+ * Avisa al coro invitado con una notificación push.
+ *
+ * Best-effort y en segundo plano: la invitación ya está guardada, y que el aviso no
+ * salga (VAPID sin configurar, nadie suscrito, el push service caído) no puede hacer
+ * fallar la invitación ni dejar al usuario mirando una rueda. Ver api/notify-cantoral.
+ */
+export async function avisarInvitacion(id: string): Promise<void> {
+  try {
+    const sb = getSupabaseClient();
+    const { data } = await sb.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return;
+    await fetch('/api/notify-cantoral', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: 'invitation', invitationId: id }),
+    });
+  } catch {
+    /* el aviso es un extra: la invitación ya quedó registrada */
+  }
+}
+
+/**
+ * Le devuelve el mensaje a quien invitó: el coro no puede ir, y por qué.
+ *
+ * Sin esto el rechazo se queda esperando a que alguien de la parroquia anfitriona entre
+ * a mirar, y lo que necesita es enterarse a tiempo para buscar otro coro. Best-effort,
+ * como el aviso de la invitación.
+ */
+export async function avisarRechazo(id: string): Promise<void> {
+  try {
+    const sb = getSupabaseClient();
+    const { data } = await sb.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return;
+    await fetch('/api/notify-cantoral', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: 'invitation-rejected', invitationId: id }),
+    });
+  } catch {
+    /* el aviso es un extra: el rechazo ya quedó registrado */
   }
 }
 
