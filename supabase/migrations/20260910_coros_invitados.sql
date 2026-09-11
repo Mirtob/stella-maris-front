@@ -149,18 +149,30 @@ COMMENT ON FUNCTION public.rechazar_invitacion(UUID) IS
 -- (incluye capillas y admin) en vez de escribir una segunda versión que se desvíe.
 -- El anfitrión se compara igual que allá: exacto, o una capilla que cuelga de él,
 -- para que invitar a la parroquia alcance a sus capillas.
-CREATE OR REPLACE FUNCTION public.user_invited_to_parish(p_unidad TEXT, p_fecha DATE)
+--
+-- OJO CON EL TIPO DE `p_fecha`: es TEXT, no DATE. `published_cantorals.date` es una
+-- columna de TEXTO (así se creó), y desde una policy de esa tabla se pasa tal cual;
+-- declararla DATE hacía fallar la migración entera con
+--   42883: function public.user_invited_to_parish(text, text) does not exist
+-- Se compara `i.date::text` en vez de castear el parámetro a DATE, para que ninguna
+-- fila con una fecha mal escrita pueda reventar la evaluación de la policy.
+-- Por si quedó colgando la versión con DATE de un intento anterior: dos sobrecargas
+-- harían ambigua cualquier llamada futura.
+DROP FUNCTION IF EXISTS public.user_invited_to_parish(TEXT, DATE);
+
+CREATE OR REPLACE FUNCTION public.user_invited_to_parish(p_unidad TEXT, p_fecha TEXT)
 RETURNS BOOLEAN
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = ''
 AS $$
   SELECT
     COALESCE(btrim(p_unidad), '') <> ''
-    AND p_fecha IS NOT NULL
+    AND COALESCE(btrim(p_fecha), '') <> ''
     AND EXISTS (
       SELECT 1
       FROM public.choir_invitations i
-      WHERE i.date = p_fecha
+      -- to_char y no `::text` para no depender del DateStyle del servidor.
+      WHERE to_char(i.date, 'YYYY-MM-DD') = left(btrim(p_fecha), 10)
         -- Rechazada = como si no existiera.
         AND i.rejected_at IS NULL
         AND (
@@ -171,9 +183,9 @@ AS $$
     );
 $$;
 
-GRANT EXECUTE ON FUNCTION public.user_invited_to_parish(TEXT, DATE) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.user_invited_to_parish(TEXT, TEXT) TO anon, authenticated;
 
-COMMENT ON FUNCTION public.user_invited_to_parish(TEXT, DATE) IS
+COMMENT ON FUNCTION public.user_invited_to_parish(TEXT, TEXT) IS
   'TRUE si el coro del usuario está invitado a cantar en esa parroquia/capilla ESE '
   'día (tabla choir_invitations). Ver 20260910_coros_invitados.';
 
