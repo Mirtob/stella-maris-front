@@ -49,7 +49,6 @@ export function SelectActiveParishDialog({
 
   const isAdmin = userRole === 'Admin';
   const effectiveParishes = parishes.length > 0 ? parishes : (defaultParish ? [defaultParish] : []);
-  const multiParish = effectiveParishes.length > 1;
   const hasNoParish = effectiveParishes.length === 0;
 
   const chapelsOf = (parishFull: string) => chapelsByParish[parishFull] ?? [];
@@ -61,25 +60,11 @@ export function SelectActiveParishDialog({
       onSelect('', 'Admin');
       return;
     }
-    if (multiParish) {
-      setChosenRole(role);
-      return;
-    }
-    // Pueblo fiel con una sola parroquia: igual mostramos el paso, porque ahí vive la
-    // opción de ir a otra parroquia de visita (p. ej. la Misa Crismal en la catedral).
-    // Sin esto, quien tiene una sola parroquia entraba directo y nunca podía elegir otra.
-    if (role === 'Pueblo fiel') {
-      setChosenRole(role);
-      return;
-    }
-    // Una sola parroquia: si tiene capillas, pasar al paso de capilla; si no, confirmar.
-    const only = effectiveParishes[0] ?? '';
-    if (only && chapelsOf(only).length > 0) {
-      setChosenRole(role);
-      setChosenParish(only);
-    } else {
-      onSelect(only, role);
-    }
+    // Todos los demás pasan por el paso de parroquia, aunque tengan una sola: ahí vive
+    // la opción de ir a otra parroquia de visita (la Misa Crismal en la catedral, un
+    // viaje, la parroquia de la familia). Antes solo lo veía el Pueblo fiel, así que un
+    // corista de una sola parroquia entraba directo y no podía elegir otra al entrar.
+    setChosenRole(role);
   };
 
   /**
@@ -212,9 +197,9 @@ export function SelectActiveParishDialog({
         )}
 
         {/* ── Step 2: Parish selection ───────────────────────────────────
-            Se muestra con varias parroquias, y SIEMPRE para Pueblo fiel (ahí está
-            la opción de ir de visita a otra parroquia). */}
-        {chosenRole && (multiParish || chosenRole === 'Pueblo fiel') && !chosenParish && !visiting && (
+            Se muestra SIEMPRE (menos al Administrador, que entra sin parroquia):
+            aunque haya una sola parroquia, ahí está la opción de ir de visita a otra. */}
+        {chosenRole && chosenRole !== 'Admin' && !chosenParish && !visiting && (
           <div className="mb-4">
             <button
               onClick={() => setChosenRole(null)}
@@ -283,7 +268,8 @@ export function SelectActiveParishDialog({
               ← Volver a mis parroquias
             </button>
             <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
-              Entrarás como <strong>Pueblo fiel</strong> solo por esta sesión. Tus parroquias no cambian.
+              Entrarás como <strong>Pueblo fiel</strong> solo por esta sesión —también si eres
+              del coro: publicar y editar es cosa del coro de casa—. Tus parroquias no cambian.
             </p>
             <div className="max-h-72 overflow-y-auto">
               <ParishPicker selected={[]} onChange={handleVisitSelect} />
@@ -295,10 +281,9 @@ export function SelectActiveParishDialog({
         {chosenRole && chosenParish && (
           <div className="mb-4">
             <button
-              onClick={() => {
-                setChosenParish(null);
-                if (!multiParish) setChosenRole(null);
-              }}
+              // Volver = al paso anterior REAL, que ahora siempre existe: la lista de
+              // parroquias, o el buscador si se venía de una visita.
+              onClick={() => setChosenParish(null)}
               className="flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 mb-4 hover:opacity-70 transition-opacity"
             >
               ← Volver
