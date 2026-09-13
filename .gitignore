@@ -49,3 +49,6 @@ scripts/.*.tmp.html
 
 # Vinculo local con el proyecto de Vercel (IDs de proyecto/organizacion)
 .vercel/
+
+# Cache de los PDF del Misal que baja scripts/import-antifonas.py (se rebajan solos)
+tmp/

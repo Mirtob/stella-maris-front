@@ -12,10 +12,13 @@ import { Tour } from '../tour/Tour';
 import { constructorTips, hasSeenTip, markTipSeen } from '../tour/tours';
 import { Song, InstrumentType, PublishedCantoral, MassType } from '../../types';
 import { PsalmFromBook } from '../songs/PsalmFromBook';
+import { MassAntiphon } from '../songs/MassAntiphon';
 import { getCelebrationsForDate, getLiturgicalDateForDate, getPersistedCustomDates, setPersistedCustomDates } from '../../utils/liturgicalCalendar';
 import { getSundayCycle } from '../../utils/liturgicalCycle';
 import { resolvePsalm } from '../../data/psalmIndex';
 import { buildPsalmSong, conSalmoDelLibro, debeReponerAntifona, esAntifonaEscritaAMano } from '../../utils/psalmSong';
+import { buildAntiphonSong, conAntifonas, findAntiphonSong } from '../../utils/antiphonSong';
+import { resolveAntiphons, conCita } from '../../data/antiphonIndex';
 import { AddSolemnityModal } from '../liturgy/AddSolemnityModal';
 import { addCustomLiturgicalDate, toLiturgicalDate } from '../../services/liturgicalDates';
 import { listInvitacionesRecibidas } from '../../services/choirInvitations';
@@ -113,6 +116,22 @@ export function ChoirView({
   const massDateObj = useMemo(() => parseYmdLocal(massDate), [massDate]);
 
   /**
+   * Al cambiar la fecha, reponer las antífonas del Misal — salvo lo escrito a mano,
+   * que manda. Misma regla que la antífona del salmo: vaciar la caja vuelve a la del
+   * Misal (así se corrige un error sin tener que recargar).
+   */
+  useEffect(() => {
+    const celebracion = getLiturgicalDateForDate(massDate);
+    const delMisal = celebracion ? resolveAntiphons(celebracion) : null;
+    if (!entradaEscritaAMano.current) {
+      setAntifonaEntrada(conCita(delMisal?.entrada, delMisal?.entradaCita));
+    }
+    if (!comunionEscritaAMano.current) {
+      setAntifonaComunion(conCita(delMisal?.comunion, delMisal?.comunionCita));
+    }
+  }, [massDate, celebTick]);
+
+  /**
    * Invitaciones para ESTE día: parroquias ajenas donde el coro fue invitado a cantar
    * (la fiesta patronal de la parroquia vecina). Habilitan publicar allá, y solo ese
    * día — lo mismo que exige la RLS. Ver utils/choirInvitations.
@@ -136,6 +155,21 @@ export function ChoirView({
   // Antífona del salmo (editable): por defecto la del índice de la celebración; el coro
   // puede cambiarla si no usa la misma. Viaja al cantoral publicado (y al PDF/pueblo).
   const [psalmAntiphon, setPsalmAntiphon] = useState('');
+
+  /**
+   * Antífonas propias del día (entrada y comunión). Se cargan solas del Misal al elegir
+   * la fecha, se pueden corregir, y la casilla decide si viajan al cantoral y al
+   * folleto. No reemplazan al canto de entrada ni al de comunión: se suman.
+   */
+  const [antifonaEntrada, setAntifonaEntrada] = useState('');
+  const [antifonaComunion, setAntifonaComunion] = useState('');
+  const [incluirEntrada, setIncluirEntrada] = useState(false);
+  const [incluirComunion, setIncluirComunion] = useState(false);
+  // Igual que con el salmo: lo escrito a mano no se pisa al cambiar la fecha.
+  const entradaEscritaAMano = useRef(false);
+  const comunionEscritaAMano = useRef(false);
+  const cambiarAntifonaEntrada = (v: string) => { entradaEscritaAMano.current = esAntifonaEscritaAMano(v); setAntifonaEntrada(v); };
+  const cambiarAntifonaComunion = (v: string) => { comunionEscritaAMano.current = esAntifonaEscritaAMano(v); setAntifonaComunion(v); };
   /**
    * ¿La antífona la escribió el coro a mano?
    *
@@ -179,8 +213,11 @@ export function ChoirView({
    * ninguna parte y daba por hecho que no había viajado.
    */
   const songsForPublish = useMemo<Song[]>(
-    () => conSalmoDelLibro(cantoral, psalmSong),
-    [cantoral, psalmSong],
+    () => conAntifonas(conSalmoDelLibro(cantoral, psalmSong), [
+      buildAntiphonSong(massDate, 'Entrada', antifonaEntrada, incluirEntrada),
+      buildAntiphonSong(massDate, 'Comunión', antifonaComunion, incluirComunion),
+    ]),
+    [cantoral, psalmSong, massDate, antifonaEntrada, antifonaComunion, incluirEntrada, incluirComunion],
   );
   /**
    * Al ENTRAR a editar un cantoral publicado, reponer su fecha, su horario y su tipo
@@ -201,6 +238,20 @@ export function ChoirView({
     if (salmoPublicado?.lyrics?.trim()) {
       antifonaEscritaAMano.current = true;
       setPsalmAntiphon(salmoPublicado.lyrics);
+    }
+    // Las antífonas publicadas vuelven a su caja, con la casilla ya marcada: si
+    // estaban en el cantoral, es que el coro las quiso.
+    const entradaPublicada = findAntiphonSong(editingCantoral.songs, 'Entrada');
+    if (entradaPublicada?.lyrics?.trim()) {
+      entradaEscritaAMano.current = true;
+      setAntifonaEntrada(entradaPublicada.lyrics);
+      setIncluirEntrada(true);
+    }
+    const comunionPublicada = findAntiphonSong(editingCantoral.songs, 'Comunión');
+    if (comunionPublicada?.lyrics?.trim()) {
+      comunionEscritaAMano.current = true;
+      setAntifonaComunion(comunionPublicada.lyrics);
+      setIncluirComunion(true);
     }
     setMassDate(editingCantoral.date);
     const hhmm = massTimeTo24h(editingCantoral.massTime);
@@ -752,9 +803,14 @@ export function ChoirView({
               );
             }
 
+            // Entrada y Comunión llevan, ADEMÁS de su buscador de cantos, la antífona
+            // propia del día: se canta después del canto de entrada, y al empezar la
+            // comunión. La casilla decide si viaja al folleto del pueblo.
+            const conAntifona = category === 'Entrada' || category === 'Comunión';
+
             return (
+              <div key={rawCategory} className={conAntifona ? 'space-y-3' : undefined}>
               <CategorySearch
-                key={rawCategory}
                 category={category}
                 icon={icon}
                 isExpanded={expandedCategories[category] || false}
@@ -770,6 +826,17 @@ export function ChoirView({
                 previousUsage={previousUsage}
                 massDate={massDate}
               />
+              {conAntifona && (
+                <MassAntiphon
+                  date={massDate}
+                  parte={category === 'Entrada' ? 'Entrada' : 'Comunión'}
+                  value={category === 'Entrada' ? antifonaEntrada : antifonaComunion}
+                  onChange={category === 'Entrada' ? cambiarAntifonaEntrada : cambiarAntifonaComunion}
+                  incluir={category === 'Entrada' ? incluirEntrada : incluirComunion}
+                  onIncluirChange={category === 'Entrada' ? setIncluirEntrada : setIncluirComunion}
+                />
+              )}
+              </div>
             );
           })}
         </div>
