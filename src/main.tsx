@@ -4,6 +4,7 @@ import App from "./App";
 import "./index.css";
 import { initSentry } from "./services/sentry";
 import { CACHE_NAME as OFFLINE_CACHE } from "./services/offlineCache";
+import { esErrorDeVersion, recargarAhora } from "./utils/chunkRecovery";
 import { reportDisplayMode, registerPwaServiceWorker } from "./services/push";
 
 // Inicializar Sentry ANTES de renderizar la app.
@@ -59,7 +60,16 @@ async function cleanupAndRender() {
   const root = createRoot(document.getElementById("root")!);
   root.render(
     <Sentry.ErrorBoundary
-      fallback={({ resetError }) => (
+      fallback={({ error, resetError }) => {
+        // DOS fallos distintos, dos salidas distintas.
+        //
+        // Si la app del teléfono quedó vieja (el trozo de código que pide ya no existe
+        // en el servidor), "Volver a intentar" NO PUEDE funcionar: reintentar vuelve a
+        // pedir el mismo archivo muerto, y la persona queda encerrada — le pasó a dos
+        // usuarios el 10-sep-2026. En ese caso se dice la verdad y el botón recarga
+        // pidiendo la versión nueva. Ver utils/chunkRecovery.
+        const versionVieja = esErrorDeVersion(error);
+        return (
         <div style={{
           minHeight: '100vh',
           display: 'flex',
@@ -71,16 +81,17 @@ async function cleanupAndRender() {
           textAlign: 'center',
           background: 'linear-gradient(135deg, #fef3c7 0%, #fdba74 100%)',
         }}>
-          <div style={{ fontSize: '64px', marginBottom: '16px' }}>⚠️</div>
+          <div style={{ fontSize: '64px', marginBottom: '16px' }}>{versionVieja ? '🔄' : '⚠️'}</div>
           <h1 style={{ color: '#1e3a8a', fontSize: '28px', marginBottom: '8px' }}>
-            Algo salió mal
+            {versionVieja ? 'Hay una versión nueva' : 'Algo salió mal'}
           </h1>
           <p style={{ color: '#1e40af', maxWidth: '420px', marginBottom: '24px', lineHeight: 1.6 }}>
-            La aplicación encontró un error inesperado. Ya lo notificamos al equipo.
-            Toca el botón para volver a intentar.
+            {versionVieja
+              ? 'La app de este teléfono quedó desactualizada y no pudo abrir esta pantalla. Toca el botón para traer la versión nueva.'
+              : 'La aplicación encontró un error inesperado. Ya lo notificamos al equipo. Toca el botón para volver a intentar.'}
           </p>
           <button
-            onClick={resetError}
+            onClick={versionVieja ? recargarAhora : resetError}
             style={{
               background: 'linear-gradient(to right, #1e3a8a, #1e3a5f)',
               color: 'white',
@@ -93,10 +104,16 @@ async function cleanupAndRender() {
               boxShadow: '0 4px 14px rgba(30, 58, 138, 0.4)',
             }}
           >
-            Volver a intentar
+            {versionVieja ? 'Actualizar la app' : 'Volver a intentar'}
           </button>
+          {versionVieja && (
+            <p style={{ color: '#1e40af', opacity: 0.75, fontSize: '13px', marginTop: '16px', maxWidth: '360px' }}>
+              Si vuelve a salir esto, cierra la app del todo y ábrela de nuevo.
+            </p>
+          )}
         </div>
-      )}
+        );
+      }}
     >
       <App />
     </Sentry.ErrorBoundary>

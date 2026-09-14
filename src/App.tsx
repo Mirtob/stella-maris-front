@@ -1,5 +1,8 @@
 import { useState, useEffect, lazy, Suspense, type ComponentType, type ReactElement, useRef } from 'react';
 import { Toaster, toast } from 'sonner';
+import {
+  esFalloDeChunk, intentarRecuperar, olvidarIntentos, limpiarParamVersion, VersionNuevaError,
+} from './utils/chunkRecovery';
 import { Login } from './components/auth/Login';
 import { AuthCallback } from './components/auth/AuthCallback';
 import { ProfileSetup } from './components/profile/ProfileSetup';
@@ -17,29 +20,40 @@ import { SolemnityAlerts } from './components/liturgy/SolemnityAlerts';
 // Vistas pesadas / no iniciales — carga diferida (code-splitting) para aligerar
 // el bundle inicial. Son exports nombrados, de ahí el `.then(m => ({ default }))`.
 //
-// `lazyWithReload`: como React.lazy, pero si la carga del chunk FALLA (típico tras un
-// DEPLOY: el hash viejo ya no existe → 404), recarga la página UNA vez para traer los
-// assets frescos. Evita el "no puedo entrar a esta pantalla / Algo salió mal" cuando la
-// pestaña estaba abierta durante un despliegue (p. ej. Configuración, que es lazy). Si
-// tras recargar sigue fallando, propaga el error real.
+// `lazyWithReload`: como React.lazy, pero sabe distinguir DOS fracasos que se veían
+// igual y no lo son:
+//
+//   · El trozo de código ya no existe (típico tras un DEPLOY: el hash viejo se borró).
+//     No es un error de programación: es que el teléfono tiene una app vieja. Se
+//     recupera solo recargando con el índice fresco, y si ni así, avisa de que hay
+//     versión nueva — ver utils/chunkRecovery.
+//   · Cualquier otro error: se propaga TAL CUAL, con su traza, para que llegue entero
+//     a Sentry y se pueda arreglar. Antes también recargaba aquí, y una recarga borra
+//     justo la pista que hacía falta.
+//
+// Por qué importa: hasta el 10-sep-2026 el primer caso terminaba en «Algo salió mal —
+// Toca el botón para volver a intentar», y ese botón NO PUEDE funcionar, porque
+// reintentar vuelve a pedir el mismo archivo muerto. Dos usuarios quedaron encerrados
+// ahí, con la promesa de que el equipo ya se había enterado.
+//
 // El genérico NO es adorno: con `{ default: any }` TypeScript daba por buena cualquier
 // prop de TODAS las pantallas cargadas así (14 componentes), porque el componente
 // resultante no declaraba ninguna. Pasarle mal las props no se notaba.
 function lazyWithReload<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>) {
   return lazy<T>(async () => {
     try {
-      return await factory();
+      const mod = await factory();
+      // Cargó bien: la app está sana y la cuenta de intentos vuelve a cero.
+      olvidarIntentos();
+      return mod;
     } catch (err) {
-      try {
-        const KEY = 'sm_chunk_reload_at';
-        const last = Number(sessionStorage.getItem(KEY) || '0');
-        if (Date.now() - last > 20000) {           // como máx. una recarga cada 20 s
-          sessionStorage.setItem(KEY, String(Date.now()));
-          window.location.reload();
-          return await new Promise<{ default: T }>(() => { /* la recarga toma el control */ });
-        }
-      } catch { /* sessionStorage no disponible (modo privado) */ }
-      throw err;
+      if (!esFalloDeChunk(err)) throw err;
+      if (intentarRecuperar()) {
+        // La recarga toma el control; esta promesa no se resuelve nunca a propósito.
+        return await new Promise<{ default: T }>(() => { /* recargando */ });
+      }
+      // Se agotaron los intentos: que la pantalla de error lo diga con todas sus letras.
+      throw new VersionNuevaError(err);
     }
   });
 }
@@ -579,6 +593,9 @@ function AppContent() {
 
   // Auth initialization — runs once on mount
   useEffect(() => {
+    // Si venimos de una recarga por version vieja, el parametro ya cumplio su papel:
+    // se quita de la barra para no ensuciar el enlace que la persona pueda compartir.
+    limpiarParamVersion();
     if (window.location.pathname === '/auth/callback') return;
 
     // V1+V2 — Clasificar el path ANTES de cualquier auth check. URLs desconocidas
