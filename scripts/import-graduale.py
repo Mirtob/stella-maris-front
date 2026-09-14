@@ -73,8 +73,11 @@ CANTOS_POR_LIBRO = {
     "romanum": [
         ("introitus",   r"\b[I1l]N\s*\."),
         ("graduale",    r"\bGR\s*\."),
-        ("alleluia",    r"\bAL\s*\."),
-        ("tractus",     r"\bTR\s*\."),
+        # El TRACTO no es un canto aparte: es lo que se canta EN LUGAR del Aleluya
+        # durante la Cuaresma. Ocupa el mismo sitio en la Misa, así que ocupa el mismo
+        # hueco aquí. Tenerlo como tipo propio obligaba a marcar "no existe" en la
+        # mitad de las filas de la planilla, que es trabajo inventado.
+        ("alleluia",    r"\bAL\s*\.|\bTR\s*\."),
         ("offertorium", r"\b[O0]F\s*\."),
         ("communio",    r"\bC[O0]\s*\."),
     ],
@@ -149,6 +152,20 @@ TIEMPOS = {
     "per annum": "del Tiempo Ordinario",
 }
 
+# Solemnidades que se celebran con VARIAS Misas, cada una con sus propios cantos.
+# La Navidad tiene cuatro (vigilia, noche, aurora, día) y en el libro cuelgan de
+# "In Nativitate Domini" como hijas. Sin esto, las cuatro quedaban sin emparejar y la
+# solemnidad más importante del año se resolvía con una entrada casi vacía.
+#
+# El sufijo sigue la convención que ya usa el índice de salmos de la app
+# ("Natividad del Señor (Misa de la vigilia)"), para que las dos fuentes hablen igual.
+SUB_MISAS = {
+    "ad missam in vigilia": "(Misa de la vigilia)",
+    "ad missam in nocte": "(Misa de la noche)",
+    "ad missam in aurora": "(Misa de la aurora)",
+    "ad missam in die": "(Misa del día)",
+}
+
 # Las que no siguen ningún patrón: se nombran una por una.
 FIESTAS = {
     "in nativitate domini": "Natividad del Señor",
@@ -203,6 +220,14 @@ def tiempo_de(titulo: str, ruta: list):
 
 def celebracion_de(titulo: str, ruta: list):
     """Nombre de la celebración en el calendario de la app, o None."""
+    # Una Misa concreta de una solemnidad: hereda el nombre de su madre y le añade cuál
+    # de sus Misas es ("Natividad del Señor (Misa de la noche)").
+    plano_sub = norm(titulo)
+    if plano_sub in SUB_MISAS and ruta:
+        madre = celebracion_de(ruta[-1], ruta[:-1])
+        if madre:
+            return f"{madre} {SUB_MISAS[plano_sub]}"
+        return None
     # "Dominica I post Pentecosten — Sanctissimae Trinitatis": la fiesta es lo que va
     # tras el guión; lo de delante es solo su posición en el calendario.
     for separador in ("—", "–", " - "):

@@ -17,9 +17,9 @@ import re
 INDICE = "src/data/gradualeIndex.data.ts"
 SALIDA = "docs/graduale-huecos.md"
 
-TIPOS = ["introitus", "graduale", "alleluia", "tractus", "offertorium", "communio"]
-# En Cuaresma el Tracto sustituye al Aleluya: no tener los dos es lo normal.
-ALTERNATIVOS = {("alleluia", "tractus")}
+# El TRACTO no es un tipo aparte: es la forma cuaresmal del Aleluya y ocupa su hueco.
+TIPOS = ["introitus", "graduale", "alleluia", "offertorium", "communio"]
+ALTERNATIVOS = set()
 
 
 def cargar() -> dict:

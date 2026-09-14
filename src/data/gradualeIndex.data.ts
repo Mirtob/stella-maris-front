@@ -659,7 +659,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "Natividad del Señor (Misa de la vigilia)"
   },
   "ad-missam-in-nocte": {
    "titulo": "Ad Missam in Nocte",
@@ -682,7 +683,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "Natividad del Señor (Misa de la noche)"
   },
   "ad-missam-in-aurora": {
    "titulo": "Ad Missam in Aurora",
@@ -717,7 +719,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "Natividad del Señor (Misa de la aurora)"
   },
   "ad-missam-in-die": {
    "titulo": "Ad Missam in Die",
@@ -745,7 +748,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "Natividad del Señor (Misa del día)"
   },
   "sanctae-familiae-iesu-mariae-et-ioseph": {
    "titulo": "Sanctae Familiae Iesu, Mariae et Ioseph",
@@ -1261,7 +1265,7 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 39.0
      }
     ],
-    "tractus": [
+    "alleluia": [
      {
       "p": 60,
       "y0": 31.0,
@@ -1302,7 +1306,7 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 39.0
      }
     ],
-    "tractus": [
+    "alleluia": [
      {
       "p": 60,
       "y0": 31.0,
@@ -1344,7 +1348,7 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 39.0
      }
     ],
-    "tractus": [
+    "alleluia": [
      {
       "p": 60,
       "y0": 31.0,
@@ -1515,7 +1519,7 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 37.0
      }
     ],
-    "tractus": [
+    "alleluia": [
      {
       "p": 69,
       "y0": 29.0,
@@ -2077,7 +2081,7 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 438.3
      }
     ],
-    "tractus": [
+    "alleluia": [
      {
       "p": 93,
       "y0": 430.3,
@@ -2359,7 +2363,7 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 231.2
      }
     ],
-    "tractus": [
+    "alleluia": [
      {
       "p": 105,
       "y0": 223.2,
@@ -2634,7 +2638,7 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 136.8
      }
     ],
-    "tractus": [
+    "alleluia": [
      {
       "p": 118,
       "y0": 128.8,
@@ -3103,7 +3107,7 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 189.6
      }
     ],
-    "tractus": [
+    "alleluia": [
      {
       "p": 154,
       "y0": 181.6,
@@ -3157,7 +3161,7 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 303.4
      }
     ],
-    "tractus": [
+    "alleluia": [
      {
       "p": 159,
       "y0": 295.4,
@@ -3183,7 +3187,7 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 303.4
      }
     ],
-    "tractus": [
+    "alleluia": [
      {
       "p": 159,
       "y0": 295.4,
@@ -3210,7 +3214,7 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 303.4
      }
     ],
-    "tractus": [
+    "alleluia": [
      {
       "p": 159,
       "y0": 295.4,
@@ -3279,7 +3283,7 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    ],
    "pagina": 169,
    "cantos": {
-    "tractus": [
+    "alleluia": [
      {
       "p": 168,
       "y0": 233.0,
@@ -3304,7 +3308,7 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    ],
    "pagina": 169,
    "cantos": {
-    "tractus": [
+    "alleluia": [
      {
       "p": 168,
       "y0": 233.0,
@@ -3365,7 +3369,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "Domingo de Resurrección (Misa del día)"
   },
   "feria-tertia-p199": {
    "titulo": "Feria Tertia",
@@ -4067,7 +4072,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "Pentecostés (Misa de la vigilia)"
   },
   "ad-missam-in-die-p249": {
    "titulo": "Ad Missam in Die",
@@ -4097,7 +4103,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "Pentecostés (Misa del día)"
   },
   "hebdomada-secunda": {
    "titulo": "Hebdomada Secunda",
@@ -5966,7 +5973,7 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    ],
    "pagina": 488,
    "cantos": {
-    "tractus": [
+    "alleluia": [
      {
       "p": 490,
       "y0": 474.0,
@@ -6123,18 +6130,6 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 545,
       "y0": 0,
       "y1": 85.1
-     }
-    ],
-    "tractus": [
-     {
-      "p": 545,
-      "y0": 340.9,
-      "y1": 519.3
-     },
-     {
-      "p": 546,
-      "y0": 0,
-      "y1": 179.1
      }
     ]
    }
@@ -6740,13 +6735,6 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
      {
       "p": 649,
       "y0": 262.1,
-      "y1": 282.4
-     }
-    ],
-    "tractus": [
-     {
-      "p": 649,
-      "y0": 274.4,
       "y1": 330.2
      }
     ],
