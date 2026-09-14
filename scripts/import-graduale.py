@@ -105,6 +105,136 @@ def slug(s: str) -> str:
     return norm(s).replace(" ", "-")[:70]
 
 
+
+# ── Del latín del libro a la celebración del calendario de la app ────────────
+#
+# Los títulos son regulares, pero el número del domingo viene en ORDINAL LATINO y el
+# tiempo litúrgico NO está en el título: está en la ruta de marcadores. "Hebdomada
+# Secunda" es el 2.º domingo de Pascua o del Tiempo Ordinario según de qué sección
+# cuelgue.
+#
+# Ojo con Cuaresma: ahí el domingo cuelga como hijo `Dominica` de su semana, así que
+# esa entrada es la que trae los cantos del domingo y gana sobre la de la semana.
+
+# Ordinales femeninos, que es como concuerdan con "hebdomada" y "dominica".
+UNIDADES = {
+    "prima": 1, "secunda": 2, "tertia": 3, "quarta": 4, "quinta": 5,
+    "sexta": 6, "septima": 7, "octava": 8, "nona": 9,
+}
+# Solo los que NO se descomponen. "decima" sí se descompone ("Decima Quinta" = 15),
+# así que va en DECENAS, no aquí.
+ENTEROS = {"undecima": 11, "duodecima": 12}
+# El libro escribe "Vigesima" y "Trigesima" con G. Se aceptan las dos grafías: con la
+# clásica (vicesima/tricesima) el importador leía "Vigesima Prima" como 1 en vez de 21
+# — y poner los cantos del domingo 21 en el primero es peor que no ponerlos.
+DECENAS = {
+    "decima": 10,
+    "vicesima": 20, "vigesima": 20,
+    "tricesima": 30, "trigesima": 30,
+}
+ROMANOS_ORD = {
+    "i": 1, "ii": 2, "iii": 3, "iv": 4, "v": 5, "vi": 6, "vii": 7, "viii": 8, "ix": 9,
+    "x": 10, "xi": 11, "xii": 12, "xiii": 13, "xiv": 14, "xv": 15, "xvi": 16,
+    "xvii": 17, "xviii": 18, "xix": 19, "xx": 20, "xxi": 21, "xxii": 22, "xxiii": 23,
+    "xxiv": 24, "xxv": 25, "xxvi": 26, "xxvii": 27, "xxviii": 28, "xxix": 29,
+    "xxx": 30, "xxxi": 31, "xxxii": 32, "xxxiii": 33, "xxxiv": 34,
+}
+
+# Tiempo litúrgico → cómo lo nombra el calendario de la app.
+TIEMPOS = {
+    "adventus": "de Adviento",
+    "quadragesimae": "de Cuaresma",
+    "paschae": "de Pascua",
+    "paschale": "de Pascua",
+    "per annum": "del Tiempo Ordinario",
+}
+
+# Las que no siguen ningún patrón: se nombran una por una.
+FIESTAS = {
+    "in nativitate domini": "Natividad del Señor",
+    "sanctae familiae iesu mariae et ioseph": "Sagrada Familia",
+    "s familiae iesu mariae et ioseph": "Sagrada Familia",
+    "sollemnitas sanctae dei genetricis mariae": "Santa María, Madre de Dios",
+    "dominica secunda post nativitatem": "2.º Domingo después de Navidad",
+    "in epiphania domini": "Epifanía del Señor",
+    "in baptismate domini": "Bautismo del Señor",
+    "dominica in palmis de passione domini": "Domingo de Ramos",
+    "dominica paschae in resurrectione domini": "Domingo de Resurrección",
+    "dominica resurrectionis": "Domingo de Resurrección",
+    "in ascensione domini": "Ascensión del Señor",
+    "dominica pentecostes": "Pentecostés",
+    "sanctissimae trinitatis": "Santísima Trinidad",
+    "ss mi corporis et sanguinis christi": "Corpus Christi",
+    "sacratissimi cordis iesu": "Sagrado Corazón de Jesús",
+    "domini nostri iesu christi universorum regis": "Jesucristo, Rey del Universo",
+    # El libro lo abrevia: "D. N. Iesu Christi universorum Regis".
+    "d n iesu christi universorum regis": "Jesucristo, Rey del Universo",
+}
+
+
+def numero_ordinal(texto: str):
+    """'Vicesima Prima' → 21. 'XXI' → 21. None si no hay ordinal."""
+    palabras = norm(texto).split()
+    # Romano suelto ("Hebdomada XXI").
+    for w in palabras:
+        if w in ROMANOS_ORD and len(palabras) <= 4:
+            return ROMANOS_ORD[w]
+    # Los ordinales que aparecen en el título, en orden.
+    fichas = [w for w in palabras if w in ENTEROS or w in DECENAS or w in UNIDADES]
+    if not fichas:
+        return None
+    # "Undecima", "Duodecima": una pieza, no se suman con nada.
+    if len(fichas) == 1 and fichas[0] in ENTEROS:
+        return ENTEROS[fichas[0]]
+    # El resto se suma: "Decima Quinta" = 10+5, "Vigesima Prima" = 20+1,
+    # "Trigesima Quarta" = 30+4.
+    total = sum(DECENAS.get(w) or UNIDADES.get(w) or 0 for w in fichas)
+    return total or None
+
+
+def tiempo_de(titulo: str, ruta: list):
+    """El tiempo litúrgico sale de la ruta; el título casi nunca lo dice."""
+    todo = norm(" ".join(list(ruta) + [titulo]))
+    for clave, nombre in TIEMPOS.items():
+        if clave in todo:
+            return nombre
+    return None
+
+
+def celebracion_de(titulo: str, ruta: list):
+    """Nombre de la celebración en el calendario de la app, o None."""
+    # "Dominica I post Pentecosten — Sanctissimae Trinitatis": la fiesta es lo que va
+    # tras el guión; lo de delante es solo su posición en el calendario.
+    for separador in ("—", "–", " - "):
+        if separador in titulo:
+            despues = titulo.split(separador)[-1].strip()
+            if norm(despues) in FIESTAS:
+                return FIESTAS[norm(despues)]
+    plano = norm(titulo)
+    if plano in FIESTAS:
+        return FIESTAS[plano]
+    for clave, nombre in FIESTAS.items():
+        if plano and (plano == clave or plano.startswith(clave)):
+            return nombre
+
+    # Un domingo: hace falta el número y el tiempo.
+    esDomingo = plano.startswith("dominica") or plano.startswith("hebdomada")
+    if not esDomingo:
+        return None
+    tiempo = tiempo_de(titulo, ruta)
+    if not tiempo:
+        return None
+    # "Dominica" a secas: el número lo lleva la semana que la contiene.
+    numero = numero_ordinal(titulo)
+    if numero is None and ruta:
+        numero = numero_ordinal(ruta[-1])
+    if not numero:
+        return None
+    # En Adviento y Cuaresma el libro empieza la cuenta en la semana; coincide con el
+    # domingo salvo en el Tiempo Ordinario, donde la Hebdomada N es el domingo N.
+    return f"{numero}.º Domingo {tiempo}"
+
+
 def descargar(libro: dict, cache: str) -> str:
     os.makedirs(cache, exist_ok=True)
     destino = os.path.join(cache, libro["archivo"])
@@ -249,13 +379,25 @@ def main():
             # se desempata con la página, que es única.
             if clave_misa in conMisa:
                 clave_misa = f"{clave_misa}-p{m['desde'] + 1}"
-            conMisa[clave_misa] = {
+            celebracion = celebracion_de(m["titulo"], m["ruta"][:-1])
+            entrada = {
                 "titulo": m["titulo"],
                 # Sin los ancestros no hay forma de saber de qué tiempo es esta Misa.
                 "ruta": m["ruta"][:-1],
                 "pagina": m["desde"] + 1,
                 "cantos": cantos,
             }
+            if celebracion:
+                entrada["celebracion"] = celebracion
+            # Si dos entradas apuntan al mismo domingo (la semana y su hijo
+            # `Dominica`, como en Cuaresma), gana la que traiga MÁS cantos.
+            previa = next((k for k, v in conMisa.items()
+                           if v.get("celebracion") == celebracion), None) if celebracion else None
+            if previa and len(conMisa[previa]["cantos"]) >= len(cantos):
+                continue
+            if previa:
+                del conMisa[previa]
+            conMisa[clave_misa] = entrada
         indice[clave] = conMisa
 
         # Informe: qué falta, para repasarlo a mano.
@@ -288,6 +430,9 @@ export interface RecorteGraduale { p: number; y0: number; y1: number; }
 /** Los cantos de una Misa del libro. Cada canto puede ocupar varias regiones. */
 export interface MisaGraduale {
   titulo: string;
+  /** Celebración del calendario de la app, cuando se pudo emparejar. El Simplex casi
+   *  nunca la trae: ofrece Misas por tiempo, y el domingo lo elige el coro. */
+  celebracion?: string;
   /** Secciones que la contienen, de fuera a dentro ("Proprium de Tempore", "Tempus
    *  Adventus"…). Sin esto, "Feria Secunda" o "Missa I" son ambiguos. */
   ruta: string[];

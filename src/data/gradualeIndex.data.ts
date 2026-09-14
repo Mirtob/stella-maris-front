@@ -14,6 +14,9 @@ export interface RecorteGraduale { p: number; y0: number; y1: number; }
 /** Los cantos de una Misa del libro. Cada canto puede ocupar varias regiones. */
 export interface MisaGraduale {
   titulo: string;
+  /** Celebración del calendario de la app, cuando se pudo emparejar. El Simplex casi
+   *  nunca la trae: ofrece Misas por tiempo, y el domingo lo elige el coro. */
+  celebracion?: string;
   /** Secciones que la contienen, de fuera a dentro ("Proprium de Tempore", "Tempus
    *  Adventus"…). Sin esto, "Feria Secunda" o "Missa I" son ambiguos. */
   ruta: string[];
@@ -96,7 +99,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "1.º Domingo de Adviento"
   },
   "hebdomada-secunda-adventus": {
    "titulo": "Hebdomada Secunda Adventus",
@@ -144,7 +148,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "2.º Domingo de Adviento"
   },
   "hebdomada-tertia-adventus": {
    "titulo": "Hebdomada Tertia Adventus",
@@ -185,7 +190,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "3.º Domingo de Adviento"
   },
   "in-feriis-adventus-a-die-17-ad-diem-24-decembris": {
    "titulo": "In Feriis Adventus a die 17 ad diem 24 decembris",
@@ -531,7 +537,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "4.º Domingo de Adviento"
   },
   "die-24-decembris-ad-missam-matutinam": {
    "titulo": "Die 24 decembris, ad Missam matutinam",
@@ -616,7 +623,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "Natividad del Señor"
   },
   "ad-missam-in-vigilia": {
    "titulo": "Ad Missam in Vigilia",
@@ -782,7 +790,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "Sagrada Familia"
   },
   "die-29-decembris": {
    "titulo": "Die 29 decembris",
@@ -882,7 +891,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 234.8
      }
     ]
-   }
+   },
+   "celebracion": "Santa María, Madre de Dios"
   },
   "dominica-secunda-post-nativitatem": {
    "titulo": "Dominica Secunda post Nativitatem",
@@ -932,7 +942,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 234.8
      }
     ]
-   }
+   },
+   "celebracion": "2.º Domingo después de Navidad"
   },
   "in-feriis-temporis-nativitatis": {
    "titulo": "In feriis temporis Nativitatis",
@@ -1023,7 +1034,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "Epifanía del Señor"
   },
   "in-feriis-post-epiphaniam": {
    "titulo": "In feriis post Epiphaniam",
@@ -1215,7 +1227,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 40.1
      }
     ]
-   }
+   },
+   "celebracion": "Bautismo del Señor"
   },
   "tempus-quadragesimae": {
    "titulo": "Tempus Quadragesimae",
@@ -1531,64 +1544,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
-  },
-  "dominica": {
-   "titulo": "Dominica",
-   "ruta": [
-    "Proprium de Tempore",
-    "Tempus Quadragesimae",
-    "Hebdomada Prima Quadragesimae"
-   ],
-   "pagina": 68,
-   "cantos": {
-    "introitus": [
-     {
-      "p": 67,
-      "y0": 324.4,
-      "y1": 519.3
-     },
-     {
-      "p": 68,
-      "y0": 0,
-      "y1": 519.3
-     },
-     {
-      "p": 69,
-      "y0": 0,
-      "y1": 37.0
-     }
-    ],
-    "tractus": [
-     {
-      "p": 69,
-      "y0": 29.0,
-      "y1": 519.3
-     },
-     {
-      "p": 70,
-      "y0": 0,
-      "y1": 519.3
-     },
-     {
-      "p": 71,
-      "y0": 0,
-      "y1": 519.3
-     },
-     {
-      "p": 72,
-      "y0": 0,
-      "y1": 452.1
-     }
-    ],
-    "offertorium": [
-     {
-      "p": 72,
-      "y0": 444.1,
-      "y1": 519.3
-     }
-    ]
-   }
+   },
+   "celebracion": "1.º Domingo de Cuaresma"
   },
   "feria-secunda-p74": {
    "titulo": "Feria Secunda",
@@ -1846,49 +1803,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
-  },
-  "dominica-p85": {
-   "titulo": "Dominica",
-   "ruta": [
-    "Proprium de Tempore",
-    "Tempus Quadragesimae",
-    "Hebdomada Secunda Quadragesimae"
-   ],
-   "pagina": 85,
-   "cantos": {
-    "introitus": [
-     {
-      "p": 84,
-      "y0": 151.8,
-      "y1": 394.6
-     }
-    ],
-    "graduale": [
-     {
-      "p": 84,
-      "y0": 386.6,
-      "y1": 519.3
-     },
-     {
-      "p": 85,
-      "y0": 0,
-      "y1": 519.3
-     },
-     {
-      "p": 86,
-      "y0": 0,
-      "y1": 335.1
-     }
-    ],
-    "offertorium": [
-     {
-      "p": 86,
-      "y0": 327.1,
-      "y1": 519.3
-     }
-    ]
-   }
+   },
+   "celebracion": "2.º Domingo de Cuaresma"
   },
   "feria-secunda-p88": {
    "titulo": "Feria Secunda",
@@ -2192,68 +2108,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
-  },
-  "dominica-p93": {
-   "titulo": "Dominica",
-   "ruta": [
-    "Proprium de Tempore",
-    "Tempus Quadragesimae",
-    "Hebdomada Tertia Quadragesimae"
-   ],
-   "pagina": 93,
-   "cantos": {
-    "introitus": [
-     {
-      "p": 92,
-      "y0": 87.5,
-      "y1": 447.1
-     }
-    ],
-    "graduale": [
-     {
-      "p": 92,
-      "y0": 439.1,
-      "y1": 519.3
-     },
-     {
-      "p": 93,
-      "y0": 0,
-      "y1": 438.3
-     }
-    ],
-    "tractus": [
-     {
-      "p": 93,
-      "y0": 430.3,
-      "y1": 519.3
-     },
-     {
-      "p": 94,
-      "y0": 0,
-      "y1": 519.3
-     },
-     {
-      "p": 95,
-      "y0": 0,
-      "y1": 81.2
-     }
-    ],
-    "offertorium": [
-     {
-      "p": 95,
-      "y0": 73.2,
-      "y1": 122.1
-     }
-    ],
-    "communio": [
-     {
-      "p": 95,
-      "y0": 114.1,
-      "y1": 519.3
-     }
-    ]
-   }
+   },
+   "celebracion": "3.º Domingo de Cuaresma"
   },
   "feria-secunda-p97": {
    "titulo": "Feria Secunda",
@@ -2522,49 +2378,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
-  },
-  "dominica-p105": {
-   "titulo": "Dominica",
-   "ruta": [
-    "Proprium de Tempore",
-    "Tempus Quadragesimae",
-    "Hebdomada Quarta Quadragesimae"
-   ],
-   "pagina": 105,
-   "cantos": {
-    "offertorium": [
-     {
-      "p": 104,
-      "y0": 76.5,
-      "y1": 519.3
-     },
-     {
-      "p": 105,
-      "y0": 0,
-      "y1": 231.2
-     }
-    ],
-    "tractus": [
-     {
-      "p": 105,
-      "y0": 223.2,
-      "y1": 519.3
-     },
-     {
-      "p": 106,
-      "y0": 0,
-      "y1": 210.6
-     }
-    ],
-    "communio": [
-     {
-      "p": 106,
-      "y0": 473.5,
-      "y1": 519.3
-     }
-    ]
-   }
+   },
+   "celebracion": "4.º Domingo de Cuaresma"
   },
   "feria-secunda-p108": {
    "titulo": "Feria Secunda",
@@ -2843,66 +2658,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
-  },
-  "dominica-p117": {
-   "titulo": "Dominica",
-   "ruta": [
-    "Proprium de Tempore",
-    "Tempus Quadragesimae",
-    "Hebdomada Quinta Quadragesimae"
-   ],
-   "pagina": 117,
-   "cantos": {
-    "introitus": [
-     {
-      "p": 116,
-      "y0": 97.9,
-      "y1": 519.3
-     },
-     {
-      "p": 117,
-      "y0": 0,
-      "y1": 42.0
-     }
-    ],
-    "graduale": [
-     {
-      "p": 117,
-      "y0": 34.0,
-      "y1": 519.3
-     },
-     {
-      "p": 118,
-      "y0": 0,
-      "y1": 136.8
-     }
-    ],
-    "tractus": [
-     {
-      "p": 118,
-      "y0": 128.8,
-      "y1": 519.3
-     },
-     {
-      "p": 119,
-      "y0": 0,
-      "y1": 519.3
-     },
-     {
-      "p": 120,
-      "y0": 0,
-      "y1": 62.2
-     }
-    ],
-    "communio": [
-     {
-      "p": 120,
-      "y0": 54.2,
-      "y1": 519.3
-     }
-    ]
-   }
+   },
+   "celebracion": "5.º Domingo de Cuaresma"
   },
   "feria-secunda-p122": {
    "titulo": "Feria Secunda",
@@ -3835,7 +3592,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "2.º Domingo de Pascua"
   },
   "hebdomada-tertia-paschae": {
    "titulo": "Hebdomada Tertia Paschae",
@@ -3869,7 +3627,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "3.º Domingo de Pascua"
   },
   "hebdomada-quarta-paschae": {
    "titulo": "Hebdomada Quarta Paschae",
@@ -3910,7 +3669,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "4.º Domingo de Pascua"
   },
   "hebdomada-quinta-paschae": {
    "titulo": "Hebdomada Quinta Paschae",
@@ -3942,7 +3702,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "5.º Domingo de Pascua"
   },
   "hebdomada-sexta-paschae": {
    "titulo": "Hebdomada Sexta Paschae",
@@ -3998,7 +3759,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 84.5
      }
     ]
-   }
+   },
+   "celebracion": "6.º Domingo de Pascua"
   },
   "in-ascensione-domini": {
    "titulo": "In Ascensione Domini",
@@ -4027,7 +3789,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "Ascensión del Señor"
   },
   "feria-sexta-et-sabbato-post-ascensionem": {
    "titulo": "Feria Sexta et Sabbato post Ascensionem",
@@ -4092,37 +3855,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
-  },
-  "dominica-p238": {
-   "titulo": "Dominica",
-   "ruta": [
-    "Proprium de Tempore",
-    "Tempus Paschale",
-    "Hebdomada Septima Paschae"
-   ],
-   "pagina": 238,
-   "cantos": {
-    "communio": [
-     {
-      "p": 237,
-      "y0": 83.0,
-      "y1": 176.7
-     }
-    ],
-    "introitus": [
-     {
-      "p": 237,
-      "y0": 168.7,
-      "y1": 519.3
-     },
-     {
-      "p": 238,
-      "y0": 0,
-      "y1": 519.3
-     }
-    ]
-   }
+   },
+   "celebracion": "7.º Domingo de Pascua"
   },
   "feriis-secunda-et-quinta": {
    "titulo": "Feriis Secunda et Quinta",
@@ -4290,7 +4024,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "Pentecostés"
   },
   "ad-missam-in-vigilia-p245": {
    "titulo": "Ad Missam in Vigilia",
@@ -4415,7 +4150,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 63.7
      }
     ]
-   }
+   },
+   "celebracion": "2.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-tertia": {
    "titulo": "Hebdomada Tertia",
@@ -4454,7 +4190,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "3.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-quarta": {
    "titulo": "Hebdomada Quarta",
@@ -4483,7 +4220,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "4.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-quinta": {
    "titulo": "Hebdomada Quinta",
@@ -4522,7 +4260,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "5.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-sexta": {
    "titulo": "Hebdomada Sexta",
@@ -4563,7 +4302,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "6.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-septima": {
    "titulo": "Hebdomada Septima",
@@ -4604,7 +4344,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "7.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-octava": {
    "titulo": "Hebdomada Octava",
@@ -4638,7 +4379,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "8.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-nona": {
    "titulo": "Hebdomada Nona",
@@ -4672,7 +4414,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "9.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-decima": {
    "titulo": "Hebdomada Decima",
@@ -4706,29 +4449,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
-  },
-  "hebdomada-undecima": {
-   "titulo": "Hebdomada Undecima",
-   "ruta": [
-    "Proprium de Tempore",
-    "Tempus per annum"
-   ],
-   "pagina": 288,
-   "cantos": {
-    "graduale": [
-     {
-      "p": 288,
-      "y0": 30.799999999999997,
-      "y1": 519.3
-     },
-     {
-      "p": 289,
-      "y0": 0,
-      "y1": 519.3
-     }
-    ]
-   }
+   },
+   "celebracion": "10.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-undecima-p291": {
    "titulo": "Hebdomada Undecima",
@@ -4769,7 +4491,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "11.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-decima-tertia": {
    "titulo": "Hebdomada Decima Tertia",
@@ -4798,7 +4521,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "13.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-decima-quarta": {
    "titulo": "Hebdomada Decima Quarta",
@@ -4839,7 +4563,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "14.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-decima-quinta": {
    "titulo": "Hebdomada Decima Quinta",
@@ -4892,7 +4617,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "15.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-decima-sexta": {
    "titulo": "Hebdomada Decima Sexta",
@@ -4933,7 +4659,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "16.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-decima-septima": {
    "titulo": "Hebdomada Decima Septima",
@@ -4991,7 +4718,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "17.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-decima-octava": {
    "titulo": "Hebdomada Decima Octava",
@@ -5030,7 +4758,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "18.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-decima-nona": {
    "titulo": "Hebdomada Decima Nona",
@@ -5069,7 +4798,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "19.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-vigesima": {
    "titulo": "Hebdomada Vigesima",
@@ -5117,7 +4847,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "20.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-vigesima-prima": {
    "titulo": "Hebdomada Vigesima Prima",
@@ -5170,7 +4901,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "21.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-vigesima-secunda": {
    "titulo": "Hebdomada Vigesima Secunda",
@@ -5206,7 +4938,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "22.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-vigesima-tertia": {
    "titulo": "Hebdomada Vigesima Tertia",
@@ -5259,7 +4992,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "23.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-vigesima-quarta": {
    "titulo": "Hebdomada Vigesima Quarta",
@@ -5300,7 +5034,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "24.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-vigesima-quinta": {
    "titulo": "Hebdomada Vigesima Quinta",
@@ -5341,7 +5076,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "25.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-vigesima-sexta": {
    "titulo": "Hebdomada Vigesima Sexta",
@@ -5387,7 +5123,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "26.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-vigesima-septima": {
    "titulo": "Hebdomada Vigesima Septima",
@@ -5433,7 +5170,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "27.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-vigesima-octava": {
    "titulo": "Hebdomada Vigesima Octava",
@@ -5486,7 +5224,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "28.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-vigesima-nona": {
    "titulo": "Hebdomada Vigesima Nona",
@@ -5527,7 +5266,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "29.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-trigesima": {
    "titulo": "Hebdomada Trigesima",
@@ -5575,7 +5315,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "30.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-trigesima-prima": {
    "titulo": "Hebdomada Trigesima Prima",
@@ -5616,7 +5357,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "31.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-trigesima-secunda": {
    "titulo": "Hebdomada Trigesima Secunda",
@@ -5650,7 +5392,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "32.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-trigesima-tertia": {
    "titulo": "Hebdomada Trigesima Tertia",
@@ -5691,7 +5434,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "33.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-trigesima-quarta": {
    "titulo": "Hebdomada Trigesima Quarta",
@@ -5741,7 +5485,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "34.º Domingo del Tiempo Ordinario"
   },
   "sollemnitates-domini-tempore-per-annum-occurrentes": {
    "titulo": "Sollemnitates Domini Tempore per Annum Occurrentes",
@@ -5844,7 +5589,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "Santísima Trinidad"
   },
   "feria-v-post-dom-ss-mae-trinitatis-ss-mi-corporis-et-sanguinis-christi": {
    "titulo": "Feria V post dom. Ss.mae Trinitatis — Ss.mi Corporis et Sanguinis Christi",
@@ -5894,7 +5640,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "Corpus Christi"
   },
   "feria-vi-post-dom-ii-post-pentecosten-sacratissimi-cordis-iesu": {
    "titulo": "Feria VI post dom. II post Pentecosten — Sacratissimi Cordis Iesu",
@@ -5912,7 +5659,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "Sagrado Corazón de Jesús"
   },
   "dominica-ultima-per-annum-d-n-iesu-christi-universorum-regis": {
    "titulo": "Dominica ultima per Annum — D. N. Iesu Christi Universorum Regis",
@@ -5942,7 +5690,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 519.3
      }
     ]
-   }
+   },
+   "celebracion": "Jesucristo, Rey del Universo"
   },
   "antiphonae-eucharisticae-pro-communione-ad-libitum-adhibendae": {
    "titulo": "Antiphonae Eucharisticae pro Communione ad Libitum Adhibendae",
@@ -8024,7 +7773,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "Natividad del Señor"
   },
   "s-familiae-iesu-mariae-et-ioseph": {
    "titulo": "S. Familiae Iesu, Mariae et Ioseph",
@@ -8095,7 +7845,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "Sagrada Familia"
   },
   "in-epiphania-domini": {
    "titulo": "In Epiphania Domini",
@@ -8166,7 +7917,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 423.5
      }
     ]
-   }
+   },
+   "celebracion": "Epifanía del Señor"
   },
   "tempus-quadragesimae": {
    "titulo": "Tempus Quadragesimae",
@@ -8339,7 +8091,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "1.º Domingo de Cuaresma"
   },
   "dominica-ii-iii": {
    "titulo": "Dominica II & III",
@@ -8405,7 +8158,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "2.º Domingo de Cuaresma"
   },
   "dominica-iv": {
    "titulo": "Dominica IV",
@@ -8476,7 +8230,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "4.º Domingo de Cuaresma"
   },
   "dominica-v": {
    "titulo": "Dominica V",
@@ -8547,7 +8302,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "5.º Domingo de Cuaresma"
   },
   "feria-v-missa-chrismatis": {
    "titulo": "Feria V Missa Chrismatis",
@@ -8751,84 +8507,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
-  },
-  "dominica-resurrectionis": {
-   "titulo": "Dominica Resurrectionis",
-   "ruta": [
-    "III. Graduale simplex",
-    "Proprium de tempore",
-    "Hebdomada Sancta"
-   ],
-   "pagina": 166,
-   "cantos": {
-    "graduale": [
-     {
-      "p": 167,
-      "y0": 368.6,
-      "y1": 576.0
-     },
-     {
-      "p": 168,
-      "y0": 0,
-      "y1": 576.0
-     },
-     {
-      "p": 169,
-      "y0": 0,
-      "y1": 61.099999999999994
-     }
-    ],
-    "alleluia": [
-     {
-      "p": 169,
-      "y0": 53.099999999999994,
-      "y1": 576.0
-     },
-     {
-      "p": 170,
-      "y0": 0,
-      "y1": 576.0
-     },
-     {
-      "p": 171,
-      "y0": 0,
-      "y1": 576.0
-     },
-     {
-      "p": 172,
-      "y0": 0,
-      "y1": 576.0
-     },
-     {
-      "p": 173,
-      "y0": 0,
-      "y1": 331.8
-     }
-    ],
-    "offertorium": [
-     {
-      "p": 173,
-      "y0": 323.8,
-      "y1": 576.0
-     },
-     {
-      "p": 174,
-      "y0": 0,
-      "y1": 576.0
-     },
-     {
-      "p": 175,
-      "y0": 0,
-      "y1": 576.0
-     },
-     {
-      "p": 176,
-      "y0": 0,
-      "y1": 576.0
-     }
-    ]
-   }
+   },
+   "celebracion": "Domingo de Resurrección"
   },
   "tempus-paschale": {
    "titulo": "Tempus Paschale",
@@ -9073,7 +8753,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "Ascensión del Señor"
   },
   "dominica-pentecostes": {
    "titulo": "Dominica Pentecostes",
@@ -9142,7 +8823,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "Pentecostés"
   },
   "tempus-per-annum": {
    "titulo": "Tempus per annum",
@@ -9283,7 +8965,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "Santísima Trinidad"
   },
   "ss-mi-corporis-et-sanguinis-christi": {
    "titulo": "SS.mi Corporis et Sanguinis Christi",
@@ -9364,7 +9047,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 575.0
      }
     ]
-   }
+   },
+   "celebracion": "Corpus Christi"
   },
   "sacratissimi-cordis-iesu": {
    "titulo": "Sacratissimi Cordis Iesu",
@@ -9435,7 +9119,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "Sagrado Corazón de Jesús"
   },
   "missa-i-p228": {
    "titulo": "Missa I",
@@ -9951,7 +9636,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "Jesucristo, Rey del Universo"
   },
   "in-praesentatione-domini": {
    "titulo": "In Praesentatione Domini",
