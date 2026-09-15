@@ -11,6 +11,7 @@ import { AtrilMode } from '../atril/AtrilMode';
 import { Tour } from '../tour/Tour';
 import { constructorTips, hasSeenTip, markTipSeen } from '../tour/tours';
 import { Song, InstrumentType, PublishedCantoral, MassType } from '../../types';
+import { debePreguntarInstrumento, instrumentoPorDefecto } from '../../utils/instrument';
 import { PsalmFromBook } from '../songs/PsalmFromBook';
 import { MassAntiphon } from '../songs/MassAntiphon';
 import { getCelebrationsForDate, getLiturgicalDateForDate, getPersistedCustomDates, setPersistedCustomDates } from '../../utils/liturgicalCalendar';
@@ -91,7 +92,9 @@ export function ChoirView({
 }: ChoirViewProps) {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showInstrumentModal, setShowInstrumentModal] = useState(false);
-  const [selectedInstrumentForMass, setSelectedInstrumentForMass] = useState<InstrumentType>(preferredInstrument);
+  const [selectedInstrumentForMass, setSelectedInstrumentForMass] = useState<InstrumentType>(
+    () => instrumentoPorDefecto(userInstruments, preferredInstrument),
+  );
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   // Un coro puede tocar hoy con guitarra aunque su perfil tenga el órgano primero:
   // el video que se abra debe ser el de la versión que se va a tocar en esta Misa.
@@ -357,11 +360,24 @@ export function ChoirView({
   const enLugarDe = celebracionesDelDia.desplazada;
   const massCycle = getSundayCycle(massDate);
 
-  // Mostrar modal de selección de instrumento siempre al inicio
+  /**
+   * Preguntar con qué instrumento se toca esta Misa — SOLO si hay algo que elegir.
+   *
+   * Antes se preguntaba con uno o más instrumentos, y el constructor se monta cada vez
+   * que se vuelve a él (se sale a mirar el calendario, se vuelve…), así que quien tiene
+   * un único instrumento en su perfil se comía el mismo diálogo una y otra vez, con una
+   * sola respuesta posible. Ver utils/instrument.
+   */
   useEffect(() => {
-    if (userInstruments && userInstruments.length > 0 && cantoral.length === 0) {
+    if (debePreguntarInstrumento(userInstruments) && cantoral.length === 0) {
       setShowInstrumentModal(true);
     }
+  }, [userInstruments]);
+
+  // Con un solo instrumento declarado, ese manda: si el perfil cambia, el constructor
+  // se pone al día sin preguntar.
+  useEffect(() => {
+    if (userInstruments?.length === 1) setSelectedInstrumentForMass(userInstruments[0]);
   }, [userInstruments]);
 
   // Tip del constructor: la 1ª vez que el coro abre una categoría para agregar cantos.

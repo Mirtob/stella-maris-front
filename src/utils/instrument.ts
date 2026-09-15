@@ -59,3 +59,30 @@ export function filterByInstrument(songs: Song[], instrument?: InstrumentType): 
   if (!instrument) return songs;
   return songs.filter((s) => songMatchesInstrument(s, instrument));
 }
+
+
+/**
+ * ¿Hay que preguntarle al coro con qué instrumento toca esta Misa?
+ *
+ * Solo cuando de verdad hay algo que elegir, o sea con DOS O MÁS instrumentos en el
+ * perfil. Con uno solo la pregunta no aporta nada y molesta: el constructor se abre
+ * muchas veces al armar un cantoral —se entra, se sale a mirar el calendario, se
+ * vuelve— y cada vuelta traía el mismo diálogo con una única respuesta posible.
+ */
+export function debePreguntarInstrumento(instrumentos?: InstrumentType[]): boolean {
+  return (instrumentos?.length ?? 0) > 1;
+}
+
+/**
+ * El instrumento con el que se arranca, sin preguntar.
+ *
+ * Si el perfil declara uno solo, ESE manda — por encima del preferido. Un perfil que
+ * dice "toco órgano" no puede acabar armando el cantoral con la guitarra porque el
+ * campo `instrument` se quedó en su valor por defecto.
+ */
+export function instrumentoPorDefecto(
+  instrumentos: InstrumentType[] | undefined,
+  preferido: InstrumentType,
+): InstrumentType {
+  return instrumentos?.length === 1 ? instrumentos[0] : preferido;
+}
