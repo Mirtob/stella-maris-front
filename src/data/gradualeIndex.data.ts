@@ -37,6 +37,18 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    ],
    "pagina": 12,
    "cantos": {
+    "introitus": [
+     {
+      "p": 11,
+      "y0": 76.6,
+      "y1": 519.3
+     },
+     {
+      "p": 12,
+      "y0": 0,
+      "y1": 43.8
+     }
+    ],
     "graduale": [
      {
       "p": 12,
@@ -73,6 +85,18 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    ],
    "pagina": 12,
    "cantos": {
+    "introitus": [
+     {
+      "p": 11,
+      "y0": 76.6,
+      "y1": 519.3
+     },
+     {
+      "p": 12,
+      "y0": 0,
+      "y1": 43.8
+     }
+    ],
     "graduale": [
      {
       "p": 12,
@@ -671,6 +695,18 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    ],
    "pagina": 38,
    "cantos": {
+    "introitus": [
+     {
+      "p": 37,
+      "y0": 190.9,
+      "y1": 519.3
+     },
+     {
+      "p": 38,
+      "y0": 0,
+      "y1": 195.3
+     }
+    ],
     "graduale": [
      {
       "p": 38,
@@ -731,6 +767,18 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    ],
    "pagina": 44,
    "cantos": {
+    "introitus": [
+     {
+      "p": 43,
+      "y0": 358.7,
+      "y1": 519.3
+     },
+     {
+      "p": 44,
+      "y0": 0,
+      "y1": 220.3
+     }
+    ],
     "graduale": [
      {
       "p": 44,
@@ -1019,6 +1067,18 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    ],
    "pagina": 53,
    "cantos": {
+    "introitus": [
+     {
+      "p": 52,
+      "y0": 87.4,
+      "y1": 519.3
+     },
+     {
+      "p": 53,
+      "y0": 0,
+      "y1": 146.2
+     }
+    ],
     "graduale": [
      {
       "p": 53,
@@ -3154,6 +3214,18 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    ],
    "pagina": 159,
    "cantos": {
+    "introitus": [
+     {
+      "p": 158,
+      "y0": 152.5,
+      "y1": 519.3
+     },
+     {
+      "p": 159,
+      "y0": 0,
+      "y1": 268.9
+     }
+    ],
     "graduale": [
      {
       "p": 159,
@@ -3180,6 +3252,18 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    ],
    "pagina": 159,
    "cantos": {
+    "introitus": [
+     {
+      "p": 158,
+      "y0": 152.5,
+      "y1": 519.3
+     },
+     {
+      "p": 159,
+      "y0": 0,
+      "y1": 268.9
+     }
+    ],
     "graduale": [
      {
       "p": 159,
@@ -3207,6 +3291,18 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    ],
    "pagina": 159,
    "cantos": {
+    "introitus": [
+     {
+      "p": 158,
+      "y0": 152.5,
+      "y1": 519.3
+     },
+     {
+      "p": 159,
+      "y0": 0,
+      "y1": 268.9
+     }
+    ],
     "graduale": [
      {
       "p": 159,
@@ -3362,6 +3458,28 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    ],
    "pagina": 193,
    "cantos": {
+    "introitus": [
+     {
+      "p": 192,
+      "y0": 54.3,
+      "y1": 519.3
+     },
+     {
+      "p": 193,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 194,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 195,
+      "y0": 0,
+      "y1": 194.2
+     }
+    ],
     "offertorium": [
      {
       "p": 195,
@@ -3775,6 +3893,23 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    ],
    "pagina": 232,
    "cantos": {
+    "introitus": [
+     {
+      "p": 231,
+      "y0": 97.2,
+      "y1": 519.3
+     },
+     {
+      "p": 232,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 233,
+      "y0": 0,
+      "y1": 39.4
+     }
+    ],
     "offertorium": [
      {
       "p": 233,
@@ -4084,6 +4219,28 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    ],
    "pagina": 249,
    "cantos": {
+    "introitus": [
+     {
+      "p": 248,
+      "y0": 65.0,
+      "y1": 519.3
+     },
+     {
+      "p": 249,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 250,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 251,
+      "y0": 0,
+      "y1": 248.1
+     }
+    ],
     "offertorium": [
      {
       "p": 251,
@@ -5503,6 +5660,18 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    ],
    "pagina": 368,
    "cantos": {
+    "introitus": [
+     {
+      "p": 367,
+      "y0": 164.9,
+      "y1": 519.3
+     },
+     {
+      "p": 368,
+      "y0": 0,
+      "y1": 36.9
+     }
+    ],
     "graduale": [
      {
       "p": 368,
@@ -5555,6 +5724,18 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    ],
    "pagina": 368,
    "cantos": {
+    "introitus": [
+     {
+      "p": 367,
+      "y0": 164.9,
+      "y1": 519.3
+     },
+     {
+      "p": 368,
+      "y0": 0,
+      "y1": 36.9
+     }
+    ],
     "graduale": [
      {
       "p": 368,
@@ -5608,6 +5789,18 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    ],
    "pagina": 374,
    "cantos": {
+    "introitus": [
+     {
+      "p": 373,
+      "y0": 62.2,
+      "y1": 519.3
+     },
+     {
+      "p": 374,
+      "y0": 0,
+      "y1": 142.6
+     }
+    ],
     "graduale": [
      {
       "p": 374,
@@ -5659,6 +5852,28 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    ],
    "pagina": 381,
    "cantos": {
+    "introitus": [
+     {
+      "p": 380,
+      "y0": 87.2,
+      "y1": 519.3
+     },
+     {
+      "p": 381,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 382,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 383,
+      "y0": 0,
+      "y1": 186.4
+     }
+    ],
     "communio": [
      {
       "p": 383,
@@ -5678,6 +5893,18 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    ],
    "pagina": 385,
    "cantos": {
+    "introitus": [
+     {
+      "p": 384,
+      "y0": 91.9,
+      "y1": 519.3
+     },
+     {
+      "p": 385,
+      "y0": 0,
+      "y1": 41.0
+     }
+    ],
     "graduale": [
      {
       "p": 385,
@@ -5789,6 +6016,112 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
      {
       "p": 396,
       "y0": 472.9,
+      "y1": 519.3
+     }
+    ]
+   }
+  },
+  "commune-beatae-mariae-virginis": {
+   "titulo": "Commune Beatae Mariae Virginis",
+   "ruta": [
+    "Communia"
+   ],
+   "pagina": 398,
+   "cantos": {
+    "introitus": [
+     {
+      "p": 399,
+      "y0": 259.2,
+      "y1": 519.3
+     },
+     {
+      "p": 400,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 401,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 402,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 403,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 404,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 405,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 406,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 407,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 408,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 409,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 410,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 411,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 412,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 413,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 414,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 415,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 416,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 417,
+      "y0": 0,
       "y1": 519.3
      }
     ]
@@ -6045,9 +6378,14 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
    "cantos": {
     "introitus": [
      {
+      "p": 536,
+      "y0": 187.2,
+      "y1": 519.3
+     },
+     {
       "p": 537,
-      "y0": 70.8,
-      "y1": 112.6
+      "y0": 0,
+      "y1": 78.8
      }
     ],
     "graduale": [
@@ -6585,22 +6923,7 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
      {
       "p": 621,
       "y0": 0,
-      "y1": 519.3
-     },
-     {
-      "p": 622,
-      "y0": 0,
-      "y1": 519.3
-     },
-     {
-      "p": 623,
-      "y0": 0,
-      "y1": 519.3
-     },
-     {
-      "p": 624,
-      "y0": 0,
-      "y1": 45.2
+      "y1": 147.6
      }
     ]
    }
@@ -7117,12 +7440,7 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
      {
       "p": 855,
       "y0": 0,
-      "y1": 519.3
-     },
-     {
-      "p": 856,
-      "y0": 0,
-      "y1": 39.8
+      "y1": 100.6
      }
     ]
    }
@@ -7171,12 +7489,7 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
      {
       "p": 855,
       "y0": 0,
-      "y1": 519.3
-     },
-     {
-      "p": 856,
-      "y0": 0,
-      "y1": 39.8
+      "y1": 100.6
      }
     ]
    }

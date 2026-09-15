@@ -70,16 +70,27 @@ LIBROS = {
 # responsorial y el salmo aleluyático (o la antífona de aclamación antes del Evangelio).
 # Se mapean a los mismos tipos para que la app no tenga que saber de esta diferencia.
 CANTOS_POR_LIBRO = {
+    # EL ROMANUM USA LAS DOS CONVENCIONES, y esto costó encontrarlo.
+    #
+    # La mayor parte del libro abrevia (IN. GR. OF. CO.), pero las Misas restauradas
+    # tras el Concilio —el Domingo de Pascua, la Ascensión, Pentecostés— llevan la
+    # forma moderna completa, la misma del Simplex ("Antiphona ad introitum").
+    # Buscando solo la abreviatura, esos días salían vacíos y parecían huecos del OCR
+    # cuando el canto estaba justo ahí.
+    #
+    # Se descubrió porque el usuario los rellenó a mano y su página no cuadraba con la
+    # que yo había detectado: él decía p193 y yo p196. Tenía razón él.
     "romanum": [
-        ("introitus",   r"\b[I1l]N\s*\."),
-        ("graduale",    r"\bGR\s*\."),
+        ("introitus",   r"\b[I1l]N\s*\.|Antiph[o0]n[as]{1,2}\s+ad\s+intr[o0]itum"),
+        ("graduale",    r"\bGR\s*\.|Psalmus\s+resp[o0]ns[o0]rius"),
         # El TRACTO no es un canto aparte: es lo que se canta EN LUGAR del Aleluya
         # durante la Cuaresma. Ocupa el mismo sitio en la Misa, así que ocupa el mismo
         # hueco aquí. Tenerlo como tipo propio obligaba a marcar "no existe" en la
         # mitad de las filas de la planilla, que es trabajo inventado.
-        ("alleluia",    r"\bAL\s*\.|\bTR\s*\."),
-        ("offertorium", r"\b[O0]F\s*\."),
-        ("communio",    r"\bC[O0]\s*\."),
+        ("alleluia",    r"\bAL\s*\.|\bTR\s*\.|Psalmus\s+allelui[a-z]*"
+                        r"|Antiph[o0]n[as]{1,2}\s+acclamati[o0]nis"),
+        ("offertorium", r"\b[O0]F\s*\.|Antiph[o0]n[as]{1,2}\s+ad\s+[o0]ffert[o0]rium"),
+        ("communio",    r"\bC[O0]\s*\.|Antiph[o0]n[as]{1,2}\s+ad\s+communi[o0]nem"),
     ],
     "simplex": [
         ("introitus",   r"Antiphona\s+ad\s+intr[o0]itum"),

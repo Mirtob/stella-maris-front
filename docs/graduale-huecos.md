@@ -16,32 +16,32 @@ el Tracto sustituye al Aleluya, así que tener uno solo es lo correcto.
 
 | Celebración | Título del libro | Pág. | Faltan |
 |---|---|---|---|
-| 1.º Domingo de Adviento | Hebdomada Prima Adventus | 12 | introitus, alleluia |
+| 1.º Domingo de Adviento | Hebdomada Prima Adventus | 12 | alleluia |
 | 2.º Domingo de Adviento | Hebdomada Secunda Adventus | 15 | alleluia |
 | 3.º Domingo de Adviento | Hebdomada Tertia Adventus | 18 | alleluia, communio |
 | 4.º Domingo de Adviento | Dominica quarta Adventus | 31 | alleluia |
 | Natividad del Señor | In Nativitate Domini | 35 | graduale, alleluia, offertorium |
 | Natividad del Señor (Misa de la vigilia) | Ad Missam in Vigilia | 35 | graduale, alleluia, offertorium |
-| Natividad del Señor (Misa de la noche) | Ad Missam in Nocte | 38 | introitus, alleluia, offertorium, communio |
+| Natividad del Señor (Misa de la noche) | Ad Missam in Nocte | 38 | alleluia, offertorium, communio |
 | Natividad del Señor (Misa de la aurora) | Ad Missam in Aurora | 41 | graduale, alleluia, communio |
-| Natividad del Señor (Misa del día) | Ad Missam in Die | 44 | introitus, alleluia, offertorium, communio |
-| Epifanía del Señor | In Epiphania Domini | 53 | introitus, alleluia, communio |
+| Natividad del Señor (Misa del día) | Ad Missam in Die | 44 | alleluia, offertorium, communio |
+| Epifanía del Señor | In Epiphania Domini | 53 | alleluia, communio |
 | Bautismo del Señor | In Baptismate Domini | 56 | offertorium |
 | 1.º Domingo de Cuaresma | Hebdomada Prima Quadragesimae | 68 | graduale, communio |
 | 2.º Domingo de Cuaresma | Hebdomada Secunda Quadragesimae | 85 | alleluia, communio |
 | 4.º Domingo de Cuaresma | Hebdomada Quarta Quadragesimae | 105 | introitus, graduale |
 | 5.º Domingo de Cuaresma | Hebdomada Quinta Quadragesimae | 117 | offertorium |
-| Domingo de Resurrección (Misa del día) | Ad Missam in Die | 193 | introitus, graduale, alleluia, communio |
+| Domingo de Resurrección (Misa del día) | Ad Missam in Die | 193 | graduale, alleluia, communio |
 | 2.º Domingo de Pascua | Hebdomada Secunda Paschae | 213 | graduale, offertorium, communio |
 | 3.º Domingo de Pascua | Hebdomada Tertia Paschae | 216 | graduale, alleluia, communio |
 | 4.º Domingo de Pascua | Hebdomada Quarta Paschae | 219 | graduale, alleluia |
 | 5.º Domingo de Pascua | Hebdomada Quinta Paschae | 222 | graduale, alleluia, offertorium, communio |
 | 6.º Domingo de Pascua | Hebdomada Sexta Paschae | 226 | graduale, alleluia |
-| Ascensión del Señor | In Ascensione Domini | 232 | introitus, graduale, alleluia |
+| Ascensión del Señor | In Ascensione Domini | 232 | graduale, alleluia |
 | 7.º Domingo de Pascua | Hebdomada Septima Paschae | 238 | graduale, alleluia, offertorium |
 | Pentecostés | Dominica Pentecostes | 245 | graduale, alleluia |
 | Pentecostés (Misa de la vigilia) | Ad Missam in Vigilia | 245 | graduale, alleluia |
-| Pentecostés (Misa del día) | Ad Missam in Die | 249 | introitus, graduale, alleluia |
+| Pentecostés (Misa del día) | Ad Missam in Die | 249 | graduale, alleluia |
 | 2.º Domingo del Tiempo Ordinario | Hebdomada Secunda | 257 | alleluia |
 | 3.º Domingo del Tiempo Ordinario | Hebdomada Tertia | 261 | graduale, alleluia, communio |
 | 4.º Domingo del Tiempo Ordinario | Hebdomada Quarta | 265 | introitus, alleluia, communio |
@@ -73,20 +73,20 @@ el Tracto sustituye al Aleluya, así que tener uno solo es lo correcto.
 | 31.º Domingo del Tiempo Ordinario | Hebdomada Trigesima Prima | 357 | alleluia, communio |
 | 32.º Domingo del Tiempo Ordinario | Hebdomada Trigesima Secunda | 360 | alleluia, offertorium, communio |
 | 33.º Domingo del Tiempo Ordinario | Hebdomada Trigesima Tertia | 363 | graduale, alleluia |
-| Santísima Trinidad | Dominica I post Pentecosten — Sanctissimae Tri | 368 | introitus, alleluia |
-| Corpus Christi | Feria V post dom. Ss.mae Trinitatis — Ss.mi Co | 374 | introitus, alleluia, communio |
-| Sagrado Corazón de Jesús | Feria VI post dom. II post Pentecosten — Sacra | 381 | introitus, graduale, alleluia, offertorium |
-| Jesucristo, Rey del Universo | Dominica ultima per Annum — D. N. Iesu Christi | 385 | introitus, alleluia, communio |
+| Santísima Trinidad | Dominica I post Pentecosten — Sanctissimae Tri | 368 | alleluia |
+| Corpus Christi | Feria V post dom. Ss.mae Trinitatis — Ss.mi Co | 374 | alleluia, communio |
+| Sagrado Corazón de Jesús | Feria VI post dom. II post Pentecosten — Sacra | 381 | graduale, alleluia, offertorium |
+| Jesucristo, Rey del Universo | Dominica ultima per Annum — D. N. Iesu Christi | 385 | alleluia, communio |
 
 ## Graduale Romanum 1974 — Ferias y otras Misas del libro
 
-- Misas: **120**
+- Misas: **121**
 - Completas: **31**
-- Con algún hueco: **89** (no bloquean nada)
+- Con algún hueco: **90** (no bloquean nada)
 
 | Celebración | Título del libro | Pág. | Faltan |
 |---|---|---|---|
-| — | Tempus Adventus | 12 | introitus, alleluia |
+| — | Tempus Adventus | 12 | alleluia |
 | — | In Feriis Adventus a die 17 ad diem 24 decembr | 21 | alleluia |
 | — | Feria Secunda | 21 | alleluia |
 | — | Feria Tertia | 24 | alleluia, offertorium, communio |
@@ -144,9 +144,9 @@ el Tracto sustituye al Aleluya, así que tener uno solo es lo correcto.
 | — | Feria Secunda | 147 | alleluia, communio |
 | — | Feria Tertia | 149 | alleluia |
 | — | Feria Quarta | 152 | alleluia, offertorium |
-| — | Sacrum Triduum Paschale | 159 | introitus, offertorium, communio |
-| — | Missa Vespertina in Cena Domini | 159 | introitus, offertorium, communio |
-| — | Ad Liturgiam Verbi | 159 | introitus, offertorium, communio |
+| — | Sacrum Triduum Paschale | 159 | offertorium, communio |
+| — | Missa Vespertina in Cena Domini | 159 | offertorium, communio |
+| — | Ad Liturgiam Verbi | 159 | offertorium, communio |
 | — | Ad Liturgiam Eucharisticam | 165 | introitus, graduale, alleluia, communio |
 | — | Ad Translationem Ss.mi Sacramenti | 167 | introitus, graduale, alleluia, offertorium |
 | — | Feria Sexta in Passione Domini | 169 | introitus, graduale, offertorium, communio |
@@ -161,11 +161,12 @@ el Tracto sustituye al Aleluya, así que tener uno solo es lo correcto.
 | — | Feriis Secunda et Quinta | 240 | graduale |
 | — | Feriis Tertia et Sexta | 241 | graduale |
 | — | Feria Quarta, et Sabbato ad Missam Matutinam | 243 | graduale |
-| — | Sollemnitates Domini Tempore per Annum Occurre | 368 | introitus, alleluia |
+| — | Sollemnitates Domini Tempore per Annum Occurre | 368 | alleluia |
 | — | Antiphonae Eucharisticae pro Communione ad Lib | 388 | introitus, graduale, alleluia, offertorium |
 | — | Commune Dedicationis Ecclesiae | 392 | alleluia, offertorium, communio |
 | — | In ipsa ecclesia dedicata | 392 | alleluia, offertorium, communio |
 | — | In aliis ecclesiis | 393 | graduale, alleluia |
+| — | Commune Beatae Mariae Virginis | 398 | graduale, alleluia, offertorium, communio |
 | — | Commune Apostolorum vel Martyrum — Tempore pas | 434 | introitus, graduale, alleluia, offertorium |
 | — | Pro Apostolis | 434 | introitus, graduale, alleluia, offertorium |
 | — | Pro pluribus Apostolis vel martyribus | 434 | introitus, graduale, alleluia, offertorium |
