@@ -5,9 +5,16 @@
  * que él —como un "canto" más de su parte— y por eso salen solas en el folleto, en la
  * vista del cantoral publicado y en el Modo Atril, sin tocar nada de eso.
  *
- * No reemplazan al canto de entrada ni al de comunión: se SUMAN. En la Misa, la
- * antífona de entrada se canta después del canto de entrada, y la de comunión cuando el
- * sacerdote empieza a comulgar. Por eso se añaden al final de su parte.
+ * No reemplazan al canto de entrada ni al de comunión: se SUMAN. Y CADA UNA VA EN SU
+ * SITIO, que no es el mismo:
+ *
+ *  · La de ENTRADA se canta DESPUÉS del canto de entrada → va al final de su parte.
+ *  · La de COMUNIÓN acompaña el COMIENZO de la procesión, cuando el sacerdote empieza
+ *    a comulgar → va ANTES de los cantos de comunión, la primera de su parte.
+ *
+ * El orden dentro de la parte es el que se imprime en el folleto y el que ve el coro en
+ * el Atril, así que ponerlas las dos al final dejaba al pueblo leyendo la antífona
+ * después de haber cantado lo que iba después.
  *
  * El coro decide si van con una casilla. Sin marcar, la antífona queda solo como
  * referencia en el constructor y no se publica.
@@ -67,19 +74,32 @@ export function findAntiphonSong<T extends Pick<Song, 'id' | 'lyrics'>>(
   return songs.find((s) => String(s.id).startsWith(`${PREFIJO[parte]}-`));
 }
 
+/** Partes cuya antífona va ANTES de los cantos, no después. Ver la nota de arriba. */
+const PRIMERO_EN_SU_PARTE: ParteConAntifona[] = ['Comunión'];
+
 /**
- * Agrega las antífonas marcadas al final de su parte.
+ * Agrega las antífonas marcadas, cada una en su sitio dentro de su parte.
  *
- * Al final y no al principio: el canto de entrada va primero y la antífona después, que
- * es el orden en que se cantan. Si ya viene una antífona de esa parte (se está editando
- * un cantoral que la traía), no se duplica.
+ * "Primera de su parte" no es "primera del cantoral": se inserta justo antes del primer
+ * canto de ESA parte, para no colarse delante de la Entrada o del Ofertorio. Si la
+ * parte todavía no tiene cantos, va al final y el orden de las partes la coloca igual.
+ *
+ * Si ya viene una antífona de esa parte (se está editando un cantoral que la traía), no
+ * se duplica.
  */
-export function conAntifonas<T extends Pick<Song, 'id'>>(cantoral: T[], antifonas: (T | null)[]): T[] {
+export function conAntifonas<T extends Pick<Song, 'id' | 'category'>>(
+  cantoral: T[],
+  antifonas: (T | null)[],
+): T[] {
   let salida = cantoral;
   for (const a of antifonas) {
     if (!a) continue;
     if (salida.some((s) => String(s.id) === String(a.id))) continue;
-    salida = [...salida, a];
+    const primero = PRIMERO_EN_SU_PARTE.includes(a.category as ParteConAntifona);
+    const i = primero ? salida.findIndex((s) => s.category === a.category) : -1;
+    salida = i === -1
+      ? [...salida, a]
+      : [...salida.slice(0, i), a, ...salida.slice(i)];
   }
   return salida;
 }

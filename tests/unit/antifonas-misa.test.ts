@@ -74,6 +74,8 @@ check('un canto normal no', isAntiphonSong({ id: 'abc123' }), false);
 
 console.log('\n== Se SUMA a su parte, no la reemplaza ==');
 const cantoEntrada = { id: 'canto1', category: 'Entrada' };
+const cantoComunion1 = { id: 'com1', category: 'Comunión' };
+const cantoComunion2 = { id: 'com2', category: 'Comunión' };
 const comunion = buildAntiphonSong(FECHA, 'Comunión', 'Preparas una mesa ante mí', true)!;
 const final = conAntifonas([cantoEntrada as never], [entrada as never, comunion as never]);
 check('quedan los tres', final.length, 3);
@@ -83,6 +85,26 @@ check('sin antífonas, el cantoral no cambia',
   conAntifonas([cantoEntrada as never], [null, null]).length, 1);
 check('no se duplica si ya estaba',
   conAntifonas([cantoEntrada as never, entrada as never], [entrada as never]).length, 2);
+
+console.log('\n== Cada antífona en su sitio dentro de su parte ==');
+// La de comunión acompaña el COMIENZO de la procesión: va antes de los cantos de
+// comunión. La de entrada se canta DESPUÉS del canto de entrada.
+const misa = conAntifonas(
+  [cantoEntrada, cantoComunion1, cantoComunion2] as never[],
+  [entrada as never, comunion as never],
+);
+// Lo que se comprueba es el orden DENTRO de cada parte, que es el que se imprime:
+// el cantoral se agrupa por partes antes de dibujarse, así que la posición absoluta
+// en el array no dice nada por sí sola.
+const enParte = (cat: string) => misa.filter(s => s.category === cat).map(s => s.id);
+check('la antífona de comunión es la PRIMERA de su parte',
+  enParte('Comunión'), [`antifona-comunion-${FECHA}`, 'com1', 'com2']);
+check('la de entrada sigue siendo la ÚLTIMA de la suya',
+  enParte('Entrada'), ['canto1', `antifona-entrada-${FECHA}`]);
+check('no se cuela delante de la Entrada', misa[0].id, 'canto1');
+check('sin cantos de comunión, igual entra',
+  conAntifonas([cantoEntrada] as never[], [comunion as never]).map(s => s.id),
+  ['canto1', `antifona-comunion-${FECHA}`]);
 
 console.log('\n== Al editar no se arrastra la del domingo pasado ==');
 const publicado = [cantoEntrada, entrada, comunion] as never[];
