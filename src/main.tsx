@@ -5,6 +5,18 @@ import "./index.css";
 import { initSentry } from "./services/sentry";
 import { CACHE_NAME as OFFLINE_CACHE } from "./services/offlineCache";
 import { esErrorDeVersion, recargarAhora } from "./utils/chunkRecovery";
+
+/**
+ * Una línea que identifique el fallo, para que una foto de la pantalla sirva de
+ * diagnóstico. Se recorta: lo que importa es el tipo y el principio del mensaje.
+ */
+function detalleDelError(error: unknown): string {
+  const e = error as { name?: string; message?: string } | null;
+  if (!e) return 'error desconocido';
+  const nombre = String(e.name || 'Error');
+  const msg = String(e.message || '').replace(/\s+/g, ' ').trim();
+  return `${nombre}: ${msg}`.slice(0, 180);
+}
 import { reportDisplayMode, registerPwaServiceWorker } from "./services/push";
 
 // Inicializar Sentry ANTES de renderizar la app.
@@ -106,9 +118,29 @@ async function cleanupAndRender() {
           >
             {versionVieja ? 'Actualizar la app' : 'Volver a intentar'}
           </button>
-          {versionVieja && (
+          {versionVieja ? (
             <p style={{ color: '#1e40af', opacity: 0.75, fontSize: '13px', marginTop: '16px', maxWidth: '360px' }}>
               Si vuelve a salir esto, cierra la app del todo y ábrela de nuevo.
+            </p>
+          ) : (
+            /*
+             * EL ERROR, A LA VISTA.
+             *
+             * No es un adorno técnico: es la única forma de diagnosticar a distancia.
+             * Quien sufre esto manda una foto de la pantalla por WhatsApp, y hasta
+             * ahora esa foto no decía NADA — el mismo cartel para un fallo de red,
+             * una version caducada o un error de programacion. Se persiguieron dos
+             * causas equivocadas por no tener este dato.
+             *
+             * Va en pequeño y al pie para no asustar: quien no entienda la línea la
+             * ignora, y quien la fotografíe nos da el diagnóstico exacto.
+             */
+            <p style={{
+              color: '#1e40af', opacity: 0.6, fontSize: '11px', marginTop: '20px',
+              maxWidth: '380px', fontFamily: 'ui-monospace, Menlo, Consolas, monospace',
+              wordBreak: 'break-word',
+            }}>
+              {detalleDelError(error)}
             </p>
           )}
         </div>
