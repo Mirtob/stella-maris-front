@@ -54,6 +54,18 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
     try { localStorage.setItem('stella_maris_ordinario_lang', l); } catch { /* modo privado */ }
   };
 
+  // El Modo Atril ocupa toda la pantalla: el botón "atrás" del teléfono debe CERRARLO,
+  // no sacar de esta pantalla. Se apunta como capa mientras está abierto.
+  //
+  // Va AQUÍ y no dentro de `renderSection`: allí se ejecutaba una vez por sección de la
+  // Misa, y además detrás de un `return null` (las partes sin canto no se dibujan), así
+  // que el número de hooks cambiaba con el cantoral que se abriera. React los cuenta y
+  // se encontraba con más que en la pintada anterior.
+  useEffect(() => {
+    if (!showAtril) return;
+    return registrarCapa(() => setShowAtril(false));
+  }, [showAtril]);
+
   // Pueblo fiel: SOLO la letra (sin partitura). Coro/Admin: letra (con acordes si
   // toca guitarra) + partitura.
   const isPuebloFiel = userRole === 'Pueblo fiel';
@@ -106,15 +118,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
         return null; // No renderizar si no hay canto para esta parte
       }
 
-    
-  // El Modo Atril ocupa toda la pantalla: el botón "atrás" del teléfono debe CERRARLO,
-  // no sacar de esta pantalla. Se apunta como capa mientras está abierto.
-  useEffect(() => {
-    if (!showAtril) return;
-    return registrarCapa(() => setShowAtril(false));
-  }, [showAtril]);
-
-  return (
+      return (
         <div key={section.id} className="bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-900/40 dark:to-blue-900/40 rounded-2xl sm:rounded-3xl p-3 sm:p-6 border-2 sm:border-4 border-purple-300 dark:border-purple-600 transition-colors">
           {/* Posture Indicator */}
           <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">

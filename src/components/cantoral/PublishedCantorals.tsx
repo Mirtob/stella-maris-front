@@ -71,6 +71,19 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
   const [archiveChapel, setArchiveChapel] = useState<string>('all');
   const [archiveSearch, setArchiveSearch] = useState<string>('');
 
+  // El Modo Atril ocupa toda la pantalla: el botón "atrás" del teléfono debe CERRARLO,
+  // no sacar de esta pantalla. Se apunta como capa mientras está abierto.
+  //
+  // Va AQUÍ, en el cuerpo del componente, y no dentro de la función que dibuja cada
+  // tarjeta: allí se ejecutaba una vez por cantoral, así que la primera pintada (con la
+  // lista todavía vacía) no registraba ninguno y la siguiente registraba tantos como
+  // cantorales hubieran llegado. React cuenta los hooks y encontraba más que antes:
+  // "Algo salió mal" al entrar, y sólo a quien le llegaba la lista después de pintar.
+  useEffect(() => {
+    if (!atrilCantoral) return;
+    return registrarCapa(() => setAtrilCantoral(null));
+  }, [atrilCantoral]);
+
   // ── Filtrado base por rol + parroquia ──────────────────────────────────────
   let roleList = cantorals;
 
@@ -178,15 +191,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
     const isExpandedCantoral = expandedId === cantoral.id;
     const categories = groupSongsByCategory(cantoral.songs);
 
-  
-  // El Modo Atril ocupa toda la pantalla: el botón "atrás" del teléfono debe CERRARLO,
-  // no sacar de esta pantalla. Se apunta como capa mientras está abierto.
-  useEffect(() => {
-    if (!atrilCantoral) return;
-    return registrarCapa(() => setAtrilCantoral(null));
-  }, [atrilCantoral]);
-
-  return (
+    return (
       <div
         key={cantoral.id}
         data-tour="pf-misas"

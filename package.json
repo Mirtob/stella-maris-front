@@ -26,8 +26,11 @@
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "@types/web-push": "^3.6.4",
+    "@typescript-eslint/parser": "^8.70.0",
     "@vercel/node": "^12.0.1",
     "@vitejs/plugin-react": "^4.7.0",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react-hooks": "^4.6.2",
     "playwright": "^1.60.0",
     "romcal": "^1.3.0",
     "tailwindcss": "4.1.12",
@@ -40,6 +43,7 @@
     "gen:calendar": "node scripts/genLiturgicalCalendar.mjs && node scripts/genCronCelebrations.mjs",
     "gen:cron-celebrations": "node scripts/genCronCelebrations.mjs",
     "typecheck": "tsc --noEmit",
-    "test:unit": "node scripts/run-unit-tests.mjs"
+    "test:unit": "node scripts/run-unit-tests.mjs",
+    "lint:hooks": "eslint --no-eslintrc -c .eslintrc.hooks.json --ext .ts,.tsx src"
   }
 }

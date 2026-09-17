@@ -58,5 +58,18 @@ jobs:
       - name: Chequeo de tipos
         run: npm run typecheck
 
+      # Reglas de los hooks de React.
+      #
+      # Se añade después de pasar tres semanas persiguiendo un "Algo salió mal" que dos
+      # usuarios veían al ENTRAR a la app y que no reproducíamos: había tres hooks
+      # llamados de forma condicional (uno por tarjeta de cantoral, uno por sección de la
+      # Misa, y un useMemo detrás de un "letra no disponible"). React cuenta los hooks
+      # entre pintadas y se plantaba en cuanto la cuenta cambiaba — que es justo lo que
+      # pasa cuando la lista llega después de la primera pintada.
+      #
+      # Ni el compilador ni las pruebas lo veían. Esta regla lo señala en un segundo.
+      - name: Reglas de los hooks
+        run: npm run lint:hooks
+
       - name: Pruebas unitarias
         run: npm run test:unit

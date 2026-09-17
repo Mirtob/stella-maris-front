@@ -21,6 +21,14 @@ interface LyricsWithChordsProps {
  * cualquier cambio. Re-rendea solo si cambia el prop `lyrics`.
  */
 function LyricsWithChordsImpl({ lyrics }: LyricsWithChordsProps) {
+  // Q34 — memo del split para que no rompa la igualdad referencial cuando
+  // el padre re-renderiza con el mismo lyrics (común al cambiar transposition).
+  //
+  // Va ANTES del "letra no disponible": estaba después, de modo que un canto sin letra
+  // llamaba a cero hooks y uno con letra a uno. Pasar de un canto al siguiente en el
+  // Atril cambiaba la cuenta y React se plantaba.
+  const lines = useMemo(() => (lyrics ?? '').split('\n'), [lyrics]);
+
   if (!lyrics) {
     return (
       <div className="text-center text-gray-600 dark:text-gray-400 py-4">
@@ -123,10 +131,6 @@ function LyricsWithChordsImpl({ lyrics }: LyricsWithChordsProps) {
       </div>
     );
   };
-
-  // Q34 — memo del split para que no rompa la igualdad referencial cuando
-  // el padre re-renderiza con el mismo lyrics (común al cambiar transposition).
-  const lines = useMemo(() => lyrics.split('\n'), [lyrics]);
 
   return (
     <div className="bg-white/60 dark:bg-white/10 rounded-xl p-4 border-2 border-blue-200 dark:border-blue-700 font-mono">
