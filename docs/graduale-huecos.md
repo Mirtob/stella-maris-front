@@ -10,73 +10,26 @@ el Tracto sustituye al Aleluya, así que tener uno solo es lo correcto.
 
 ## Graduale Romanum 1974 — Domingos y solemnidades
 
-- Misas: **66**
-- Completas: **5**
-- Con algún hueco: **61** (hay que cerrarlos)
+- Misas: **67**
+- Completas: **53**
+- Con algún hueco: **14** (hay que cerrarlos)
 
 | Celebración | Título del libro | Pág. | Faltan |
 |---|---|---|---|
-| 1.º Domingo de Adviento | Hebdomada Prima Adventus | 12 | alleluia |
-| 2.º Domingo de Adviento | Hebdomada Secunda Adventus | 15 | alleluia |
-| 3.º Domingo de Adviento | Hebdomada Tertia Adventus | 18 | alleluia, communio |
-| 4.º Domingo de Adviento | Dominica quarta Adventus | 31 | alleluia |
 | Natividad del Señor | In Nativitate Domini | 35 | graduale, alleluia, offertorium |
-| Natividad del Señor (Misa de la vigilia) | Ad Missam in Vigilia | 35 | graduale, alleluia, offertorium |
-| Natividad del Señor (Misa de la noche) | Ad Missam in Nocte | 38 | alleluia, offertorium, communio |
-| Natividad del Señor (Misa de la aurora) | Ad Missam in Aurora | 41 | graduale, alleluia, communio |
-| Natividad del Señor (Misa del día) | Ad Missam in Die | 44 | alleluia, offertorium, communio |
-| Epifanía del Señor | In Epiphania Domini | 53 | alleluia, communio |
-| Bautismo del Señor | In Baptismate Domini | 56 | offertorium |
-| 1.º Domingo de Cuaresma | Hebdomada Prima Quadragesimae | 68 | graduale, communio |
-| 2.º Domingo de Cuaresma | Hebdomada Secunda Quadragesimae | 85 | alleluia, communio |
-| 4.º Domingo de Cuaresma | Hebdomada Quarta Quadragesimae | 105 | introitus, graduale |
-| 5.º Domingo de Cuaresma | Hebdomada Quinta Quadragesimae | 117 | offertorium |
-| Domingo de Resurrección (Misa del día) | Ad Missam in Die | 193 | graduale, alleluia, communio |
-| 2.º Domingo de Pascua | Hebdomada Secunda Paschae | 213 | graduale, offertorium, communio |
-| 3.º Domingo de Pascua | Hebdomada Tertia Paschae | 216 | graduale, alleluia, communio |
-| 4.º Domingo de Pascua | Hebdomada Quarta Paschae | 219 | graduale, alleluia |
-| 5.º Domingo de Pascua | Hebdomada Quinta Paschae | 222 | graduale, alleluia, offertorium, communio |
-| 6.º Domingo de Pascua | Hebdomada Sexta Paschae | 226 | graduale, alleluia |
-| Ascensión del Señor | In Ascensione Domini | 232 | graduale, alleluia |
-| 7.º Domingo de Pascua | Hebdomada Septima Paschae | 238 | graduale, alleluia, offertorium |
+| 2.º Domingo de Cuaresma | Hebdomada Secunda Quadragesimae | 85 | alleluia |
+| 4.º Domingo de Cuaresma | Hebdomada Quarta Quadragesimae | 105 | graduale |
+| 2.º Domingo de Pascua | Hebdomada Secunda Paschae | 213 | graduale |
+| 3.º Domingo de Pascua | Hebdomada Tertia Paschae | 216 | graduale |
+| 4.º Domingo de Pascua | Hebdomada Quarta Paschae | 219 | graduale |
+| 5.º Domingo de Pascua | Hebdomada Quinta Paschae | 222 | graduale |
+| 6.º Domingo de Pascua | Hebdomada Sexta Paschae | 226 | graduale |
+| Ascensión del Señor | In Ascensione Domini | 232 | graduale |
+| 7.º Domingo de Pascua | Hebdomada Septima Paschae | 238 | graduale |
 | Pentecostés | Dominica Pentecostes | 245 | graduale, alleluia |
-| Pentecostés (Misa de la vigilia) | Ad Missam in Vigilia | 245 | graduale, alleluia |
-| Pentecostés (Misa del día) | Ad Missam in Die | 249 | graduale, alleluia |
-| 2.º Domingo del Tiempo Ordinario | Hebdomada Secunda | 257 | alleluia |
-| 3.º Domingo del Tiempo Ordinario | Hebdomada Tertia | 261 | graduale, alleluia, communio |
-| 4.º Domingo del Tiempo Ordinario | Hebdomada Quarta | 265 | introitus, alleluia, communio |
-| 5.º Domingo del Tiempo Ordinario | Hebdomada Quinta | 268 | alleluia, offertorium, communio |
-| 6.º Domingo del Tiempo Ordinario | Hebdomada Sexta | 272 | alleluia, communio |
-| 7.º Domingo del Tiempo Ordinario | Hebdomada Septima | 275 | alleluia, communio |
-| 8.º Domingo del Tiempo Ordinario | Hebdomada Octava | 278 | graduale, alleluia, communio |
-| 9.º Domingo del Tiempo Ordinario | Hebdomada Nona | 281 | introitus, alleluia, communio |
-| 10.º Domingo del Tiempo Ordinario | Hebdomada Decima | 285 | graduale, alleluia, communio |
-| 11.º Domingo del Tiempo Ordinario | Hebdomada Undecima | 291 | alleluia, communio |
-| 13.º Domingo del Tiempo Ordinario | Hebdomada Decima Tertia | 294 | introitus, alleluia, communio |
-| 14.º Domingo del Tiempo Ordinario | Hebdomada Decima Quarta | 297 | alleluia, communio |
-| 15.º Domingo del Tiempo Ordinario | Hebdomada Decima Quinta | 300 | alleluia |
-| 16.º Domingo del Tiempo Ordinario | Hebdomada Decima Sexta | 304 | alleluia, communio |
-| 17.º Domingo del Tiempo Ordinario | Hebdomada Decima Septima | 307 | alleluia |
-| 18.º Domingo del Tiempo Ordinario | Hebdomada Decima Octava | 312 | alleluia, offertorium, communio |
-| 19.º Domingo del Tiempo Ordinario | Hebdomada Decima Nona | 316 | alleluia, offertorium, communio |
-| 20.º Domingo del Tiempo Ordinario | Hebdomada Vigesima | 320 | alleluia |
-| 21.º Domingo del Tiempo Ordinario | Hebdomada Vigesima Prima | 323 | alleluia |
-| 22.º Domingo del Tiempo Ordinario | Hebdomada Vigesima Secunda | 327 | alleluia, communio |
-| 23.º Domingo del Tiempo Ordinario | Hebdomada Vigesima Tertia | 329 | alleluia |
-| 24.º Domingo del Tiempo Ordinario | Hebdomada Vigesima Quarta | 333 | alleluia, offertorium |
-| 25.º Domingo del Tiempo Ordinario | Hebdomada Vigesima Quinta | 336 | alleluia, communio |
-| 26.º Domingo del Tiempo Ordinario | Hebdomada Vigesima Sexta | 339 | alleluia, communio |
-| 27.º Domingo del Tiempo Ordinario | Hebdomada Vigesima Septima | 343 | alleluia, offertorium |
-| 28.º Domingo del Tiempo Ordinario | Hebdomada Vigesima Octava | 347 | alleluia |
-| 29.º Domingo del Tiempo Ordinario | Hebdomada Vigesima Nona | 351 | alleluia, communio |
-| 30.º Domingo del Tiempo Ordinario | Hebdomada Trigesima | 354 | alleluia |
-| 31.º Domingo del Tiempo Ordinario | Hebdomada Trigesima Prima | 357 | alleluia, communio |
-| 32.º Domingo del Tiempo Ordinario | Hebdomada Trigesima Secunda | 360 | alleluia, offertorium, communio |
-| 33.º Domingo del Tiempo Ordinario | Hebdomada Trigesima Tertia | 363 | graduale, alleluia |
-| Santísima Trinidad | Dominica I post Pentecosten — Sanctissimae Tri | 368 | alleluia |
-| Corpus Christi | Feria V post dom. Ss.mae Trinitatis — Ss.mi Co | 374 | alleluia, communio |
-| Sagrado Corazón de Jesús | Feria VI post dom. II post Pentecosten — Sacra | 381 | graduale, alleluia, offertorium |
-| Jesucristo, Rey del Universo | Dominica ultima per Annum — D. N. Iesu Christi | 385 | alleluia, communio |
+| Pentecostés (Misa de la vigilia) | Ad Missam in Vigilia | 245 | graduale |
+| Pentecostés (Misa del día) | Ad Missam in Die | 249 | graduale |
+| 11.º Domingo del Tiempo Ordinario | Hebdomada Undecima | 288 | introitus, alleluia, offertorium, communio |
 
 ## Graduale Romanum 1974 — Ferias y otras Misas del libro
 

@@ -89,6 +89,7 @@ COLUMNAS = [
     ("→ EMPIEZA\npor dónde", 18),
     ("→ TERMINA\nen la página\n(si es otra)", 15),
     ("→ TERMINA\npor dónde", 18),
+    ("→ Ciclo\n(A, B o C)", 13),
     ("→ No existe", 12),
     ("Notas", 26),
     ("clave (no tocar)", 30),
@@ -122,6 +123,14 @@ def hoja_instrucciones(wb: Workbook) -> None:
         ("                       termina en la misma, déjala vacía.", False),
         ("TERMINA por dónde      dónde acaba. Si se deja vacío, el canto llega hasta el canto", False),
         ("                       siguiente o hasta el pie de la página.", False),
+        ("", False),
+        ("Ciclo                  SOLO si el libro marca 'anno A', 'anno B' o 'anno C'", False),
+        ("                       junto a ese canto. Vacío = sirve para los tres años.", False),
+        ("", False),
+        ("                       Cuando un canto tiene variante por ciclo, se rellena UNA", False),
+        ("                       FILA POR CADA AÑO que aparezca: se duplica la fila a mano", False),
+        ("                       (copiar y pegar) y se cambia el ciclo y la posición.", False),
+        ("                       Lo urgente es el AÑO A, que es el que viene.", False),
         ("", False),
         ("No existe              una X si ese canto no está en esa Misa.", False),
         ("", False),
@@ -183,7 +192,10 @@ def previos(ruta: str) -> dict:
     ws = load_workbook(ruta, data_only=True)["Huecos"]
     cabecera7 = str(ws.cell(row=1, column=7).value or "")
     formato_viejo = "PÍXELES" in cabecera7 or "y0" in cabecera7
-    col_clave = 11 if formato_viejo else 12
+    # Cada versión de la planilla añadió una columna, así que la clave se ha ido
+    # corriendo. Se localiza por la cabecera en vez de por un número fijo.
+    col_clave = 11 if formato_viejo else (
+        13 if str(ws.cell(row=1, column=10).value or "").startswith("→ Ciclo") else 12)
 
     guardado = {}
     for r in range(2, ws.max_row + 1):
@@ -204,11 +216,16 @@ def previos(ruta: str) -> dict:
                 etiqueta_mas_cercana(y0 / alto) if isinstance(y0, (int, float)) else None,
                 None,
                 etiqueta_mas_cercana(y1 / alto) if isinstance(y1, (int, float)) else None,
+                None,       # ciclo: no existía en aquella versión
                 noexiste,
                 notas,
             ]
+        elif col_clave == 13:
+            datos = [ws.cell(row=r, column=c).value for c in (6, 7, 8, 9, 10, 11, 12)]
         else:
-            datos = [ws.cell(row=r, column=c).value for c in (6, 7, 8, 9, 10, 11)]
+            # Planilla sin columna de ciclo: se inserta vacía en su sitio.
+            v = [ws.cell(row=r, column=c).value for c in (6, 7, 8, 9, 10, 11)]
+            datos = v[:4] + [None] + v[4:]
 
         if any(x not in (None, "") for x in datos):
             guardado[(libro, clave, canto)] = datos
@@ -249,19 +266,19 @@ def main():
             ) or "(ninguno)"
             paginas = ", ".join(str(p) for p in paginas_de(misa))
             for tipo in faltantes(misa["cantos"]):
-                ya = anteriores.get((libro, clave, tipo), [None] * 6)
+                ya = anteriores.get((libro, clave, tipo), [None] * 7)
                 valores = [libro, misa["celebracion"], tipo, paginas, encontrado,
                            *ya, clave]
                 for j, v in enumerate(valores, start=1):
                     c = ws.cell(row=fila, column=j, value=v)
                     c.border = BORDE
-                    c.alignment = Alignment(vertical="top", wrap_text=j in (2, 5, 11))
+                    c.alignment = Alignment(vertical="top", wrap_text=j in (2, 5, 12))
                     # Ámbar lo que se rellena; gris lo que ya viene dado.
-                    c.fill = RELLENAR if 6 <= j <= 11 else DADO
+                    c.fill = RELLENAR if 6 <= j <= 12 else DADO
                 fila += 1
 
     ultima = fila - 1
-    ws.auto_filter.ref = f"A1:L{ultima}"
+    ws.auto_filter.ref = f"A1:M{ultima}"
 
     # Ayudas de validación: evita erratas que luego hay que perseguir.
     v_pag = DataValidation(type="whole", operator="between", formula1=1, formula2=902,
@@ -280,7 +297,10 @@ def main():
     v_pag.add(f"H2:H{ultima}")
     v_pos.add(f"G2:G{ultima}")
     v_pos.add(f"I2:I{ultima}")
-    v_x.add(f"J2:J{ultima}")
+    v_ciclo = DataValidation(type="list", formula1='"A,B,C"', allow_blank=True)
+    ws.add_data_validation(v_ciclo)
+    v_ciclo.add(f"J2:J{ultima}")
+    v_x.add(f"K2:K{ultima}")
 
     hoja_instrucciones(wb)
     os.makedirs(os.path.dirname(SALIDA), exist_ok=True)

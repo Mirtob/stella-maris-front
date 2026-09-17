@@ -14,6 +14,11 @@ export interface RecorteGraduale { p: number; y0: number; y1: number; }
 /** Los cantos de una Misa del libro. Cada canto puede ocupar varias regiones. */
 export interface MisaGraduale {
   titulo: string;
+  /** Cantos que NO existen en esta Misa (comprobado a mano sobre el libro). */
+  noExisten?: string[];
+  /** Variantes por ciclo litúrgico, solo donde el libro las trae. El canto normal
+   *  sigue en `cantos`; esto lo sustituye cuando el año coincide. */
+  cantosPorCiclo?: Partial<Record<'A' | 'B' | 'C', Record<string, RecorteGraduale[]>>>;
   /** Celebración del calendario de la app, cuando se pudo emparejar. El Simplex casi
    *  nunca la trae: ofrece Misas por tiempo, y el domingo lo elige el coro. */
   celebracion?: string;
@@ -122,6 +127,13 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 443.6,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 13,
+      "y0": 152.3,
+      "y1": 519.3
+     }
     ]
    },
    "celebracion": "1.º Domingo de Adviento"
@@ -171,6 +183,13 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 438.7,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 15,
+      "y0": 238.9,
+      "y1": 519.3
+     }
     ]
    },
    "celebracion": "2.º Domingo de Adviento"
@@ -211,6 +230,20 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
      {
       "p": 19,
       "y0": 227.7,
+      "y1": 519.3
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 19,
+      "y0": 0.0,
+      "y1": 193.9
+     }
+    ],
+    "communio": [
+     {
+      "p": 19,
+      "y0": 325.4,
       "y1": 519.3
      }
     ]
@@ -560,6 +593,13 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 0,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 32,
+      "y0": 0.0,
+      "y1": 280.4
+     }
     ]
    },
    "celebracion": "4.º Domingo de Adviento"
@@ -682,6 +722,37 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 441.8,
       "y1": 519.3
      }
+    ],
+    "graduale": [
+     {
+      "p": 34,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 35,
+      "y0": 0,
+      "y1": 453.5
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 35,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 36,
+      "y0": 0,
+      "y1": 150.6
+     }
+    ],
+    "offertorium": [
+     {
+      "p": 36,
+      "y0": 238.9,
+      "y1": 453.5
+     }
     ]
    },
    "celebracion": "Natividad del Señor (Misa de la vigilia)"
@@ -718,6 +789,27 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 0,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 39,
+      "y0": 238.9,
+      "y1": 519.3
+     }
+    ],
+    "offertorium": [
+     {
+      "p": 40,
+      "y0": 0.0,
+      "y1": 193.9
+     }
+    ],
+    "communio": [
+     {
+      "p": 40,
+      "y0": 325.4,
+      "y1": 366.9
+     }
     ]
    },
    "celebracion": "Natividad del Señor (Misa de la noche)"
@@ -753,6 +845,32 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 42,
       "y0": 0,
       "y1": 519.3
+     }
+    ],
+    "graduale": [
+     {
+      "p": 41,
+      "y0": 238.9,
+      "y1": 519.3
+     },
+     {
+      "p": 42,
+      "y0": 0,
+      "y1": 107.3
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 42,
+      "y0": 325.4,
+      "y1": 366.9
+     }
+    ],
+    "communio": [
+     {
+      "p": 43,
+      "y0": 325.4,
+      "y1": 366.9
      }
     ]
    },
@@ -793,6 +911,32 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
      {
       "p": 46,
       "y0": 0,
+      "y1": 519.3
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 45,
+      "y0": 325.4,
+      "y1": 366.9
+     }
+    ],
+    "offertorium": [
+     {
+      "p": 45,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 46,
+      "y0": 0,
+      "y1": 280.4
+     }
+    ],
+    "communio": [
+     {
+      "p": 46,
+      "y0": 412.0,
       "y1": 519.3
      }
     ]
@@ -1097,6 +1241,20 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 247.39999999999998,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 54,
+      "y0": 0.0,
+      "y1": 280.4
+     }
+    ],
+    "communio": [
+     {
+      "p": 55,
+      "y0": 0.0,
+      "y1": 107.3
+     }
     ]
    },
    "celebracion": "Epifanía del Señor"
@@ -1289,6 +1447,13 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 57,
       "y0": 0,
       "y1": 40.1
+     }
+    ],
+    "offertorium": [
+     {
+      "p": 56,
+      "y0": 325.4,
+      "y1": 519.3
      }
     ]
    },
@@ -1607,6 +1772,20 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 444.1,
       "y1": 519.3
      }
+    ],
+    "graduale": [
+     {
+      "p": 68,
+      "y0": 325.4,
+      "y1": 519.3
+     }
+    ],
+    "communio": [
+     {
+      "p": 73,
+      "y0": 325.4,
+      "y1": 366.9
+     }
     ]
    },
    "celebracion": "1.º Domingo de Cuaresma"
@@ -1866,9 +2045,19 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 327.1,
       "y1": 519.3
      }
+    ],
+    "communio": [
+     {
+      "p": 86,
+      "y0": 412.0,
+      "y1": 519.3
+     }
     ]
    },
-   "celebracion": "2.º Domingo de Cuaresma"
+   "celebracion": "2.º Domingo de Cuaresma",
+   "noExisten": [
+    "alleluia"
+   ]
   },
   "feria-secunda-p88": {
    "titulo": "Feria Secunda",
@@ -2441,9 +2630,24 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 473.5,
       "y1": 519.3
      }
+    ],
+    "introitus": [
+     {
+      "p": 104,
+      "y0": 238.9,
+      "y1": 519.3
+     },
+     {
+      "p": 105,
+      "y0": 0,
+      "y1": 193.9
+     }
     ]
    },
-   "celebracion": "4.º Domingo de Cuaresma"
+   "celebracion": "4.º Domingo de Cuaresma",
+   "noExisten": [
+    "graduale"
+   ]
   },
   "feria-secunda-p108": {
    "titulo": "Feria Secunda",
@@ -2719,6 +2923,13 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
      {
       "p": 120,
       "y0": 54.2,
+      "y1": 519.3
+     }
+    ],
+    "offertorium": [
+     {
+      "p": 119,
+      "y0": 238.9,
       "y1": 519.3
      }
     ]
@@ -3486,6 +3697,42 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 186.2,
       "y1": 519.3
      }
+    ],
+    "graduale": [
+     {
+      "p": 192,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 193,
+      "y0": 0,
+      "y1": 453.5
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 193,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 194,
+      "y0": 0,
+      "y1": 107.3
+     }
+    ],
+    "communio": [
+     {
+      "p": 195,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 196,
+      "y0": 0,
+      "y1": 150.6
+     }
     ]
    },
    "celebracion": "Domingo de Resurrección (Misa del día)"
@@ -3714,9 +3961,31 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 0,
       "y1": 519.3
      }
+    ],
+    "offertorium": [
+     {
+      "p": 213,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 214,
+      "y0": 0,
+      "y1": 280.4
+     }
+    ],
+    "communio": [
+     {
+      "p": 214,
+      "y0": 238.9,
+      "y1": 410.2
+     }
     ]
    },
-   "celebracion": "2.º Domingo de Pascua"
+   "celebracion": "2.º Domingo de Pascua",
+   "noExisten": [
+    "graduale"
+   ]
   },
   "hebdomada-tertia-paschae": {
    "titulo": "Hebdomada Tertia Paschae",
@@ -3749,9 +4018,31 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 259.4,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 216,
+      "y0": 109.0,
+      "y1": 519.3
+     },
+     {
+      "p": 217,
+      "y0": 0,
+      "y1": 193.9
+     }
+    ],
+    "communio": [
+     {
+      "p": 218,
+      "y0": 0.0,
+      "y1": 280.4
+     }
     ]
    },
-   "celebracion": "3.º Domingo de Pascua"
+   "celebracion": "3.º Domingo de Pascua",
+   "noExisten": [
+    "graduale"
+   ]
   },
   "hebdomada-quarta-paschae": {
    "titulo": "Hebdomada Quarta Paschae",
@@ -3791,9 +4082,24 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 160.1,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 219,
+      "y0": 325.4,
+      "y1": 519.3
+     },
+     {
+      "p": 220,
+      "y0": 0,
+      "y1": 107.3
+     }
     ]
    },
-   "celebracion": "4.º Domingo de Pascua"
+   "celebracion": "4.º Domingo de Pascua",
+   "noExisten": [
+    "graduale"
+   ]
   },
   "hebdomada-quinta-paschae": {
    "titulo": "Hebdomada Quinta Paschae",
@@ -3824,9 +4130,43 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 0,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 222,
+      "y0": 0.0,
+      "y1": 519.3
+     },
+     {
+      "p": 223,
+      "y0": 0,
+      "y1": 107.3
+     }
+    ],
+    "offertorium": [
+     {
+      "p": 223,
+      "y0": 238.9,
+      "y1": 519.3
+     },
+     {
+      "p": 224,
+      "y0": 0,
+      "y1": 193.9
+     }
+    ],
+    "communio": [
+     {
+      "p": 224,
+      "y0": 238.9,
+      "y1": 453.5
+     }
     ]
    },
-   "celebracion": "5.º Domingo de Pascua"
+   "celebracion": "5.º Domingo de Pascua",
+   "noExisten": [
+    "graduale"
+   ]
   },
   "hebdomada-sexta-paschae": {
    "titulo": "Hebdomada Sexta Paschae",
@@ -3881,9 +4221,24 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 0,
       "y1": 84.5
      }
+    ],
+    "alleluia": [
+     {
+      "p": 226,
+      "y0": 0.0,
+      "y1": 519.3
+     },
+     {
+      "p": 227,
+      "y0": 0,
+      "y1": 193.9
+     }
     ]
    },
-   "celebracion": "6.º Domingo de Pascua"
+   "celebracion": "6.º Domingo de Pascua",
+   "noExisten": [
+    "graduale"
+   ]
   },
   "in-ascensione-domini": {
    "titulo": "In Ascensione Domini",
@@ -3928,9 +4283,19 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 207.0,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 232,
+      "y0": 0.0,
+      "y1": 519.3
+     }
     ]
    },
-   "celebracion": "Ascensión del Señor"
+   "celebracion": "Ascensión del Señor",
+   "noExisten": [
+    "graduale"
+   ]
   },
   "feria-sexta-et-sabbato-post-ascensionem": {
    "titulo": "Feria Sexta et Sabbato post Ascensionem",
@@ -3994,9 +4359,36 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 0,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 238,
+      "y0": 0.0,
+      "y1": 519.3
+     },
+     {
+      "p": 239,
+      "y0": 0,
+      "y1": 107.3
+     }
+    ],
+    "offertorium": [
+     {
+      "p": 236,
+      "y0": 238.9,
+      "y1": 519.3
+     },
+     {
+      "p": 237,
+      "y0": 0,
+      "y1": 107.3
+     }
     ]
    },
-   "celebracion": "7.º Domingo de Pascua"
+   "celebracion": "7.º Domingo de Pascua",
+   "noExisten": [
+    "graduale"
+   ]
   },
   "feriis-secunda-et-quinta": {
    "titulo": "Feriis Secunda et Quinta",
@@ -4165,7 +4557,10 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
      }
     ]
    },
-   "celebracion": "Pentecostés"
+   "celebracion": "Pentecostés",
+   "noExisten": [
+    "graduale"
+   ]
   },
   "ad-missam-in-vigilia-p245": {
    "titulo": "Ad Missam in Vigilia",
@@ -4206,9 +4601,24 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 197.2,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 245,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 246,
+      "y0": 0,
+      "y1": 453.5
+     }
     ]
    },
-   "celebracion": "Pentecostés (Misa de la vigilia)"
+   "celebracion": "Pentecostés (Misa de la vigilia)",
+   "noExisten": [
+    "graduale"
+   ]
   },
   "ad-missam-in-die-p249": {
    "titulo": "Ad Missam in Die",
@@ -4259,9 +4669,24 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 33.7,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 248,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 249,
+      "y0": 0,
+      "y1": 453.5
+     }
     ]
    },
-   "celebracion": "Pentecostés (Misa del día)"
+   "celebracion": "Pentecostés (Misa del día)",
+   "noExisten": [
+    "graduale"
+   ]
   },
   "hebdomada-secunda": {
    "titulo": "Hebdomada Secunda",
@@ -4313,6 +4738,13 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 0,
       "y1": 63.7
      }
+    ],
+    "alleluia": [
+     {
+      "p": 258,
+      "y0": 325.4,
+      "y1": 519.3
+     }
     ]
    },
    "celebracion": "2.º Domingo del Tiempo Ordinario"
@@ -4353,6 +4785,37 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 32.5,
       "y1": 519.3
      }
+    ],
+    "graduale": [
+     {
+      "p": 261,
+      "y0": 368.7,
+      "y1": 519.3
+     },
+     {
+      "p": 262,
+      "y0": 0,
+      "y1": 150.6
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 262,
+      "y0": 325.4,
+      "y1": 519.3
+     }
+    ],
+    "communio": [
+     {
+      "p": 263,
+      "y0": 238.9,
+      "y1": 519.3
+     },
+     {
+      "p": 264,
+      "y0": 0,
+      "y1": 410.2
+     }
     ]
    },
    "celebracion": "3.º Domingo del Tiempo Ordinario"
@@ -4382,6 +4845,32 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 266,
       "y0": 335.6,
       "y1": 519.3
+     }
+    ],
+    "introitus": [
+     {
+      "p": 264,
+      "y0": 412.0,
+      "y1": 519.3
+     },
+     {
+      "p": 265,
+      "y0": 0,
+      "y1": 193.9
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 266,
+      "y0": 0.0,
+      "y1": 280.4
+     }
+    ],
+    "communio": [
+     {
+      "p": 267,
+      "y0": 0.0,
+      "y1": 280.4
      }
     ]
    },
@@ -4421,6 +4910,27 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
      {
       "p": 270,
       "y0": 0,
+      "y1": 519.3
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 269,
+      "y0": 0.0,
+      "y1": 150.6
+     }
+    ],
+    "offertorium": [
+     {
+      "p": 269,
+      "y0": 238.9,
+      "y1": 519.3
+     }
+    ],
+    "communio": [
+     {
+      "p": 270,
+      "y0": 0.0,
       "y1": 519.3
      }
     ]
@@ -4465,6 +4975,25 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 177.9,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 272,
+      "y0": 412.0,
+      "y1": 519.3
+     },
+     {
+      "p": 273,
+      "y0": 0,
+      "y1": 150.6
+     }
+    ],
+    "communio": [
+     {
+      "p": 274,
+      "y0": 0.0,
+      "y1": 280.4
+     }
     ]
    },
    "celebracion": "6.º Domingo del Tiempo Ordinario"
@@ -4507,6 +5036,20 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 292.5,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 276,
+      "y0": 325.4,
+      "y1": 366.9
+     }
+    ],
+    "communio": [
+     {
+      "p": 277,
+      "y0": 0.0,
+      "y1": 193.9
+     }
     ]
    },
    "celebracion": "7.º Domingo del Tiempo Ordinario"
@@ -4541,6 +5084,37 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 279,
       "y0": 272.3,
       "y1": 519.3
+     }
+    ],
+    "graduale": [
+     {
+      "p": 278,
+      "y0": 0.0,
+      "y1": 453.5
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 278,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 279,
+      "y0": 0,
+      "y1": 280.4
+     }
+    ],
+    "communio": [
+     {
+      "p": 279,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 280,
+      "y0": 0,
+      "y1": 280.4
      }
     ]
    },
@@ -4577,6 +5151,32 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 0,
       "y1": 519.3
      }
+    ],
+    "introitus": [
+     {
+      "p": 280,
+      "y0": 238.9,
+      "y1": 519.3
+     },
+     {
+      "p": 281,
+      "y0": 0,
+      "y1": 107.3
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 282,
+      "y0": 0.0,
+      "y1": 410.2
+     }
+    ],
+    "communio": [
+     {
+      "p": 283,
+      "y0": 368.7,
+      "y1": 410.2
+     }
     ]
    },
    "celebracion": "9.º Domingo del Tiempo Ordinario"
@@ -4612,9 +5212,68 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 198.8,
       "y1": 519.3
      }
+    ],
+    "graduale": [
+     {
+      "p": 284,
+      "y0": 412.0,
+      "y1": 519.3
+     },
+     {
+      "p": 285,
+      "y0": 0,
+      "y1": 410.2
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 285,
+      "y0": 368.7,
+      "y1": 519.3
+     },
+     {
+      "p": 286,
+      "y0": 0,
+      "y1": 150.6
+     }
+    ],
+    "communio": [
+     {
+      "p": 286,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 287,
+      "y0": 0,
+      "y1": 150.6
+     }
     ]
    },
    "celebracion": "10.º Domingo del Tiempo Ordinario"
+  },
+  "hebdomada-undecima": {
+   "titulo": "Hebdomada Undecima",
+   "ruta": [
+    "Proprium de Tempore",
+    "Tempus per annum"
+   ],
+   "pagina": 288,
+   "cantos": {
+    "graduale": [
+     {
+      "p": 288,
+      "y0": 30.799999999999997,
+      "y1": 519.3
+     },
+     {
+      "p": 289,
+      "y0": 0,
+      "y1": 519.3
+     }
+    ]
+   },
+   "celebracion": "11.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-undecima-p291": {
    "titulo": "Hebdomada Undecima",
@@ -4654,9 +5313,28 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 474.3,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 288,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 289,
+      "y0": 0,
+      "y1": 280.4
+     }
+    ],
+    "communio": [
+     {
+      "p": 290,
+      "y0": 325.4,
+      "y1": 410.2
+     }
     ]
    },
-   "celebracion": "11.º Domingo del Tiempo Ordinario"
+   "celebracion": "12.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-decima-tertia": {
    "titulo": "Hebdomada Decima Tertia",
@@ -4683,6 +5361,32 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 295,
       "y0": 217.8,
       "y1": 519.3
+     }
+    ],
+    "introitus": [
+     {
+      "p": 293,
+      "y0": 238.9,
+      "y1": 519.3
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 294,
+      "y0": 368.7,
+      "y1": 519.3
+     },
+     {
+      "p": 295,
+      "y0": 0,
+      "y1": 280.4
+     }
+    ],
+    "communio": [
+     {
+      "p": 296,
+      "y0": 152.3,
+      "y1": 280.4
      }
     ]
    },
@@ -4725,6 +5429,20 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 298,
       "y0": 326.8,
       "y1": 519.3
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 298,
+      "y0": 0.0,
+      "y1": 366.9
+     }
+    ],
+    "communio": [
+     {
+      "p": 299,
+      "y0": 152.3,
+      "y1": 280.4
      }
     ]
    },
@@ -4780,6 +5498,18 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 265.3,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 301,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 302,
+      "y0": 0,
+      "y1": 280.4
+     }
     ]
    },
    "celebracion": "15.º Domingo del Tiempo Ordinario"
@@ -4821,6 +5551,30 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 305,
       "y0": 159.8,
       "y1": 519.3
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 304,
+      "y0": 368.7,
+      "y1": 519.3
+     },
+     {
+      "p": 305,
+      "y0": 0,
+      "y1": 193.9
+     }
+    ],
+    "communio": [
+     {
+      "p": 305,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 306,
+      "y0": 0,
+      "y1": 193.9
      }
     ]
    },
@@ -4881,6 +5635,18 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 29.200000000000003,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 308,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 309,
+      "y0": 0,
+      "y1": 150.6
+     }
     ]
    },
    "celebracion": "17.º Domingo del Tiempo Ordinario"
@@ -4921,6 +5687,37 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 0,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 313,
+      "y0": 109.0,
+      "y1": 410.2
+     }
+    ],
+    "offertorium": [
+     {
+      "p": 313,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 314,
+      "y0": 0,
+      "y1": 519.3
+     },
+     {
+      "p": 315,
+      "y0": 0,
+      "y1": 107.3
+     }
+    ],
+    "communio": [
+     {
+      "p": 315,
+      "y0": 65.8,
+      "y1": 410.2
+     }
     ]
    },
    "celebracion": "18.º Domingo del Tiempo Ordinario"
@@ -4960,6 +5757,37 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 318,
       "y0": 0,
       "y1": 519.3
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 317,
+      "y0": 325.4,
+      "y1": 519.3
+     },
+     {
+      "p": 318,
+      "y0": 0,
+      "y1": 193.9
+     }
+    ],
+    "offertorium": [
+     {
+      "p": 318,
+      "y0": 109.0,
+      "y1": 366.9
+     }
+    ],
+    "communio": [
+     {
+      "p": 318,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 319,
+      "y0": 0,
+      "y1": 107.3
      }
     ]
    },
@@ -5009,6 +5837,18 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 321,
       "y0": 443.6,
       "y1": 519.3
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 320,
+      "y0": 368.7,
+      "y1": 519.3
+     },
+     {
+      "p": 321,
+      "y0": 0,
+      "y1": 150.6
      }
     ]
    },
@@ -5064,6 +5904,18 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 134.9,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 323,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 324,
+      "y0": 0,
+      "y1": 410.2
+     }
     ]
    },
    "celebracion": "21.º Domingo del Tiempo Ordinario"
@@ -5100,6 +5952,25 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 327,
       "y0": 261.0,
       "y1": 519.3
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 326,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 327,
+      "y0": 0,
+      "y1": 280.4
+     }
+    ],
+    "communio": [
+     {
+      "p": 328,
+      "y0": 0.0,
+      "y1": 366.9
      }
     ]
    },
@@ -5155,6 +6026,13 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 186.4,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 330,
+      "y0": 0.0,
+      "y1": 280.4
+     }
     ]
    },
    "celebracion": "23.º Domingo del Tiempo Ordinario"
@@ -5197,6 +6075,20 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 387.9,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 333,
+      "y0": 325.4,
+      "y1": 519.3
+     }
+    ],
+    "offertorium": [
+     {
+      "p": 334,
+      "y0": 238.9,
+      "y1": 453.5
+     }
     ]
    },
    "celebracion": "24.º Domingo del Tiempo Ordinario"
@@ -5238,6 +6130,25 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 337,
       "y0": 176.1,
       "y1": 519.3
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 336,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 337,
+      "y0": 0,
+      "y1": 150.6
+     }
+    ],
+    "communio": [
+     {
+      "p": 338,
+      "y0": 0.0,
+      "y1": 280.4
      }
     ]
    },
@@ -5286,6 +6197,25 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 387.0,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 340,
+      "y0": 238.9,
+      "y1": 519.3
+     },
+     {
+      "p": 341,
+      "y0": 0,
+      "y1": 107.3
+     }
+    ],
+    "communio": [
+     {
+      "p": 342,
+      "y0": 109.0,
+      "y1": 366.9
+     }
     ]
    },
    "celebracion": "26.º Domingo del Tiempo Ordinario"
@@ -5332,6 +6262,30 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 345,
       "y0": 0,
       "y1": 519.3
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 344,
+      "y0": 325.4,
+      "y1": 519.3
+     },
+     {
+      "p": 345,
+      "y0": 0,
+      "y1": 150.6
+     }
+    ],
+    "offertorium": [
+     {
+      "p": 345,
+      "y0": 152.3,
+      "y1": 519.3
+     },
+     {
+      "p": 346,
+      "y0": 0,
+      "y1": 107.3
      }
     ]
    },
@@ -5387,6 +6341,13 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 0,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 348,
+      "y0": 325.4,
+      "y1": 453.5
+     }
     ]
    },
    "celebracion": "28.º Domingo del Tiempo Ordinario"
@@ -5428,6 +6389,25 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 352,
       "y0": 288.7,
       "y1": 519.3
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 351,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 352,
+      "y0": 0,
+      "y1": 280.4
+     }
+    ],
+    "communio": [
+     {
+      "p": 353,
+      "y0": 0.0,
+      "y1": 280.4
      }
     ]
    },
@@ -5478,6 +6458,18 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 311.9,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 354,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 355,
+      "y0": 0,
+      "y1": 107.3
+     }
     ]
    },
    "celebracion": "30.º Domingo del Tiempo Ordinario"
@@ -5520,6 +6512,30 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 93.1,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 357,
+      "y0": 325.4,
+      "y1": 519.3
+     },
+     {
+      "p": 358,
+      "y0": 0,
+      "y1": 107.3
+     }
+    ],
+    "communio": [
+     {
+      "p": 358,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 359,
+      "y0": 0,
+      "y1": 150.6
+     }
     ]
    },
    "celebracion": "31.º Domingo del Tiempo Ordinario"
@@ -5553,6 +6569,27 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
      {
       "p": 361,
       "y0": 0,
+      "y1": 519.3
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 360,
+      "y0": 238.9,
+      "y1": 519.3
+     }
+    ],
+    "offertorium": [
+     {
+      "p": 361,
+      "y0": 0.0,
+      "y1": 280.4
+     }
+    ],
+    "communio": [
+     {
+      "p": 361,
+      "y0": 238.9,
       "y1": 519.3
      }
     ]
@@ -5596,6 +6633,30 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 364,
       "y0": 368.1,
       "y1": 519.3
+     }
+    ],
+    "graduale": [
+     {
+      "p": 362,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 363,
+      "y0": 0,
+      "y1": 366.9
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 363,
+      "y0": 325.4,
+      "y1": 519.3
+     },
+     {
+      "p": 364,
+      "y0": 0,
+      "y1": 150.6
      }
     ]
    },
@@ -5776,6 +6837,13 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 212.5,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 371,
+      "y0": 325.4,
+      "y1": 453.5
+     }
     ]
    },
    "celebracion": "Santísima Trinidad"
@@ -5839,6 +6907,20 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 137.3,
       "y1": 519.3
      }
+    ],
+    "alleluia": [
+     {
+      "p": 374,
+      "y0": 325.4,
+      "y1": 519.3
+     }
+    ],
+    "communio": [
+     {
+      "p": 379,
+      "y0": 238.9,
+      "y1": 519.3
+     }
     ]
    },
    "celebracion": "Corpus Christi"
@@ -5878,6 +6960,37 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
      {
       "p": 383,
       "y0": 178.4,
+      "y1": 519.3
+     }
+    ],
+    "graduale": [
+     {
+      "p": 380,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 381,
+      "y0": 0,
+      "y1": 280.4
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 381,
+      "y0": 238.9,
+      "y1": 519.3
+     },
+     {
+      "p": 382,
+      "y0": 0,
+      "y1": 280.4
+     }
+    ],
+    "offertorium": [
+     {
+      "p": 382,
+      "y0": 238.9,
       "y1": 519.3
      }
     ]
@@ -5922,6 +7035,25 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 386,
       "y0": 273.1,
       "y1": 519.3
+     }
+    ],
+    "alleluia": [
+     {
+      "p": 385,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 386,
+      "y0": 0,
+      "y1": 280.4
+     }
+    ],
+    "communio": [
+     {
+      "p": 387,
+      "y0": 0.0,
+      "y1": 280.4
      }
     ]
    },

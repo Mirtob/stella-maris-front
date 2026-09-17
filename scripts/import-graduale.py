@@ -177,6 +177,18 @@ SUB_MISAS = {
     "ad missam in die": "(Misa del día)",
 }
 
+# ERRATAS DEL PROPIO PDF, corregidas a mano.
+#
+# El marcador "Hebdomada Undecima" aparece DOS VECES (p288 y p291) y no hay ninguno
+# para la duodécima: el siguiente salta a la decimotercera. Resultado: el 11.º domingo
+# tenía dos entradas y el 12.º no existía en el índice — nunca llegó a la planilla, así
+# que tampoco se podía rellenar a mano. La segunda es en realidad la duodécima.
+#
+# Se corrige por PÁGINA y no por título, que es lo único que distingue a las dos.
+MARCADOR_CORREGIDO = {
+    ("romanum", 291): "12.º Domingo del Tiempo Ordinario",
+}
+
 # Las que no siguen ningún patrón: se nombran una por una.
 FIESTAS = {
     "in nativitate domini": "Natividad del Señor",
@@ -390,17 +402,139 @@ def recortes_de_misa(doc, desde: int, hasta: int, cantos: list) -> dict:
     return cantos
 
 
+# Posiciones de la planilla → fracción de la altura de la página. Excel guarda unas
+# selecciones como texto ("1/3") y otras convertidas a número (0.333): valen las dos.
+POSICIONES = {
+    "arriba del todo": 0.0, "1/6": 1 / 6, "1/4": 0.25, "1/3": 1 / 3,
+    "a la mitad": 0.5, "2/3": 2 / 3, "3/4": 0.75, "5/6": 5 / 6, "al final": 1.0,
+}
+
+# Holgura del recorte, en fracción de página. Las posiciones de la planilla se señalan
+# a ojo ("más o menos por aquí"), así que se recorta ANCHO a propósito: que sobre un
+# poco de página es inofensivo; que el canto salga cortado, no.
+HOLGURA = 0.04
+
+
+def fraccion(valor):
+    """La posición tal como la guardó Excel → fracción 0..1. None si no hay dato."""
+    if isinstance(valor, str):
+        return POSICIONES.get(valor.strip())
+    if isinstance(valor, (int, float)):
+        v = float(valor)
+        return v if 0.0 <= v <= 1.0 else None
+    return None
+
+
+def regiones_desde_planilla(doc, p_ini, f_ini, p_fin, f_fin):
+    """Las regiones a recortar a partir de lo señalado a mano.
+
+    Un canto puede cruzar de página: empieza en el último tercio de una y termina en el
+    primero de la siguiente. En ese caso son varias regiones —desde donde empieza hasta
+    el pie, las páginas de en medio enteras, y la cabecera de la última—, que es
+    exactamente lo que la planilla permite expresar con sus cuatro columnas.
+    """
+    ini = int(p_ini) - 1
+    fin = int(p_fin) - 1 if p_fin else ini
+    if ini < 0 or ini >= doc.page_count:
+        return None
+    fin = max(ini, min(fin, doc.page_count - 1))
+    alto_ini = doc[ini].rect.height
+
+    y0 = max(0.0, (f_ini - HOLGURA) * alto_ini) if f_ini is not None else 0.0
+    if fin == ini:
+        y1 = min(alto_ini, (f_fin + HOLGURA) * alto_ini) if f_fin is not None else alto_ini
+        if y1 <= y0:
+            y1 = alto_ini
+        return [{"p": ini, "y0": round(y0, 1), "y1": round(y1, 1)}]
+
+    regiones = [{"p": ini, "y0": round(y0, 1), "y1": round(alto_ini, 1)}]
+    for p in range(ini + 1, fin):
+        regiones.append({"p": p, "y0": 0, "y1": round(doc[p].rect.height, 1)})
+    alto_fin = doc[fin].rect.height
+    y1 = min(alto_fin, (f_fin + HOLGURA) * alto_fin) if f_fin is not None else alto_fin
+    regiones.append({"p": fin, "y0": 0, "y1": round(y1, 1)})
+    return regiones
+
+
+def aplicar_planilla(indice: dict, docs: dict, ruta: str) -> dict:
+    """Vuelca en el índice lo rellenado a mano. Devuelve un resumen de lo aplicado.
+
+    Lo manual MANDA sobre lo detectado: si alguien se tomó el trabajo de mirar la
+    página, su dato vale más que el mío. Las filas marcadas "no existe" se anotan para
+    que el informe de huecos deje de pedirlas.
+    """
+    resumen = {"aplicadas": 0, "porCiclo": 0, "noExisten": 0, "descartadas": []}
+    if not ruta or not os.path.exists(ruta):
+        print(f"  (sin planilla en {ruta}: se usa solo lo detectado)")
+        return resumen
+    try:
+        from openpyxl import load_workbook
+    except ImportError:
+        sys.exit("Falta openpyxl: .venv/Scripts/pip.exe install openpyxl")
+
+    ws = load_workbook(ruta, data_only=True)["Huecos"]
+    # La clave viaja en la última columna; su número cambió al añadir la del ciclo.
+    col_clave = 13 if str(ws.cell(row=1, column=10).value or "").startswith("→ Ciclo") else 12
+    col_ciclo = 10 if col_clave == 13 else None
+
+    for r in range(2, ws.max_row + 1):
+        libro = ws.cell(row=r, column=1).value
+        canto = ws.cell(row=r, column=3).value
+        clave = ws.cell(row=r, column=col_clave).value
+        if not libro or not clave or libro not in indice:
+            continue
+        misa = indice[libro].get(clave)
+        if not misa:
+            resumen["descartadas"].append(f"f{r}: {clave} ya no está en el índice")
+            continue
+
+        p_ini = ws.cell(row=r, column=6).value
+        f_ini = fraccion(ws.cell(row=r, column=7).value)
+        p_fin = ws.cell(row=r, column=8).value
+        f_fin = fraccion(ws.cell(row=r, column=9).value)
+        ciclo = (str(ws.cell(row=r, column=col_ciclo).value or "").strip().upper()
+                 if col_ciclo else "")
+        noexiste = ws.cell(row=r, column=col_clave - 2).value
+
+        if noexiste:
+            misa.setdefault("noExisten", [])
+            if canto not in misa["noExisten"]:
+                misa["noExisten"].append(canto)
+            resumen["noExisten"] += 1
+            continue
+        if not p_ini:
+            continue
+
+        regiones = regiones_desde_planilla(docs[libro], p_ini, f_ini, p_fin, f_fin)
+        if not regiones:
+            resumen["descartadas"].append(f"f{r}: página {p_ini} fuera del documento")
+            continue
+
+        if ciclo in ("A", "B", "C"):
+            misa.setdefault("cantosPorCiclo", {}).setdefault(ciclo, {})[canto] = regiones
+            resumen["porCiclo"] += 1
+        else:
+            misa["cantos"][canto] = regiones
+            resumen["aplicadas"] += 1
+    return resumen
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cache", default=os.path.join("tmp", "graduale"))
+    ap.add_argument("--planilla", default=os.path.join(
+        os.path.expanduser("~"), "Desktop", "Huecos-Graduale.xlsx"),
+        help="planilla rellenada a mano que se fusiona con lo detectado")
     args = ap.parse_args()
 
     indice = {}
     informe = {}
+    docs = {}
 
     for clave, libro in LIBROS.items():
         ruta = descargar(libro, args.cache)
         doc = fitz.open(ruta)
+        docs[clave] = doc
         print(f"\n{libro['titulo']}: {doc.page_count} páginas")
 
         misas = misas_del_libro(doc)
@@ -415,7 +549,8 @@ def main():
             # se desempata con la página, que es única.
             if clave_misa in conMisa:
                 clave_misa = f"{clave_misa}-p{m['desde'] + 1}"
-            celebracion = celebracion_de(m["titulo"], m["ruta"][:-1])
+            celebracion = (MARCADOR_CORREGIDO.get((clave, m["desde"] + 1))
+                           or celebracion_de(m["titulo"], m["ruta"][:-1]))
             entrada = {
                 "titulo": m["titulo"],
                 # Sin los ancestros no hay forma de saber de qué tiempo es esta Misa.
@@ -448,7 +583,15 @@ def main():
         print(f"  Misas con cantos: {len(conMisa)}   (con introito Y comunión: {completas})")
         print(f"  por tipo: {porTipo}")
         print(f"  marcadores sin ningún canto (secciones, prólogos…): {len(sinNada)}")
-        doc.close()
+
+    # ── Lo rellenado a mano, encima de lo detectado ─────────────────────────
+    res = aplicar_planilla(indice, docs, args.planilla)
+    for d in docs.values():
+        d.close()
+    print(f"\nde la planilla: {res['aplicadas']} cantos aplicados, "
+          f"{res['porCiclo']} variantes por ciclo, {res['noExisten']} marcados como inexistentes")
+    for msg in res["descartadas"][:10]:
+        print(f"   descartada {msg}")
 
     cabecera = """// ARCHIVO GENERADO por scripts/import-graduale.py — NO editar a mano.
 // Dónde está cada canto propio en el Graduale Romanum y en el Graduale Simplex:
@@ -466,6 +609,11 @@ export interface RecorteGraduale { p: number; y0: number; y1: number; }
 /** Los cantos de una Misa del libro. Cada canto puede ocupar varias regiones. */
 export interface MisaGraduale {
   titulo: string;
+  /** Cantos que NO existen en esta Misa (comprobado a mano sobre el libro). */
+  noExisten?: string[];
+  /** Variantes por ciclo litúrgico, solo donde el libro las trae. El canto normal
+   *  sigue en `cantos`; esto lo sustituye cuando el año coincide. */
+  cantosPorCiclo?: Partial<Record<'A' | 'B' | 'C', Record<string, RecorteGraduale[]>>>;
   /** Celebración del calendario de la app, cuando se pudo emparejar. El Simplex casi
    *  nunca la trae: ofrece Misas por tiempo, y el domingo lo elige el coro. */
   celebracion?: string;
