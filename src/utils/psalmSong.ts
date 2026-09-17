@@ -17,6 +17,7 @@ import { getSundayCycle } from './liturgicalCycle';
 import { resolvePsalm } from '../data/psalmIndex';
 import { isAntiphonSong } from './antiphonSong';
 import { isGradualeSong } from './gradualeSong';
+import { isKyrialeSong } from './kyrialeSong';
 
 /**
  * @param massDate fecha de la Misa, 'YYYY-MM-DD'
@@ -63,7 +64,8 @@ export function songsForBuilder<T extends Pick<Song, 'id' | 'category'>>(songs: 
   // casilla): ChoirView las repone en su caja desde el cantoral publicado, asi que
   // aqui salen del borrador junto con el salmo. Y lo mismo los propios gregorianos,
   // que salen de la celebracion y del ciclo de la fecha.
-  return songs.filter(s => !isBookPsalm(s) && !isAntiphonSong(s) && !isGradualeSong(s));
+  return songs.filter(s => !isBookPsalm(s) && !isAntiphonSong(s)
+    && !isGradualeSong(s) && !isKyrialeSong(s));
 }
 
 /**

@@ -53,8 +53,20 @@ CABECERA = re.compile(r"^(?:[IVXLC]+|\d{1,3}|[A-ZÆŒ][A-ZÆŒ\s.,:'-]{3,})$")
 
 
 def es_cabecera(texto: str) -> bool:
-    """Si esa línea es el título corrido de la página y no letra de canto."""
-    return bool(CABECERA.match(FOLIO.sub("", texto).strip()))
+    """Si esa línea es el título corrido de la página y no letra de canto.
+
+    La prueba es que NO TENGA MINÚSCULAS. Enumerar los caracteres permitidos no sirve:
+    el escaneo mete un carácter ilegible en cualquier palabra ("CANTUS IN ORDINE MISS?
+    OCCURRENTES") y la línea dejaba de reconocerse, así que el título se colaba en medio
+    del canto justo donde se cosen dos páginas. La letra cantada siempre trae minúsculas
+    -va silabeada bajo las neumas-, de modo que la regla al revés es mucho más firme.
+    """
+    limpio = FOLIO.sub("", texto).strip()
+    if not limpio or len(limpio) < 2:
+        return False
+    if any(c.islower() for c in limpio):
+        return False
+    return any(c.isupper() for c in limpio) or limpio.isdigit()
 
 
 def leer_indice() -> dict:

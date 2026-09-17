@@ -15,12 +15,16 @@ import { debePreguntarInstrumento, instrumentoPorDefecto } from '../../utils/ins
 import { PsalmFromBook } from '../songs/PsalmFromBook';
 import { MassAntiphon } from '../songs/MassAntiphon';
 import { GradualeChoice } from '../songs/GradualeChoice';
+import { KyrialeChoice } from '../songs/KyrialeChoice';
 import { getCelebrationsForDate, getLiturgicalDateForDate, getPersistedCustomDates, setPersistedCustomDates } from '../../utils/liturgicalCalendar';
 import { getSundayCycle } from '../../utils/liturgicalCycle';
 import { resolvePsalm } from '../../data/psalmIndex';
 import { buildPsalmSong, conSalmoDelLibro, debeReponerAntifona, esAntifonaEscritaAMano } from '../../utils/psalmSong';
 import { buildAntiphonSong, conAntifonas, findAntiphonSong } from '../../utils/antiphonSong';
 import { buildGradualeSong, libroDelCantoral } from '../../utils/gradualeSong';
+import { buildKyrialeSongs, misaDelCantoral, gloriaDelCantoral,
+         buildPaterNosterSong, paterNosterDelCantoral,
+         type EleccionKyriale } from '../../utils/kyrialeSong';
 import { PARTES_CON_PROPIO, parteTienePropio, hayPropios, type LibroGraduale } from '../../data/gradualeIndex';
 import { resolveAntiphons, conCita } from '../../data/antiphonIndex';
 import { AddSolemnityModal } from '../liturgy/AddSolemnityModal';
@@ -181,6 +185,17 @@ export function ChoirView({
   const [libroGregoriano, setLibroGregoriano] = useState<Record<string, LibroGraduale | null>>({});
   const elegirGregoriano = (parte: string, libro: LibroGraduale | null) =>
     setLibroGregoriano((prev) => ({ ...prev, [parte]: libro }));
+  /**
+   * La Misa del ordinario en gregoriano, y de dónde sale su Gloria.
+   *
+   * Se guarda UNA Misa, no una parte por parte: el Santo y el Cordero son los de la Misa
+   * del Kyrie, y lo único que puede venir de otra es el Gloria (ver utils/kyrialeSong).
+   */
+  const [misaGregoriana, setMisaGregoriana] = useState<EleccionKyriale | null>(null);
+  const [gloriaGregoriano, setGloriaGregoriano] = useState<EleccionKyriale | null>(null);
+  /** Tono del Padre Nuestro gregoriano. Va suelto: no pertenece a ninguna Misa. */
+  const [paterGregoriano, setPaterGregoriano] = useState<string | null>(null);
+
   /** El atajo del encabezado: el mismo libro en todas las partes que lo tengan. */
   const gregorianoEnTodo = (libro: LibroGraduale | null) =>
     setLibroGregoriano(libro === null
@@ -244,9 +259,12 @@ export function ChoirView({
         massDate, getLiturgicalDateForDate(massDate), parte, libroGregoriano[parte] ?? null,
         getSundayCycle(massDate),
       )),
+      // El ordinario gregoriano: las cuatro partes salen de una sola elección.
+      ...buildKyrialeSongs(massDate, misaGregoriana, gloriaGregoriano),
+      buildPaterNosterSong(massDate, 'romanum', paterGregoriano),
     ]),
     [cantoral, psalmSong, massDate, antifonaEntrada, antifonaComunion, incluirEntrada,
-     incluirComunion, libroGregoriano],
+     incluirComunion, libroGregoriano, misaGregoriana, gloriaGregoriano, paterGregoriano],
   );
   /**
    * Al ENTRAR a editar un cantoral publicado, reponer su fecha, su horario y su tipo
@@ -289,6 +307,12 @@ export function ChoirView({
       if (libro) gregorianos[parte] = libro;
     }
     setLibroGregoriano(gregorianos);
+    // La Misa del ordinario se lee del Kyrie, que es el que manda; el Gloria puede ser
+    // de otra, así que se repone por su cuenta.
+    setMisaGregoriana(misaDelCantoral(editingCantoral.songs, editingCantoral.date));
+    setGloriaGregoriano(gloriaDelCantoral(editingCantoral.songs, editingCantoral.date));
+    setPaterGregoriano(
+      paterNosterDelCantoral(editingCantoral.songs, editingCantoral.date)?.tono ?? null);
     setMassDate(editingCantoral.date);
     const hhmm = massTimeTo24h(editingCantoral.massTime);
     if (hhmm) setMassTime(hhmm);
@@ -664,6 +688,17 @@ export function ChoirView({
               </div>
             </div>
           )}
+        </div>
+
+        <div className="mt-4">
+          <KyrialeChoice
+            valor={misaGregoriana}
+            onChange={setMisaGregoriana}
+            gloriaDe={gloriaGregoriano}
+            onGloriaChange={setGloriaGregoriano}
+            paterNoster={paterGregoriano}
+            onPaterChange={setPaterGregoriano}
+          />
         </div>
 
         {/* Modo Atril — leer el repertorio durante la Misa */}
