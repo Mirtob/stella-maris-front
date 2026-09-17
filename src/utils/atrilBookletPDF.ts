@@ -272,6 +272,21 @@ export interface AtrilPrintOptions {
   notation?: ChordNotation;
 }
 
+/**
+ * Carga un recorte del Graduale para meterlo en el PDF.
+ *
+ * Es un archivo propio (`/graduale/...`), no de Drive, así que no pasa por el proxy ni
+ * por pdf.js: es una imagen y se dibuja tal cual.
+ */
+async function cargarFacsimil(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img.naturalWidth ? img : null);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
 export async function generateAtrilPrintable(opts: AtrilPrintOptions): Promise<{ blob: Blob; url: string }> {
   const { instrument, role } = opts;
   const notation = opts.notation ?? getChordNotation();
@@ -368,7 +383,27 @@ export async function generateAtrilPrintable(opts: AtrilPrintOptions): Promise<{
     }
 
     // Contenido.
-    if (mode === 'score' && proxy) {
+    if (s.gradualeImage) {
+      // Propio gregoriano: el tetragrama del libro, y el pie diciendo de dónde sale.
+      // Va antes que todo lo demás porque no tiene letra ni acordes que mostrar.
+      const img = await cargarFacsimil(s.gradualeImage);
+      if (!img) {
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(150, 150, 150);
+        need(6); doc.text('(No se pudo cargar la partitura gregoriana.)', M, y); y += 6;
+      } else {
+        const ar = img.naturalWidth / img.naturalHeight;
+        let w = CW, h = w / ar;
+        const maxH = PH - 2 * M;
+        if (h > maxH) { h = maxH; w = h * ar; }
+        need(h);
+        doc.addImage(img, 'PNG', M + (CW - w) / 2, y, w, h, undefined, 'FAST');
+        y += h + 3;
+        if (s.gradualeFuente) {
+          doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(140, 140, 140);
+          need(5); doc.text(clean(s.gradualeFuente), M + CW / 2, y, { align: 'center' }); y += 5;
+        }
+      }
+    } else if (mode === 'score' && proxy) {
       const imgs = await renderPdfToImages({ url: proxy }, 1500);
       if (imgs.length === 0) {
         doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(150, 150, 150);

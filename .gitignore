@@ -52,3 +52,6 @@ scripts/.*.tmp.html
 
 # Cache de los PDF del Misal que baja scripts/import-antifonas.py (se rebajan solos)
 tmp/
+
+# Python (scripts de importacion)
+__pycache__/

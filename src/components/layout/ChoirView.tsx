@@ -14,11 +14,14 @@ import { Song, InstrumentType, PublishedCantoral, MassType } from '../../types';
 import { debePreguntarInstrumento, instrumentoPorDefecto } from '../../utils/instrument';
 import { PsalmFromBook } from '../songs/PsalmFromBook';
 import { MassAntiphon } from '../songs/MassAntiphon';
+import { GradualeChoice } from '../songs/GradualeChoice';
 import { getCelebrationsForDate, getLiturgicalDateForDate, getPersistedCustomDates, setPersistedCustomDates } from '../../utils/liturgicalCalendar';
 import { getSundayCycle } from '../../utils/liturgicalCycle';
 import { resolvePsalm } from '../../data/psalmIndex';
 import { buildPsalmSong, conSalmoDelLibro, debeReponerAntifona, esAntifonaEscritaAMano } from '../../utils/psalmSong';
 import { buildAntiphonSong, conAntifonas, findAntiphonSong } from '../../utils/antiphonSong';
+import { buildGradualeSong, libroDelCantoral } from '../../utils/gradualeSong';
+import { PARTES_CON_PROPIO, parteTienePropio, hayPropios, type LibroGraduale } from '../../data/gradualeIndex';
 import { resolveAntiphons, conCita } from '../../data/antiphonIndex';
 import { AddSolemnityModal } from '../liturgy/AddSolemnityModal';
 import { addCustomLiturgicalDate, toLiturgicalDate } from '../../services/liturgicalDates';
@@ -168,6 +171,22 @@ export function ChoirView({
   const [antifonaComunion, setAntifonaComunion] = useState('');
   const [incluirEntrada, setIncluirEntrada] = useState(false);
   const [incluirComunion, setIncluirComunion] = useState(false);
+  /**
+   * Propio gregoriano elegido para cada parte de la Misa (o nada).
+   *
+   * Es un mapa por parte y no una sola opción para toda la Misa porque hay coros que
+   * cantan el introito en gregoriano y el resto en castellano. Se guarda el LIBRO
+   * (Romanum o Simplex); el canto concreto sale de la celebración y del ciclo.
+   */
+  const [libroGregoriano, setLibroGregoriano] = useState<Record<string, LibroGraduale | null>>({});
+  const elegirGregoriano = (parte: string, libro: LibroGraduale | null) =>
+    setLibroGregoriano((prev) => ({ ...prev, [parte]: libro }));
+  /** El atajo del encabezado: el mismo libro en todas las partes que lo tengan. */
+  const gregorianoEnTodo = (libro: LibroGraduale | null) =>
+    setLibroGregoriano(libro === null
+      ? {}
+      : Object.fromEntries(PARTES_CON_PROPIO.map((p) => [p, libro])));
+
   // Igual que con el salmo: lo escrito a mano no se pisa al cambiar la fecha.
   const entradaEscritaAMano = useRef(false);
   const comunionEscritaAMano = useRef(false);
@@ -219,8 +238,15 @@ export function ChoirView({
     () => conAntifonas(conSalmoDelLibro(cantoral, psalmSong), [
       buildAntiphonSong(massDate, 'Entrada', antifonaEntrada, incluirEntrada),
       buildAntiphonSong(massDate, 'Comunión', antifonaComunion, incluirComunion),
+      // Los propios gregorianos se colocan igual que las antífonas: cada uno dentro de
+      // su parte, y la comunión la primera de la suya.
+      ...PARTES_CON_PROPIO.map((parte) => buildGradualeSong(
+        massDate, getLiturgicalDateForDate(massDate), parte, libroGregoriano[parte] ?? null,
+        getSundayCycle(massDate),
+      )),
     ]),
-    [cantoral, psalmSong, massDate, antifonaEntrada, antifonaComunion, incluirEntrada, incluirComunion],
+    [cantoral, psalmSong, massDate, antifonaEntrada, antifonaComunion, incluirEntrada,
+     incluirComunion, libroGregoriano],
   );
   /**
    * Al ENTRAR a editar un cantoral publicado, reponer su fecha, su horario y su tipo
@@ -256,6 +282,13 @@ export function ChoirView({
       setAntifonaComunion(comunionPublicada.lyrics);
       setIncluirComunion(true);
     }
+    // Y el propio gregoriano que llevara cada parte, para no perderlo al editar.
+    const gregorianos: Record<string, LibroGraduale | null> = {};
+    for (const parte of PARTES_CON_PROPIO) {
+      const libro = libroDelCantoral(editingCantoral.songs, parte, editingCantoral.date);
+      if (libro) gregorianos[parte] = libro;
+    }
+    setLibroGregoriano(gregorianos);
     setMassDate(editingCantoral.date);
     const hhmm = massTimeTo24h(editingCantoral.massTime);
     if (hhmm) setMassTime(hhmm);
@@ -597,6 +630,40 @@ export function ChoirView({
             <span className="text-base">➕</span>
             {massCelebration ? 'Agregar otra celebración a este día' : 'Agregar celebración para esta fecha'}
           </button>
+          {/* Atajo: hay coros que cantan TODOS los propios en gregoriano, y marcarlos
+              parte por parte son cinco toques. Sólo aparece si ese día el libro trae
+              algo; después se puede cambiar cualquier parte por separado. */}
+          {massCelebration && hayPropios(massCelebration, massCycle) && (
+            <div className="mt-3 pt-3 border-t border-blue-200/70 dark:border-slate-600/70">
+              <p className="text-sm font-bold text-brand-ink">Propios en gregoriano</p>
+              <p className="text-xs text-brand-ink-soft mb-2">
+                Para toda la Misa de una vez. Cada parte se puede cambiar después.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => gregorianoEnTodo('romanum')}
+                  className="px-3 py-2 rounded-xl text-sm font-bold bg-stone-800 text-white border-2 border-stone-800 active:opacity-70"
+                >
+                  Todo el Romanum
+                </button>
+                <button
+                  type="button"
+                  onClick={() => gregorianoEnTodo('simplex')}
+                  className="px-3 py-2 rounded-xl text-sm font-bold bg-stone-800 text-white border-2 border-stone-800 active:opacity-70"
+                >
+                  Todo el Simplex
+                </button>
+                <button
+                  type="button"
+                  onClick={() => gregorianoEnTodo(null)}
+                  className="px-3 py-2 rounded-xl text-sm font-bold bg-white/70 dark:bg-white/10 text-brand-ink border-2 border-stone-300 dark:border-stone-600 active:opacity-70"
+                >
+                  Quitar
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Modo Atril — leer el repertorio durante la Misa */}
@@ -823,9 +890,13 @@ export function ChoirView({
             // propia del día: se canta después del canto de entrada, y al empezar la
             // comunión. La casilla decide si viaja al folleto del pueblo.
             const conAntifona = category === 'Entrada' || category === 'Comunión';
+            // Las cinco partes con propio en el Graduale llevan además el selector de
+            // gregoriano. Son más que las dos del Misal: el gradual, el aleluya y el
+            // ofertorio también tienen melodía propia en el libro.
+            const conGregoriano = parteTienePropio(category);
 
             return (
-              <div key={rawCategory} className={conAntifona ? 'space-y-3' : undefined}>
+              <div key={rawCategory} className={conAntifona || conGregoriano ? 'space-y-3' : undefined}>
               <CategorySearch
                 category={category}
                 icon={icon}
@@ -850,6 +921,15 @@ export function ChoirView({
                   onChange={category === 'Entrada' ? cambiarAntifonaEntrada : cambiarAntifonaComunion}
                   incluir={category === 'Entrada' ? incluirEntrada : incluirComunion}
                   onIncluirChange={category === 'Entrada' ? setIncluirEntrada : setIncluirComunion}
+                />
+              )}
+              {conGregoriano && massCelebration && (
+                <GradualeChoice
+                  celebracion={massCelebration}
+                  parte={category}
+                  ciclo={massCycle}
+                  valor={libroGregoriano[category] ?? null}
+                  onChange={(libro) => elegirGregoriano(category, libro)}
                 />
               )}
               </div>

@@ -18,6 +18,7 @@ import { cycleForBookId } from '../../data/psalmIndex';
 import { generateAtrilPrintable } from '../../utils/atrilBookletPDF';
 import { PdfPages } from './PdfPages';
 import { PsalmPageImage } from '../songs/PsalmPageImage';
+import { GradualeScore } from '../songs/GradualeScore';
 import { FavoriteButton } from '../songs/FavoriteButton';
 import { VoiceMixer } from './VoiceMixer';
 import { getSongTracks, tieneMezclador, type AudioTrack } from '../../services/songAudio';
@@ -641,7 +642,18 @@ export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onCl
 
                   {/* Contenido de la sección */}
                   <div className="px-3 sm:px-6 py-4">
-                    {isPsalm ? (
+                    {s.gradualeImage ? (
+                      /* Propio gregoriano: el tetragrama, y nada más. No lleva la
+                         condición de rol de las otras partituras — el gregoriano lo
+                         canta también el pueblo. */
+                      <GradualeScore
+                        src={s.gradualeImage}
+                        alt={s.title}
+                        fuente={s.gradualeFuente}
+                        zoom={pdfZoom}
+                        onDark
+                      />
+                    ) : isPsalm ? (
                       <>
                         {s.lyrics && (
                           <div style={{ zoom: fontScale } as any}>

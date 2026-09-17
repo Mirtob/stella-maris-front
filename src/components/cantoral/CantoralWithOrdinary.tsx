@@ -11,6 +11,7 @@ import { LyricsOnly } from '../songs/LyricsOnly';
 import { LyricsReadingControls } from '../songs/LyricsReadingControls';
 import { cycleForBookId } from '../../data/psalmIndex';
 import { PsalmPageImage } from '../songs/PsalmPageImage';
+import { GradualeScore } from '../songs/GradualeScore';
 import { FavoriteButton } from '../songs/FavoriteButton';
 import { LyricsWithChords } from '../songs/LyricsWithChords';
 import { transposeContent, getChordNotation, keyPrefersFlats } from '../../utils/chordTranspose';
@@ -489,6 +490,24 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
                           La del domingo es propia del día y la canta el cantor.
                         </p>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Propio gregoriano — para TODOS, también el Pueblo fiel: el
+                    gregoriano lo canta la asamblea, no sólo el coro. */}
+                {selectedSong.gradualeImage && (
+                  <div className="bg-white/40 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-4 border-2 border-stone-300 dark:border-stone-600 transition-colors">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Music className="w-6 h-6 text-stone-700 dark:text-stone-300 flex-shrink-0" strokeWidth={2.5} />
+                      <h4 className="text-xl font-bold text-brand-ink">{selectedSong.title}</h4>
+                    </div>
+                    <div className="bg-white rounded-xl p-2 border border-stone-200">
+                      <GradualeScore
+                        src={selectedSong.gradualeImage}
+                        alt={selectedSong.title}
+                        fuente={selectedSong.gradualeFuente}
+                      />
                     </div>
                   </div>
                 )}

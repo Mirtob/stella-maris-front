@@ -543,6 +543,24 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   const colW = (contentW - gutter) / 2;
   const colX = [margenCuerpo, margenCuerpo + colW + gutter];
 
+  /**
+   * Los tetragramas del propio gregoriano, cargados ANTES de medir.
+   *
+   * Van en el folleto del pueblo y no sólo en el del coro a propósito: el gregoriano lo
+   * canta la asamblea. Como el armado del cuerpo es síncrono (se rehace muchas veces
+   * buscando la letra más grande que quepa), las imágenes se resuelven aquí, una sola
+   * vez, y después sólo se consultan sus medidas.
+   */
+  const facsimiles = new Map<string, { img: HTMLImageElement; ratio: number }>();
+  await Promise.all(cantoral.songs
+    .filter((s) => s.gradualeImage)
+    .map(async (s) => {
+      const img = await loadImage(s.gradualeImage!);
+      if (img?.naturalWidth) {
+        facsimiles.set(String(s.id), { img, ratio: img.naturalHeight / img.naturalWidth });
+      }
+    }));
+
   // QR del canal: se arma antes para poder incluirlo en la medición (así nunca es él
   // quien obliga a abrir una hoja más).
   let qrDataUrl: string | null = null;
@@ -633,6 +651,44 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
           lineas.forEach((l, i) => pdf.text(l, x + w / 2, y + BASE + i * paso, { align: 'center' }));
         },
       });
+    };
+
+    /**
+     * El tetragrama de un propio gregoriano, a lo ancho de la columna.
+     *
+     * A ancho de columna (unos 90 mm) el facsímil queda casi al tamaño del libro
+     * impreso, así que se lee. Lo único que se controla es que no sea más alto que la
+     * columna: si lo es, se achica por altura y se centra, porque partir un tetragrama
+     * entre dos columnas lo vuelve inservible.
+     *
+     * No se le aplica `adv()`: el ajuste a una hoja achica la LETRA, y achicar además
+     * la partitura sería empezar a pelear contra el motivo de imprimirla.
+     */
+    const facsimil = (song: Song) => {
+      const f = facsimiles.get(String(song.id));
+      if (!f) return false;
+      const disponible = colBottom - colTop;
+      let w = colW;
+      let h = w * f.ratio;
+      if (h > disponible) { h = disponible; w = h / f.ratio; }
+      els.push({
+        h: h + adv(2),
+        draw: (x, y, ancho) => {
+          pdf.addImage(f.img, 'PNG', x + (ancho - w) / 2, y, w, h, undefined, 'FAST');
+        },
+      });
+      if (song.gradualeFuente) {
+        els.push({
+          h: adv(4.5),
+          draw: (x, y, ancho) => {
+            pdf.setFont('helvetica', 'italic');
+            pdf.setFontSize(8);
+            pdf.setTextColor(130, 130, 130);
+            pdf.text(cleanText(song.gradualeFuente!), x + ancho / 2, y + adv(3), { align: 'center' });
+          },
+        });
+      }
+      return true;
     };
 
     // Una línea de letra = una pieza. Que el corte entre columnas caiga a mitad de una
@@ -737,7 +793,11 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
           ? soloLaAclamacion(crudo)
           : { letra: crudo, seQuitoLaEstrofa: false };
         const lyrics = cleanLyrics(letraAleluya);
-        if (lyrics) {
+        // El propio gregoriano no tiene letra que imprimir: tiene partitura, y el texto
+        // va escrito bajo las neumas en el propio facsímil.
+        if (song.gradualeImage && facsimil(song)) {
+          // ya está dibujado
+        } else if (lyrics) {
           const estrofas = parseStanzas(lyrics);
           estrofas.forEach((estrofa, i) => {
             lineasDeEstrofa(estrofa);

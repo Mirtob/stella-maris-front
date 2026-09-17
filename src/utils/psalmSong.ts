@@ -16,6 +16,7 @@ import { getLiturgicalDateForDate } from './liturgicalCalendar';
 import { getSundayCycle } from './liturgicalCycle';
 import { resolvePsalm } from '../data/psalmIndex';
 import { isAntiphonSong } from './antiphonSong';
+import { isGradualeSong } from './gradualeSong';
 
 /**
  * @param massDate fecha de la Misa, 'YYYY-MM-DD'
@@ -60,8 +61,9 @@ export function isBookPsalm(song: Pick<Song, 'id' | 'category'>): boolean {
 export function songsForBuilder<T extends Pick<Song, 'id' | 'category'>>(songs: T[]): T[] {
   // Las antifonas de entrada y comunion se derivan igual de la fecha (y llevan su
   // casilla): ChoirView las repone en su caja desde el cantoral publicado, asi que
-  // aqui salen del borrador junto con el salmo.
-  return songs.filter(s => !isBookPsalm(s) && !isAntiphonSong(s));
+  // aqui salen del borrador junto con el salmo. Y lo mismo los propios gregorianos,
+  // que salen de la celebracion y del ciclo de la fecha.
+  return songs.filter(s => !isBookPsalm(s) && !isAntiphonSong(s) && !isGradualeSong(s));
 }
 
 /**

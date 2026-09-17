@@ -126,6 +126,9 @@ export interface Song {
   psalmBookId?: string;              // ID de Drive del PDF del libro de salmos (año A/B/C)
   psalmPage?: number;                // Página del salmo dentro del libro (un salmo por página)
   psalmPageEnd?: number;             // Última página si el salmo ocupa un rango
+  // ── Propio gregoriano (canto sintético del Graduale Romanum o Simplex) ──────
+  gradualeImage?: string;            // Recorte del facsímil con el tetragrama (/graduale/...)
+  gradualeFuente?: string;           // De dónde sale, para el pie ("Graduale Romanum · p. 16")
 }
 
 export type UserRole = 'Coro' | 'Pueblo fiel' | 'Admin';

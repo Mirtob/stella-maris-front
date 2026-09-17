@@ -42,12 +42,16 @@ export async function cacheCantoralsForOffline(cantorals: PublishedCantoral[]): 
   try {
     const cache = await caches.open(CACHE_NAME);
 
-    // URLs de PDF de la ventana actual
+    // Lo que hay que tener a mano sin red: los PDF de partitura de la ventana actual,
+    // y los tetragramas del propio gregoriano, que son archivos nuestros (/graduale/…)
+    // y no pasan por el proxy. Sin ellos, un coro que canta el gregoriano desde el
+    // teléfono se queda sin partitura justo donde la señal falla, que es el templo.
     const wanted = new Set<string>();
     for (const c of cantorals) {
       for (const s of c.songs) {
         const u = pdfProxyUrlFor(s.sheetMusicUrl);
         if (u) wanted.add(u);
+        if (s.gradualeImage) wanted.add(s.gradualeImage);
       }
     }
 
