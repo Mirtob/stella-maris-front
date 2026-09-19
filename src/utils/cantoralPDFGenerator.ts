@@ -13,6 +13,7 @@ import { guardarPdf } from './descargarPdf';
 import { getPdfFont, getPdfScale } from '../data/pdfStyle';
 import { renderPdfToImages, imposeBooklet } from './atrilBookletPDF';
 import { repartirEnColumnas, type Pieza } from './pdfColumns';
+import { partirFacsimil, type TrozoFacsimil } from './facsimilTrozos';
 import { sortCategoriesByMassOrder } from './ordinary';
 
 interface PDFGeneratorOptions {
@@ -70,6 +71,17 @@ async function loadCircularLogo(src: string): Promise<{ dataUrl: string; size: n
     img.src = src;
   });
 }
+
+/**
+ * Aire que se reserva en el PRIMER trozo de una partitura, en mm.
+ *
+ * Ahí van el título del canto (dos líneas si el nombre es largo) y, cuando el canto cabe
+ * de una pieza, también el pie que dice de qué libro y página sale. Sin esta reserva, el
+ * título y la partitura juntos pasaban de la columna, y como el reparto dibuja igual lo
+ * que no cabe —perder letra de un canto sería peor que un renglón fuera de caja—, la
+ * partitura se salía de la hoja y aparecía cortada.
+ */
+const RESERVA_TITULO = 22;
 
 /** Carga una imagen y resuelve cuando está lista (o null si falla). */
 async function loadImage(src: string): Promise<HTMLImageElement | null> {
@@ -551,14 +563,14 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
    * buscando la letra más grande que quepa), las imágenes se resuelven aquí, una sola
    * vez, y después sólo se consultan sus medidas.
    */
-  const facsimiles = new Map<string, { img: HTMLImageElement; ratio: number }>();
+  const facsimiles = new Map<string, TrozoFacsimil[]>();
   await Promise.all(cantoral.songs
     .filter((s) => s.gradualeImage)
     .map(async (s) => {
       const img = await loadImage(s.gradualeImage!);
-      if (img?.naturalWidth) {
-        facsimiles.set(String(s.id), { img, ratio: img.naturalHeight / img.naturalWidth });
-      }
+      if (!img?.naturalWidth) return;
+      const trozos = partirFacsimil(img, colW, colBottom - colTop, RESERVA_TITULO);
+      if (trozos.length) facsimiles.set(String(s.id), trozos);
     }));
 
   // QR del canal: se arma antes para poder incluirlo en la medición (así nunca es él
@@ -665,17 +677,16 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
      * la partitura sería empezar a pelear contra el motivo de imprimirla.
      */
     const facsimil = (song: Song) => {
-      const f = facsimiles.get(String(song.id));
-      if (!f) return false;
-      const disponible = colBottom - colTop;
-      let w = colW;
-      let h = w * f.ratio;
-      if (h > disponible) { h = disponible; w = h / f.ratio; }
-      els.push({
-        h: h + adv(2),
-        draw: (x, y, ancho) => {
-          pdf.addImage(f.img, 'PNG', x + (ancho - w) / 2, y, w, h, undefined, 'FAST');
-        },
+      const trozos = facsimiles.get(String(song.id));
+      if (!trozos) return false;
+      trozos.forEach((t, i) => {
+        const ultimo = i === trozos.length - 1;
+        els.push({
+          h: t.h + (ultimo ? adv(2) : 0),
+          draw: (x, y, ancho) => {
+            pdf.addImage(t.dataUrl, 'PNG', x, y, ancho, t.h, undefined, 'FAST');
+          },
+        });
       });
       if (song.gradualeFuente) {
         els.push({
@@ -796,7 +807,11 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
         // El propio gregoriano no tiene letra que imprimir: tiene partitura, y el texto
         // va escrito bajo las neumas en el propio facsímil.
         if (song.gradualeImage && facsimil(song)) {
-          // ya está dibujado
+          // El pie ("Graduale Romanum · p. 738") viaja con el último trozo: solo, al
+          // empezar una columna, se lee como si fuera de otro canto.
+          if (els.length >= 2 && song.gradualeFuente) {
+            agrupar(els.length - 2, 2, `pie-${category}-${idx}`);
+          }
         } else if (lyrics) {
           const estrofas = parseStanzas(lyrics);
           estrofas.forEach((estrofa, i) => {

@@ -6,6 +6,7 @@ import { sortByMassOrder, isOrdinary } from './ordinary';
 import { transposeContent, getChordNotation, getTransposedKey, keyPrefersFlats, type ChordNotation } from './chordTranspose';
 import { getOfflinePdf } from '../services/offlineCache';
 import { stripLyricsFormatting } from './lyricsFormat';
+import { partirFacsimil, cargarFacsimil } from './facsimilTrozos';
 
 // =============================================================================
 // Cuadernillo imprimible del Modo Atril.
@@ -272,21 +273,6 @@ export interface AtrilPrintOptions {
   notation?: ChordNotation;
 }
 
-/**
- * Carga un recorte del Graduale para meterlo en el PDF.
- *
- * Es un archivo propio (`/graduale/...`), no de Drive, así que no pasa por el proxy ni
- * por pdf.js: es una imagen y se dibuja tal cual.
- */
-async function cargarFacsimil(src: string): Promise<HTMLImageElement | null> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => resolve(img.naturalWidth ? img : null);
-    img.onerror = () => resolve(null);
-    img.src = src;
-  });
-}
-
 export async function generateAtrilPrintable(opts: AtrilPrintOptions): Promise<{ blob: Blob; url: string }> {
   const { instrument, role } = opts;
   const notation = opts.notation ?? getChordNotation();
@@ -391,13 +377,23 @@ export async function generateAtrilPrintable(opts: AtrilPrintOptions): Promise<{
         doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(150, 150, 150);
         need(6); doc.text('(No se pudo cargar la partitura gregoriana.)', M, y); y += 6;
       } else {
-        const ar = img.naturalWidth / img.naturalHeight;
-        let w = CW, h = w / ar;
-        const maxH = PH - 2 * M;
-        if (h > maxH) { h = maxH; w = h * ar; }
-        need(h);
-        doc.addImage(img, 'PNG', M + (CW - w) / 2, y, w, h, undefined, 'FAST');
-        y += h + 3;
+        // A ancho de página y PARTIDA si hace falta, no encogida hasta que quepa: hay
+        // graduales diez veces más altos que anchos, y encogerlos los dejaba en dos
+        // centímetros de ancho. Lo que sigue continúa en la página siguiente, como en
+        // el libro. El primer trozo deja sitio al encabezado que ya se dibujó.
+        //
+        // La reserva es lo que ya ocupa el encabezado de este canto, pero acotada a un
+        // tercio de la página: con el encabezado muy abajo, reservar todo lo consumido
+        // dejaría un primer trozo de dos dedos y el canto se picaría en muchos más
+        // pedazos de los necesarios.
+        const alto = PH - 2 * M;
+        const trozos = partirFacsimil(img, CW, alto, Math.min(Math.max(0, y - M), alto / 3));
+        for (const t of trozos) {
+          need(t.h);
+          doc.addImage(t.dataUrl, 'PNG', M, y, CW, t.h, undefined, 'FAST');
+          y += t.h;
+        }
+        y += 3;
         if (s.gradualeFuente) {
           doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(140, 140, 140);
           need(5); doc.text(clean(s.gradualeFuente), M + CW / 2, y, { align: 'center' }); y += 5;

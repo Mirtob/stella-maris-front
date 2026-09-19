@@ -36,6 +36,33 @@ export interface Caja {
   columnas: number;
 }
 
+/**
+ * En cuántos trozos hay que partir una partitura para que quepa por columnas.
+ *
+ * Devuelve el alto de cada trozo, en las mismas unidades que la caja. El PRIMERO va más
+ * corto porque encima lleva el título del canto; los demás pueden ocupar la columna
+ * entera.
+ *
+ * Existe porque el reparto NO descarta lo que no cabe: lo dibuja igual y se sale de la
+ * hoja (ver `repartirEnColumnas`). Para la letra da igual —un renglón nunca es más alto
+ * que una columna—, pero una partitura del Graduale puede ser diez veces más alta que
+ * ancha, y entonces se salía de la hoja y aparecía cortada. Partirla y que siga en la
+ * columna siguiente es lo que hace un folleto impreso.
+ */
+export function planDeCorte(alto: number, columna: number, reserva: number): number[] {
+  const primera = Math.max(1, columna - reserva);
+  if (alto <= primera) return [alto];
+
+  const trozos = [primera];
+  let resto = alto - primera;
+  while (resto > columna) {
+    trozos.push(columna);
+    resto -= columna;
+  }
+  if (resto > 0) trozos.push(resto);
+  return trozos;
+}
+
 /** Alto del grupo que empieza en `i`; para una pieza suelta, su propio alto. */
 function altoDesde(piezas: Pieza[], i: number): number {
   const g = piezas[i].grupo;

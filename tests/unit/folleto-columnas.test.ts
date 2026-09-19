@@ -5,7 +5,7 @@
  * portada queda como está y el resto pasa a dos columnas que llenan la hoja de arriba
  * abajo, para que el cantoral entre en una sola hoja.
  */
-import { repartirEnColumnas, type Pieza } from '../../src/utils/pdfColumns';
+import { repartirEnColumnas, planDeCorte, type Pieza } from '../../src/utils/pdfColumns';
 
 let pass = 0, fail = 0;
 function check(name: string, actual: unknown, expected: unknown) {
@@ -78,6 +78,47 @@ check('la caja puede no empezar en cero',
   mapa([linea(), linea()], { top: 17, bottom: 100, columnas: 2 }), ['1.0@17', '1.0@27']);
 check('el índice devuelto apunta a la pieza original (los espacios saltados no corren la cuenta)',
   repartir([{ h: 8, espacio: true }, linea(), linea()]).colocadas.map(c => c.pieza), [1, 2]);
+
+console.log('\n== Partir una partitura larga ==');
+// El reparto dibuja igual lo que no cabe (ver arriba: "una pieza más alta que la columna
+// se dibuja igual"). Para la letra da lo mismo, pero una partitura del Graduale puede ser
+// diez veces más alta que ancha: se salía de la hoja y salía CORTADA, justo en el gradual
+// y el aleluya. De ahí que haya que partirla antes de entregársela al reparto.
+const COLUMNA = 248;      // alto útil de una columna del folleto, en mm
+const RESERVA = 22;       // lo que ocupan encima el título del canto y su pie
+
+check('lo que cabe con su título no se parte',
+  planDeCorte(200, COLUMNA, RESERVA), [200]);
+check('justo en el límite, tampoco',
+  planDeCorte(226, COLUMNA, RESERVA), [226]);
+check('un pelo más alto ya se parte en dos',
+  planDeCorte(227, COLUMNA, RESERVA), [226, 1]);
+check('el primer trozo deja sitio al título; los demás usan la columna entera',
+  planDeCorte(600, COLUMNA, RESERVA), [226, 248, 126]);
+
+// El caso real que rompía: el aleluya del Commune Sanctarum, 9,84 veces más alto que
+// ancho, sobre una columna de 91,5 mm.
+const ALELUYA_LARGO = 91.5 * 9.84;
+const trozosAleluya = planDeCorte(ALELUYA_LARGO, COLUMNA, RESERVA);
+check('el aleluya más largo del libro cabe en cuatro columnas', trozosAleluya.length, 4);
+check('ningún trozo se sale de la columna',
+  trozosAleluya.every((t) => t <= COLUMNA), true);
+check('el primero además deja sitio al título',
+  trozosAleluya[0] <= COLUMNA - RESERVA, true);
+check('y no se pierde ni un milímetro de canto',
+  Math.round(trozosAleluya.reduce((a, b) => a + b, 0)), Math.round(ALELUYA_LARGO));
+
+// Y una vez partida, el reparto ya la coloca sin que nada se salga.
+const titulo = { h: 13, grupo: 'canto' };
+const piezas = [titulo, { h: trozosAleluya[0], grupo: 'canto' },
+                ...trozosAleluya.slice(1).map((h) => ({ h }))];
+const colocadas = repartir(piezas, { top: 0, bottom: COLUMNA, columnas: 2 }).colocadas;
+check('cada trozo queda dentro de su columna',
+  colocadas.every((c, i) => c.y + piezas[c.pieza].h <= COLUMNA + 0.01)
+    && colocadas.length === piezas.length, true);
+check('el título no se queda solo: va con el primer trozo',
+  colocadas[0].hoja === colocadas[1].hoja && colocadas[0].columna === colocadas[1].columna,
+  true);
 
 console.log(`\n${pass} ok, ${fail} fallas`);
 if (fail > 0) process.exit(1);
