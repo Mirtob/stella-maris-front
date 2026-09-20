@@ -16,8 +16,9 @@
  */
 import {
   misasDelTiempo, tiempoConMisasDelSimplex, rotuloMisaDelTiempo, alternativasDelDia,
-  resolveGraduale, librosDisponibles, hayPropios,
+  resolveGraduale, librosDisponibles, hayPropios, archivoDelCanto,
 } from '../../src/data/gradualeIndex';
+import { getSundayCycle } from '../../src/utils/liturgicalCycle';
 import { buildGradualeSong, misasDelCantoral } from '../../src/utils/gradualeSong';
 
 let pass = 0, fail = 0;
@@ -133,6 +134,40 @@ check('la Misa de la noche viaja al cantoral',
   deNoche?.gradualeImage?.includes(laNoche.clave), true);
 check('y se recupera al editarlo',
   misasDelCantoral([deNoche!], '2026-12-25'), { romanum: laNoche.clave });
+
+// ── El año NO se elige: lo pone la fecha ───────────────────────────────────
+// Cuando el libro trae una comunión distinta para el año A, otra para el B y otra para
+// el C, no son tres opciones entre las que escoger: es UNA PARA CADA AÑO. La del año que
+// no toca sería, lisa y llanamente, otro canto.
+check('una sola melodía sirve para los tres años',
+  ['A', 'B', 'C'].map((a) => archivoDelCanto(1, 'communio', a as any)),
+  ['communio', 'communio', 'communio']);
+check('con una melodía por año, se canta la del año que toca',
+  ['A', 'B', 'C'].map((a) => archivoDelCanto(['A', 'B', 'C'], 'communio', a as any)),
+  ['communio-A', 'communio-B', 'communio-C']);
+
+// El libro no siempre marca los tres. Si trae la del año A y además la general, en B y
+// en C se canta la general — antes el canto desaparecía del cantoral esos dos años.
+check('marcado sólo el año A, en A se canta la de A',
+  archivoDelCanto(['*', 'A'], 'communio', 'A'), 'communio-A');
+check('y en B y C, la general',
+  ['B', 'C'].map((a) => archivoDelCanto(['*', 'A'], 'communio', a as any)),
+  ['communio', 'communio']);
+check('sin general y sin la del año, no hay canto: mejor nada que la melodía de otro año',
+  archivoDelCanto(['A'], 'communio', 'B'), null);
+check('un canto que el libro no trae, tampoco',
+  archivoDelCanto(undefined, 'communio', 'A'), null);
+
+// El año sale de la FECHA, y coincide con lo que dice el calendario de la app.
+check('el 1.º de Adviento de 2026 abre el año litúrgico siguiente',
+  getSundayCycle('2026-11-29'), getSundayCycle('2027-01-10'));
+check('y el domingo anterior es todavía el año que termina',
+  getSundayCycle('2026-11-22') !== getSundayCycle('2026-11-29'), true);
+
+// Con los datos de hoy ningún canto tiene variantes todavía (falta marcar la columna
+// Ciclo de la planilla), así que la regla se prueba sobre la función, no sobre el índice.
+check('hoy el índice no trae ninguna variante por año',
+  resolveGraduale('romanum', DOMINGO_23, 'Comunión')?.año, undefined);
 
 console.log(`\n${pass} ok, ${fail} fallas`);
 if (fail) process.exit(1);

@@ -242,9 +242,13 @@ def escribir_indice_app(hechas: dict, porTiempo: dict, subMisas: dict) -> None:
 // lleva el navegador: sólo los nombres, sin los recortes (esos viven en
 // gradualeIndex.data.ts, que se queda en el repositorio y no se empaqueta).
 //
-// Cada canto vale `1` si sirve para los tres ciclos, o la lista de ciclos para los que
-// el libro trae melodía propia (pasa sobre todo en las comuniones del Tiempo Ordinario).
-// La imagen es /graduale/<libro>/<clave>/<canto>[-<ciclo>].webp
+// Cada canto vale `1` si una sola melodía sirve para los tres años, o la lista de años
+// que tiene cubiertos cuando el libro trae una por año (pasa sobre todo en las comuniones
+// del Tiempo Ordinario). En esa lista, "*" es la versión para los años sin melodía propia.
+//
+// El año NO se elige: lo determina la fecha de la Misa (ver utils/liturgicalCycle).
+//
+// La imagen es /graduale/<libro>/<clave>/<canto>[-<año>].webp
 
 export interface MisaApp {
   /** Carpeta de las imágenes, y clave de la Misa en el índice grande. */
@@ -393,13 +397,21 @@ def main():
                     # es lo que distingue una de otra dentro del mismo día.
                     if sub:
                         ficha["rotulo"] = sub.group(2)
+                    # El ciclo NO se elige: lo pone el año. Así que aquí se anota qué
+                    # años tiene cubiertos cada canto, y "*" marca la versión que sirve
+                    # para los años sin melodía propia.
+                    #
+                    # Guardar sólo los años marcados no bastaba: si el libro traía una
+                    # comunión propia del año A y además la general, la general se perdía
+                    # y en los años B y C ese canto desaparecía del cantoral.
                     base, _, ciclo = nombre.partition("-")
-                    if ciclo:
-                        previo = ficha["cantos"].get(base)
-                        ficha["cantos"][base] = sorted(
-                            set(previo if isinstance(previo, list) else []) | {ciclo})
+                    previo = ficha["cantos"].get(base)
+                    if not ciclo and previo is None:
+                        ficha["cantos"][base] = 1     # lo normal: una para los tres años
                     else:
-                        ficha["cantos"].setdefault(base, 1)
+                        marcas = {"*"} if previo == 1 else set(previo or [])
+                        marcas.add(ciclo or "*")
+                        ficha["cantos"][base] = sorted(marcas)
             except Exception as e:                      # noqa: BLE001 — se informa y sigue
                 fallos.append(f"{clave}/{nombre}: {e}")
         doc.close()

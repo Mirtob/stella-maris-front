@@ -47,7 +47,11 @@ export function buildGradualeSong(
     lyrics: '',
     isLiturgical: true,
     gradualeImage: propio.imagen,
-    gradualeFuente: `${LIBROS[libro].nombre} · p. ${propio.pagina}`,
+    // El pie dice el año sólo cuando el libro trae una melodía para cada uno: en el
+    // folleto impreso es la única pista de por qué este domingo no suena como el
+    // del año pasado.
+    gradualeFuente: `${LIBROS[libro].nombre} · p. ${propio.pagina}`
+      + (propio.año ? ` · Año ${propio.año}` : ''),
   } as Song;
 }
 

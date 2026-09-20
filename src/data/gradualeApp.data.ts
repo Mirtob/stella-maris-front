@@ -4,9 +4,13 @@
 // lleva el navegador: sólo los nombres, sin los recortes (esos viven en
 // gradualeIndex.data.ts, que se queda en el repositorio y no se empaqueta).
 //
-// Cada canto vale `1` si sirve para los tres ciclos, o la lista de ciclos para los que
-// el libro trae melodía propia (pasa sobre todo en las comuniones del Tiempo Ordinario).
-// La imagen es /graduale/<libro>/<clave>/<canto>[-<ciclo>].webp
+// Cada canto vale `1` si una sola melodía sirve para los tres años, o la lista de años
+// que tiene cubiertos cuando el libro trae una por año (pasa sobre todo en las comuniones
+// del Tiempo Ordinario). En esa lista, "*" es la versión para los años sin melodía propia.
+//
+// El año NO se elige: lo determina la fecha de la Misa (ver utils/liturgicalCycle).
+//
+// La imagen es /graduale/<libro>/<clave>/<canto>[-<año>].webp
 
 export interface MisaApp {
   /** Carpeta de las imágenes, y clave de la Misa en el índice grande. */

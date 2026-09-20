@@ -73,6 +73,9 @@ export function GradualeChoice({
           >
             <span className="min-w-0 truncate text-left">
               {nombreDelPropio(elegido.canto, parte)} · {elegido.misa} · p. {elegido.pagina}
+              {/* El año sólo se nombra donde el libro trae una melodía para cada uno.
+                  No es algo que se elija: lo pone la fecha de la Misa. */}
+              {elegido.año && ` · Año ${elegido.año}`}
             </span>
             {abierto
               ? <ChevronUp className="w-4 h-4 flex-shrink-0" />

@@ -137,6 +137,36 @@ export function alternativasDelDia(
   }));
 }
 
+/** La versión general, para los años que no tienen melodía propia. */
+export const SIRVE_TODO_AÑO = '*';
+
+/**
+ * Qué archivo toca cantar este año, o `null` si el libro no trae ese canto.
+ *
+ * EL AÑO NO SE ELIGE: lo determina la fecha de la Misa. Cuando el libro trae una
+ * comunión distinta para el año A, otra para el B y otra para el C, no son tres opciones
+ * entre las que escoger — es una para cada año, y la del año que no toca sería, lisa y
+ * llanamente, otro canto.
+ *
+ * El orden es el único posible: primero la melodía propia de este año; si el libro no la
+ * trae, la general; y si no hay ninguna, nada. Sin ese segundo paso, un canto con
+ * variante sólo del año A desaparecía del cantoral en los años B y C.
+ *
+ * @param cubre  `1` = una melodía para los tres años; lista = los años cubiertos, con
+ *               `'*'` para la versión general.
+ */
+export function archivoDelCanto(
+  cubre: 1 | readonly string[] | undefined,
+  canto: string,
+  año: CicloGraduale | undefined,
+): string | null {
+  if (!cubre) return null;
+  if (cubre === 1) return canto;
+  if (año && cubre.includes(año)) return `${canto}-${año}`;
+  if (cubre.includes(SIRVE_TODO_AÑO)) return canto;
+  return null;
+}
+
 /** Dónde vive la imagen ya recortada. La genera scripts/render-graduale-webp.py. */
 export function gradualeImageUrl(
   libro: LibroGraduale, clave: string, canto: string,
@@ -153,6 +183,9 @@ export interface PropioGraduale {
   imagen: string;
   /** Página impresa donde empieza, por si alguien quiere ir al libro de papel. */
   pagina: number;
+  /** El año del que es esta melodía, SÓLO si el libro trae una distinta por año.
+   *  No es una elección: sale de la fecha de la Misa. */
+  año?: CicloGraduale;
 }
 
 /** Lo que hace falta además de la celebración para resolver un propio. */
@@ -200,21 +233,18 @@ export function resolveGraduale(
   if (!misa) return null;
 
   for (const canto of nombres) {
-    const hay = misa.cantos[canto];
-    if (!hay) continue;
-    // `1` = una sola melodía, que sirve los tres años. Una lista = el libro trae una
-    // por ciclo, y entonces sólo vale la del año que se está armando: la del año que
-    // no es sería, lisa y llanamente, otro canto.
-    if (hay !== 1) {
-      if (!ciclo || !hay.includes(ciclo)) continue;
-    }
-    const archivo = hay === 1 ? canto : `${canto}-${ciclo}`;
+    const cubre = misa.cantos[canto];
+    const archivo = archivoDelCanto(cubre, canto, ciclo);
+    if (!archivo) continue;
     return {
       libro,
       canto: canto as CantoGraduale,
       misa: misa.titulo,
       imagen: gradualeImageUrl(libro, misa.clave, archivo),
       pagina: misa.pagina,
+      // Se dice el año sólo cuando el libro trae una melodía distinta para cada uno:
+      // así el coro ve por qué este domingo suena diferente al del año pasado.
+      año: archivo === `${canto}-${ciclo}` ? ciclo : undefined,
     };
   }
   return null;
