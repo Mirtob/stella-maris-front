@@ -69,17 +69,21 @@ export function libroDelCantoral<T extends Pick<Song, 'id'>>(
 }
 
 /**
- * La Misa del tiempo del Simplex que llevaba un cantoral publicado.
+ * Qué Misa del libro llevaba un cantoral publicado, en cada libro.
  *
  * No va en el id —ahí sólo caben libro y parte— sino en la ruta de la imagen, que es
- * `/graduale/simplex/<clave>/<canto>.webp`. Se lee de ahí para que al editar un cantoral
- * el coro no se encuentre con otra Misa distinta de la que publicó.
+ * `/graduale/<libro>/<clave>/<canto>.webp`. Se lee de ahí para que al editar un cantoral
+ * el coro no se encuentre con otra Misa distinta de la que publicó: ni otra de las ocho
+ * del Simplex, ni —peor— la Misa del día de Navidad en lugar de la de la noche.
  */
-export function misaDelTiempoDelCantoral<T extends Pick<Song, 'id' | 'gradualeImage'>>(
+export function misasDelCantoral<T extends Pick<Song, 'id' | 'gradualeImage'>>(
   songs: T[], massDate: string,
-): string | null {
-  const suyo = songs.find((s) => String(s.id).startsWith(`${PREFIJO}simplex-`)
-    && String(s.id).endsWith(`-${massDate}`));
-  const m = /^\/graduale\/simplex\/([^/]+)\//.exec(suyo?.gradualeImage ?? '');
-  return m ? m[1] : null;
+): Partial<Record<LibroGraduale, string>> {
+  const salida: Partial<Record<LibroGraduale, string>> = {};
+  for (const s of songs) {
+    if (!String(s.id).startsWith(PREFIJO) || !String(s.id).endsWith(`-${massDate}`)) continue;
+    const m = /^\/graduale\/(romanum|simplex)\/([^/]+)\//.exec(s.gradualeImage ?? '');
+    if (m) salida[m[1] as LibroGraduale] = m[2];
+  }
+  return salida;
 }

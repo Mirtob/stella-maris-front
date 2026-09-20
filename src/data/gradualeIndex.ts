@@ -10,14 +10,21 @@
  * el texto del Misal en una parte y el gregoriano en otra—. Por eso la elección se
  * guarda por PARTE y no una sola para toda la Misa.
  *
- * LOS DOS LIBROS NO ESTÁN ORGANIZADOS IGUAL, y eso se nota aquí. El Romanum da un
- * propio para cada domingo; el Simplex da Misas para un TIEMPO entero —ocho para el
- * Tiempo Ordinario, dos para Adviento, dos para Pascua— y deja que el coro escoja cuál
- * canta. Por eso el Simplex se resuelve por dos caminos: por la celebración, cuando el
- * libro la nombra (Corpus, la Trinidad, los domingos de Cuaresma), y si no, por la Misa
- * del tiempo que el coro haya elegido.
+ * UN DÍA NO SIEMPRE TIENE UNA SOLA MISA, y de ahí sale casi toda la complicación de
+ * este archivo:
+ *
+ *  · El Romanum da un propio por domingo, pero algunas solemnidades llevan VARIAS Misas
+ *    con cantos distintos: la Navidad tiene cuatro (vigilia, noche, aurora y día) y
+ *    Pentecostés dos.
+ *  · El Simplex ni siquiera va por domingo: da Misas para un TIEMPO entero —ocho para el
+ *    Tiempo Ordinario, dos para Adviento, dos para Pascua— y el coro escoge.
+ *
+ * El calendario de la app, en cambio, da UN nombre por día. Así que las dos cosas se
+ * ofrecen como "alternativas del día" y gana siempre la más concreta: la Misa de la
+ * solemnidad sobre la entrada del día, y la entrada del día sobre la Misa del tiempo.
  */
-import { GRADUALE_APP, SIMPLEX_POR_TIEMPO, type MisaApp } from './gradualeApp.data';
+import { GRADUALE_APP, SIMPLEX_POR_TIEMPO, MISAS_DE_LA_SOLEMNIDAD,
+         type MisaApp } from './gradualeApp.data';
 
 export type LibroGraduale = 'romanum' | 'simplex';
 export type CantoGraduale =
@@ -90,6 +97,46 @@ export function rotuloMisaDelTiempo(misa: MisaApp): string {
   return misa.titulo.replace(/^Missa\s+/i, 'Misa ');
 }
 
+/**
+ * Una Misa entre varias que el libro ofrece para el mismo día.
+ *
+ * Hay dos motivos por los que un día tiene más de una, y NO se comportan igual:
+ *
+ *  · `solemnidad` — la Navidad tiene cuatro Misas (vigilia, noche, aurora y día) y
+ *    Pentecostés dos, cada una con sus propios cantos. Son MÁS concretas que la entrada
+ *    del día, así que la elegida manda sobre ella.
+ *  · `tiempo` — las Misas que el Simplex da para un tiempo entero. Son MENOS concretas
+ *    que el propio del día, así que sólo se usan donde el libro no trae ese día.
+ *
+ * La regla, en una línea: gana siempre lo más concreto.
+ */
+export interface AlternativaMisa extends MisaApp {
+  libro: LibroGraduale;
+  /** Cómo se ofrece al coro ("Misa de la noche", "Misa III"). */
+  rotuloCorto: string;
+  clase: 'solemnidad' | 'tiempo';
+}
+
+/** Las Misas entre las que el coro puede elegir ese día, en ese libro. */
+export function alternativasDelDia(
+  libro: LibroGraduale, celebracion: string, tiempo?: string,
+): AlternativaMisa[] {
+  const deLaSolemnidad = (MISAS_DE_LA_SOLEMNIDAD as
+    Record<string, Record<string, Record<string, MisaApp>>>)[libro]?.[celebracion];
+  if (deLaSolemnidad) {
+    return Object.values(deLaSolemnidad).map((m) => ({
+      ...m, libro, clase: 'solemnidad' as const,
+      rotuloCorto: m.rotulo ?? m.titulo,
+    }));
+  }
+  // Las Misas por tiempo son cosa del Simplex, y sólo valen donde el libro no trae ya
+  // esa celebración con nombre propio.
+  if (libro !== 'simplex' || !tiempo || misaDe(libro, celebracion)) return [];
+  return misasDelTiempo(tiempo).map((m) => ({
+    ...m, libro, clase: 'tiempo' as const, rotuloCorto: rotuloMisaDelTiempo(m),
+  }));
+}
+
 /** Dónde vive la imagen ya recortada. La genera scripts/render-graduale-webp.py. */
 export function gradualeImageUrl(
   libro: LibroGraduale, clave: string, canto: string,
@@ -112,8 +159,8 @@ export interface PropioGraduale {
 export interface OpcionesGraduale {
   /** Año dominical, para los cantos que el libro trae distintos por ciclo. */
   ciclo?: CicloGraduale;
-  /** Misa del tiempo elegida por el coro en el Simplex (su `clave`). */
-  misaDelTiempo?: string | null;
+  /** La Misa que el coro eligió entre las varias del día (su `clave`). */
+  misaElegida?: string | null;
   /** Tiempo litúrgico de la fecha ('Adviento', 'Tiempo Ordinario'…). */
   tiempo?: string;
 }
@@ -125,10 +172,13 @@ export interface OpcionesGraduale {
  * sobre todo en las comuniones del Tiempo Ordinario). Donde no la ofrece, se devuelve
  * la única que hay, que sirve para los tres.
  *
- * EN EL SIMPLEX HAY DOS CAMINOS, y el orden importa: si el libro trae esa celebración
- * con nombre propio (Corpus, la Santísima Trinidad, los domingos de Cuaresma), manda ese
- * propio, porque para eso lo escribieron. La Misa del tiempo que el coro haya elegido
- * cubre todo lo demás, que en el Simplex es casi el año entero.
+ * CUANDO EL DÍA TIENE VARIAS MISAS, gana la más concreta:
+ *
+ *  1. la Misa de la solemnidad que el coro eligió (la de la noche de Navidad), que es
+ *     más concreta que la entrada del día;
+ *  2. el propio de la celebración, cuando el libro la trae con nombre propio;
+ *  3. la Misa del tiempo elegida en el Simplex, que es la genérica del tiempo y por eso
+ *     sólo rellena donde no hay nada más.
  */
 export function resolveGraduale(
   libro: LibroGraduale,
@@ -136,14 +186,17 @@ export function resolveGraduale(
   parte: string,
   opciones: OpcionesGraduale = {},
 ): PropioGraduale | null {
-  const { ciclo, misaDelTiempo, tiempo } = opciones;
+  const { ciclo, misaElegida, tiempo } = opciones;
   const nombres = CANTOS_DE_LA_PARTE[parte];
   if (!nombres) return null;
 
-  let misa = misaDe(libro, celebracion);
-  if (!misa && libro === 'simplex' && misaDelTiempo && tiempo) {
-    misa = misasDelTiempo(tiempo).find((m) => m.clave === misaDelTiempo) ?? null;
-  }
+  const elegida = misaElegida
+    ? alternativasDelDia(libro, celebracion, tiempo).find((m) => m.clave === misaElegida)
+    : undefined;
+  const misa: MisaApp | null = (elegida?.clase === 'solemnidad' ? elegida : null)
+    ?? misaDe(libro, celebracion)
+    ?? elegida
+    ?? null;
   if (!misa) return null;
 
   for (const canto of nombres) {

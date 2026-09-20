@@ -22,12 +22,12 @@ import { resolvePsalm } from '../../data/psalmIndex';
 import { buildPsalmSong, conSalmoDelLibro, debeReponerAntifona, esAntifonaEscritaAMano } from '../../utils/psalmSong';
 import { buildAntiphonSong, conAntifonas, findAntiphonSong } from '../../utils/antiphonSong';
 import { buildGradualeSong, libroDelCantoral,
-         misaDelTiempoDelCantoral } from '../../utils/gradualeSong';
+         misasDelCantoral } from '../../utils/gradualeSong';
 import { buildKyrialeSongs, misaDelCantoral, gloriaDelCantoral,
          buildPaterNosterSong, paterNosterDelCantoral,
          type EleccionKyriale } from '../../utils/kyrialeSong';
-import { PARTES_CON_PROPIO, parteTienePropio, hayPropios, misasDelTiempo,
-         rotuloMisaDelTiempo, type LibroGraduale } from '../../data/gradualeIndex';
+import { PARTES_CON_PROPIO, parteTienePropio, hayPropios, alternativasDelDia,
+         LIBROS, type LibroGraduale } from '../../data/gradualeIndex';
 import { resolveAntiphons, conCita } from '../../data/antiphonIndex';
 import { AddSolemnityModal } from '../liturgy/AddSolemnityModal';
 import { addCustomLiturgicalDate, toLiturgicalDate } from '../../services/liturgicalDates';
@@ -199,17 +199,18 @@ export function ChoirView({
   const [paterGregoriano, setPaterGregoriano] = useState<string | null>(null);
 
   /**
-   * Misa del Simplex elegida para este tiempo litúrgico (su clave), si hace falta.
+   * Cuál de las varias Misas del día se canta, en cada libro.
    *
-   * El Simplex no trae un propio por domingo como el Romanum: para el Tiempo Ordinario
-   * ofrece ocho Misas, para Adviento y Pascua dos, y el coro escoge. Es UNA por Misa y
-   * no una por parte porque en el libro cada una es un juego completo; las partes
-   * siguen pudiéndose mezclar con el Romanum, que es otra cosa.
+   * Un día no siempre tiene una sola: la Navidad trae cuatro Misas en el Romanum
+   * (vigilia, noche, aurora y día) y el Simplex ofrece ocho para todo el Tiempo
+   * Ordinario. Se guarda UNA por libro y no una por parte porque cada Misa del libro es
+   * un juego completo; mezclar partes entre los dos libros sigue igual, que es otra cosa.
    */
-  const [misaSimplex, setMisaSimplex] = useState<string | null>(null);
-  /** Tiempo litúrgico de la fecha: es lo que decide qué Misas ofrece el Simplex. */
+  const [misaElegida, setMisaElegida] = useState<Partial<Record<LibroGraduale, string>>>({});
+  const elegirMisa = (libro: LibroGraduale, clave: string | null) =>
+    setMisaElegida((prev) => ({ ...prev, [libro]: clave || undefined }));
+  /** Tiempo litúrgico de la fecha: decide qué Misas ofrece el Simplex. */
   const tiempoDeLaMisa = useMemo(() => getCurrentLiturgicalSeason(massDateObj), [massDateObj]);
-  const misasDelSimplex = useMemo(() => misasDelTiempo(tiempoDeLaMisa), [tiempoDeLaMisa]);
 
   /** El atajo del encabezado: el mismo libro en todas las partes que lo tengan. */
   const gregorianoEnTodo = (libro: LibroGraduale | null) =>
@@ -270,16 +271,20 @@ export function ChoirView({
       buildAntiphonSong(massDate, 'Comunión', antifonaComunion, incluirComunion),
       // Los propios gregorianos se colocan igual que las antífonas: cada uno dentro de
       // su parte, y la comunión la primera de la suya.
-      ...PARTES_CON_PROPIO.map((parte) => buildGradualeSong(
-        massDate, getLiturgicalDateForDate(massDate), parte, libroGregoriano[parte] ?? null,
-        { ciclo: getSundayCycle(massDate), tiempo: tiempoDeLaMisa, misaDelTiempo: misaSimplex },
-      )),
+      ...PARTES_CON_PROPIO.map((parte) => {
+        const libro = libroGregoriano[parte] ?? null;
+        return buildGradualeSong(
+          massDate, getLiturgicalDateForDate(massDate), parte, libro,
+          { ciclo: getSundayCycle(massDate), tiempo: tiempoDeLaMisa,
+            misaElegida: libro ? misaElegida[libro] : undefined },
+        );
+      }),
       // El ordinario gregoriano: las cuatro partes salen de una sola elección.
       ...buildKyrialeSongs(massDate, misaGregoriana, gloriaGregoriano),
       buildPaterNosterSong(massDate, 'romanum', paterGregoriano),
     ]),
     [cantoral, psalmSong, massDate, antifonaEntrada, antifonaComunion, incluirEntrada,
-     incluirComunion, libroGregoriano, misaSimplex, tiempoDeLaMisa,
+     incluirComunion, libroGregoriano, misaElegida, tiempoDeLaMisa,
      misaGregoriana, gloriaGregoriano, paterGregoriano],
   );
   /**
@@ -323,7 +328,7 @@ export function ChoirView({
       if (libro) gregorianos[parte] = libro;
     }
     setLibroGregoriano(gregorianos);
-    setMisaSimplex(misaDelTiempoDelCantoral(editingCantoral.songs, editingCantoral.date));
+    setMisaElegida(misasDelCantoral(editingCantoral.songs, editingCantoral.date));
     // La Misa del ordinario se lee del Kyrie, que es el que manda; el Gloria puede ser
     // de otra, así que se repone por su cuenta.
     setMisaGregoriana(misaDelCantoral(editingCantoral.songs, editingCantoral.date));
@@ -675,41 +680,48 @@ export function ChoirView({
               parte por parte son cinco toques. Sólo aparece si ese día el libro trae
               algo; después se puede cambiar cualquier parte por separado. */}
           {massCelebration && hayPropios(massCelebration,
-            { ciclo: massCycle, tiempo: tiempoDeLaMisa, misaDelTiempo: misaSimplex }) && (
+            { ciclo: massCycle, tiempo: tiempoDeLaMisa }) && (
             <div className="mt-3 pt-3 border-t border-blue-200/70 dark:border-slate-600/70">
               <p className="text-sm font-bold text-brand-ink">Propios en gregoriano</p>
               <p className="text-xs text-brand-ink-soft mb-2">
                 Para toda la Misa de una vez. Cada parte se puede cambiar después.
               </p>
 
-              {/* El Simplex no trae un propio por domingo: para el Tiempo Ordinario
-                  ofrece ocho Misas, y para Adviento y Pascua dos. Elegir una es lo que
-                  lo hace servir todo el año; sin esto sólo valía en las veintiséis
-                  celebraciones que el libro nombra, ninguna del Tiempo Ordinario. */}
-              {misasDelSimplex.length > 0 && (
-                <div className="mb-3">
-                  <label className="block text-xs font-bold text-brand-ink mb-1">
-                    Misa del Simplex para {tiempoDeLaMisa.toLowerCase()}
-                  </label>
-                  <select
-                    value={misaSimplex ?? ''}
-                    onChange={(e) => setMisaSimplex(e.target.value || null)}
-                    className="w-full px-3 py-2 rounded-xl border-2 border-stone-300 dark:border-stone-600 bg-white dark:bg-slate-800 text-brand-ink font-semibold focus:outline-none focus:border-stone-700"
-                  >
-                    <option value="">Elige una Misa…</option>
-                    {misasDelSimplex.map((m) => (
-                      <option key={m.clave} value={m.clave}>
-                        {rotuloMisaDelTiempo(m)} · p. {m.pagina}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-brand-ink-soft">
-                    El Simplex da {misasDelSimplex.length} Misas para todo este tiempo y el
-                    coro escoge cuál canta. Los días que el libro sí trae con nombre propio
-                    —Corpus, la Trinidad— se usa el suyo.
-                  </p>
-                </div>
-              )}
+              {/* Cuando el libro ofrece VARIAS Misas para el mismo día, hay que elegir.
+                  Pasa por dos motivos distintos y los dos se preguntan igual: la Navidad
+                  tiene cuatro Misas en el Romanum, y el Simplex da ocho para todo el
+                  Tiempo Ordinario porque no va por domingo sino por tiempo. */}
+              {(['romanum', 'simplex'] as LibroGraduale[]).map((libro) => {
+                const opciones = alternativasDelDia(libro, massCelebration, tiempoDeLaMisa);
+                if (opciones.length === 0) return null;
+                const esDelDia = opciones[0].clase === 'solemnidad';
+                return (
+                  <div key={libro} className="mb-3">
+                    <label className="block text-xs font-bold text-brand-ink mb-1">
+                      {esDelDia
+                        ? `Misa del día · ${LIBROS[libro].corto}`
+                        : `Misa del ${LIBROS[libro].corto} para ${tiempoDeLaMisa.toLowerCase()}`}
+                    </label>
+                    <select
+                      value={misaElegida[libro] ?? ''}
+                      onChange={(e) => elegirMisa(libro, e.target.value || null)}
+                      className="w-full px-3 py-2 rounded-xl border-2 border-stone-300 dark:border-stone-600 bg-white dark:bg-slate-800 text-brand-ink font-semibold focus:outline-none focus:border-stone-700"
+                    >
+                      <option value="">Elige una Misa…</option>
+                      {opciones.map((m) => (
+                        <option key={m.clave} value={m.clave}>
+                          {m.rotuloCorto} · p. {m.pagina}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-xs text-brand-ink-soft">
+                      {esDelDia
+                        ? `Esta solemnidad tiene ${opciones.length} Misas con cantos distintos en el ${LIBROS[libro].nombre}.`
+                        : `El ${LIBROS[libro].corto} da ${opciones.length} Misas para todo este tiempo y el coro escoge cuál canta.`}
+                    </p>
+                  </div>
+                );
+              })}
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -1011,7 +1023,8 @@ export function ChoirView({
                   parte={category}
                   ciclo={massCycle}
                   tiempo={tiempoDeLaMisa}
-                  misaDelTiempo={misaSimplex}
+                  misaElegida={libroGregoriano[category]
+                    ? misaElegida[libroGregoriano[category]!] : undefined}
                   valor={libroGregoriano[category] ?? null}
                   onChange={(libro) => elegirGregoriano(category, libro)}
                 />

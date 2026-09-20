@@ -16,6 +16,9 @@ export interface MisaApp {
   /** Página impresa donde empieza, para quien quiera ir al libro de papel. */
   pagina: number;
   cantos: Record<string, 1 | readonly string[]>;
+  /** Cuál de las Misas del día es ("Misa de la noche"). Sólo en las solemnidades
+   *  que el libro trae con varias. */
+  rotulo?: string;
 }
 
 export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>> =
@@ -75,54 +78,6 @@ export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>
    "pagina": 35,
    "cantos": {
     "introitus": 1,
-    "communio": 1
-   }
-  },
-  "Natividad del Señor (Misa de la vigilia)": {
-   "clave": "ad-missam-in-vigilia",
-   "titulo": "Ad Missam in Vigilia",
-   "pagina": 35,
-   "cantos": {
-    "introitus": 1,
-    "communio": 1,
-    "graduale": 1,
-    "alleluia": 1,
-    "offertorium": 1
-   }
-  },
-  "Natividad del Señor (Misa de la noche)": {
-   "clave": "ad-missam-in-nocte",
-   "titulo": "Ad Missam in Nocte",
-   "pagina": 38,
-   "cantos": {
-    "introitus": 1,
-    "graduale": 1,
-    "alleluia": 1,
-    "offertorium": 1,
-    "communio": 1
-   }
-  },
-  "Natividad del Señor (Misa de la aurora)": {
-   "clave": "ad-missam-in-aurora",
-   "titulo": "Ad Missam in Aurora",
-   "pagina": 41,
-   "cantos": {
-    "offertorium": 1,
-    "introitus": 1,
-    "graduale": 1,
-    "alleluia": 1,
-    "communio": 1
-   }
-  },
-  "Natividad del Señor (Misa del día)": {
-   "clave": "ad-missam-in-die",
-   "titulo": "Ad Missam in Die",
-   "pagina": 44,
-   "cantos": {
-    "introitus": 1,
-    "graduale": 1,
-    "alleluia": 1,
-    "offertorium": 1,
     "communio": 1
    }
   },
@@ -244,18 +199,6 @@ export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>
     "offertorium": 1
    }
   },
-  "Domingo de Resurrección (Misa del día)": {
-   "clave": "ad-missam-in-die-p193",
-   "titulo": "Ad Missam in Die",
-   "pagina": 193,
-   "cantos": {
-    "introitus": 1,
-    "offertorium": 1,
-    "graduale": 1,
-    "alleluia": 1,
-    "communio": 1
-   }
-  },
   "Domingo de la Divina Misericordia (2.º de Pascua)": {
    "clave": "hebdomada-secunda-paschae",
    "titulo": "Hebdomada Secunda Paschae",
@@ -341,28 +284,6 @@ export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>
     "introitus": 1,
     "offertorium": 1,
     "communio": 1
-   }
-  },
-  "Pentecostés (Misa de la vigilia)": {
-   "clave": "ad-missam-in-vigilia-p245",
-   "titulo": "Ad Missam in Vigilia",
-   "pagina": 245,
-   "cantos": {
-    "introitus": 1,
-    "offertorium": 1,
-    "communio": 1,
-    "alleluia": 1
-   }
-  },
-  "Pentecostés (Misa del día)": {
-   "clave": "ad-missam-in-die-p249",
-   "titulo": "Ad Missam in Die",
-   "pagina": 249,
-   "cantos": {
-    "introitus": 1,
-    "offertorium": 1,
-    "communio": 1,
-    "alleluia": 1
    }
   },
   "2.º Domingo del Tiempo Ordinario": {
@@ -1263,4 +1184,117 @@ export const SIMPLEX_POR_TIEMPO: Record<string, Record<string, MisaApp>> =
    }
   }
  }
+} as const;
+
+/**
+ * Las varias Misas que algunas SOLEMNIDADES tienen, cada una con sus propios cantos.
+ *
+ * La Navidad tiene cuatro (vigilia, noche, aurora y día) y Pentecostés dos. El calendario
+ * de la app da UN nombre por día, así que estas Misas no caben en `GRADUALE_APP`, que va
+ * por celebración: colgadas de ahí, sus cantos quedaban invisibles. Aquí van por
+ * solemnidad, y el coro elige cuál canta en el constructor.
+ *
+ * Son MÁS concretas que la entrada del día, así que la elegida manda sobre ella.
+ */
+export const MISAS_DE_LA_SOLEMNIDAD:
+  Record<'romanum' | 'simplex', Record<string, Record<string, MisaApp>>> =
+{
+ "romanum": {
+  "Natividad del Señor": {
+   "ad-missam-in-vigilia": {
+    "clave": "ad-missam-in-vigilia",
+    "titulo": "Ad Missam in Vigilia",
+    "pagina": 35,
+    "cantos": {
+     "introitus": 1,
+     "communio": 1,
+     "graduale": 1,
+     "alleluia": 1,
+     "offertorium": 1
+    },
+    "rotulo": "Misa de la vigilia"
+   },
+   "ad-missam-in-nocte": {
+    "clave": "ad-missam-in-nocte",
+    "titulo": "Ad Missam in Nocte",
+    "pagina": 38,
+    "cantos": {
+     "introitus": 1,
+     "graduale": 1,
+     "alleluia": 1,
+     "offertorium": 1,
+     "communio": 1
+    },
+    "rotulo": "Misa de la noche"
+   },
+   "ad-missam-in-aurora": {
+    "clave": "ad-missam-in-aurora",
+    "titulo": "Ad Missam in Aurora",
+    "pagina": 41,
+    "cantos": {
+     "offertorium": 1,
+     "introitus": 1,
+     "graduale": 1,
+     "alleluia": 1,
+     "communio": 1
+    },
+    "rotulo": "Misa de la aurora"
+   },
+   "ad-missam-in-die": {
+    "clave": "ad-missam-in-die",
+    "titulo": "Ad Missam in Die",
+    "pagina": 44,
+    "cantos": {
+     "introitus": 1,
+     "graduale": 1,
+     "alleluia": 1,
+     "offertorium": 1,
+     "communio": 1
+    },
+    "rotulo": "Misa del día"
+   }
+  },
+  "Domingo de Resurrección": {
+   "ad-missam-in-die-p193": {
+    "clave": "ad-missam-in-die-p193",
+    "titulo": "Ad Missam in Die",
+    "pagina": 193,
+    "cantos": {
+     "introitus": 1,
+     "offertorium": 1,
+     "graduale": 1,
+     "alleluia": 1,
+     "communio": 1
+    },
+    "rotulo": "Misa del día"
+   }
+  },
+  "Pentecostés": {
+   "ad-missam-in-vigilia-p245": {
+    "clave": "ad-missam-in-vigilia-p245",
+    "titulo": "Ad Missam in Vigilia",
+    "pagina": 245,
+    "cantos": {
+     "introitus": 1,
+     "offertorium": 1,
+     "communio": 1,
+     "alleluia": 1
+    },
+    "rotulo": "Misa de la vigilia"
+   },
+   "ad-missam-in-die-p249": {
+    "clave": "ad-missam-in-die-p249",
+    "titulo": "Ad Missam in Die",
+    "pagina": 249,
+    "cantos": {
+     "introitus": 1,
+     "offertorium": 1,
+     "communio": 1,
+     "alleluia": 1
+    },
+    "rotulo": "Misa del día"
+   }
+  }
+ },
+ "simplex": {}
 } as const;

@@ -169,6 +169,20 @@ TIEMPOS_APP = {
 
 MISSA_POR_TIEMPO = re.compile(r"^Missa\s+[IVX]+$", re.I)
 
+# "Natividad del Señor (Misa de la noche)" → la solemnidad y cuál de sus Misas es.
+SUB_MISA = re.compile(r"^(.+?)\s+\((Misa\s+[^)]+)\)$")
+
+# Domingos que el libro trae pero el calendario NO PRODUCE NUNCA en los años generados.
+#
+# No es un fallo de nadie: el 9.º domingo del Tiempo Ordinario sólo cae en años con la
+# Pascua muy tardía, y el 2.º después de Navidad desaparece cuando la Epifanía se pasa al
+# domingo, que es lo que hace el calendario general. Se anotan para que el comprobador no
+# avise de ellos todos los días: si algún año llegan a existir, el canto ya está.
+NO_OCURREN = {
+    "9.º Domingo del Tiempo Ordinario",
+    "2.º Domingo después de Navidad",
+}
+
 
 def tiempo_de_la_misa(libro: str, misa: dict):
     """El tiempo al que sirve una Misa suelta del Simplex, o `None` si no es de ésas.
@@ -201,7 +215,8 @@ def comprobar_contra_el_calendario(hechas: dict) -> None:
     except Exception as e:                            # noqa: BLE001
         print(f"   (no se pudo leer el calendario: {e})")
         return
-    huerfanas = sorted({c for libro in hechas.values() for c in libro} - nombres)
+    huerfanas = sorted({c for libro in hechas.values() for c in libro}
+                       - nombres - NO_OCURREN)
     if huerfanas:
         print(f"   AVISO: {len(huerfanas)} celebraciones que el calendario no conoce "
               "(el coro nunca las verá):")
@@ -209,7 +224,7 @@ def comprobar_contra_el_calendario(hechas: dict) -> None:
             print(f"      {c}")
 
 
-def escribir_indice_app(hechas: dict, porTiempo: dict) -> None:
+def escribir_indice_app(hechas: dict, porTiempo: dict, subMisas: dict) -> None:
     """El índice ESBELTO que se lleva la app: sólo lo que de verdad hay dibujado.
 
     El índice grande (gradualeIndex.data.ts) lleva los recortes página a página, que son
@@ -239,6 +254,9 @@ export interface MisaApp {
   /** Página impresa donde empieza, para quien quiera ir al libro de papel. */
   pagina: number;
   cantos: Record<string, 1 | readonly string[]>;
+  /** Cuál de las Misas del día es ("Misa de la noche"). Sólo en las solemnidades
+   *  que el libro trae con varias. */
+  rotulo?: string;
 }
 
 export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>> =
@@ -258,17 +276,36 @@ export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>
  */
 export const SIMPLEX_POR_TIEMPO: Record<string, Record<string, MisaApp>> =
 """
+    cabecera_sub = """
+/**
+ * Las varias Misas que algunas SOLEMNIDADES tienen, cada una con sus propios cantos.
+ *
+ * La Navidad tiene cuatro (vigilia, noche, aurora y día) y Pentecostés dos. El calendario
+ * de la app da UN nombre por día, así que estas Misas no caben en `GRADUALE_APP`, que va
+ * por celebración: colgadas de ahí, sus cantos quedaban invisibles. Aquí van por
+ * solemnidad, y el coro elige cuál canta en el constructor.
+ *
+ * Son MÁS concretas que la entrada del día, así que la elegida manda sobre ella.
+ */
+export const MISAS_DE_LA_SOLEMNIDAD:
+  Record<'romanum' | 'simplex', Record<string, Record<string, MisaApp>>> =
+"""
     cuerpo = json.dumps(hechas, ensure_ascii=False, indent=1)
     porTiempoTxt = json.dumps(porTiempo, ensure_ascii=False, indent=1)
+    for libro in ("romanum", "simplex"):
+        subMisas.setdefault(libro, {})
+    subTxt = json.dumps(subMisas, ensure_ascii=False, indent=1)
     io.open(APP, "w", encoding="utf-8").write(
         cabecera + cuerpo + " as const;" + chr(10)
-        + cabecera_tiempo + porTiempoTxt + " as const;" + chr(10))
+        + cabecera_tiempo + porTiempoTxt + " as const;" + chr(10)
+        + cabecera_sub + subTxt + " as const;" + chr(10))
     total = sum(len(v) for v in hechas.values())
     sueltas = sum(len(v) for v in porTiempo.values())
+    subs = sum(len(m) for libro in subMisas.values() for m in libro.values())
     print("")
     print(f"índice de la app: {total} celebraciones + {sueltas} Misas por tiempo "
           f"({', '.join(f'{t}: {len(v)}' for t, v in porTiempo.items())}) · "
-          f"{os.path.getsize(APP) // 1024} KB")
+          f"+ {subs} Misas de solemnidades · {os.path.getsize(APP) // 1024} KB")
     comprobar_contra_el_calendario(hechas)
 
 
@@ -283,7 +320,7 @@ def main():
 
     indice = leer_indice()
     libros = [args.libro] if args.libro else list(PDFS)
-    app, porTiempo = {}, {}
+    app, porTiempo, subMisas = {}, {}, {}
     for libro in libros:
         ruta = PDFS[libro]
         if not os.path.exists(ruta):
@@ -329,8 +366,18 @@ def main():
                 # quedaba en catorce domingos sueltos de los cincuenta y dos del año.
                 misa = indice[libro][clave]
                 destinos = []
-                if misa.get("celebracion"):
-                    destinos.append((logradas, misa["celebracion"]))
+                celebracion = misa.get("celebracion") or ""
+                sub = SUB_MISA.match(celebracion)
+                if sub:
+                    # Una de las varias Misas de una solemnidad (las cuatro de Navidad,
+                    # las dos de Pentecostés). No van por su nombre completo: el
+                    # calendario da UN nombre por día, así que "Natividad del Señor (Misa
+                    # de la noche)" no existe para la app y el canto quedaba invisible.
+                    # Van colgadas de su solemnidad, para que el coro elija cuál canta.
+                    destinos.append((subMisas.setdefault(libro, {})
+                                     .setdefault(sub.group(1), {}), clave))
+                elif celebracion:
+                    destinos.append((logradas, celebracion))
                 for otra in misa.get("tambien") or []:
                     destinos.append((logradas, otra))
                 tiempo = tiempo_de_la_misa(libro, misa)
@@ -342,6 +389,10 @@ def main():
                         "clave": clave, "titulo": misa["titulo"],
                         "pagina": misa["pagina"], "cantos": {},
                     })
+                    # El rótulo de una sub-Misa lo pone el libro ("Misa de la noche"):
+                    # es lo que distingue una de otra dentro del mismo día.
+                    if sub:
+                        ficha["rotulo"] = sub.group(2)
                     base, _, ciclo = nombre.partition("-")
                     if ciclo:
                         previo = ficha["cantos"].get(base)
@@ -364,7 +415,7 @@ def main():
     # Sólo se reescribe el índice de la app cuando se dibujaron LOS DOS libros: con
     # --libro se está probando, y guardar medio índice dejaría la app sin el otro.
     if len(libros) == len(PDFS):
-        escribir_indice_app(app, porTiempo)
+        escribir_indice_app(app, porTiempo, subMisas)
     else:
         print("(sólo un libro: no se toca el índice de la app)")
 

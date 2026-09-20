@@ -15,10 +15,10 @@
  *  · La Misa elegida se recupera al editar un cantoral publicado.
  */
 import {
-  misasDelTiempo, tiempoConMisasDelSimplex, rotuloMisaDelTiempo,
+  misasDelTiempo, tiempoConMisasDelSimplex, rotuloMisaDelTiempo, alternativasDelDia,
   resolveGraduale, librosDisponibles, hayPropios,
 } from '../../src/data/gradualeIndex';
-import { buildGradualeSong, misaDelTiempoDelCantoral } from '../../src/utils/gradualeSong';
+import { buildGradualeSong, misasDelCantoral } from '../../src/utils/gradualeSong';
 
 let pass = 0, fail = 0;
 function check(name: string, actual: unknown, expected: unknown) {
@@ -52,7 +52,7 @@ check('el Romanum sí, porque él sí trae ese domingo',
   resolveGraduale('romanum', DOMINGO_23, 'Entrada')?.canto, 'introitus');
 
 const misaIII = misasDelTiempo(ORDINARIO)[2].clave;
-const conMisa = { tiempo: ORDINARIO, misaDelTiempo: misaIII };
+const conMisa = { tiempo: ORDINARIO, misaElegida: misaIII };
 check('elegida la Misa III, el Simplex ya sirve ese domingo',
   resolveGraduale('simplex', DOMINGO_23, 'Entrada', conMisa)?.misa, 'Missa III');
 check('y la partitura sale de la carpeta de esa Misa',
@@ -92,12 +92,47 @@ check('y San Pedro y San Pablo',
 const canto = buildGradualeSong('2026-09-06', DOMINGO_23, 'Entrada', 'simplex', conMisa);
 check('se arma con la Misa elegida', canto?.gradualeFuente?.includes('Graduale Simplex'), true);
 check('y se recupera al editar el cantoral publicado',
-  misaDelTiempoDelCantoral([canto!], '2026-09-06'), misaIII);
-check('otra fecha no cuenta', misaDelTiempoDelCantoral([canto!], '2026-09-13'), null);
+  misasDelCantoral([canto!], '2026-09-06'), { simplex: misaIII });
+check('otra fecha no cuenta', misasDelCantoral([canto!], '2026-09-13'), {});
 
 // ── El atajo del encabezado ────────────────────────────────────────────────
 check('hay gregoriano ese domingo aunque no se elija Misa (por el Romanum)',
   hayPropios(DOMINGO_23, { tiempo: ORDINARIO }), true);
+
+// ── Las varias Misas de una solemnidad ─────────────────────────────────────
+// La Navidad tiene CUATRO Misas en el Romanum, con cantos distintos. El calendario de la
+// app da un solo nombre por día, así que estaban en el índice pero nadie podía verlas:
+// eran los cantos del día más importante del año, invisibles.
+const NAVIDAD = 'Natividad del Señor';
+const navidad = alternativasDelDia('romanum', NAVIDAD);
+check('la Navidad trae cuatro Misas', navidad.length, 4);
+check('y se nombran como en el libro',
+  navidad.map((m) => m.rotuloCorto),
+  ['Misa de la vigilia', 'Misa de la noche', 'Misa de la aurora', 'Misa del día']);
+check('las cuatro están completas',
+  navidad.every((m) => Object.keys(m.cantos).length === 5), true);
+check('Pentecostés trae dos', alternativasDelDia('romanum', 'Pentecostés').length, 2);
+check('un domingo corriente no trae varias',
+  alternativasDelDia('romanum', DOMINGO_23), []);
+
+// Son MÁS concretas que la entrada del día, así que la elegida manda sobre ella.
+const laNoche = navidad.find((m) => m.rotuloCorto === 'Misa de la noche')!;
+check('elegida la Misa de la noche, se canta la de la noche',
+  resolveGraduale('romanum', NAVIDAD, 'Entrada', { misaElegida: laNoche.clave })?.pagina,
+  laNoche.pagina);
+check('y es distinta de la del día',
+  laNoche.pagina === navidad.find((m) => m.rotuloCorto === 'Misa del día')!.pagina, false);
+check('sin elegir, se usa la entrada general del día',
+  resolveGraduale('romanum', NAVIDAD, 'Entrada')?.pagina !== laNoche.pagina, true);
+
+// Lo mismo que con el Simplex: al editar un cantoral hay que recuperar cuál era, o el
+// coro se encontraría con la Misa del día donde publicó la de la noche.
+const deNoche = buildGradualeSong('2026-12-25', NAVIDAD, 'Entrada', 'romanum',
+  { misaElegida: laNoche.clave });
+check('la Misa de la noche viaja al cantoral',
+  deNoche?.gradualeImage?.includes(laNoche.clave), true);
+check('y se recupera al editarlo',
+  misasDelCantoral([deNoche!], '2026-12-25'), { romanum: laNoche.clave });
 
 console.log(`\n${pass} ok, ${fail} fallas`);
 if (fail) process.exit(1);
