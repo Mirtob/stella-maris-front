@@ -9,6 +9,10 @@ interface GradualeChoiceProps {
   celebracion: string;
   parte: string;
   ciclo?: CicloGraduale;
+  /** Tiempo litúrgico de la fecha: de él salen las Misas del Simplex. */
+  tiempo?: string;
+  /** Misa del tiempo elegida en el Simplex (su clave), si el coro eligió alguna. */
+  misaDelTiempo?: string | null;
   /** Libro elegido para esta parte, o `null` si el coro no quiere gregoriano aquí. */
   valor: LibroGraduale | null;
   onChange: (libro: LibroGraduale | null) => void;
@@ -26,12 +30,15 @@ interface GradualeChoiceProps {
  * se imprime también en el folleto del pueblo, porque el gregoriano lo canta la
  * asamblea, no sólo el coro.
  */
-export function GradualeChoice({ celebracion, parte, ciclo, valor, onChange }: GradualeChoiceProps) {
+export function GradualeChoice({
+  celebracion, parte, ciclo, tiempo, misaDelTiempo, valor, onChange,
+}: GradualeChoiceProps) {
   const [abierto, setAbierto] = useState(false);
-  const disponibles = librosDisponibles(celebracion, parte, ciclo);
+  const opciones = { ciclo, tiempo, misaDelTiempo };
+  const disponibles = librosDisponibles(celebracion, parte, opciones);
   if (disponibles.length === 0) return null;
 
-  const elegido = valor ? resolveGraduale(valor, celebracion, parte, ciclo) : null;
+  const elegido = valor ? resolveGraduale(valor, celebracion, parte, opciones) : null;
 
   return (
     <div className="bg-white/50 dark:bg-white/10 backdrop-blur-sm rounded-2xl p-4 border-2 border-stone-300/70 dark:border-stone-600/70 transition-colors">

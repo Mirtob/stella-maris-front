@@ -16,7 +16,7 @@
 import { Song } from '../types';
 import {
   resolveGraduale, nombreDelPropio, LIBROS,
-  type LibroGraduale, type CicloGraduale,
+  type LibroGraduale, type OpcionesGraduale,
 } from '../data/gradualeIndex';
 
 const PREFIJO = 'graduale-';
@@ -33,10 +33,10 @@ export function buildGradualeSong(
   celebracion: string,
   parte: string,
   libro: LibroGraduale | null,
-  ciclo?: CicloGraduale,
+  opciones: OpcionesGraduale = {},
 ): Song | null {
   if (!libro || !celebracion) return null;
-  const propio = resolveGraduale(libro, celebracion, parte, ciclo);
+  const propio = resolveGraduale(libro, celebracion, parte, opciones);
   if (!propio) return null;
   return {
     id: `${PREFIJO}${libro}-${parte}-${massDate}`,
@@ -66,4 +66,20 @@ export function libroDelCantoral<T extends Pick<Song, 'id'>>(
     }
   }
   return null;
+}
+
+/**
+ * La Misa del tiempo del Simplex que llevaba un cantoral publicado.
+ *
+ * No va en el id —ahí sólo caben libro y parte— sino en la ruta de la imagen, que es
+ * `/graduale/simplex/<clave>/<canto>.webp`. Se lee de ahí para que al editar un cantoral
+ * el coro no se encuentre con otra Misa distinta de la que publicó.
+ */
+export function misaDelTiempoDelCantoral<T extends Pick<Song, 'id' | 'gradualeImage'>>(
+  songs: T[], massDate: string,
+): string | null {
+  const suyo = songs.find((s) => String(s.id).startsWith(`${PREFIJO}simplex-`)
+    && String(s.id).endsWith(`-${massDate}`));
+  const m = /^\/graduale\/simplex\/([^/]+)\//.exec(suyo?.gradualeImage ?? '');
+  return m ? m[1] : null;
 }

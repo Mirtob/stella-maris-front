@@ -256,7 +256,7 @@ export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>
     "communio": 1
    }
   },
-  "2.º Domingo de Pascua": {
+  "Domingo de la Divina Misericordia (2.º de Pascua)": {
    "clave": "hebdomada-secunda-paschae",
    "titulo": "Hebdomada Secunda Paschae",
    "pagina": 213,
@@ -745,7 +745,7 @@ export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>
     "alleluia": 1
    }
   },
-  "34.º Domingo del Tiempo Ordinario": {
+  "Jesucristo, Rey del Universo": {
    "clave": "hebdomada-trigesima-quarta",
    "titulo": "Hebdomada Trigesima Quarta",
    "pagina": 366,
@@ -791,18 +791,6 @@ export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>
     "graduale": 1,
     "alleluia": 1,
     "offertorium": 1
-   }
-  },
-  "Jesucristo, Rey del Universo": {
-   "clave": "dominica-ultima-per-annum-d-n-iesu-christi-universorum-regis",
-   "titulo": "Dominica ultima per Annum — D. N. Iesu Christi Universorum Regis",
-   "pagina": 385,
-   "cantos": {
-    "introitus": 1,
-    "graduale": 1,
-    "offertorium": 1,
-    "alleluia": 1,
-    "communio": 1
    }
   }
  },
@@ -855,6 +843,18 @@ export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>
    }
   },
   "2.º Domingo de Cuaresma": {
+   "clave": "dominica-ii-iii",
+   "titulo": "Dominica II & III",
+   "pagina": 109,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "alleluia": 1,
+    "offertorium": 1,
+    "communio": 1
+   }
+  },
+  "3.º Domingo de Cuaresma": {
    "clave": "dominica-ii-iii",
    "titulo": "Dominica II & III",
    "pagina": 109,
@@ -967,6 +967,299 @@ export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>
     "graduale": 1,
     "offertorium": 1,
     "communio": 1
+   }
+  },
+  "Presentación del Señor": {
+   "clave": "in-praesentatione-domini",
+   "titulo": "In Praesentatione Domini",
+   "pagina": 272,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "alleluia": 1,
+    "offertorium": 1,
+    "communio": 1
+   }
+  },
+  "San José, Esposo de la Virgen María": {
+   "clave": "santi-ioseph-sponsi-b-mariae-virginis",
+   "titulo": "Santi Ioseph sponsi B. Mariae Virginis",
+   "pagina": 280,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "offertorium": 1,
+    "communio": 1
+   }
+  },
+  "Anunciación del Señor": {
+   "clave": "in-annuntiatione-domini",
+   "titulo": "In Annuntiatione Domini",
+   "pagina": 284,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "offertorium": 1,
+    "communio": 1
+   }
+  },
+  "Natividad de San Juan Bautista": {
+   "clave": "in-nativitate-sancti-ioannis-baptistae",
+   "titulo": "In Nativitate sancti Ioannis Baptistae",
+   "pagina": 288,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "alleluia": 1,
+    "offertorium": 1,
+    "communio": 1
+   }
+  },
+  "San Pedro y San Pablo, Apóstoles": {
+   "clave": "sanctorum-petri-et-pauli-apostolorum",
+   "titulo": "Sanctorum Petri et Pauli Apostolorum",
+   "pagina": 295,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "alleluia": 1,
+    "offertorium": 1,
+    "communio": 1
+   }
+  },
+  "Transfiguración del Señor": {
+   "clave": "in-transfiguratione-domini",
+   "titulo": "In Transfiguratione Domini",
+   "pagina": 301,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "alleluia": 1,
+    "offertorium": 1,
+    "communio": 1
+   }
+  },
+  "Asunción de la Virgen María": {
+   "clave": "in-assumptione-b-mariae-virginis",
+   "titulo": "In Assumptione B. Mariae Virginis",
+   "pagina": 307,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "alleluia": 1,
+    "offertorium": 1,
+    "communio": 1
+   }
+  },
+  "Birth of the Blessed Virgin Mary": {
+   "clave": "in-nativitate-b-mariae-virginis",
+   "titulo": "In Nativitate B. Mariae Virginis",
+   "pagina": 315,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "offertorium": 1,
+    "communio": 1
+   }
+  },
+  "The Exaltation of the Holy Cross": {
+   "clave": "in-exaltatione-sanctae-crucis",
+   "titulo": "In Exaltatione sanctae Crucis",
+   "pagina": 318,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "alleluia": 1,
+    "offertorium": 1,
+    "communio": 1
+   }
+  },
+  "Saints Michael, Gabriel and Raphael, Archangels": {
+   "clave": "ss-michaelis-gabrielis-et-raphaelis-archangelorum",
+   "titulo": "Ss. Michaelis, Gabrielis et Raphaelis, archangelorum",
+   "pagina": 323,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "alleluia": 1,
+    "offertorium": 1,
+    "communio": 1
+   }
+  },
+  "Todos los Santos": {
+   "clave": "omnium-sanctorum",
+   "titulo": "Omnium Sanctorum",
+   "pagina": 330,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "alleluia": 1,
+    "offertorium": 1,
+    "communio": 1
+   }
+  },
+  "Inmaculada Concepción de la Virgen María": {
+   "clave": "in-conceptione-immaculata-b-mariae-virginis",
+   "titulo": "In Conceptione immaculata B. Mariae Virginis",
+   "pagina": 336,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1
+   }
+  }
+ }
+} as const;
+
+/**
+ * Las Misas que el GRADUALE SIMPLEX ofrece por tiempo litúrgico, no por domingo.
+ *
+ * El Simplex está hecho así a propósito: en vez de dar los propios de cada domingo, da
+ * ocho Misas para todo el Tiempo Ordinario, dos para Adviento y dos para Pascua, y es el
+ * coro quien escoge cuál canta. Por eso no aparecen en `GRADUALE_APP`, que va por
+ * celebración: aquí van por tiempo, y la elección se hace en el constructor.
+ *
+ * Los domingos que el Simplex SÍ trae con nombre propio (los de Cuaresma, las
+ * solemnidades) están en `GRADUALE_APP` como los del Romanum.
+ */
+export const SIMPLEX_POR_TIEMPO: Record<string, Record<string, MisaApp>> =
+{
+ "Adviento": {
+  "missa-i": {
+   "clave": "missa-i",
+   "titulo": "Missa I",
+   "pagina": 66,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "alleluia": 1,
+    "offertorium": 1,
+    "communio": 1
+   }
+  },
+  "missa-ii": {
+   "clave": "missa-ii",
+   "titulo": "Missa II",
+   "pagina": 72,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "alleluia": 1,
+    "offertorium": 1,
+    "communio": 1
+   }
+  }
+ },
+ "Pascua": {
+  "missa-i-p178": {
+   "clave": "missa-i-p178",
+   "titulo": "Missa I",
+   "pagina": 178,
+   "cantos": {
+    "introitus": 1,
+    "alleluia": 1,
+    "offertorium": 1,
+    "communio": 1
+   }
+  },
+  "missa-ii-p185": {
+   "clave": "missa-ii-p185",
+   "titulo": "Missa II",
+   "pagina": 185,
+   "cantos": {
+    "introitus": 1,
+    "alleluia": 1,
+    "offertorium": 1,
+    "communio": 1
+   }
+  }
+ },
+ "Tiempo Ordinario": {
+  "missa-i-p228": {
+   "clave": "missa-i-p228",
+   "titulo": "Missa I",
+   "pagina": 228,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "alleluia": 1
+   }
+  },
+  "missa-ii-p233": {
+   "clave": "missa-ii-p233",
+   "titulo": "Missa II",
+   "pagina": 233,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "alleluia": 1,
+    "offertorium": 1,
+    "communio": 1
+   }
+  },
+  "missa-iii": {
+   "clave": "missa-iii",
+   "titulo": "Missa III",
+   "pagina": 238,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "alleluia": 1,
+    "communio": 1
+   }
+  },
+  "missa-iv": {
+   "clave": "missa-iv",
+   "titulo": "Missa IV",
+   "pagina": 244,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "alleluia": 1,
+    "offertorium": 1,
+    "communio": 1
+   }
+  },
+  "missa-v": {
+   "clave": "missa-v",
+   "titulo": "Missa V",
+   "pagina": 250,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "alleluia": 1,
+    "communio": 1
+   }
+  },
+  "missa-vi": {
+   "clave": "missa-vi",
+   "titulo": "Missa VI",
+   "pagina": 255,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "offertorium": 1,
+    "communio": 1
+   }
+  },
+  "missa-vii": {
+   "clave": "missa-vii",
+   "titulo": "Missa VII",
+   "pagina": 258,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "offertorium": 1
+   }
+  },
+  "missa-viii": {
+   "clave": "missa-viii",
+   "titulo": "Missa VIII",
+   "pagina": 261,
+   "cantos": {
+    "introitus": 1,
+    "graduale": 1,
+    "alleluia": 1,
+    "offertorium": 1
    }
   }
  }

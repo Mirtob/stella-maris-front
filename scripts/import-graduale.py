@@ -209,6 +209,60 @@ FIESTAS = {
     "domini nostri iesu christi universorum regis": "Jesucristo, Rey del Universo",
     # El libro lo abrevia: "D. N. Iesu Christi universorum Regis".
     "d n iesu christi universorum regis": "Jesucristo, Rey del Universo",
+
+    # ── Santoral (Proprium Sanctorum) ────────────────────────────────────────
+    # Doce solemnidades y fiestas que el Simplex trae completas y que hasta ahora no se
+    # emparejaban con nada: el emparejador sabía de domingos y de las solemnidades del
+    # Señor, pero no de éstas, así que quedaban en el índice sin celebración y la app no
+    # las ofrecía nunca.
+    #
+    # Los tres nombres en inglés NO son un descuido: son los que hoy tiene el calendario
+    # de la app (quedan unas treinta celebraciones sin traducir). Se escriben tal como
+    # están porque la clave del índice de la app ES el nombre de la celebración, y si no
+    # coincide exactamente el canto no aparece. El día que se traduzcan, el comprobador
+    # de `render-graduale-webp.py` avisará de que estas claves quedaron huérfanas.
+    "in praesentatione domini": "Presentación del Señor",
+    "santi ioseph sponsi b mariae virginis": "San José, Esposo de la Virgen María",
+    "sancti ioseph sponsi b mariae virginis": "San José, Esposo de la Virgen María",
+    "in annuntiatione domini": "Anunciación del Señor",
+    "in nativitate sancti ioannis baptistae": "Natividad de San Juan Bautista",
+    "sanctorum petri et pauli apostolorum": "San Pedro y San Pablo, Apóstoles",
+    "in transfiguratione domini": "Transfiguración del Señor",
+    "in assumptione b mariae virginis": "Asunción de la Virgen María",
+    "in nativitate b mariae virginis": "Birth of the Blessed Virgin Mary",
+    "in exaltatione sanctae crucis": "The Exaltation of the Holy Cross",
+    "ss michaelis gabrielis et raphaelis archangelorum":
+        "Saints Michael, Gabriel and Raphael, Archangels",
+    "omnium sanctorum": "Todos los Santos",
+    "in conceptione immaculata b mariae virginis":
+        "Inmaculada Concepción de la Virgen María",
+}
+
+# Cómo llama el CALENDARIO DE LA APP a lo que el libro nombra de otra manera.
+#
+# La clave del índice de la app es el nombre de la celebración, así que un nombre que el
+# calendario no usa deja el canto inalcanzable: nadie lo ve y nada falla. Estos dos los
+# encontró el comprobador de `render-graduale-webp.py`, y los dos son la misma
+# celebración con distinto nombre, no dos días diferentes:
+#
+#  · el 34.º y último domingo del Tiempo Ordinario ES Jesucristo Rey del Universo;
+#  · el 2.º de Pascua, el de la Divina Misericordia.
+#
+# Al renombrarlos coinciden con la entrada que el libro ya traía por su nombre propio, y
+# entonces decide la regla de más abajo: gana la que traiga más cantos.
+ALIAS_CALENDARIO = {
+    "34.º Domingo del Tiempo Ordinario": "Jesucristo, Rey del Universo",
+    "2.º Domingo de Pascua": "Domingo de la Divina Misericordia (2.º de Pascua)",
+}
+
+# Misas que el libro ofrece para VARIAS celebraciones a la vez.
+#
+# El Simplex titula "Dominica II & III" una sola Misa que sirve para los dos domingos de
+# Cuaresma. El emparejador leía el primer número romano y se quedaba con el 2.º, así que
+# el 3.º de Cuaresma no tenía Simplex — no por falta de música, sino porque nadie le
+# había dicho que era la misma.
+TAMBIEN_SIRVE = {
+    ("simplex", "dominica ii iii"): ["3.º Domingo de Cuaresma"],
 }
 
 
@@ -280,7 +334,8 @@ def celebracion_de(titulo: str, ruta: list):
         return None
     # En Adviento y Cuaresma el libro empieza la cuenta en la semana; coincide con el
     # domingo salvo en el Tiempo Ordinario, donde la Hebdomada N es el domingo N.
-    return f"{numero}.º Domingo {tiempo}"
+    nombre = f"{numero}.º Domingo {tiempo}"
+    return ALIAS_CALENDARIO.get(nombre, nombre)
 
 
 def descargar(libro: dict, cache: str) -> str:
@@ -456,7 +511,7 @@ def regiones_desde_planilla(doc, p_ini, f_ini, p_fin, f_fin):
     return regiones
 
 
-def aplicar_planilla(indice: dict, docs: dict, ruta: str) -> dict:
+def aplicar_planilla(indice: dict, docs: dict, ruta: str, redirecciones: dict) -> dict:
     """Vuelca en el índice lo rellenado a mano. Devuelve un resumen de lo aplicado.
 
     Lo manual MANDA sobre lo detectado: si alguien se tomó el trabajo de mirar la
@@ -483,6 +538,12 @@ def aplicar_planilla(indice: dict, docs: dict, ruta: str) -> dict:
         clave = ws.cell(row=r, column=col_clave).value
         if not libro or not clave or libro not in indice:
             continue
+        # Si esa Misa se fundió con otra al resolver un duplicado, se sigue el rastro:
+        # lo anotado a mano vale para la celebración, no para la entrada del libro.
+        vistas = set()
+        while clave in redirecciones and clave not in indice[libro] and clave not in vistas:
+            vistas.add(clave)
+            clave = redirecciones[clave]
         misa = indice[libro].get(clave)
         if not misa:
             resumen["descartadas"].append(f"f{r}: {clave} ya no está en el índice")
@@ -530,6 +591,9 @@ def main():
     indice = {}
     informe = {}
     docs = {}
+    # Claves de Misa que dejaron de existir al resolver un duplicado, y a cuál apuntan
+    # ahora. La planilla va por clave y se aplica después: sin esto, sus filas se caen.
+    redirecciones = {}
 
     for clave, libro in LIBROS.items():
         ruta = descargar(libro, args.cache)
@@ -560,13 +624,24 @@ def main():
             }
             if celebracion:
                 entrada["celebracion"] = celebracion
+            # Una misma Misa puede servir a más de un domingo (ver TAMBIEN_SIRVE).
+            tambien = TAMBIEN_SIRVE.get((clave, norm(m["titulo"])))
+            if tambien:
+                entrada["tambien"] = list(tambien)
             # Si dos entradas apuntan al mismo domingo (la semana y su hijo
             # `Dominica`, como en Cuaresma), gana la que traiga MÁS cantos.
+            #
+            # La que pierde deja una REDIRECCIÓN, y esto no es un detalle: la planilla
+            # rellenada a mano se aplica DESPUÉS, y va por clave de Misa. Sin la
+            # redirección, las filas que apuntaban a la entrada perdedora se caían —
+            # pasó con Cristo Rey, donde se perdieron dos cantos anotados a mano.
             previa = next((k for k, v in conMisa.items()
                            if v.get("celebracion") == celebracion), None) if celebracion else None
             if previa and len(conMisa[previa]["cantos"]) >= len(cantos):
+                redirecciones[clave_misa] = previa
                 continue
             if previa:
+                redirecciones[previa] = clave_misa
                 del conMisa[previa]
             conMisa[clave_misa] = entrada
         indice[clave] = conMisa
@@ -585,7 +660,7 @@ def main():
         print(f"  marcadores sin ningún canto (secciones, prólogos…): {len(sinNada)}")
 
     # ── Lo rellenado a mano, encima de lo detectado ─────────────────────────
-    res = aplicar_planilla(indice, docs, args.planilla)
+    res = aplicar_planilla(indice, docs, args.planilla, redirecciones)
     for d in docs.values():
         d.close()
     print(f"\nde la planilla: {res['aplicadas']} cantos aplicados, "
@@ -617,6 +692,8 @@ export interface MisaGraduale {
   /** Celebración del calendario de la app, cuando se pudo emparejar. El Simplex casi
    *  nunca la trae: ofrece Misas por tiempo, y el domingo lo elige el coro. */
   celebracion?: string;
+  /** Otras celebraciones a las que sirve esta misma Misa ("Dominica II & III"). */
+  tambien?: string[];
   /** Secciones que la contienen, de fuera a dentro ("Proprium de Tempore", "Tempus
    *  Adventus"…). Sin esto, "Feria Secunda" o "Missa I" son ambiguos. */
   ruta: string[];

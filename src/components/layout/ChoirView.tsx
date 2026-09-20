@@ -21,11 +21,13 @@ import { getSundayCycle } from '../../utils/liturgicalCycle';
 import { resolvePsalm } from '../../data/psalmIndex';
 import { buildPsalmSong, conSalmoDelLibro, debeReponerAntifona, esAntifonaEscritaAMano } from '../../utils/psalmSong';
 import { buildAntiphonSong, conAntifonas, findAntiphonSong } from '../../utils/antiphonSong';
-import { buildGradualeSong, libroDelCantoral } from '../../utils/gradualeSong';
+import { buildGradualeSong, libroDelCantoral,
+         misaDelTiempoDelCantoral } from '../../utils/gradualeSong';
 import { buildKyrialeSongs, misaDelCantoral, gloriaDelCantoral,
          buildPaterNosterSong, paterNosterDelCantoral,
          type EleccionKyriale } from '../../utils/kyrialeSong';
-import { PARTES_CON_PROPIO, parteTienePropio, hayPropios, type LibroGraduale } from '../../data/gradualeIndex';
+import { PARTES_CON_PROPIO, parteTienePropio, hayPropios, misasDelTiempo,
+         rotuloMisaDelTiempo, type LibroGraduale } from '../../data/gradualeIndex';
 import { resolveAntiphons, conCita } from '../../data/antiphonIndex';
 import { AddSolemnityModal } from '../liturgy/AddSolemnityModal';
 import { addCustomLiturgicalDate, toLiturgicalDate } from '../../services/liturgicalDates';
@@ -196,6 +198,19 @@ export function ChoirView({
   /** Tono del Padre Nuestro gregoriano. Va suelto: no pertenece a ninguna Misa. */
   const [paterGregoriano, setPaterGregoriano] = useState<string | null>(null);
 
+  /**
+   * Misa del Simplex elegida para este tiempo litúrgico (su clave), si hace falta.
+   *
+   * El Simplex no trae un propio por domingo como el Romanum: para el Tiempo Ordinario
+   * ofrece ocho Misas, para Adviento y Pascua dos, y el coro escoge. Es UNA por Misa y
+   * no una por parte porque en el libro cada una es un juego completo; las partes
+   * siguen pudiéndose mezclar con el Romanum, que es otra cosa.
+   */
+  const [misaSimplex, setMisaSimplex] = useState<string | null>(null);
+  /** Tiempo litúrgico de la fecha: es lo que decide qué Misas ofrece el Simplex. */
+  const tiempoDeLaMisa = useMemo(() => getCurrentLiturgicalSeason(massDateObj), [massDateObj]);
+  const misasDelSimplex = useMemo(() => misasDelTiempo(tiempoDeLaMisa), [tiempoDeLaMisa]);
+
   /** El atajo del encabezado: el mismo libro en todas las partes que lo tengan. */
   const gregorianoEnTodo = (libro: LibroGraduale | null) =>
     setLibroGregoriano(libro === null
@@ -257,14 +272,15 @@ export function ChoirView({
       // su parte, y la comunión la primera de la suya.
       ...PARTES_CON_PROPIO.map((parte) => buildGradualeSong(
         massDate, getLiturgicalDateForDate(massDate), parte, libroGregoriano[parte] ?? null,
-        getSundayCycle(massDate),
+        { ciclo: getSundayCycle(massDate), tiempo: tiempoDeLaMisa, misaDelTiempo: misaSimplex },
       )),
       // El ordinario gregoriano: las cuatro partes salen de una sola elección.
       ...buildKyrialeSongs(massDate, misaGregoriana, gloriaGregoriano),
       buildPaterNosterSong(massDate, 'romanum', paterGregoriano),
     ]),
     [cantoral, psalmSong, massDate, antifonaEntrada, antifonaComunion, incluirEntrada,
-     incluirComunion, libroGregoriano, misaGregoriana, gloriaGregoriano, paterGregoriano],
+     incluirComunion, libroGregoriano, misaSimplex, tiempoDeLaMisa,
+     misaGregoriana, gloriaGregoriano, paterGregoriano],
   );
   /**
    * Al ENTRAR a editar un cantoral publicado, reponer su fecha, su horario y su tipo
@@ -307,6 +323,7 @@ export function ChoirView({
       if (libro) gregorianos[parte] = libro;
     }
     setLibroGregoriano(gregorianos);
+    setMisaSimplex(misaDelTiempoDelCantoral(editingCantoral.songs, editingCantoral.date));
     // La Misa del ordinario se lee del Kyrie, que es el que manda; el Gloria puede ser
     // de otra, así que se repone por su cuenta.
     setMisaGregoriana(misaDelCantoral(editingCantoral.songs, editingCantoral.date));
@@ -657,12 +674,42 @@ export function ChoirView({
           {/* Atajo: hay coros que cantan TODOS los propios en gregoriano, y marcarlos
               parte por parte son cinco toques. Sólo aparece si ese día el libro trae
               algo; después se puede cambiar cualquier parte por separado. */}
-          {massCelebration && hayPropios(massCelebration, massCycle) && (
+          {massCelebration && hayPropios(massCelebration,
+            { ciclo: massCycle, tiempo: tiempoDeLaMisa, misaDelTiempo: misaSimplex }) && (
             <div className="mt-3 pt-3 border-t border-blue-200/70 dark:border-slate-600/70">
               <p className="text-sm font-bold text-brand-ink">Propios en gregoriano</p>
               <p className="text-xs text-brand-ink-soft mb-2">
                 Para toda la Misa de una vez. Cada parte se puede cambiar después.
               </p>
+
+              {/* El Simplex no trae un propio por domingo: para el Tiempo Ordinario
+                  ofrece ocho Misas, y para Adviento y Pascua dos. Elegir una es lo que
+                  lo hace servir todo el año; sin esto sólo valía en las veintiséis
+                  celebraciones que el libro nombra, ninguna del Tiempo Ordinario. */}
+              {misasDelSimplex.length > 0 && (
+                <div className="mb-3">
+                  <label className="block text-xs font-bold text-brand-ink mb-1">
+                    Misa del Simplex para {tiempoDeLaMisa.toLowerCase()}
+                  </label>
+                  <select
+                    value={misaSimplex ?? ''}
+                    onChange={(e) => setMisaSimplex(e.target.value || null)}
+                    className="w-full px-3 py-2 rounded-xl border-2 border-stone-300 dark:border-stone-600 bg-white dark:bg-slate-800 text-brand-ink font-semibold focus:outline-none focus:border-stone-700"
+                  >
+                    <option value="">Elige una Misa…</option>
+                    {misasDelSimplex.map((m) => (
+                      <option key={m.clave} value={m.clave}>
+                        {rotuloMisaDelTiempo(m)} · p. {m.pagina}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-brand-ink-soft">
+                    El Simplex da {misasDelSimplex.length} Misas para todo este tiempo y el
+                    coro escoge cuál canta. Los días que el libro sí trae con nombre propio
+                    —Corpus, la Trinidad— se usa el suyo.
+                  </p>
+                </div>
+              )}
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -963,6 +1010,8 @@ export function ChoirView({
                   celebracion={massCelebration}
                   parte={category}
                   ciclo={massCycle}
+                  tiempo={tiempoDeLaMisa}
+                  misaDelTiempo={misaSimplex}
                   valor={libroGregoriano[category] ?? null}
                   onChange={(libro) => elegirGregoriano(category, libro)}
                 />

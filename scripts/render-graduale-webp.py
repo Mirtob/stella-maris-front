@@ -38,6 +38,7 @@ except ImportError:
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INDICE = os.path.join(ROOT, "src", "data", "gradualeIndex.data.ts")
 SALIDA = os.path.join(ROOT, "public", "graduale")
+CALENDARIO = os.path.join(ROOT, "src", "data", "liturgicalCalendar.generated.json")
 APP = os.path.join(ROOT, "src", "data", "gradualeApp.data.ts")
 PDFS = {"romanum": os.path.join(ROOT, "tmp", "graduale", "GR.pdf"),
         "simplex": os.path.join(ROOT, "tmp", "graduale", "GS.pdf")}
@@ -157,7 +158,58 @@ def coser(imagenes):
     return bn.convert("1")
 
 
-def escribir_indice_app(hechas: dict) -> None:
+# El tiempo litúrgico del libro, en las palabras que usa la app (utils/liturgicalSeason).
+TIEMPOS_APP = {
+    "Tempus Adventus": "Adviento",
+    "Tempus Nativitatis": "Navidad",
+    "Tempus Quadragesimae": "Cuaresma",
+    "Tempus Paschale": "Pascua",
+    "Tempus per annum": "Tiempo Ordinario",
+}
+
+MISSA_POR_TIEMPO = re.compile(r"^Missa\s+[IVX]+$", re.I)
+
+
+def tiempo_de_la_misa(libro: str, misa: dict):
+    """El tiempo al que sirve una Misa suelta del Simplex, o `None` si no es de ésas.
+
+    Sólo el Simplex las tiene: son las "Missa I"… "Missa VIII" que el libro ofrece para
+    un tiempo entero, sin atarlas a un domingo. El Romanum no funciona así —da los
+    propios de cada domingo— y su "Missa in Cena Domini", que también empieza por
+    "Missa", no es de éstas: por eso hace falta que el título sea un numeral romano y
+    nada más.
+    """
+    if libro != "simplex" or not MISSA_POR_TIEMPO.match(misa.get("titulo", "")):
+        return None
+    ruta = misa.get("ruta") or []
+    return TIEMPOS_APP.get(ruta[-1]) if ruta else None
+
+
+def comprobar_contra_el_calendario(hechas: dict) -> None:
+    """Avisa de las celebraciones del índice que el calendario de la app no conoce.
+
+    La clave del índice de la app ES el nombre de la celebración, así que una letra de
+    más deja el canto inalcanzable sin que nada falle: el coro simplemente no lo ve.
+    Esto lo caza aquí, que es donde se puede arreglar.
+
+    Importa sobre todo por las celebraciones que el calendario aún trae en inglés: el día
+    que se traduzcan, estas claves quedan huérfanas y hay que actualizarlas.
+    """
+    try:
+        cal = json.load(io.open(CALENDARIO, encoding="utf-8"))
+        nombres = {x["name"] for x in cal}
+    except Exception as e:                            # noqa: BLE001
+        print(f"   (no se pudo leer el calendario: {e})")
+        return
+    huerfanas = sorted({c for libro in hechas.values() for c in libro} - nombres)
+    if huerfanas:
+        print(f"   AVISO: {len(huerfanas)} celebraciones que el calendario no conoce "
+              "(el coro nunca las verá):")
+        for c in huerfanas:
+            print(f"      {c}")
+
+
+def escribir_indice_app(hechas: dict, porTiempo: dict) -> None:
     """El índice ESBELTO que se lleva la app: sólo lo que de verdad hay dibujado.
 
     El índice grande (gradualeIndex.data.ts) lleva los recortes página a página, que son
@@ -191,11 +243,33 @@ export interface MisaApp {
 
 export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>> =
 """
+
+    cabecera_tiempo = """
+/**
+ * Las Misas que el GRADUALE SIMPLEX ofrece por tiempo litúrgico, no por domingo.
+ *
+ * El Simplex está hecho así a propósito: en vez de dar los propios de cada domingo, da
+ * ocho Misas para todo el Tiempo Ordinario, dos para Adviento y dos para Pascua, y es el
+ * coro quien escoge cuál canta. Por eso no aparecen en `GRADUALE_APP`, que va por
+ * celebración: aquí van por tiempo, y la elección se hace en el constructor.
+ *
+ * Los domingos que el Simplex SÍ trae con nombre propio (los de Cuaresma, las
+ * solemnidades) están en `GRADUALE_APP` como los del Romanum.
+ */
+export const SIMPLEX_POR_TIEMPO: Record<string, Record<string, MisaApp>> =
+"""
     cuerpo = json.dumps(hechas, ensure_ascii=False, indent=1)
-    io.open(APP, "w", encoding="utf-8").write(cabecera + cuerpo + " as const;" + chr(10))
+    porTiempoTxt = json.dumps(porTiempo, ensure_ascii=False, indent=1)
+    io.open(APP, "w", encoding="utf-8").write(
+        cabecera + cuerpo + " as const;" + chr(10)
+        + cabecera_tiempo + porTiempoTxt + " as const;" + chr(10))
     total = sum(len(v) for v in hechas.values())
+    sueltas = sum(len(v) for v in porTiempo.values())
     print("")
-    print(f"índice de la app: {total} celebraciones · {os.path.getsize(APP) // 1024} KB")
+    print(f"índice de la app: {total} celebraciones + {sueltas} Misas por tiempo "
+          f"({', '.join(f'{t}: {len(v)}' for t, v in porTiempo.items())}) · "
+          f"{os.path.getsize(APP) // 1024} KB")
+    comprobar_contra_el_calendario(hechas)
 
 
 def main():
@@ -209,7 +283,7 @@ def main():
 
     indice = leer_indice()
     libros = [args.libro] if args.libro else list(PDFS)
-    app = {}
+    app, porTiempo = {}, {}
     for libro in libros:
         ruta = PDFS[libro]
         if not os.path.exists(ruta):
@@ -243,13 +317,28 @@ def main():
                 coser(partes).save(destino, "WEBP", lossless=True, method=6)
                 total += os.path.getsize(destino)
                 hechos += 1
-                # Sólo las Misas atadas a una celebración del calendario llegan a la
-                # app: el Simplex ofrece además Misas por tiempo ("Missa I"…), que no
-                # corresponden a un domingo concreto y las elige el coro a mano.
+                # A la app llegan dos cosas distintas:
+                #
+                #  · las Misas atadas a una celebración del calendario (las dos del
+                #    Romanum y buena parte del Simplex), y
+                #  · las Misas POR TIEMPO del Simplex ("Missa I"… "Missa VIII"), que no
+                #    corresponden a ningún domingo concreto y elige el coro.
+                #
+                # Lo segundo no es un hueco del índice: el Simplex está pensado así, con
+                # ocho Misas para todo el Tiempo Ordinario. Sin ofrecerlas, el Simplex se
+                # quedaba en catorce domingos sueltos de los cincuenta y dos del año.
                 misa = indice[libro][clave]
-                celebracion = misa.get("celebracion")
-                if celebracion:
-                    ficha = logradas.setdefault(celebracion, {
+                destinos = []
+                if misa.get("celebracion"):
+                    destinos.append((logradas, misa["celebracion"]))
+                for otra in misa.get("tambien") or []:
+                    destinos.append((logradas, otra))
+                tiempo = tiempo_de_la_misa(libro, misa)
+                if tiempo:
+                    destinos.append((porTiempo.setdefault(tiempo, {}), clave))
+
+                for donde, llave in destinos:
+                    ficha = donde.setdefault(llave, {
                         "clave": clave, "titulo": misa["titulo"],
                         "pagina": misa["pagina"], "cantos": {},
                     })
@@ -275,7 +364,7 @@ def main():
     # Sólo se reescribe el índice de la app cuando se dibujaron LOS DOS libros: con
     # --libro se está probando, y guardar medio índice dejaría la app sin el otro.
     if len(libros) == len(PDFS):
-        escribir_indice_app(app)
+        escribir_indice_app(app, porTiempo)
     else:
         print("(sólo un libro: no se toca el índice de la app)")
 

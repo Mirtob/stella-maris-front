@@ -22,6 +22,8 @@ export interface MisaGraduale {
   /** Celebración del calendario de la app, cuando se pudo emparejar. El Simplex casi
    *  nunca la trae: ofrece Misas por tiempo, y el domingo lo elige el coro. */
   celebracion?: string;
+  /** Otras celebraciones a las que sirve esta misma Misa ("Dominica II & III"). */
+  tambien?: string[];
   /** Secciones que la contienen, de fuera a dentro ("Proprium de Tempore", "Tempus
    *  Adventus"…). Sin esto, "Feria Secunda" o "Missa I" son ambiguos. */
   ruta: string[];
@@ -3982,7 +3984,7 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
      }
     ]
    },
-   "celebracion": "2.º Domingo de Pascua",
+   "celebracion": "Domingo de la Divina Misericordia (2.º de Pascua)",
    "noExisten": [
     "graduale"
    ]
@@ -6686,9 +6688,14 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
     ],
     "alleluia": [
      {
-      "p": 365,
-      "y0": 413.8,
-      "y1": 438.9
+      "p": 385,
+      "y0": 498.5,
+      "y1": 519.3
+     },
+     {
+      "p": 386,
+      "y0": 0,
+      "y1": 280.4
      }
     ],
     "offertorium": [
@@ -6705,13 +6712,13 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
     ],
     "communio": [
      {
-      "p": 366,
-      "y0": 153.0,
-      "y1": 519.3
+      "p": 387,
+      "y0": 0.0,
+      "y1": 280.4
      }
     ]
    },
-   "celebracion": "34.º Domingo del Tiempo Ordinario"
+   "celebracion": "Jesucristo, Rey del Universo"
   },
   "sollemnitates-domini-tempore-per-annum-occurrentes": {
    "titulo": "Sollemnitates Domini Tempore per Annum Occurrentes",
@@ -6996,68 +7003,6 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
     ]
    },
    "celebracion": "Sagrado Corazón de Jesús"
-  },
-  "dominica-ultima-per-annum-d-n-iesu-christi-universorum-regis": {
-   "titulo": "Dominica ultima per Annum — D. N. Iesu Christi Universorum Regis",
-   "ruta": [
-    "Proprium de Tempore",
-    "Tempus per annum",
-    "Sollemnitates Domini Tempore per Annum Occurrentes"
-   ],
-   "pagina": 385,
-   "cantos": {
-    "introitus": [
-     {
-      "p": 384,
-      "y0": 91.9,
-      "y1": 519.3
-     },
-     {
-      "p": 385,
-      "y0": 0,
-      "y1": 41.0
-     }
-    ],
-    "graduale": [
-     {
-      "p": 385,
-      "y0": 33.0,
-      "y1": 519.3
-     },
-     {
-      "p": 386,
-      "y0": 0,
-      "y1": 281.1
-     }
-    ],
-    "offertorium": [
-     {
-      "p": 386,
-      "y0": 273.1,
-      "y1": 519.3
-     }
-    ],
-    "alleluia": [
-     {
-      "p": 385,
-      "y0": 498.5,
-      "y1": 519.3
-     },
-     {
-      "p": 386,
-      "y0": 0,
-      "y1": 280.4
-     }
-    ],
-    "communio": [
-     {
-      "p": 387,
-      "y0": 0.0,
-      "y1": 280.4
-     }
-    ]
-   },
-   "celebracion": "Jesucristo, Rey del Universo"
   },
   "antiphonae-eucharisticae-pro-communione-ad-libitum-adhibendae": {
    "titulo": "Antiphonae Eucharisticae pro Communione ad Libitum Adhibendae",
@@ -9592,7 +9537,10 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
      }
     ]
    },
-   "celebracion": "2.º Domingo de Cuaresma"
+   "celebracion": "2.º Domingo de Cuaresma",
+   "tambien": [
+    "3.º Domingo de Cuaresma"
+   ]
   },
   "dominica-iv": {
    "titulo": "Dominica IV",
@@ -11140,7 +11088,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 573.1
      }
     ]
-   }
+   },
+   "celebracion": "Presentación del Señor"
   },
   "santi-ioseph-sponsi-b-mariae-virginis": {
    "titulo": "Santi Ioseph sponsi B. Mariae Virginis",
@@ -11193,7 +11142,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "San José, Esposo de la Virgen María"
   },
   "in-annuntiatione-domini": {
    "titulo": "In Annuntiatione Domini",
@@ -11246,7 +11196,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "Anunciación del Señor"
   },
   "in-nativitate-sancti-ioannis-baptistae": {
    "titulo": "In Nativitate sancti Ioannis Baptistae",
@@ -11321,7 +11272,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "Natividad de San Juan Bautista"
   },
   "sanctorum-petri-et-pauli-apostolorum": {
    "titulo": "Sanctorum Petri et Pauli Apostolorum",
@@ -11391,7 +11343,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "San Pedro y San Pablo, Apóstoles"
   },
   "in-transfiguratione-domini": {
    "titulo": "In Transfiguratione Domini",
@@ -11461,7 +11414,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "Transfiguración del Señor"
   },
   "in-assumptione-b-mariae-virginis": {
    "titulo": "In Assumptione B. Mariae Virginis",
@@ -11541,7 +11495,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "Asunción de la Virgen María"
   },
   "in-nativitate-b-mariae-virginis": {
    "titulo": "In Nativitate B. Mariae Virginis",
@@ -11589,7 +11544,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "Birth of the Blessed Virgin Mary"
   },
   "in-exaltatione-sanctae-crucis": {
    "titulo": "In Exaltatione sanctae Crucis",
@@ -11654,7 +11610,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "The Exaltation of the Holy Cross"
   },
   "ss-michaelis-gabrielis-et-raphaelis-archangelorum": {
    "titulo": "Ss. Michaelis, Gabrielis et Raphaelis, archangelorum",
@@ -11729,7 +11686,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "Saints Michael, Gabriel and Raphael, Archangels"
   },
   "omnium-sanctorum": {
    "titulo": "Omnium Sanctorum",
@@ -11799,7 +11757,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "Todos los Santos"
   },
   "in-conceptione-immaculata-b-mariae-virginis": {
    "titulo": "In Conceptione immaculata B. Mariae Virginis",
@@ -11848,7 +11807,8 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y1": 576.0
      }
     ]
-   }
+   },
+   "celebracion": "Inmaculada Concepción de la Virgen María"
   },
   "commune-dedicationis-ecclesiae": {
    "titulo": "Commune dedicationis ecclesiae",
