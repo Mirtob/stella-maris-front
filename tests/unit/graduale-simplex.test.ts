@@ -164,10 +164,44 @@ check('el 1.º de Adviento de 2026 abre el año litúrgico siguiente',
 check('y el domingo anterior es todavía el año que termina',
   getSundayCycle('2026-11-22') !== getSundayCycle('2026-11-29'), true);
 
-// Con los datos de hoy ningún canto tiene variantes todavía (falta marcar la columna
-// Ciclo de la planilla), así que la regla se prueba sobre la función, no sobre el índice.
-check('hoy el índice no trae ninguna variante por año',
-  resolveGraduale('romanum', DOMINGO_23, 'Comunión')?.año, undefined);
+// ── Las variantes que el libro trae de verdad ──────────────────────────────
+// Se leen del propio Graduale: el libro rotula los años en texto ("Dom. anno B :") y el
+// escaneo lo conserva. Estas tres celebraciones son las que hoy salen con variante.
+const TERCERO = '3.º Domingo del Tiempo Ordinario';
+check('el 3.º domingo tiene una comunión para cada año',
+  ['A', 'B', 'C'].map((a) =>
+    resolveGraduale('romanum', TERCERO, 'Comunión', { ciclo: a as any })?.año),
+  ['A', 'B', 'C']);
+check('y son tres imágenes distintas',
+  new Set(['A', 'B', 'C'].map((a) =>
+    resolveGraduale('romanum', TERCERO, 'Comunión', { ciclo: a as any })?.imagen)).size, 3);
+
+// En el 2.º domingo el libro sólo rotula B y C: el año A canta la versión general, que
+// es la suya. Sin ese respaldo el canto desaparecía justo en el año que viene.
+const SEGUNDO = '2.º Domingo del Tiempo Ordinario';
+check('el 2.º domingo tiene comunión los tres años',
+  ['A', 'B', 'C'].every((a) =>
+    resolveGraduale('romanum', SEGUNDO, 'Comunión', { ciclo: a as any }) !== null), true);
+check('B y C llevan la suya, y A la general',
+  ['A', 'B', 'C'].map((a) =>
+    resolveGraduale('romanum', SEGUNDO, 'Comunión', { ciclo: a as any })?.año),
+  [undefined, 'B', 'C']);
+
+// Sin saber el año no se puede elegir entre variantes: se devuelve la general, y si no
+// la hay, nada. Nunca la de un año al azar.
+check('sin año, el 3.º domingo no devuelve ninguna al azar',
+  resolveGraduale('romanum', TERCERO, 'Comunión'), null);
+check('un domingo sin variantes no dice año',
+  resolveGraduale('romanum', DOMINGO_23, 'Comunión', { ciclo: 'A' })?.año, undefined);
+
+// El pie del folleto sólo nombra el año donde de verdad cambia: es la única pista de
+// por qué ese domingo no suena como el del año pasado.
+check('el pie dice el año cuando hay variante',
+  buildGradualeSong('2027-01-24', TERCERO, 'Comunión', 'romanum', { ciclo: 'C' })
+    ?.gradualeFuente?.includes('Año C'), true);
+check('y no lo dice cuando no la hay',
+  buildGradualeSong('2026-09-06', DOMINGO_23, 'Comunión', 'romanum', { ciclo: 'A' })
+    ?.gradualeFuente?.includes('Año'), false);
 
 console.log(`\n${pass} ok, ${fail} fallas`);
 if (fail) process.exit(1);

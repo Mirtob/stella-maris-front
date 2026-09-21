@@ -254,7 +254,11 @@ export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>
    "cantos": {
     "introitus": 1,
     "offertorium": 1,
-    "communio": 1,
+    "communio": [
+     "*",
+     "A",
+     "C"
+    ],
     "alleluia": 1
    }
   },
@@ -298,7 +302,11 @@ export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>
     "introitus": 1,
     "graduale": 1,
     "offertorium": 1,
-    "communio": 1,
+    "communio": [
+     "*",
+     "B",
+     "C"
+    ],
     "alleluia": 1
    }
   },
@@ -311,7 +319,11 @@ export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>
     "offertorium": 1,
     "graduale": 1,
     "alleluia": 1,
-    "communio": 1
+    "communio": [
+     "A",
+     "B",
+     "C"
+    ]
    }
   },
   "4.º Domingo del Tiempo Ordinario": {

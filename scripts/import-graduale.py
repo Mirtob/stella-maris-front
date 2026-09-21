@@ -420,22 +420,216 @@ def rotulos_de_pagina(pagina, cantos: list) -> list:
     return unicos
 
 
-def recortes_de_misa(doc, desde: int, hasta: int, cantos: list) -> dict:
-    """Para cada canto de la Misa, las regiones de página que hay que recortar.
+# El libro rotula los años EN TEXTO, no en la música: "Dom. anno B :", "Dom. annis A et
+# B :". El escaneo lo conserva, así que se pueden leer.
+ANIO = re.compile(r"\bann?(?:o|is)\s+([ABC])(?:\s*et\s*([ABC]))?\s*:?\s*(.*)$", re.I)
+# CÓMO SE SABE SI EL CANTO ESTÁ AQUÍ O EN OTRA PÁGINA.
+#
+# Cuando el canto viene debajo, el rótulo es sólo el rótulo: "Dom. anno B :". Cuando está
+# en otro sitio, el libro pone su comienzo y a dónde ir: "Dom. anno B : Fuit homo, 569."
+# Así que basta con mirar si hay ALGO detrás de los dos puntos.
+#
+# Se probó primero a buscar el número de folio del final, y no sirve: el escaneo lo
+# destroza ("In nomine Domini, I 55-" por "155."). Esa referencia se coló como si el
+# canto estuviera ahí y recortó TRES PÁGINAS de música de otros domingos. Mirar si hay
+# texto detrás es inmune a eso, porque da igual cómo salga escrito.
+LETRAS = re.compile(r"[A-Za-zÀ-ÿ0-9]")
+MINIMO_PARA_SER_REFERENCIA = 3
+
+# Cuánto puede separar a un rótulo de año del canto al que manda, en puntos. Van pegados
+# (25-35 pt en el libro); con más distancia ya no se sabe si el canto es suyo o del
+# siguiente, y poner un canto en el año que no es sería peor que no ponerlo.
+CERCA_DEL_ANIO = 60
+
+# Alto mínimo de un canto, en puntos. Sirve para no cortar un recorte por el propio
+# rótulo cuando el OCR lo repite un par de líneas más abajo.
+ALTO_MINIMO = 40
+
+# Cuántos rótulos de año se aprovecharon y cuántos no. Se informa en cada corrida: lo
+# que queda fuera es lo que NO se puede dar por bueno, y conviene tenerlo a la vista.
+CUENTA_ANIOS = {"vistos": 0, "aplicados": 0, "sinCanto": 0}
+
+# Cuánto pueden tocarse dos recortes sin que se considere que uno se come al otro, en
+# puntos. Por debajo de esto es el roce normal del margen entre canto y canto.
+SOLAPE_TOLERADO = 30
+
+
+def regiones_entre(doc, p0: int, y0: float, p1: int, y1: float) -> list:
+    """De (página, altura) a (página, altura), las regiones a recortar."""
+    fuera = []
+    for p in range(p0, min(p1 + 1, doc.page_count)):
+        alto = doc[p].rect.height
+        desde = max(0.0, y0) if p == p0 else 0.0
+        hasta = min(y1, alto) if p == p1 else alto
+        if hasta - desde > 2:
+            fuera.append({"p": p, "y0": round(desde, 1), "y1": round(hasta, 1)})
+    return fuera
+
+
+def rotulos_crudos(pagina, cantos: list) -> list:
+    """TODOS los rótulos de canto de la página, sin quitar los repetidos: [(tipo, y)].
+
+    `rotulos_de_pagina` se queda con uno por tipo y página, y hace bien: así no se cuela
+    la basura del OCR en la detección normal. Pero por eso mismo no sirve aquí — cuando
+    una página trae dos comuniones, la del año B y la del C, la segunda no existe para
+    ella. Esta versión las ve todas, y se usa SÓLO pegada a un rótulo de año, que es
+    donde se sabe que empieza un canto de verdad.
+    """
+    # SIN distinguir mayúsculas, y esto es lo que hacía falta: en las páginas con dos
+    # comuniones el escaneo escribe "co." en minúscula, y la detección normal —que sí
+    # distingue— no veía ninguna de las dos. Aquí se puede permitir porque lo que se
+    # encuentre sólo vale si cae pegado a un rótulo de año.
+    texto = pagina.get_text()
+    hallados = []
+    for tipo, patron in cantos:
+        for m in re.finditer(patron, texto, re.I):
+            for caja in pagina.search_for(m.group(0)):
+                hallados.append((tipo, round(caja.y0, 1)))
+    # El mismo literal puede aparecer varias veces en la misma línea: se agrupa.
+    fuera, vistos = [], set()
+    for tipo, y in sorted(hallados, key=lambda x: x[1]):
+        clave = (tipo, round(y))
+        if clave in vistos:
+            continue
+        vistos.add(clave)
+        fuera.append((tipo, y))
+    return fuera
+
+
+# Dónde ACABA un canto, además de en el rótulo siguiente.
+#
+# Un canto de año es el último de su Misa muchas veces, y entonces no hay rótulo detrás
+# que lo corte: el recorte se comía las referencias a las ferias y hasta el encabezado de
+# la Misa siguiente. Estas dos líneas son el final de verdad:
+#
+#   · el encabezado de la Misa siguiente, en mayúsculas ("HEBDOMADA TERTIA");
+#   · las remisiones a los días de entre semana ("Feria 5 : Multitudo languentium, 471").
+#
+# El encabezado se exige como DOS PALABRAS enteras en mayúsculas ("HEBDOMADA TERTIA").
+# Con un patrón más suelto —cualquier línea en mayúsculas— el ruido del escaneo pasaba
+# por encabezado y cortaba el canto por la mitad: la comunión del año C perdía su último
+# pentagrama.
+CIERRA_LA_MISA = re.compile(
+    r"^(?:Feria\s+\d|[-—]\s*\d\s*:)"
+    r"|^[A-ZÁÉÍÓÚÆŒ]{3,}(?:\s+[A-ZÁÉÍÓÚÆŒ]{2,})+\s*$")
+
+
+ALTO_CABECERA = 26   # alto de la cabecera corrida de la página, en puntos
+
+
+def cierres_de_pagina(pagina) -> list:
+    """Las alturas donde acaba un bloque de cantos en esta página.
+
+    Se ignora la franja de arriba: ahí va la CABECERA CORRIDA ("TEMPUS PER ANNUM"), que
+    tiene la misma forma que el encabezado de una Misa y se colaba como final. Con ella,
+    un canto que seguía en la página siguiente se cortaba en el primer milímetro.
+    """
+    fuera = []
+    for b in pagina.get_text("dict")["blocks"]:
+        for l in b.get("lines", []):
+            y = round(l["bbox"][1], 1)
+            if y < ALTO_CABECERA:
+                continue
+            t = " ".join("".join(s["text"] for s in l["spans"]).split())
+            if t and len(t) < 60 and CIERRA_LA_MISA.match(t):
+                fuera.append(y)
+    return sorted(fuera)
+
+
+def anios_de_pagina(pagina) -> list:
+    """Los rótulos de año de la página: [(y, 'AB')], sólo los que traen el canto debajo.
+
+    Se descartan los que remiten a otro folio: ahí no empieza ningún canto, y si se
+    tomaran, el año acabaría apuntando al canto siguiente, que es de otro.
+    """
+    fuera = []
+    for b in pagina.get_text("dict")["blocks"]:
+        for l in b.get("lines", []):
+            t = " ".join("".join(s["text"] for s in l["spans"]).split())
+            if not t or len(t) > 70:
+                continue
+            m = ANIO.search(t)
+            if not m:
+                continue
+            # Si detrás de los dos puntos hay texto, el canto está en otra página.
+            if len(LETRAS.findall(m.group(3) or "")) >= MINIMO_PARA_SER_REFERENCIA:
+                continue
+            fuera.append((round(l["bbox"][1], 1),
+                          "".join(a.upper() for a in (m.group(1), m.group(2)) if a)))
+    return sorted(fuera)
+
+
+def recortes_de_misa(doc, desde: int, hasta: int, cantos: list,
+                     anios_usados: set = None) -> tuple:
+    """Las regiones a recortar de cada canto de la Misa, y las variantes por año.
 
     Un canto va de su rótulo al siguiente. Si el siguiente está en otra página, el
     canto sigue hasta el pie y continúa en las páginas de en medio: por eso cada canto
     guarda una LISTA de regiones, no una sola.
+
+    LAS VARIANTES POR AÑO YA ESTABAN AQUÍ, y se tiraban. Muchos domingos del Tiempo
+    Ordinario traen un canto distinto según el año del leccionario, y el libro lo avisa
+    con un rótulo de texto justo encima. Como este recorrido se quedaba con el PRIMER
+    canto de cada tipo y descartaba el resto, la segunda comunión —la de otro año— se
+    perdía sin que nada lo dijera. Ahora, cuando un canto viene precedido de un rótulo de
+    año, se guarda aparte, bajo ese año.
     """
     # Todos los rótulos del rango, en orden, con su página.
-    marcas = []
+    marcas, crudas, anios = [], [], []
     for p in range(desde, hasta):
         if p >= doc.page_count:
             break
         for tipo, y in rotulos_de_pagina(doc[p], cantos):
             marcas.append({"tipo": tipo, "pagina": p, "y": y})
 
-    cantos = {}
+    # Para los años se mira UNA PÁGINA MÁS, porque el último canto de una Misa suele
+    # seguir en la página donde ya empieza la siguiente. Como esa página la recorren las
+    # dos, se reparte por orden de lectura: el rótulo de año que ya tomó la Misa anterior
+    # no lo vuelve a tomar la siguiente — está por encima de su encabezado, así que es
+    # cola de la anterior.
+    usados = anios_usados if anios_usados is not None else set()
+    cierres = []
+    for p in range(desde, min(hasta + 1, doc.page_count)):
+        for tipo, y in rotulos_crudos(doc[p], cantos):
+            crudas.append({"tipo": tipo, "pagina": p, "y": y})
+        for y in cierres_de_pagina(doc[p]):
+            cierres.append((p, y))
+        for y, letras in anios_de_pagina(doc[p]):
+            if (p, y) in usados:
+                continue
+            usados.add((p, y))
+            anios.append({"pagina": p, "y": y, "anios": letras})
+
+    porAnio = {}
+    for a in anios:
+        # El canto de ese año empieza en el rótulo que va JUSTO debajo del de año.
+        inicio = next((c for c in crudas
+                       if c["pagina"] == a["pagina"]
+                       and 0 < c["y"] - a["y"] < CERCA_DEL_ANIO), None)
+        CUENTA_ANIOS["vistos"] += 1
+        if not inicio:
+            # El rótulo está, pero debajo no arranca ningún canto: o remite a otro folio
+            # (y eso ya se filtró) o el escaneo no dejó leer su abreviatura. Se cuenta
+            # para saber cuánto queda fuera, que es lo que no se puede dar por bueno.
+            CUENTA_ANIOS["sinCanto"] += 1
+            continue
+        # Y termina donde empieza lo siguiente: otro canto, otro año, o el fin de la Misa.
+        # Se exige alguna distancia para no cortar por el propio rótulo repetido.
+        siguientes = [(c["pagina"], c["y"]) for c in crudas
+                      if (c["pagina"], c["y"]) > (inicio["pagina"], inicio["y"] + ALTO_MINIMO)]
+        siguientes += [(x["pagina"], x["y"]) for x in anios
+                       if (x["pagina"], x["y"]) > (inicio["pagina"], inicio["y"] + ALTO_MINIMO)]
+        siguientes += [c for c in cierres
+                       if c > (inicio["pagina"], inicio["y"] + ALTO_MINIMO)]
+        fin = min(siguientes) if siguientes else (min(hasta, doc.page_count), 0.0)
+        regiones = regiones_entre(doc, inicio["pagina"], inicio["y"] - MARGEN_ARRIBA,
+                                  fin[0], fin[1] - MARGEN_ABAJO)
+        if regiones:
+            CUENTA_ANIOS["aplicados"] += 1
+            for letra in a["anios"]:
+                porAnio.setdefault(letra, {}).setdefault(inicio["tipo"], regiones)
+
+    salida = {}
     for i, marca in enumerate(marcas):
         sig = marcas[i + 1] if i + 1 < len(marcas) else None
         alto = doc[marca["pagina"]].rect.height
@@ -452,9 +646,49 @@ def recortes_de_misa(doc, desde: int, hasta: int, cantos: list) -> dict:
             if sig:
                 regiones.append({"p": sig["pagina"], "y0": 0,
                                  "y1": max(0, sig["y"] - MARGEN_ABAJO)})
+
         # El primero de cada tipo manda (una Misa no repite su introito).
-        cantos.setdefault(marca["tipo"], regiones)
-    return cantos
+        salida.setdefault(marca["tipo"], regiones)
+
+    return salida, porAnio
+
+
+def se_solapan(a: list, b: list) -> float:
+    """Cuánto se pisan dos recortes, en puntos. 0 si no se tocan."""
+    total = 0.0
+    for ra in a or []:
+        for rb in b or []:
+            if ra["p"] != rb["p"]:
+                continue
+            total += max(0.0, min(ra["y1"], rb["y1"]) - max(ra["y0"], rb["y0"]))
+    return total
+
+
+def quitar_generales_que_pisan(indice: dict) -> int:
+    """La versión general de un canto no puede contener la de un año.
+
+    Cuando el libro trae un canto por año, la detección normal —que no sabe de años— se
+    queda con un recorte largo que se come dos o tres de esas versiones. Si ese recorte
+    queda como "general", los años sin versión propia acabarían mostrándolo: un revoltijo
+    con el canto de otro año dentro. Mejor sin canto que con el canto equivocado.
+
+    Se hace AL FINAL, sobre el índice ya completo, y no al detectar: la planilla
+    rellenada a mano se aplica después y volvía a meter esos recortes largos. Aquí da
+    igual de dónde venga cada uno.
+
+    Se permite un roce pequeño: dos recortes seguidos se tocan por el margen, y eso no es
+    pisarse.
+    """
+    quitados = 0
+    for libro in indice.values():
+        for misa in libro.values():
+            for tipo, regiones in list(misa.get("cantos", {}).items()):
+                for cantos_del_anio in (misa.get("cantosPorCiclo") or {}).values():
+                    if se_solapan(regiones, cantos_del_anio.get(tipo)) > SOLAPE_TOLERADO:
+                        del misa["cantos"][tipo]
+                        quitados += 1
+                        break
+    return quitados
 
 
 # Posiciones de la planilla → fracción de la altura de la página. Excel guarda unas
@@ -603,9 +837,12 @@ def main():
 
         misas = misas_del_libro(doc)
         conMisa, sinNada = {}, []
+        # Compartido por todas las Misas del libro: ver el reparto en recortes_de_misa.
+        anios_usados = set()
         for m in misas:
-            cantos = recortes_de_misa(doc, m["desde"], m["hasta"], CANTOS_POR_LIBRO[clave])
-            if not cantos:
+            cantos, porAnio = recortes_de_misa(
+                doc, m["desde"], m["hasta"], CANTOS_POR_LIBRO[clave], anios_usados)
+            if not cantos and not porAnio:
                 sinNada.append(m["titulo"])
                 continue
             clave_misa = slug(m["titulo"])
@@ -622,6 +859,10 @@ def main():
                 "pagina": m["desde"] + 1,
                 "cantos": cantos,
             }
+            # Las variantes por año que trae el libro. El año NO se elige: lo pone la
+            # fecha de la Misa, así que esto es un dato, no una opción.
+            if porAnio:
+                entrada["cantosPorCiclo"] = porAnio
             if celebracion:
                 entrada["celebracion"] = celebracion
             # Una misma Misa puede servir a más de un domingo (ver TAMBIEN_SIRVE).
@@ -660,6 +901,10 @@ def main():
         print(f"  marcadores sin ningún canto (secciones, prólogos…): {len(sinNada)}")
 
     # ── Lo rellenado a mano, encima de lo detectado ─────────────────────────
+    print("")
+    print(f"variantes por año: {CUENTA_ANIOS['aplicados']} de {CUENTA_ANIOS['vistos']} "
+          f"rótulos ({CUENTA_ANIOS['sinCanto']} sin canto legible debajo)")
+
     res = aplicar_planilla(indice, docs, args.planilla, redirecciones)
     for d in docs.values():
         d.close()
@@ -667,6 +912,10 @@ def main():
           f"{res['porCiclo']} variantes por ciclo, {res['noExisten']} marcados como inexistentes")
     for msg in res["descartadas"][:10]:
         print(f"   descartada {msg}")
+
+    quitados = quitar_generales_que_pisan(indice)
+    if quitados:
+        print(f"quitadas {quitados} versiones generales que contenían la de un año")
 
     cabecera = """// ARCHIVO GENERADO por scripts/import-graduale.py — NO editar a mano.
 // Dónde está cada canto propio en el Graduale Romanum y en el Graduale Simplex:

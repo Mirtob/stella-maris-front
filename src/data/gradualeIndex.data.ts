@@ -4237,6 +4237,31 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
      }
     ]
    },
+   "cantosPorCiclo": {
+    "A": {
+     "communio": [
+      {
+       "p": 228,
+       "y0": 150.6,
+       "y1": 343.3
+      }
+     ]
+    },
+    "C": {
+     "communio": [
+      {
+       "p": 228,
+       "y0": 365.6,
+       "y1": 519.3
+      },
+      {
+       "p": 229,
+       "y0": 0.0,
+       "y1": 28.5
+      }
+     ]
+    }
+   },
    "celebracion": "6.º Domingo de Pascua",
    "noExisten": [
     "graduale"
@@ -4749,6 +4774,31 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
      }
     ]
    },
+   "cantosPorCiclo": {
+    "B": {
+     "communio": [
+      {
+       "p": 259,
+       "y0": 55.7,
+       "y1": 261.4
+      }
+     ]
+    },
+    "C": {
+     "communio": [
+      {
+       "p": 259,
+       "y0": 267.0,
+       "y1": 519.3
+      },
+      {
+       "p": 260,
+       "y0": 0.0,
+       "y1": 115.2
+      }
+     ]
+    }
+   },
    "celebracion": "2.º Domingo del Tiempo Ordinario"
   },
   "hebdomada-tertia": {
@@ -4806,19 +4856,46 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "y0": 325.4,
       "y1": 519.3
      }
-    ],
-    "communio": [
-     {
-      "p": 263,
-      "y0": 238.9,
-      "y1": 519.3
-     },
-     {
-      "p": 264,
-      "y0": 0,
-      "y1": 410.2
-     }
     ]
+   },
+   "cantosPorCiclo": {
+    "A": {
+     "communio": [
+      {
+       "p": 263,
+       "y0": 391.2,
+       "y1": 519.3
+      },
+      {
+       "p": 264,
+       "y0": 0.0,
+       "y1": 90.9
+      }
+     ]
+    },
+    "B": {
+     "communio": [
+      {
+       "p": 263,
+       "y0": 391.2,
+       "y1": 519.3
+      },
+      {
+       "p": 264,
+       "y0": 0.0,
+       "y1": 90.9
+      }
+     ]
+    },
+    "C": {
+     "communio": [
+      {
+       "p": 264,
+       "y0": 115.0,
+       "y1": 327.5
+      }
+     ]
+    }
    },
    "celebracion": "3.º Domingo del Tiempo Ordinario"
   },
