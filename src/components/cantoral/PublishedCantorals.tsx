@@ -13,6 +13,7 @@ import { parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
 import { massTypeBadge, cantoralYaPaso, fechaEnQueSeCanta } from '../../utils/massType';
 import { groupSongsByMassPart, massCategoryIcon } from '../../utils/ordinary';
 import { parseParishChapel, splitActiveParish } from '../../utils/parish';
+import { cantoralVisiblePara, esCantoralDeSalida } from '../../utils/cantoralVisibilidad';
 import { LiturgicalColorBadge } from '../liturgy/LiturgicalColorBadge';
 
 interface PublishedCantoralsProps {
@@ -95,10 +96,12 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
   // Filtrar por parroquia activa del usuario (tolerante a espacios y mayúsculas,
   // igual que listCantorals — evita que un cantoral "no aparezca" por diferencias
   // de formato entre la parroquia guardada y la activa).
+  //
+  // Con una excepción: el cantoral que MI coro armó como invitado en otra parroquia
+  // también es suyo y se queda, aunque su parroquia sea otra. Solo para el perfil Coro
+  // (el pueblo fiel de aquí ese domingo va a su propia Misa). Ver utils/cantoralVisibilidad.
   if (userParishName) {
-    const norm = (s?: string) => (s ?? '').trim().toLowerCase();
-    const target = norm(userParishName);
-    roleList = roleList.filter(c => norm(c.parishName) === target);
+    roleList = roleList.filter(c => cantoralVisiblePara(c, { unidadActiva: userParishName, esCoro: canManage }));
   }
 
   // ── Ventanas temporales ────────────────────────────────────────────────────
@@ -219,6 +222,14 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                   )}
                 </div>
                 <div className="text-sm opacity-90">{cantoral.parishName}</div>
+                {/* Salida del coro: este cantoral se canta en OTRA parroquia, la que
+                    invitó. Sin decirlo, en la lista de la parroquia propia parece un
+                    cantoral con la parroquia mal escrita. */}
+                {esCantoralDeSalida(cantoral, userParishName) && (
+                  <div className="mt-1 inline-flex items-center gap-1 text-[11px] font-bold bg-white/25 border border-white/40 rounded-full px-2 py-0.5">
+                    ✈️ Invitados — se canta allá
+                  </div>
+                )}
               </div>
             </div>
             {cantoral.status === 'draft' && (

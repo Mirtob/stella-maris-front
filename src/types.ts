@@ -190,4 +190,15 @@ export interface PublishedCantoral {
   garland?: string; // Id de la guirnalda elegida para adornar el folleto PDF (ver data/garlands)
   pdfFont?: string; // Id de la fuente del folleto PDF (ver data/pdfStyle)
   pdfSize?: string; // Id del tamaño/escala del folleto PDF (ver data/pdfStyle)
+  /**
+   * Parroquia/capilla del CORO INVITADO, cuando este cantoral se publicó en casa ajena.
+   *
+   * El coro de Pirque canta la fiesta patronal de Valdivia de Paine: el cantoral es de
+   * Valdivia (`parishName`) para todo el mundo, y además del coro de Pirque —solo del
+   * CORO, no de su pueblo fiel, que ese domingo tiene su propia Misa—. Guarda la unidad
+   * tal como fue invitada (`ChoirInvitation.guestParish`).
+   *
+   * Vacío = cantoral normal, de la parroquia propia. Ver utils/cantoralVisibilidad.
+   */
+  guestChoirParish?: string;
 }

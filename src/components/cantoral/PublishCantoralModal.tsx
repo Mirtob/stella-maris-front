@@ -38,6 +38,12 @@ export interface PublishTarget {
   pdfFont: string;
   /** Id del tamaño/escala de letra del folleto PDF. */
   pdfSize: string;
+  /**
+   * Cuando se publica en la parroquia que INVITÓ: la unidad del coro invitado, tal como
+   * fue invitada. Hace que el cantoral también sea del coro que lo armó y no solo de la
+   * casa ajena. Vacío en una publicación normal. Ver utils/cantoralVisibilidad.
+   */
+  guestChoirParish?: string;
 }
 
 interface PublishCantoralModalProps {
@@ -56,6 +62,10 @@ interface PublishCantoralModalProps {
   invitations?: ChoirInvitation[];
   /** Admin verificado: sus celebraciones agregadas son globales (para todos los usuarios). */
   isAdmin?: boolean;
+  /** Parroquia/capilla elegida en el constructor como destino ("Dónde se canta"). Es
+   *  la que viene marcada al abrir; sin esto, el coro que armó el cantoral de la
+   *  parroquia que lo invitó lo encontraba marcado para su propia parroquia. */
+  initialParish?: string;
   /** Datos pre-seleccionados al inicio del constructor (fecha/hora/tipo de Misa). */
   initialDate?: string;
   initialMassTime?: string;
@@ -97,12 +107,17 @@ function normalizeMassTime(raw: string): string {
   return `${String(displayH).padStart(2, '0')}:${min} ${period}`;
 }
 
-export function PublishCantoralModal({ cantoral, parishName, parishes = [], invitations = [], isAdmin = false, initialDate, initialMassTime, initialMassType, onClose, onPublish, userInstruments = [], isEditing = false }: PublishCantoralModalProps) {
+export function PublishCantoralModal({ cantoral, parishName, parishes = [], invitations = [], isAdmin = false, initialParish, initialDate, initialMassTime, initialMassType, onClose, onPublish, userInstruments = [], isEditing = false }: PublishCantoralModalProps) {
   // Lista efectiva de parroquias (con fallback a la activa). >1 ⇒ modo multi-parroquia.
   const propias = parishes.length > 0 ? parishes : (parishName ? [parishName] : []);
   // Las anfitrionas se suman al final: primero la casa, después donde te invitaron.
   const invitadas = invitations.map(i => i.hostParish).filter(h => !propias.includes(h));
-  const allParishes = [...propias, ...invitadas];
+  // Al EDITAR, la parroquia del cantoral publicado también es un destino: si se editara
+  // uno publicado en la parroquia que invitó y su invitación ya no estuviera, "guardar"
+  // lo mudaría a la parroquia propia sin decir nada. (Quien manda sigue siendo la RLS.)
+  const enEdicion = isEditing && initialParish && !propias.includes(initialParish) && !invitadas.includes(initialParish)
+    ? [initialParish] : [];
+  const allParishes = [...propias, ...invitadas, ...enEdicion];
   const isMulti = allParishes.length > 1;
   /** ¿Aquí se publica por invitación (y no por ser la parroquia propia)? */
   const invitacionDe = (parish: string): ChoirInvitation | undefined =>
@@ -138,8 +153,10 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], invi
 
   // ── Estado modo multi-parroquia ───────────────────────────────────────────
   // Parroquias marcadas para publicar (por defecto, solo la activa).
+  // El destino elegido en el constructor manda; si no viene (o ya no existe), la activa.
+  const destinoInicial = (initialParish && allParishes.includes(initialParish)) ? initialParish : parishName;
   const [selectedParishes, setSelectedParishes] = useState<Set<string>>(
-    () => new Set(parishName ? [parishName] : [])
+    () => new Set(destinoInicial ? [destinoInicial] : [])
   );
   // Fecha/celebración/horario por parroquia.
   const [schedules, setSchedules] = useState<Record<string, ParishSchedule>>(() => {
@@ -298,11 +315,15 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], invi
           garland,
           pdfFont,
           pdfSize,
+          // Publicar como invitados no es publicar y desaparecer: el cantoral queda
+          // también en la casa del coro que lo armó (solo para el perfil Coro).
+          guestChoirParish: invitacionDe(parish)?.guestParish,
         };
       });
     }
+    const unica = allParishes[0] || parishName;
     return [{
-      parishName: allParishes[0] || parishName,
+      parishName: unica,
       date: publishDate(selectedDate, massType, liturgicalDate),
       liturgicalDate: liturgicalDate.trim(),
       massTime: normalizeMassTime(massTime),
@@ -311,6 +332,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], invi
       garland,
       pdfFont,
       pdfSize,
+      guestChoirParish: invitacionDe(unica)?.guestParish,
     }];
   };
 

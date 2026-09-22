@@ -101,6 +101,7 @@ import {
 } from './services/googleAuth';
 import {
   listCantorals,
+  listCantoralsComoCoroInvitado,
   publishCantoral as publishCantoralToDB,
   deleteCantoral as deleteCantoralFromDB,
   updateCantoral as updateCantoralInDB,
@@ -108,6 +109,7 @@ import {
   rowToCantoral,
   findDuplicate,
 } from './services/cantorals';
+import { olvidarDatosDeLaMisa } from './utils/borradorMisa';
 import { getSupabaseClient } from './services/supabaseClient';
 import { uploadCantoralPDF } from './services/cantoralPDF';
 import { cacheCantoralsForOffline, getOfflineCantorals } from './services/offlineCache';
@@ -308,6 +310,31 @@ function App() {
   );
 }
 
+/**
+ * Los cantorales que este usuario tiene que ver.
+ *
+ * Dos orígenes, no uno: los de la parroquia en la que está, y —solo con perfil CORO—
+ * los que su coro armó como INVITADO en otra parroquia (la fiesta patronal de la
+ * parroquia vecina). Sin lo segundo, el coro de Pirque publicaba el cantoral de
+ * Valdivia de Paine y después no podía abrirlo desde su propia app.
+ *
+ * El pueblo fiel de Pirque NO lo ve: ese domingo va a la Misa de su parroquia.
+ * Ver utils/cantoralVisibilidad y la migración 20260922_cantoral_coro_invitado.
+ */
+async function cargarCantoralesVisibles(
+  unidadActiva: string | undefined,
+  esCoro: boolean,
+): Promise<PublishedCantoral[]> {
+  const [propios, invitados] = await Promise.all([
+    listCantorals(unidadActiva),
+    esCoro && unidadActiva ? listCantoralsComoCoroInvitado(unidadActiva) : Promise.resolve([]),
+  ]);
+  if (invitados.length === 0) return propios;
+  // El de casa manda: si por lo que sea la misma fila llegó por los dos lados, una sola.
+  const vistos = new Set(propios.map((c) => c.id));
+  return [...propios, ...invitados.filter((c) => !vistos.has(c.id))];
+}
+
 // ---------------------------------------------------------------------------
 // AppContent — all business logic and state lives here
 // ---------------------------------------------------------------------------
@@ -323,6 +350,10 @@ function AppContent() {
   // Se consume al montar el constructor y se limpia, para que volver a entrar por el
   // menú no reviva una fecha vieja.
   const [fechaParaConstructor, setFechaParaConstructor] = useState<string | null>(null);
+  // Y la parroquia: al aceptar una invitación, el constructor tiene que abrirse en la
+  // parroquia ANFITRIONA. Sin esto quedaba apuntando a la propia y el cantoral de la
+  // fiesta patronal terminaba publicado en la casa equivocada.
+  const [parroquiaParaConstructor, setParroquiaParaConstructor] = useState<string | null>(null);
   // Catálogo global de capillas (parishFull → capillas) para el selector de sesión.
   const [chapelsByParish, setChapelsByParish] = useState<Record<string, { id: string; name: string }[]>>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -513,7 +544,7 @@ function AppContent() {
       ? undefined  // sin filtro: trae todos los cantorales de todas las parroquias
       : (userProfile.activeParishName || userProfile.parishName);
     setLoadingCantorals(true);
-    listCantorals(parish)
+    cargarCantoralesVisibles(parish, effectiveRoleForLoad === 'Coro')
       .then((list) => {
         // Sin red y sin datos del backend: usar lo cacheado para la Misa.
         if (list.length === 0 && typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -984,6 +1015,20 @@ function AppContent() {
 
   // Q15 — Traducir errores de Supabase a mensajes humanos.
   // RLS, JWT, network y "duplicate key" son los más comunes en producción.
+  /**
+   * Vuelve a pedir la lista de cantorales con el mismo criterio con que se cargó al
+   * entrar (parroquia activa + los de coro invitado si el perfil es Coro). Se usa
+   * después de publicar, editar o borrar: antes cada sitio llamaba a `listCantorals`
+   * por su cuenta y el cantoral recién publicado en la parroquia que invitó se caía
+   * de la lista al primer refresco.
+   */
+  const refrescarCantorales = async (): Promise<PublishedCantoral[]> => {
+    const rol = userProfile?.activeRole || userProfile?.role;
+    const esAdmin = rol === 'Admin' || isVerifiedAdmin;
+    const unidad = esAdmin ? undefined : (userProfile?.activeParishName || userProfile?.parishName);
+    return cargarCantoralesVisibles(unidad, rol === 'Coro');
+  };
+
   const translatePublishError = (error?: string): string => {
     const raw = (error ?? '').toLowerCase();
     if (raw.includes('jwt') || raw.includes('unauthorized') || raw.includes('401')) {
@@ -997,6 +1042,12 @@ function AppContent() {
     }
     if (raw.includes('failed to fetch') || raw.includes('network')) {
       return 'Sin conexión a internet. Revisa tu red y vuelve a intentar.';
+    }
+    // La columna del coro invitado (migración 20260922). Solo aparece al publicar en la
+    // parroquia que te invitó, así que el mensaje tiene que decir EXACTAMENTE qué falta:
+    // "no pudimos guardar" mandaría a buscar el problema en los cantos.
+    if (raw.includes('guest_choir_parish') || raw.includes('pgrst204')) {
+      return 'Falta aplicar la migración 20260922 en Supabase (columna guest_choir_parish).';
     }
     return 'No pudimos guardar el cantoral. Vuelve a intentar.';
   };
@@ -1070,8 +1121,7 @@ function AppContent() {
       const r = await updateCantoralInDB(updated);
       if (!r.ok) {
         toast.error('No se pudo actualizar el cantoral', { description: r.error });
-        const activeParish = userProfile?.activeParishName || userProfile?.parishName;
-        setPublishedCantorals(await listCantorals(activeParish));
+        setPublishedCantorals(await refrescarCantorales());
         return;
       }
       setCantoral([]);
@@ -1081,8 +1131,7 @@ function AppContent() {
       toast.success('Cambios guardados', {
         description: 'Se actualizó el cantoral publicado. No se envió ningún aviso.',
       });
-      const activeParish = userProfile?.activeParishName || userProfile?.parishName;
-      setPublishedCantorals(await listCantorals(activeParish));
+      setPublishedCantorals(await refrescarCantorales());
       // Regenerar el PDF del coro EN SEGUNDO PLANO (no bloquea la edición).
       void generateAndUploadCantoralPDF(updated, false);
       return;
@@ -1133,8 +1182,11 @@ function AppContent() {
     // Nada se publicó → conservar el draft para reintentar.
     if (succeeded.length === 0) return;
 
-    // Al menos uno OK → limpiar el draft y avisar.
+    // Al menos uno OK → limpiar el draft y avisar. También se olvidan la fecha y el
+    // lugar recordados: esa Misa ya tiene cantoral, y reabrir el constructor apuntando
+    // a ella invitaría a publicar el mismo cantoral dos veces.
     setCantoral([]);
+    olvidarDatosDeLaMisa();
     toast.success(
       succeeded.length === 1
         ? '¡Cantoral publicado! 🎵'
@@ -1159,8 +1211,7 @@ function AppContent() {
     // Aviso push "nuevo cantoral" a los suscriptores de cada parroquia (segundo plano).
     void notifyNewCantorals(succeeded);
 
-    const fresh = await listCantorals(userProfile?.activeParishName || userProfile?.parishName);
-    setPublishedCantorals(fresh);
+    setPublishedCantorals(await refrescarCantorales());
   };
 
   /** Dispara el aviso push de "nuevo cantoral" para los recién publicados. Manda TODOS
@@ -1270,9 +1321,7 @@ function AppContent() {
     const r = await deleteCantoralFromDB(id);
     if (!r.ok) {
       toast.error('No se pudo eliminar el cantoral', { description: r.error });
-      const activeParish = userProfile?.activeParishName || userProfile?.parishName;
-      const fresh = await listCantorals(activeParish);
-      setPublishedCantorals(fresh);
+      setPublishedCantorals(await refrescarCantorales());
     }
   };
 
@@ -1638,8 +1687,12 @@ function AppContent() {
             onPublishCantoral: handlePublishCantoral,
             navigate,
             fechaParaConstructor,
-            onPickCantoralDate: setFechaParaConstructor,
-            onConsumeCantoralDate: () => setFechaParaConstructor(null),
+            parroquiaParaConstructor,
+            onPickCantoralDate: (date: string, parish?: string) => {
+              setFechaParaConstructor(date);
+              setParroquiaParaConstructor(parish ?? null);
+            },
+            onConsumeCantoralDate: () => { setFechaParaConstructor(null); setParroquiaParaConstructor(null); },
             onDeleteCantoral: handleDeleteCantoral,
             onEditCantoral: handleEditCantoral,
             onCancelEdit: handleCancelEdit,
@@ -1704,7 +1757,9 @@ interface ViewProps {
   onListen: (cantoral: PublishedCantoral) => void;
   /** Fecha elegida en el calendario litúrgico, para abrir el constructor en ella. */
   fechaParaConstructor: string | null;
-  onPickCantoralDate: (date: string) => void;
+  /** Parroquia anfitriona de una invitación aceptada, para abrir el constructor en ella. */
+  parroquiaParaConstructor: string | null;
+  onPickCantoralDate: (date: string, parish?: string) => void;
   onConsumeCantoralDate: () => void;
 }
 
@@ -1730,6 +1785,7 @@ function renderView(p: ViewProps): ReactElement | null {
             editingCantoral={p.editingCantoral}
             onCancelEdit={p.onCancelEdit}
             initialMassDate={p.fechaParaConstructor ?? undefined}
+            initialParish={p.parroquiaParaConstructor ?? undefined}
             onConsumeInitialDate={p.onConsumeCantoralDate}
           />
         );
@@ -1822,7 +1878,7 @@ function renderView(p: ViewProps): ReactElement | null {
             activeParish={p.activeParishName || p.userProfile.parishName || ''}
             // Aceptar lleva al constructor con la fecha puesta, igual que elegir un
             // día en el calendario litúrgico.
-            onBuildCantoral={(date) => { p.onPickCantoralDate(date); p.navigate('main'); }}
+            onBuildCantoral={(date, hostParish) => { p.onPickCantoralDate(date, hostParish); p.navigate('main'); }}
           />
         </RoleGuard>
       );

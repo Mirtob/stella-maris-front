@@ -15,6 +15,8 @@ import { renderPdfToImages, imposeBooklet } from './atrilBookletPDF';
 import { repartirEnColumnas, type Pieza } from './pdfColumns';
 import { partirFacsimil, type TrozoFacsimil } from './facsimilTrozos';
 import { sortCategoriesByMassOrder } from './ordinary';
+import { getCelebrationsForDate } from './liturgicalCalendar';
+import { celebracionesDePortada } from './celebracionesPortada';
 
 interface PDFGeneratorOptions {
   cantoral: PublishedCantoral;
@@ -472,6 +474,14 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   const formattedDate = formatYmdForDisplay(fechaEnQueSeCanta(cantoral));
   const tipoMisa = MASS_TYPE_LABEL[resolveMassType(cantoral)];
 
+  // Lo que se celebra ADEMÁS ese día, y la celebración que quedó desplazada por esta.
+  // El constructor ya lo decía en pantalla; la portada no, y era justo donde hacía
+  // falta: el folleto es lo que la gente tiene en la mano. Se resuelve contra
+  // `cantoral.date`, que es la fecha de la CELEBRACIÓN (en I Vísperas no es el día en
+  // que se canta). Ver utils/celebracionesPortada.
+  const { tambien: tambienSeCelebra, enLugarDe } =
+    celebracionesDePortada(cantoral.liturgicalDate, getCelebrationsForDate(cantoral.date));
+
   let coverTop = margin;
   let coverBottom = pageH - margin;
   if (garland) {
@@ -488,6 +498,9 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     { t: 'Cantoral de la Misa', s: 24, b: true, c: colors.primary, h: 14 },
     { t: `Tiempo: ${colors.seasonName}`, s: 11, b: false, c: colors.primary, h: 9 },
     { t: cleanText(cantoral.liturgicalDate), s: 16, b: false, c: [80, 80, 80], h: 11 },
+    // Un domingo que desaparece sin explicación se lee como un error de la app.
+    { t: enLugarDe ? cleanText(`En lugar de ${enLugarDe}`) : '', s: 10, b: false, c: [130, 130, 130] as [number, number, number], h: 8 },
+    { t: tambienSeCelebra.length > 0 ? cleanText(`También se celebra: ${tambienSeCelebra.join(' · ')}`) : '', s: 11, b: false, c: [100, 100, 100] as [number, number, number], h: 8 },
     { t: cleanText(formattedDate), s: 12, b: false, c: [100, 100, 100], h: 9 },
     // Se nombra el tipo cuando no es la Misa del día: sin esto, la portada de una Misa
     // del sábado por la tarde no explica por qué la celebración es la del domingo.

@@ -33,6 +33,8 @@ import { AddSolemnityModal } from '../liturgy/AddSolemnityModal';
 import { addCustomLiturgicalDate, toLiturgicalDate } from '../../services/liturgicalDates';
 import { listInvitacionesRecibidas } from '../../services/choirInvitations';
 import { invitacionesVigentesPara, type ChoirInvitation } from '../../utils/choirInvitations';
+import { leerDatosDeLaMisa, guardarDatosDeLaMisa } from '../../utils/borradorMisa';
+import { formatActiveParishLabel } from '../../utils/parish';
 import { computeUsage, resolveAnnualTarget } from '../../utils/previousUsage';
 import { getTodayLocal, formatYmdForDisplay, parseYmdLocal } from '../../utils/dateLocal';
 import { massTimeTo24h, massTimeTo12h } from '../../utils/massType';
@@ -69,6 +71,11 @@ interface ChoirViewProps {
   initialMassDate?: string;
   /** Avisa que la fecha de entrada ya se usó, para que no reviva al volver a entrar. */
   onConsumeInitialDate?: () => void;
+  /** Parroquia anfitriona con la que abrir el constructor, cuando se llega desde una
+   *  invitación aceptada. Llega junto con `initialMassDate`: son la fecha y el LUGAR de
+   *  esa Misa. Sin esto, aceptar la invitación dejaba el constructor apuntando a la
+   *  parroquia propia y el cantoral se publicaba en la casa equivocada. */
+  initialParish?: string;
 }
 
 // Horarios de Misa seleccionables cada 30 min (06:00–22:00). Valor 'HH:MM' (24h).
@@ -98,6 +105,7 @@ export function ChoirView({
   onCancelEdit,
   initialMassDate,
   onConsumeInitialDate,
+  initialParish,
 }: ChoirViewProps) {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showInstrumentModal, setShowInstrumentModal] = useState(false);
@@ -116,11 +124,28 @@ export function ChoirView({
   const [showAtril, setShowAtril] = useState(false);
   const [showAddSolemnity, setShowAddSolemnity] = useState(false);
   const [celebTick, setCelebTick] = useState(0);
+  /**
+   * Los datos de la Misa que quedaron de la última vez (fecha, hora, tipo y LUGAR).
+   *
+   * El constructor se desmonta cada vez que se sale a mirar otra pantalla, y hasta
+   * ahora eso borraba para dónde iba el cantoral: se volvía y estaba otra vez en hoy,
+   * en la parroquia propia. Con un coro invitado eso es peor que molesto — el cantoral
+   * se termina publicando en la casa equivocada. Ver utils/borradorMisa.
+   *
+   * La fecha que llega del calendario o de una invitación MANDA: si apunta a otro día,
+   * lo recordado es de otra Misa y no se mezcla.
+   */
+  const recordado = useMemo(() => {
+    const guardado = leerDatosDeLaMisa(getTodayLocal());
+    if (initialMassDate && guardado && guardado.fecha !== initialMassDate) return null;
+    return guardado;
+  }, []);
   // Fecha de la Misa para la que se arma el cantoral: fija la celebración/ciclo desde el
   // inicio (para cargar el salmo del libro) y pre-llena la fecha al publicar.
-  const [massDate, setMassDate] = useState(initialMassDate || getTodayLocal());
+  const [massDate, setMassDate] = useState(initialMassDate || recordado?.fecha || getTodayLocal());
   // La fecha que llega del calendario se usa UNA vez. Si se dejara puesta, salir del
-  // constructor y volver por el menú reabriría aquel domingo en vez de hoy.
+  // constructor y volver por el menú reabriría aquel domingo en vez de hoy — para eso
+  // está lo recordado, que sí sabe cuándo caducar.
   useEffect(() => { if (initialMassDate) onConsumeInitialDate?.(); }, []);
   // Todo lo litúrgico (tiempo, rótulo del Aleluya, aspersión) se decide contra la
   // fecha de la MISA, no contra la de hoy: el cantoral se arma con anticipación y
@@ -153,17 +178,75 @@ export function ChoirView({
     [parishes, parishName],
   );
   const [invitaciones, setInvitaciones] = useState<ChoirInvitation[]>([]);
+  /** Ya se sabe qué invitaciones hay para este día (aunque no haya ninguna). */
+  const [invitacionesListas, setInvitacionesListas] = useState(false);
   useEffect(() => {
     let cancelado = false;
-    if (!massDate || parroquiasPropias.length === 0) { setInvitaciones([]); return; }
+    setInvitacionesListas(false);
+    if (!massDate || parroquiasPropias.length === 0) { setInvitaciones([]); setInvitacionesListas(true); return; }
     listInvitacionesRecibidas(parroquiasPropias, massDate).then((filas) => {
       if (cancelado) return;
       setInvitaciones(invitacionesVigentesPara(filas, parroquiasPropias, massDate));
+      setInvitacionesListas(true);
     });
     return () => { cancelado = true; };
   }, [massDate, parroquiasPropias]);
-  const [massTime, setMassTime] = useState('10:00');
-  const [massType, setMassType] = useState<MassType>('dia');
+  const [massTime, setMassTime] = useState(recordado?.hora || '10:00');
+  const [massType, setMassType] = useState<MassType>(recordado?.tipo || 'dia');
+
+  // ── Dónde se canta ────────────────────────────────────────────────────────
+  /**
+   * La unidad (parroquia o capilla) donde se va a cantar esta Misa.
+   *
+   * Se elige AQUÍ y no recién al publicar porque es la mitad de la pregunta "¿para
+   * dónde va este cantoral?" — la otra mitad es la fecha— y porque un coro invitado
+   * arma el cantoral de otra parroquia: verlo escrito desde el principio es lo que
+   * evita publicarlo en la casa equivocada.
+   */
+  const [destino, setDestino] = useState<string>(
+    () => initialParish || recordado?.destino || parishName || '',
+  );
+  /** Dónde se puede publicar hoy: la casa, y las parroquias que invitaron a ESTE día. */
+  const destinosPosibles = useMemo(() => {
+    const invitadas = invitaciones.map((i) => i.hostParish).filter((h) => !parroquiasPropias.includes(h));
+    const lista = [...parroquiasPropias, ...invitadas];
+    // Editando un cantoral ya publicado en casa ajena, su parroquia sigue siendo un
+    // destino válido aunque la invitación ya se haya retirado: guardar un cambio no
+    // puede mudar el cantoral de parroquia a espaldas de nadie.
+    const enEdicion = editingCantoral?.parishName;
+    if (enEdicion && !lista.includes(enEdicion)) lista.push(enEdicion);
+    return lista;
+  }, [parroquiasPropias, invitaciones, editingCantoral?.parishName]);
+  /** La invitación que habilita el destino elegido (si se canta en casa ajena). */
+  const invitacionDelDestino = useMemo(
+    () => invitaciones.find((i) => i.hostParish === destino),
+    [invitaciones, destino],
+  );
+  /**
+   * Si el destino recordado ya no está disponible —cambió la fecha, retiraron la
+   * invitación—, se vuelve a la parroquia propia. Se espera a que las invitaciones
+   * estén cargadas: si no, la primera pintada (con la lista todavía vacía) tiraría
+   * abajo justamente el destino invitado que se quería recordar.
+   */
+  useEffect(() => {
+    if (!invitacionesListas || destinosPosibles.length === 0) return;
+    if (!destinosPosibles.includes(destino)) setDestino(destinosPosibles[0]);
+  }, [invitacionesListas, destinosPosibles, destino]);
+  /** Te invitaron a ESA Misa, no a ese día: el tipo lo fija la invitación. */
+  useEffect(() => {
+    if (invitacionDelDestino && massType !== invitacionDelDestino.massType) {
+      setMassType(invitacionDelDestino.massType);
+    }
+  }, [invitacionDelDestino]);
+  /**
+   * Guardar lo elegido para recuperarlo al volver. Editar un cantoral ya publicado NO
+   * es un borrador: sus datos salen del cantoral, y pisarlos aquí dejaría el recuerdo
+   * apuntando a una Misa que ya tiene cantoral.
+   */
+  useEffect(() => {
+    if (editingCantoral) return;
+    guardarDatosDeLaMisa({ fecha: massDate, hora: massTime, tipo: massType, destino });
+  }, [massDate, massTime, massType, destino, editingCantoral]);
   // Antífona del salmo (editable): por defecto la del índice de la celebración; el coro
   // puede cambiarla si no usa la misma. Viaja al cantoral publicado (y al PDF/pueblo).
   const [psalmAntiphon, setPsalmAntiphon] = useState('');
@@ -336,6 +419,9 @@ export function ChoirView({
     setPaterGregoriano(
       paterNosterDelCantoral(editingCantoral.songs, editingCantoral.date)?.tono ?? null);
     setMassDate(editingCantoral.date);
+    // Y DÓNDE se canta: un cantoral publicado en la parroquia que invitó se edita para
+    // allá, no para la propia. Sin esto, guardar los cambios lo mandaba a casa.
+    setDestino(editingCantoral.parishName);
     const hhmm = massTimeTo24h(editingCantoral.massTime);
     if (hhmm) setMassTime(hhmm);
     setMassType(editingCantoral.massType ?? (editingCantoral.vigil ? 'visperas_i' : 'dia'));
@@ -536,6 +622,7 @@ export function ChoirView({
       garland: t.garland,
       pdfFont: t.pdfFont,
       pdfSize: t.pdfSize,
+      guestChoirParish: t.guestChoirParish,
     }));
 
     // Delegate to App.handlePublishCantoral which:
@@ -643,13 +730,42 @@ export function ChoirView({
               id="mass-type"
               value={massType}
               onChange={(e) => setMassType(e.target.value as MassType)}
-              className="w-full px-3 py-2.5 rounded-xl border-2 border-blue-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-brand-ink font-semibold focus:outline-none focus:border-brand"
+              disabled={!!invitacionDelDestino}
+              className="w-full px-3 py-2.5 rounded-xl border-2 border-blue-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-brand-ink font-semibold focus:outline-none focus:border-brand disabled:opacity-70"
             >
               <option value="dia">Misa del día</option>
               <option value="visperas_i">I Vísperas (sábado por la tarde)</option>
               <option value="visperas_ii">II Vísperas (domingo por la tarde)</option>
             </select>
           </div>
+          {/* Dónde se canta. Se elige aquí, con la fecha, porque las dos juntas son la
+              respuesta a "¿para dónde va este cantoral?" — y porque un coro invitado
+              arma el cantoral de OTRA parroquia. */}
+          {destinosPosibles.length > 0 && (
+            <div className="mt-3">
+              <label htmlFor="mass-parish" className="text-xs font-bold text-brand-ink-soft mb-1 block">Dónde se canta</label>
+              <select
+                id="mass-parish"
+                value={destino}
+                onChange={(e) => setDestino(e.target.value)}
+                disabled={destinosPosibles.length === 1}
+                className="w-full px-3 py-2.5 rounded-xl border-2 border-blue-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-brand-ink font-semibold focus:outline-none focus:border-brand disabled:opacity-70"
+              >
+                {destinosPosibles.map((d) => (
+                  <option key={d} value={d}>
+                    {formatActiveParishLabel(d)}{invitaciones.some((i) => i.hostParish === d) ? ' — invitados' : ''}
+                  </option>
+                ))}
+              </select>
+              {invitacionDelDestino && (
+                <p className="text-sm text-brand-ink-soft mt-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl px-3 py-2">
+                  🤝 Van como <strong className="text-brand-ink">invitados</strong> a {formatActiveParishLabel(invitacionDelDestino.hostParish)}
+                  {invitacionDelDestino.note ? ` · ${invitacionDelDestino.note}` : ''}. Este cantoral queda publicado allá
+                  —para su coro y su pueblo fiel— y también en {formatActiveParishLabel(invitacionDelDestino.guestParish)}, solo para el coro.
+                </p>
+              )}
+            </div>
+          )}
           <p className="text-sm text-brand-ink-soft mt-3">
             {massCelebration
               ? <>{formatYmdForDisplay(massDate, { weekday: 'long', day: 'numeric', month: 'long' })} · <strong className="text-brand-ink">{massCelebration}</strong> · Año {massCycle}</>
@@ -1068,6 +1184,7 @@ export function ChoirView({
           parishes={parishes}
           invitations={invitaciones}
           isAdmin={isAdmin}
+          initialParish={destino}
           initialDate={massDate}
           initialMassTime={massTimeTo12h(massTime)}
           initialMassType={massType}

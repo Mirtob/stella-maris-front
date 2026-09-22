@@ -1,5 +1,6 @@
 import { PublishedCantoral } from '../types';
 import { getSupabaseClient } from './supabaseClient';
+import { esDeMiCoroInvitado } from '../utils/cantoralVisibilidad';
 
 const TABLE = 'published_cantorals';
 
@@ -24,6 +25,7 @@ export function rowToCantoral(row: any): PublishedCantoral {
     garland: row.garland ?? undefined,
     pdfFont: row.pdf_font ?? undefined,
     pdfSize: row.pdf_size ?? undefined,
+    guestChoirParish: row.guest_choir_parish ?? undefined,
   };
 }
 
@@ -50,7 +52,46 @@ function cantoralToRow(c: PublishedCantoral): any {
     garland: c.garland ?? null,
     pdf_font: c.pdfFont ?? null,
     pdf_size: c.pdfSize ?? null,
+    // Solo se manda cuando lo hay: la columna es de la migración 20260922 y, si todavía
+    // no está aplicada, mandarla en NULL rompería TODA publicación en vez de solo la de
+    // un coro invitado (que es la única que la necesita). Ver mensajeDeColumnaFaltante.
+    ...(c.guestChoirParish ? { guest_choir_parish: c.guestChoirParish.trim() } : {}),
   };
+}
+
+/**
+ * Los cantorales que este coro armó COMO INVITADO en otras parroquias.
+ *
+ * Va en una consulta aparte y no en un OR sobre `listCantorals` porque la unidad
+ * invitada puede ser una capilla y la del perfil su parroquia madre (o al revés), y eso
+ * no se expresa con un filtro de PostgREST. Son poquísimas filas —los coros invitados
+ * son fiestas patronales, no el domingo normal—, así que se filtran aquí con la misma
+ * regla que usa la invitación. Mismo criterio que services/choirInvitations.
+ *
+ * Si la migración 20260922 no está aplicada, la consulta falla y esto devuelve [] : el
+ * coro ve su parroquia como siempre, sin pantalla rota.
+ */
+export async function listCantoralsComoCoroInvitado(unidadActiva?: string, year?: string): Promise<PublishedCantoral[]> {
+  const unidad = (unidadActiva ?? '').trim();
+  if (!unidad) return [];
+  try {
+    const sb = getSupabaseClient();
+    let query = sb.from(TABLE).select('*')
+      .not('guest_choir_parish', 'is', null)
+      .order('date', { ascending: false });
+    if (year && /^\d{4}$/.test(year)) {
+      query = query.gte('date', `${year}-01-01`).lte('date', `${year}-12-31`);
+    }
+    const { data, error } = await query;
+    if (error) {
+      console.error('Error listando cantorales de coro invitado:', error.message);
+      return [];
+    }
+    return (data ?? []).map(rowToCantoral).filter((c) => esDeMiCoroInvitado(c, unidad));
+  } catch (err) {
+    console.error('Excepción listando cantorales de coro invitado:', err);
+    return [];
+  }
 }
 
 /** Lista cantorales — opcionalmente filtra por parroquia.

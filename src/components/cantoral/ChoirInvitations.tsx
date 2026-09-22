@@ -25,11 +25,12 @@ interface ChoirInvitationsProps {
   /** Parroquia (o capilla) activa: la casa desde la que se invita. */
   activeParish: string;
   /**
-   * Aceptar lleva derecho a armar el cantoral de esa fecha. La pantalla no sabe
-   * navegar: avisa con la fecha y App abre el constructor en ella, igual que hace el
-   * calendario litúrgico.
+   * Aceptar lleva derecho a armar el cantoral de esa Misa. La pantalla no sabe navegar:
+   * avisa con la fecha Y con la parroquia anfitriona, y App abre el constructor en las
+   * dos —igual que hace el calendario litúrgico con la fecha—. El lugar viaja junto con
+   * la fecha porque es la otra mitad de "para dónde va este cantoral".
    */
-  onBuildCantoral?: (date: string) => void;
+  onBuildCantoral?: (date: string, hostParish: string) => void;
 }
 
 /**
@@ -169,7 +170,7 @@ export function ChoirInvitations({ parishes, activeParish, onBuildCantoral }: Ch
     toast.success('Invitación aceptada', {
       description: `A armar el cantoral del ${fechaLarga(inv.date)} para ${formatActiveParishLabel(inv.hostParish)}.`,
     });
-    onBuildCantoral?.(inv.date);
+    onBuildCantoral?.(inv.date, inv.hostParish);
   };
 
   /** Rechazar: con el motivo, que es lo que le sirve a la anfitriona. */
@@ -278,7 +279,7 @@ export function ChoirInvitations({ parishes, activeParish, onBuildCantoral }: Ch
                       </p>
                       {onBuildCantoral && (
                         <button
-                          onClick={() => onBuildCantoral(inv.date)}
+                          onClick={() => onBuildCantoral(inv.date, inv.hostParish)}
                           className="mt-3 w-full bg-gradient-to-br from-green-600 to-green-700 text-white py-2 px-3 rounded-lg flex items-center justify-center gap-2 active:scale-95 transition-all text-sm font-bold border-2 border-green-800"
                         >
                           <Calendar className="w-4 h-4" strokeWidth={2.5} />
