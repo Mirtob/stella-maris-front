@@ -17,7 +17,7 @@
  */
 import {
   cubre, esParaMiCoro, parroquiasMadre, parroquiasInvitadasPara, invitacionesVigentesPara,
-  estaVigente, estaPendiente, estadoInvitacion, meInvitaron, inviteYo,
+  estaVigente, estaPendiente, estadoInvitacion, meInvitaron, inviteYo, invitacionQueMarca,
   type ChoirInvitation,
 } from '../../src/utils/choirInvitations';
 
@@ -148,6 +148,38 @@ check('la aceptó un compañero: al resto del coro le sirve igual',
   parroquiasInvitadasPara([aceptada()], [PIRQUE_CAPILLA], FIESTA), [VALDIVIA]);
 check('aceptada y despues rechazada: se apaga',
   parroquiasInvitadasPara([aceptada({ rejectedAt: '2026-10-02T12:00:00Z' })], [PIRQUE], FIESTA), []);
+
+console.log('\n== De quien es el cantoral al publicar (invitacionQueMarca) ==');
+// Reportado el 23-sep-2026: el cantoral del 11 de octubre se publico en Valdivia de
+// Paine sin marca de coro invitado, y por eso no aparecia en Pirque. La causa: quien
+// publico tiene AMBAS parroquias en su perfil, e `invitacionesVigentesPara` descarta las
+// anfitrionas que uno ya cubre —ahi publica por derecho—, asi que la invitacion se
+// perdia antes de llegar al menu de publicacion.
+const marca = (inv: ChoirInvitation[], propias: string[], fecha: string, host: string) =>
+  invitacionQueMarca(inv, propias, fecha, host)?.guestParish ?? null;
+
+check('la invitacion aceptada marca el cantoral',
+  marca([aceptada()], [PIRQUE], FIESTA, VALDIVIA), PIRQUE);
+check('REGRESION: marca aunque el perfil incluya TAMBIEN la anfitriona',
+  marca([aceptada()], [PIRQUE, VALDIVIA], FIESTA, VALDIVIA), PIRQUE);
+check('y eso que esa invitacion no se ofrece como destino',
+  parroquiasInvitadasPara([aceptada()], [PIRQUE, VALDIVIA], FIESTA), []);
+check('sin aceptar no marca', marca([inv()], [PIRQUE], FIESTA, VALDIVIA), null);
+check('rechazada no marca',
+  marca([inv({ rejectedAt: '2026-10-01T12:00:00Z' })], [PIRQUE], FIESTA, VALDIVIA), null);
+check('otra fecha no marca', marca([aceptada()], [PIRQUE], '2026-10-18', VALDIVIA), null);
+check('otra anfitriona no marca', marca([aceptada()], [PIRQUE], FIESTA, BUIN), null);
+check('si el coro invitado no es el mio, no marca',
+  marca([aceptada({ guestParish: BUIN })], [PIRQUE], FIESTA, VALDIVIA), null);
+check('entre por una capilla de la parroquia invitada',
+  marca([aceptada()], [PIRQUE_CAPILLA], FIESTA, VALDIVIA), PIRQUE);
+check('invitaron a la capilla y la anfitriona es una capilla',
+  marca([aceptada({ guestParish: PIRQUE_CAPILLA, hostParish: VALDIVIA_CAPILLA })],
+        [PIRQUE], FIESTA, VALDIVIA_CAPILLA), PIRQUE_CAPILLA);
+check('espacios de sobra en el nombre de la anfitriona no rompen el calce',
+  marca([aceptada()], [PIRQUE], FIESTA, '  ' + VALDIVIA + ' '), PIRQUE);
+check('sin anfitriona no marca', marca([aceptada()], [PIRQUE], FIESTA, ''), null);
+check('sin parroquias propias no marca', marca([aceptada()], [], FIESTA, VALDIVIA), null);
 
 console.log(`\n${pass} ok, ${fail} fallas`);
 if (fail > 0) process.exit(1);

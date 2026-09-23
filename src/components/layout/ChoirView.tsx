@@ -32,7 +32,7 @@ import { resolveAntiphons, conCita } from '../../data/antiphonIndex';
 import { AddSolemnityModal } from '../liturgy/AddSolemnityModal';
 import { addCustomLiturgicalDate, toLiturgicalDate } from '../../services/liturgicalDates';
 import { listInvitacionesRecibidas } from '../../services/choirInvitations';
-import { invitacionesVigentesPara, type ChoirInvitation } from '../../utils/choirInvitations';
+import { invitacionesVigentesPara, invitacionQueMarca, type ChoirInvitation } from '../../utils/choirInvitations';
 import { leerDatosDeLaMisa, guardarDatosDeLaMisa } from '../../utils/borradorMisa';
 import { formatActiveParishLabel } from '../../utils/parish';
 import { computeUsage, resolveAnnualTarget } from '../../utils/previousUsage';
@@ -177,20 +177,34 @@ export function ChoirView({
     () => (parishes?.length ? parishes : (parishName ? [parishName] : [])),
     [parishes, parishName],
   );
-  const [invitaciones, setInvitaciones] = useState<ChoirInvitation[]>([]);
+  /**
+   * Las invitaciones tal como llegaron, SIN filtrar.
+   *
+   * Se guardan crudas y no ya filtradas porque de ellas salen dos respuestas distintas:
+   * qué parroquias OFRECER como destino (abajo, `invitaciones`) y de QUIÉN es el cantoral
+   * al publicar (`invitacionQueMarca`, en handlePublish). La segunda no puede depender de
+   * la primera: al que tiene la anfitriona en su propio perfil, la lista de destinos la
+   * descarta —ahí publica por derecho— y eso dejaba el cantoral sin marcar.
+   */
+  const [invitacionesDelDia, setInvitacionesDelDia] = useState<ChoirInvitation[]>([]);
   /** Ya se sabe qué invitaciones hay para este día (aunque no haya ninguna). */
   const [invitacionesListas, setInvitacionesListas] = useState(false);
   useEffect(() => {
     let cancelado = false;
     setInvitacionesListas(false);
-    if (!massDate || parroquiasPropias.length === 0) { setInvitaciones([]); setInvitacionesListas(true); return; }
+    if (!massDate || parroquiasPropias.length === 0) { setInvitacionesDelDia([]); setInvitacionesListas(true); return; }
     listInvitacionesRecibidas(parroquiasPropias, massDate).then((filas) => {
       if (cancelado) return;
-      setInvitaciones(invitacionesVigentesPara(filas, parroquiasPropias, massDate));
+      setInvitacionesDelDia(filas);
       setInvitacionesListas(true);
     });
     return () => { cancelado = true; };
   }, [massDate, parroquiasPropias]);
+  /** Las que se OFRECEN como destino: parroquias ajenas donde hoy se puede publicar. */
+  const invitaciones = useMemo(
+    () => invitacionesVigentesPara(invitacionesDelDia, parroquiasPropias, massDate),
+    [invitacionesDelDia, parroquiasPropias, massDate],
+  );
   const [massTime, setMassTime] = useState(recordado?.hora || '10:00');
   const [massType, setMassType] = useState<MassType>(recordado?.tipo || 'dia');
 
@@ -622,7 +636,13 @@ export function ChoirView({
       garland: t.garland,
       pdfFont: t.pdfFont,
       pdfSize: t.pdfSize,
-      guestChoirParish: t.guestChoirParish,
+      // De quién es el cantoral. El menú de publicación ya lo resuelve cuando la
+      // anfitriona vino por invitación; esto lo vuelve a resolver contra la parroquia y
+      // la fecha DEFINITIVAS —la fecha se canoniza al publicar— y contra las
+      // invitaciones sin filtrar, para que no se pierda la marca cuando quien publica
+      // también pertenece a la parroquia anfitriona. Ver utils/choirInvitations.
+      guestChoirParish: t.guestChoirParish
+        ?? invitacionQueMarca(invitacionesDelDia, parroquiasPropias, t.date, t.parishName)?.guestParish,
     }));
 
     // Delegate to App.handlePublishCantoral which:

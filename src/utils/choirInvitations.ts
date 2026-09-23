@@ -127,6 +127,41 @@ export function invitacionesVigentesPara(
     });
 }
 
+/**
+ * La invitación ACEPTADA que convierte a este cantoral en uno de coro invitado.
+ *
+ * Se resuelve contra la parroquia y la fecha FINALES del cantoral —las que se van a
+ * guardar—, no contra lo que hubiera en el constructor: al publicar, la fecha se canoniza
+ * a la de la celebración, y una invitación vale para un día concreto.
+ *
+ * A diferencia de `invitacionesVigentesPara`, esta NO descarta las anfitrionas que el
+ * usuario ya cubre por perfil. Aquella lista decide qué OFRECER como destino, y ahí sí
+ * sobra ofrecer una parroquia donde ya se publica por derecho; esta decide **de quién es
+ * el cantoral**, y eso no cambia porque quien publica pertenezca además a la anfitriona.
+ *
+ * Sin esa distinción, a quien tuviera las dos parroquias en su perfil el cantoral le
+ * salía sin marcar y desaparecía de la casa del coro invitado — que es exactamente lo
+ * que pasaba el 23-sep-2026 con el cantoral del 11 de octubre en Valdivia de Paine.
+ */
+export function invitacionQueMarca(
+  invitaciones: ChoirInvitation[],
+  parroquiasPropias: string[],
+  fecha: string,
+  anfitriona: string,
+): ChoirInvitation | undefined {
+  const dia = (fecha ?? '').slice(0, 10);
+  const host = (anfitriona ?? '').trim();
+  if (!dia || !host) return undefined;
+  const madres = parroquiasMadre(parroquiasPropias);
+  if (madres.length === 0) return undefined;
+  return invitaciones.find((i) => (
+    i.date === dia
+    && estadoInvitacion(i) === 'aceptada'
+    && (i.hostParish ?? '').trim() === host
+    && madres.some((m) => esParaMiCoro(i.guestParish, m))
+  ));
+}
+
 /** Solo los nombres, para cuando basta con saber dónde. */
 export function parroquiasInvitadasPara(
   invitaciones: ChoirInvitation[],
