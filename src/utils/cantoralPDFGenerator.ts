@@ -615,10 +615,10 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   interface Elem extends Pieza {
     /** Pinta la pieza con el borde superior en (x, y) y ancho w. */
     draw: (x: number, y: number, w: number) => void;
-    /** Piezas que viajan juntas: un encabezado con su primer canto, un título con
-     *  las primeras líneas de su letra. Si el grupo entero no cabe en lo que resta de
-     *  columna, se salta ANTES — así no queda un rótulo colgando al pie. */
-    grupo?: string;
+    /** «No me dejes solo al pie»: arrastra a la pieza siguiente. Encadenada, ata el
+     *  encabezado de parte con su título y el título con su primera línea, de modo que
+     *  ningún rótulo cierre una plana. Ver utils/pdfColumns. */
+    conSiguiente?: boolean;
     /** Es aire de separación: se omite si cae justo al empezar una columna. */
     espacio?: boolean;
   }
@@ -633,7 +633,10 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     const LH = adv(interlineado);
     const BASE = adv(4);        // de borde superior de la pieza a la línea base del texto
 
-    const espacio = (h: number) => els.push({ h, draw: () => {}, espacio: true });
+    // `pegado` mantiene la cadena viva a través del aire: sin eso, el hueco entre el
+    // encabezado de la parte y el título del primer canto rompía el bloque en dos.
+    const espacio = (h: number, pegado = false) =>
+      els.push({ h, draw: () => {}, espacio: true, conSiguiente: pegado || undefined });
 
     // Encabezado de parte de la Misa: rótulo en color litúrgico con una cenefa a cada
     // lado, dentro del ancho de la columna (la guirnalda a hoja completa no cabe en un
@@ -643,6 +646,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
       const h = adv(8);
       els.push({
         h,
+        conSiguiente: true,
         draw: (x, y, w) => {
           pdf.setFont('helvetica', 'bold');
           let fs = 10.5;
@@ -669,6 +673,9 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
       const paso = adv(5.8);
       els.push({
         h: lineas.length * paso + adv(1.5),
+        // La regla que pidió el coro: un título jamás cierra una plana. Si no cabe con
+        // lo que viene detrás, el hueco se deja en blanco y empieza en la siguiente.
+        conSiguiente: true,
         draw: (x, y, w) => {
           pdf.setFont('helvetica', 'bolditalic');
           pdf.setFontSize(11);
@@ -696,6 +703,9 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
         const ultimo = i === trozos.length - 1;
         els.push({
           h: t.h + (ultimo ? adv(2) : 0),
+          // El pie ("Graduale Romanum · p. 738") no se despega del último trozo: solo,
+          // al empezar una columna, se lee como si fuera de otro canto.
+          conSiguiente: ultimo && !!song.gradualeFuente,
           draw: (x, y, ancho) => {
             pdf.addImage(t.dataUrl, 'PNG', x, y, ancho, t.h, undefined, 'FAST');
           },
@@ -792,19 +802,12 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
       });
     };
 
-    /** Ata las `cuantas` piezas que empiezan en `desde` para que no se separen. */
-    const agrupar = (desde: number, cuantas: number, id: string) => {
-      for (let i = desde; i < Math.min(els.length, desde + cuantas); i++) els[i].grupo = id;
-    };
-
     sortedCategories.forEach((category, catIdx) => {
       if (catIdx > 0) espacio(adv(4));
-      const iCabecera = els.length;
       encabezado(category);
-      espacio(adv(2));
+      espacio(adv(2), true);
 
       byCategory[category].forEach((song, idx) => {
-        const iCanto = els.length;
         titulo(song);
         // En el Aleluya se imprime SOLO la aclamación. La estrofa que trae el canto en
         // el catálogo está ahí como ejemplo, para poder escribir los acordes: la de
@@ -820,11 +823,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
         // El propio gregoriano no tiene letra que imprimir: tiene partitura, y el texto
         // va escrito bajo las neumas en el propio facsímil.
         if (song.gradualeImage && facsimil(song)) {
-          // El pie ("Graduale Romanum · p. 738") viaja con el último trozo: solo, al
-          // empezar una columna, se lee como si fuera de otro canto.
-          if (els.length >= 2 && song.gradualeFuente) {
-            agrupar(els.length - 2, 2, `pie-${category}-${idx}`);
-          }
+          // El facsímil ya se ató solo: ver `facsimil()`.
         } else if (lyrics) {
           const estrofas = parseStanzas(lyrics);
           estrofas.forEach((estrofa, i) => {
@@ -856,12 +855,9 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
             },
           });
         }
-        // El título viaja con la primera línea de su letra, y el encabezado de la parte
-        // con el título de su primer canto: así ningún rótulo queda solo al pie de una
-        // columna. No se ata más que eso a propósito: cada línea que se exige por
+        // El encabezado, el título y la primera pieza de contenido ya viajan atados por
+        // `conSiguiente`. No se ata más que eso a propósito: cada línea que se exige por
         // adelantado es espacio que puede quedar en blanco al final de la columna.
-        agrupar(iCanto, 2, `canto-${category}-${idx}`);
-        if (idx === 0) agrupar(iCabecera, iCanto - iCabecera + 1, `parte-${catIdx}`);
         if (idx < byCategory[category].length - 1) separador();
       });
     });

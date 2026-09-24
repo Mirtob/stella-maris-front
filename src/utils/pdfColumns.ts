@@ -10,10 +10,20 @@
 export interface Pieza {
   /** Alto que ocupa, en las mismas unidades que `top`/`bottom`. */
   h: number;
-  /** Piezas contiguas con el mismo grupo no se separan: si el grupo entero no cabe en
-   *  lo que resta de columna, se salta antes de empezarlo. Así un rótulo nunca queda
-   *  colgando solo al pie de una columna. */
-  grupo?: string;
+  /**
+   * «No me dejes solo al pie»: esta pieza arrastra a la siguiente.
+   *
+   * Es la regla del taller de toda la vida: un título nunca cierra una plana. Si la
+   * pieza y la que viene detrás no caben juntas en lo que queda de columna, se salta
+   * ANTES de empezarla y el hueco se deja en blanco.
+   *
+   * Encadenadas, resuelven los rótulos de un tirón: el encabezado de la parte tira de
+   * su título y el título de su primera línea. Antes esto se pedía con un id de grupo
+   * por bloque, y dos bloques solapados se pisaban el id — el título del primer canto
+   * de cada parte quedaba atado al encabezado y suelto de su letra, que es justo lo que
+   * se quería evitar. Una marca booleana por pieza no se puede pisar.
+   */
+  conSiguiente?: boolean;
   /** Aire de separación: se omite si cae justo al empezar una columna. */
   espacio?: boolean;
 }
@@ -63,12 +73,19 @@ export function planDeCorte(alto: number, columna: number, reserva: number): num
   return trozos;
 }
 
-/** Alto del grupo que empieza en `i`; para una pieza suelta, su propio alto. */
+/**
+ * Alto del bloque que empieza en `i`: la pieza más todas las que se exigen detrás.
+ *
+ * Para una pieza suelta es su propio alto. Estando en mitad de una cadena ya medida al
+ * empezarla, también: medirla de nuevo entera haría que el bloque no cupiera nunca.
+ */
 function altoDesde(piezas: Pieza[], i: number): number {
-  const g = piezas[i].grupo;
-  if (!g || (i > 0 && piezas[i - 1].grupo === g)) return piezas[i].h;
+  if (i > 0 && piezas[i - 1].conSiguiente) return piezas[i].h;
   let h = 0;
-  for (let k = i; k < piezas.length && piezas[k].grupo === g; k++) h += piezas[k].h;
+  for (let k = i; k < piezas.length; k++) {
+    h += piezas[k].h;
+    if (!piezas[k].conSiguiente) break;
+  }
   return h;
 }
 

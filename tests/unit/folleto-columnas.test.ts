@@ -45,26 +45,42 @@ check('el espacio que queda justo en el corte tampoco abre la columna siguiente'
 check('un espacio en medio de la columna sí ocupa su lugar',
   mapa([linea(), { h: 5, espacio: true }, linea()]), ['1.0@0', '1.0@10', '1.0@15']);
 
-console.log('\n== Nada de rótulos colgando: los grupos no se parten ==');
-// 9 líneas llenan hasta y=90; quedan 10 de aire. Un encabezado (6) cabría solo, pero
-// arrastra su título (8): el grupo entero mide 14 y debe irse completo a la otra columna.
-const conGrupo: Pieza[] = [
+console.log('\n== Nada de rotulos colgando: un titulo no cierra una plana ==');
+// 9 lineas llenan hasta y=90; quedan 10 de aire. Un encabezado (6) cabria solo, pero
+// arrastra su titulo (8): el bloque mide 14 y debe irse completo a la otra columna.
+const conCadena: Pieza[] = [
   ...Array.from({ length: 9 }, () => linea()),
-  { h: 6, grupo: 'parte' },
-  { h: 8, grupo: 'parte' },
+  { h: 6, conSiguiente: true },
+  { h: 8 },
   linea(),
 ];
-check('el encabezado se va con su título a la columna siguiente',
-  mapa(conGrupo).slice(9), ['1.1@0', '1.1@6', '1.1@14']);
-check('sin grupo, el encabezado se habría quedado solo al pie',
+check('el encabezado se va con su titulo a la columna siguiente',
+  mapa(conCadena).slice(9), ['1.1@0', '1.1@6', '1.1@14']);
+check('sin la marca, el encabezado se habria quedado solo al pie',
   mapa([...Array.from({ length: 9 }, () => linea()), { h: 6 }, { h: 8 }]).slice(9),
   ['1.0@90', '1.1@0']);
-check('si el grupo cabe entero, no se salta',
-  mapa([...Array.from({ length: 8 }, () => linea()), { h: 6, grupo: 'g' }, { h: 8, grupo: 'g' }]).slice(8),
+check('si el bloque cabe entero, no se salta',
+  mapa([...Array.from({ length: 8 }, () => linea()), { h: 6, conSiguiente: true }, { h: 8 }]).slice(8),
   ['1.0@80', '1.0@86']);
-check('dos grupos distintos no se confunden entre sí',
-  mapa([{ h: 50, grupo: 'a' }, { h: 30, grupo: 'b' }, { h: 30, grupo: 'b' }]),
-  ['1.0@0', '1.1@0', '1.1@30']);
+
+// REGRESION (24-sep-2026). El primer canto de cada parte de la Misa salia con el titulo
+// colgando al pie: el encabezado lo arrastraba a el, pero el ya no arrastraba a su
+// letra, porque los dos bloques solapados se pisaban el id de grupo. Encadenadas, las
+// tres piezas se miden juntas y el hueco se deja en blanco.
+const parteCompleta: Pieza[] = [
+  ...Array.from({ length: 8 }, () => linea()),
+  { h: 6, conSiguiente: true },   // ENTRADA
+  { h: 8, conSiguiente: true },   // titulo del canto
+  linea(),                        // su primera linea de letra
+];
+check('encabezado + titulo + primera linea viajan los tres juntos',
+  mapa(parteCompleta).slice(8), ['1.1@0', '1.1@6', '1.1@14']);
+check('y si caben los tres, no se salta nada',
+  mapa([...Array.from({ length: 7 }, () => linea()),
+        { h: 6, conSiguiente: true }, { h: 8, conSiguiente: true }, linea()]).slice(7),
+  ['1.0@70', '1.0@76', '1.0@84']);
+check('una cadena mas alta que la columna se coloca igual, sin perder piezas',
+  mapa([{ h: 60, conSiguiente: true }, { h: 60, conSiguiente: true }, { h: 60 }]).length, 3);
 
 console.log('\n== Casos límite ==');
 check('una pieza más alta que la columna se dibuja igual (no se pierde letra)',
@@ -109,8 +125,8 @@ check('y no se pierde ni un milímetro de canto',
   Math.round(trozosAleluya.reduce((a, b) => a + b, 0)), Math.round(ALELUYA_LARGO));
 
 // Y una vez partida, el reparto ya la coloca sin que nada se salga.
-const titulo = { h: 13, grupo: 'canto' };
-const piezas = [titulo, { h: trozosAleluya[0], grupo: 'canto' },
+const titulo = { h: 13, conSiguiente: true };
+const piezas = [titulo, { h: trozosAleluya[0] },
                 ...trozosAleluya.slice(1).map((h) => ({ h }))];
 const colocadas = repartir(piezas, { top: 0, bottom: COLUMNA, columnas: 2 }).colocadas;
 check('cada trozo queda dentro de su columna',
