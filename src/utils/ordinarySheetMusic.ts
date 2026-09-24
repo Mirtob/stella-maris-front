@@ -63,28 +63,51 @@ const PART_SYNONYMS: Record<string, string[]> = {
 };
 
 /**
- * Qué partitura sirve para la ASAMBLEA, cuando la carpeta de la Misa trae varias.
+ * Qué partitura va al folleto del pueblo cuando la carpeta de la Misa trae varias.
  *
- * La que va al folleto del pueblo tiene que ser la de la línea melódica principal y sin
- * cifrado de acordes: el fiel canta la melodía, y los acordes son del que acompaña (y
- * solo se muestran en el perfil de Coro y en el Modo Atril). Entre dos archivos de la
- * misma parte y la misma Misa, esto inclina la elección — no descarta a nadie, porque
- * quedarse sin partitura es peor que quedarse con la del tenor.
+ * La que se imprime es la de la VOZ PRINCIPAL — la línea melódica que canta la asamblea,
+ * sin cifrado de acordes (los acordes son del que acompaña, y solo se muestran en el
+ * perfil de Coro y en el Modo Atril). El orden lo fijó el coro el 24-sep-2026:
+ *
+ *   1. «Voz»      — la melodía, escrita como tal.
+ *   2. «Órgano»   — en el archivo del coro lleva la línea principal.
+ *   3. «Soprano»  — a falta de las dos, es la melodía dentro del arreglo a cuatro voces.
+ *
+ * Y se esquivan las que claramente no son la melodía: las cifradas, los arreglos a varias
+ * voces y las demás voces sueltas.
+ *
+ * Esto INCLINA, no descarta: quedarse sin partitura es peor que quedarse con la del
+ * tenor, así que si es la única que hay, esa va.
  */
-const PREFIERE = ['pueblo', 'asamblea', 'melodia', 'melodica', 'voz unica', 'unisono', 'fieles'];
+const PREFERENCIA_VOZ: readonly (readonly string[])[] = [
+  ['voz', 'melodia', 'melodica', 'pueblo', 'asamblea', 'unisono', 'fieles'],
+  ['organo', 'orga'],
+  ['soprano', 'sop'],
+];
 const EVITA = [
-  'acorde', 'cifrado', 'guitarra', 'cifra',           // acompañamiento
-  'satb', 'sat ', 'coral', 'polifon',                  // arreglo a varias voces
-  'soprano', 'contralto', 'alto', 'tenor', 'bajo', 'barit',  // una voz suelta
-  'organo', 'teclado', 'piano',                        // reducción instrumental
+  'acordes', 'acorde', 'cifrado', 'cifra', 'guitarra',        // acompañamiento
+  'satb', 'coral', 'polifonia', 'polifonica',                 // arreglo a varias voces
+  'contralto', 'alto', 'tenor', 'bajo', 'baritono', 'barit',  // otra voz suelta
+  'piano', 'teclado',                                         // reducción instrumental
 ];
 
-/** Cuánto inclina el nombre de un archivo hacia la partitura de la asamblea. */
-function sesgoDeAsamblea(nombreNormalizado: string): number {
-  let sesgo = 0;
-  if (PREFIERE.some((t) => nombreNormalizado.includes(t))) sesgo += 1;
-  if (EVITA.some((t) => nombreNormalizado.includes(t))) sesgo -= 1;
-  return sesgo;
+/**
+ * Las palabras del nombre, sueltas.
+ *
+ * Se compara por PALABRA y no por trozo de texto: "contralto" contiene "alto", y con una
+ * comparación por substring la partitura de la contralto se habría colado como si fuera
+ * la del alto — o peor, cualquier nombre que llevara esas letras dentro.
+ */
+const palabras = (nombreNormalizado: string): Set<string> =>
+  new Set(nombreNormalizado.split(/[^a-z0-9]+/).filter(Boolean));
+
+/** Cuánto inclina el nombre de un archivo hacia la partitura de la voz principal. */
+function sesgoDeVozPrincipal(nombreNormalizado: string): number {
+  const tokens = palabras(nombreNormalizado);
+  if (EVITA.some((t) => tokens.has(t))) return -0.5;
+  const nivel = PREFERENCIA_VOZ.findIndex((grupo) => grupo.some((t) => tokens.has(t)));
+  if (nivel === -1) return 0;                       // nombre neutro: ni suma ni resta
+  return (PREFERENCIA_VOZ.length - nivel) * 0.3;    // voz 0,9 · órgano 0,6 · soprano 0,3
 }
 
 /** Último segmento de la ruta = nombre de la carpeta contenedora del archivo. */
@@ -134,8 +157,12 @@ export function pickOrdinarySheet(
     // El sesgo de asamblea desempata DENTRO de la misma calidad de coincidencia: pesa
     // menos que la carpeta y que el nombre de la Misa, para no traer el Santo de otra
     // Misa solo porque su archivo dice "pueblo".
+    // El sesgo desempata DENTRO de la misma calidad de coincidencia: como mucho suma
+    // 0,9, siempre menos que acertar la carpeta (3) o el nombre de la Misa (2). Traer el
+    // Santo de otra Misa porque su archivo dice "voz" sería peor que traer el del tenor
+    // de la Misa correcta.
     const score = 1 + (folderMatch ? 3 : 0) + (nameMassMatch ? 2 : 0)
-      + sesgoDeAsamblea(n) * 0.5;
+      + sesgoDeVozPrincipal(n);
     if (score > bestScore) { bestScore = score; best = f; }
   }
   return best;

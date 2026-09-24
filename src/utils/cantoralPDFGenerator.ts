@@ -16,6 +16,8 @@ import { repartirEnColumnas, type Pieza } from './pdfColumns';
 import { partirFacsimil, type TrozoFacsimil } from './facsimilTrozos';
 import { sortCategoriesByMassOrder, isOrdinary } from './ordinary';
 import { resolveOrdinarySheetMusic } from './ordinarySheetMusic';
+import { refrescarCantos } from './refrescarCantos';
+import { getSongs } from '../services/songLoader';
 import { getDrivePdfProxyUrl } from './driveProxy';
 import { getCelebrationsForDate } from './liturgicalCalendar';
 import { celebracionesDePortada } from './celebracionesPortada';
@@ -439,7 +441,29 @@ function cleanLyrics(lyrics: string): string {
 // ──────────────────────────────────────────────
 
 export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise<{ blob: Blob; url: string }> {
-  const { cantoral, download = true, booklet = false } = options;
+  const { download = true, booklet = false } = options;
+
+  /**
+   * La letra que se imprime es la de HOY, no la del día en que se publicó.
+   *
+   * El cantoral guarda una copia de cada canto dentro de sí, así que corregir una letra
+   * en el catálogo no cambiaba el folleto ya publicado: seguía saliendo la versión vieja
+   * y no había forma de arreglarla salvo volver a publicar. Reportado el 24-sep-2026.
+   *
+   * Se refresca al ARMAR el folleto —no al guardar el cantoral— para que valga también
+   * para los que ya estaban publicados. Ver utils/refrescarCantos: solo se ponen al día
+   * los campos que el folleto imprime, y lo sintético (salmo del libro, propios del
+   * Graduale, antífonas) se queda como estaba. Si el catálogo no se puede leer, se
+   * imprime la copia guardada, que es lo que se hacía antes.
+   */
+  let cantoral = options.cantoral;
+  try {
+    const catalogo = await getSongs();
+    cantoral = { ...cantoral, songs: refrescarCantos(cantoral.songs, catalogo) };
+  } catch {
+    /* sin catálogo se imprime la copia guardada */
+  }
+
   const colors = getColorsForDate(cantoral.date);
 
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });

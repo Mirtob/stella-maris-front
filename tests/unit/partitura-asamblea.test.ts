@@ -39,31 +39,49 @@ check('reconoce los sinonimos en español',
 check('y el Cordero por Agnus',
   elegido('Cordero de Dios', undefined, [f('Agnus Dei.pdf')]), 'Agnus Dei.pdf');
 
-console.log('\n== La del pueblo: melodia, sin cifrado ==');
+console.log('\n== La del pueblo: la VOZ PRINCIPAL, sin cifrado ==');
+// Orden fijado por el coro el 24-sep-2026: Voz > Organo > Soprano.
 const carpeta = `/Partituras/${MISA}`;
-check('prefiere la de melodia sobre la de acordes',
-  elegido('Gloria', MISA, [f('Gloria acordes.pdf', carpeta), f('Gloria melodia.pdf', carpeta)]),
-  'Gloria melodia.pdf');
-check('prefiere la del pueblo sobre la del tenor',
-  elegido('Santo', MISA, [f('Santo tenor.pdf', carpeta), f('Santo pueblo.pdf', carpeta)]),
-  'Santo pueblo.pdf');
+check('la Voz le gana al Organo',
+  elegido('Gloria', MISA, [f('Gloria organo.pdf', carpeta), f('Gloria voz.pdf', carpeta)]),
+  'Gloria voz.pdf');
+check('el Organo le gana a la Soprano',
+  elegido('Gloria', MISA, [f('Gloria soprano.pdf', carpeta), f('Gloria organo.pdf', carpeta)]),
+  'Gloria organo.pdf');
+check('la Soprano le gana al Tenor',
+  elegido('Santo', MISA, [f('Santo tenor.pdf', carpeta), f('Santo soprano.pdf', carpeta)]),
+  'Santo soprano.pdf');
+check('las tres juntas: manda la Voz',
+  elegido('Santo', MISA, [f('Santo soprano.pdf', carpeta), f('Santo organo.pdf', carpeta),
+                          f('Santo voz.pdf', carpeta)]),
+  'Santo voz.pdf');
+check('una preferida le gana a un nombre neutro',
+  elegido('Kyrie', MISA, [f('Kyrie.pdf', carpeta), f('Kyrie organo.pdf', carpeta)]),
+  'Kyrie organo.pdf');
+
+console.log('\n== Y se esquiva lo que no es la melodia ==');
 check('evita la cifrada aunque venga primero',
   elegido('Santo', MISA, [f('Santo cifrado.pdf', carpeta), f('Santo.pdf', carpeta)]),
   'Santo.pdf');
 check('evita el arreglo a cuatro voces',
   elegido('Cordero de Dios', MISA, [f('Cordero SATB.pdf', carpeta), f('Cordero.pdf', carpeta)]),
   'Cordero.pdf');
-check('evita la reduccion de organo',
-  elegido('Kyrie', MISA, [f('Kyrie organo.pdf', carpeta), f('Kyrie.pdf', carpeta)]),
-  'Kyrie.pdf');
-check('la de asamblea le gana a la neutra',
-  elegido('Gloria', MISA, [f('Gloria.pdf', carpeta), f('Gloria asamblea.pdf', carpeta)]),
-  'Gloria asamblea.pdf');
+check('evita la de guitarra',
+  elegido('Gloria', MISA, [f('Gloria guitarra.pdf', carpeta), f('Gloria.pdf', carpeta)]),
+  'Gloria.pdf');
+// "contralto" contiene "alto": con comparacion por substring se habria colado donde no
+// corresponde. Se compara por PALABRA.
+check('la contralto se esquiva igual que el alto',
+  elegido('Santo', MISA, [f('Santo contralto.pdf', carpeta), f('Santo.pdf', carpeta)]),
+  'Santo.pdf');
+check('los parentesis no rompen el calce',
+  elegido('Gloria', MISA, [f('Gloria (tenor).pdf', carpeta), f('Gloria (voz).pdf', carpeta)]),
+  'Gloria (voz).pdf');
 
 console.log('\n== Pero acertar la Misa pesa mas que el sesgo ==');
 // El sesgo desempata DENTRO de la misma calidad de coincidencia; no la atropella.
-check('no trae el de otra Misa por decir "pueblo"',
-  elegido('Santo', MISA, [f('Santo pueblo.pdf', '/Partituras/Misa T. Aragues'),
+check('no trae el de otra Misa por decir "voz"',
+  elegido('Santo', MISA, [f('Santo voz.pdf', '/Partituras/Misa T. Aragues'),
                           f('Santo tenor.pdf', carpeta)]),
   'Santo tenor.pdf');
 check('si solo hay una, esa va aunque sea la cifrada',

@@ -110,6 +110,8 @@ import {
   findDuplicate,
 } from './services/cantorals';
 import { olvidarDatosDeLaMisa } from './utils/borradorMisa';
+import { refrescarCantos } from './utils/refrescarCantos';
+import { getSongs } from './services/songLoader';
 import { getSupabaseClient } from './services/supabaseClient';
 import { uploadCantoralPDF } from './services/cantoralPDF';
 import { cacheCantoralsForOffline, getOfflineCantorals } from './services/offlineCache';
@@ -329,10 +331,38 @@ async function cargarCantoralesVisibles(
     listCantorals(unidadActiva),
     esCoro && unidadActiva ? listCantoralsComoCoroInvitado(unidadActiva) : Promise.resolve([]),
   ]);
-  if (invitados.length === 0) return propios;
-  // El de casa manda: si por lo que sea la misma fila llegó por los dos lados, una sola.
   const vistos = new Set(propios.map((c) => c.id));
-  return [...propios, ...invitados.filter((c) => !vistos.has(c.id))];
+  // El de casa manda: si por lo que sea la misma fila llegó por los dos lados, una sola.
+  const todos = invitados.length === 0
+    ? propios
+    : [...propios, ...invitados.filter((c) => !vistos.has(c.id))];
+  return ponerLetrasAlDia(todos);
+}
+
+/**
+ * Los cantorales, con la letra que dice HOY el catálogo.
+ *
+ * Cada cantoral guarda una COPIA de sus cantos, así que corregir una letra no cambiaba
+ * nada de lo ya publicado: ni la pantalla, ni el folleto, ni lo que abre el QR. El coro
+ * corregía y no pasaba nada. Reportado el 24-sep-2026.
+ *
+ * Se hace al cargar, en un solo sitio, para que valga en toda la app a la vez. El
+ * catálogo viene del caché de módulo de `getSongs`, así que después de la primera vez no
+ * cuesta una llamada. Si no se puede leer, se muestran las copias guardadas, que es lo
+ * que se hacía antes: nunca se queda un cantoral sin cantos por esto.
+ *
+ * Ver utils/refrescarCantos — la categoría no se toca y lo sintético se respeta.
+ */
+async function ponerLetrasAlDia(cantorales: PublishedCantoral[]): Promise<PublishedCantoral[]> {
+  if (cantorales.length === 0) return cantorales;
+  try {
+    const catalogo = await getSongs();
+    if (!catalogo.length) return cantorales;
+    const indice = new Map(catalogo.map((s) => [String(s.id), s]));
+    return cantorales.map((c) => ({ ...c, songs: refrescarCantos(c.songs, indice) }));
+  } catch {
+    return cantorales;
+  }
 }
 
 // ---------------------------------------------------------------------------
