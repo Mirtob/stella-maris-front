@@ -70,7 +70,6 @@ export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>
    "pagina": 31,
    "cantos": {
     "introitus": 1,
-    "offertorium": 1,
     "communio": 1,
     "graduale": 1,
     "alleluia": 1
@@ -90,8 +89,6 @@ export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>
    "titulo": "Sanctae Familiae Iesu, Mariae et Ioseph",
    "pagina": 48,
    "cantos": {
-    "introitus": 1,
-    "graduale": 1,
     "alleluia": 1,
     "offertorium": 1,
     "communio": 1
@@ -139,7 +136,6 @@ export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>
    "pagina": 56,
    "cantos": {
     "communio": 1,
-    "introitus": 1,
     "graduale": 1,
     "alleluia": 1,
     "offertorium": 1
@@ -301,7 +297,6 @@ export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>
    "cantos": {
     "introitus": 1,
     "graduale": 1,
-    "offertorium": 1,
     "communio": [
      "*",
      "B",
@@ -688,7 +683,6 @@ export const GRADUALE_APP: Record<'romanum' | 'simplex', Record<string, MisaApp>
    "pagina": 366,
    "cantos": {
     "introitus": 1,
-    "graduale": 1,
     "alleluia": 1,
     "offertorium": 1,
     "communio": 1
@@ -1264,8 +1258,7 @@ export const MISAS_DE_LA_SOLEMNIDAD:
      "introitus": 1,
      "graduale": 1,
      "alleluia": 1,
-     "offertorium": 1,
-     "communio": 1
+     "offertorium": 1
     },
     "rotulo": "Misa del día"
    }

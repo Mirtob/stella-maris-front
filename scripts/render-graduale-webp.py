@@ -137,6 +137,16 @@ def trozo(doc, marcos, region):
 # se comió sus 19 páginas), y conviene enterarse en vez de guardar un mamotreto.
 LIMITE_WEBP = 16383
 
+# Y el suelo, por el otro lado. Cuando el OCR ve una abreviatura donde no hay canto —una
+# página de remisiones, "IN. ut supra, p. 300", que lista los cinco rótulos en líneas
+# seguidas—, el recorte sale de quince puntos y da un jirón de pauta de 25x12 px:
+# ilegible, y peor que no ofrecer nada, porque el coro lo agrega al folleto creyendo que
+# es el canto. 50 px a 170 dpi son 7,5 mm: menos que un tetragrama con su texto debajo,
+# así que nada real cae aquí. El que cae no se guarda, y como el índice de la app se
+# escribe a partir de lo que SÍ se dibujó, la celebración queda sin ese propio en vez de
+# con uno roto. Reportado el 24-sep-2026.
+MINIMO_UTIL = 50
+
 
 def coser(imagenes):
     """Las regiones, una debajo de otra, binarizadas y sin márgenes en blanco."""
@@ -155,6 +165,9 @@ def coser(imagenes):
     if caja:
         bn = bn.crop((max(0, caja[0] - MARGEN), max(0, caja[1] - MARGEN),
                       min(ancho, caja[2] + MARGEN), min(alto, caja[3] + MARGEN)))
+    if bn.height < MINIMO_UTIL:
+        raise ValueError(f"mide {bn.width}x{bn.height} px: eso no es un canto, es un "
+                         "jirón de pauta — la entrada del índice apunta a una remisión")
     return bn.convert("1")
 
 
@@ -346,6 +359,7 @@ def main():
 
         total, hechos, fallos = 0, 0, []
         logradas = {}
+        escritos = set()      # lo que de verdad quedó en disco, para barrer el resto
         for clave, nombre, regiones in tareas:
             try:
                 for r in regiones:
@@ -356,6 +370,7 @@ def main():
                 os.makedirs(carpeta, exist_ok=True)
                 destino = os.path.join(carpeta, f"{nombre}.webp")
                 coser(partes).save(destino, "WEBP", lossless=True, method=6)
+                escritos.add(destino)
                 total += os.path.getsize(destino)
                 hechos += 1
                 # A la app llegan dos cosas distintas:
@@ -415,6 +430,27 @@ def main():
             except Exception as e:                      # noqa: BLE001 — se informa y sigue
                 fallos.append(f"{clave}/{nombre}: {e}")
         doc.close()
+
+        # BARRER LO QUE YA NO SE PRODUCE.
+        # El índice de la app se escribe con lo que SÍ se dibujó, así que un canto que
+        # deja de salir desaparece de la app — pero su .webp viejo se quedaba en
+        # public/, y el navegador lo seguía descargando. Peor: al bajar el umbral de un
+        # recorte, el jirón antiguo sobrevivía al arreglo. Solo en una corrida completa:
+        # con --libro o --muestra se está probando y barrer dejaría la app a medias.
+        if not args.libro and not args.muestra:
+            raiz = os.path.join(SALIDA, libro)
+            barridos = 0
+            for carpeta, _, archivos in os.walk(raiz):
+                for f in archivos:
+                    ruta = os.path.join(carpeta, f)
+                    if f.endswith(".webp") and ruta not in escritos:
+                        os.remove(ruta)
+                        barridos += 1
+            for carpeta, _, archivos in os.walk(raiz, topdown=False):
+                if not os.listdir(carpeta):
+                    os.rmdir(carpeta)
+            if barridos:
+                print(f"   barridos {barridos} recortes que ya no se generan")
 
         app[libro] = logradas
         print(f"[{libro}] {hechos} imágenes · {total // 1024} KB "

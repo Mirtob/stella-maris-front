@@ -582,6 +582,24 @@ def recortes_de_misa(doc, desde: int, hasta: int, cantos: list,
         for tipo, y in rotulos_de_pagina(doc[p], cantos):
             marcas.append({"tipo": tipo, "pagina": p, "y": y})
 
+    # EL RÓTULO QUE CIERRA EL ÚLTIMO CANTO ESTÁ FUERA DEL RANGO.
+    # Un canto va de su rótulo al siguiente, pero el último de la Misa no tenía
+    # siguiente: el rango de páginas del marcador termina antes, y el canto se quedaba
+    # cortado en el salto de página. El ofertorio del 26.º Domingo (Super flumina
+    # Babylonis, p341) salía con dos líneas y media y el resto se perdía; reportado el
+    # 24-sep-2026. La página siguiente ya se mira para las variantes por año —por esta
+    # misma razón, escrita ahí abajo—, así que aquí se mira también.
+    #
+    # Se usa SOLO PARA CERRAR: no entra en `marcas`, porque los rótulos de esa página
+    # pueden ser ya de la Misa siguiente y adoptarlos daría cantos ajenos. Basta el
+    # primero, que es donde acaba lo nuestro, venga de quien venga.
+    cierre_fuera_de_rango = None
+    if hasta < doc.page_count:
+        primeros = rotulos_de_pagina(doc[hasta], cantos)
+        if primeros:
+            tipo, y = primeros[0]
+            cierre_fuera_de_rango = {"tipo": tipo, "pagina": hasta, "y": y}
+
     # Para los años se mira UNA PÁGINA MÁS, porque el último canto de una Misa suele
     # seguir en la página donde ya empieza la siguiente. Como esa página la recorren las
     # dos, se reparte por orden de lectura: el rótulo de año que ya tomó la Misa anterior
@@ -631,7 +649,7 @@ def recortes_de_misa(doc, desde: int, hasta: int, cantos: list,
 
     salida = {}
     for i, marca in enumerate(marcas):
-        sig = marcas[i + 1] if i + 1 < len(marcas) else None
+        sig = marcas[i + 1] if i + 1 < len(marcas) else cierre_fuera_de_rango
         alto = doc[marca["pagina"]].rect.height
         regiones = []
         if sig and sig["pagina"] == marca["pagina"]:

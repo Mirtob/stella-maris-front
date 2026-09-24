@@ -110,8 +110,17 @@ check('la Navidad trae cuatro Misas', navidad.length, 4);
 check('y se nombran como en el libro',
   navidad.map((m) => m.rotuloCorto),
   ['Misa de la vigilia', 'Misa de la noche', 'Misa de la aurora', 'Misa del día']);
-check('las cuatro están completas',
-  navidad.every((m) => Object.keys(m.cantos).length === 5), true);
+// TRES de las cuatro están completas. A la «Misa del día» le falta la comunión, y no es
+// culpa del libro: la entrada del índice apunta a la línea de citación del salmo
+// ("Ps. 97, 1 ab. 1 cd. 2…"), no al canto. Hasta el 24-sep-2026 esa línea se publicaba
+// como si fuera la comunión —una tira de texto sin una sola nota— y esta prueba la
+// contaba por buena. Ahora el render se niega a guardar un recorte de 32 px y el hueco
+// queda a la vista, que es lo que corresponde. Se rellena con la planilla de huecos
+// (scripts/planilla-huecos-graduale.py).
+check('tres de las cuatro están completas',
+  navidad.filter((m) => Object.keys(m.cantos).length === 5).length, 3);
+check('y a la Misa del día le falta la comunión: es un hueco del índice, no del libro',
+  navidad.find((m) => m.rotuloCorto === 'Misa del día')!.cantos.communio, undefined);
 check('Pentecostés trae dos', alternativasDelDia('romanum', 'Pentecostés').length, 2);
 check('un domingo corriente no trae varias',
   alternativasDelDia('romanum', DOMINGO_23), []);

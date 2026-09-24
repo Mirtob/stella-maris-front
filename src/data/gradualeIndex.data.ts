@@ -80,6 +80,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 13,
       "y0": 443.6,
       "y1": 519.3
+     },
+     {
+      "p": 14,
+      "y0": 0,
+      "y1": 177.0
      }
     ]
    }
@@ -128,6 +133,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 13,
       "y0": 443.6,
       "y1": 519.3
+     },
+     {
+      "p": 14,
+      "y0": 0,
+      "y1": 177.0
      }
     ],
     "alleluia": [
@@ -184,6 +194,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 16,
       "y0": 438.7,
       "y1": 519.3
+     },
+     {
+      "p": 17,
+      "y0": 0,
+      "y1": 229.8
      }
     ],
     "alleluia": [
@@ -233,6 +248,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 19,
       "y0": 227.7,
       "y1": 519.3
+     },
+     {
+      "p": 20,
+      "y0": 0,
+      "y1": 162.5
      }
     ],
     "alleluia": [
@@ -393,6 +413,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 26,
       "y0": 79.7,
       "y1": 519.3
+     },
+     {
+      "p": 27,
+      "y0": 0,
+      "y1": 332.3
      }
     ]
    }
@@ -411,6 +436,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 27,
       "y0": 324.3,
       "y1": 519.3
+     },
+     {
+      "p": 28,
+      "y0": 0,
+      "y1": 293.1
      }
     ]
    }
@@ -429,6 +459,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 28,
       "y0": 285.1,
       "y1": 519.3
+     },
+     {
+      "p": 29,
+      "y0": 0,
+      "y1": 189.1
      }
     ]
    }
@@ -447,6 +482,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 29,
       "y0": 181.1,
       "y1": 519.3
+     },
+     {
+      "p": 30,
+      "y0": 0,
+      "y1": 238.0
      }
     ]
    }
@@ -496,6 +536,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 32,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 33,
+      "y0": 0,
+      "y1": 173.1
      }
     ]
    }
@@ -545,6 +590,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 32,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 33,
+      "y0": 0,
+      "y1": 173.1
      }
     ]
    }
@@ -594,6 +644,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 32,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 33,
+      "y0": 0,
+      "y1": 173.1
      }
     ],
     "alleluia": [
@@ -620,6 +675,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 33,
       "y0": 165.1,
       "y1": 519.3
+     },
+     {
+      "p": 34,
+      "y0": 0,
+      "y1": 169.6
      }
     ]
    }
@@ -653,6 +713,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 36,
       "y0": 441.8,
       "y1": 519.3
+     },
+     {
+      "p": 37,
+      "y0": 0,
+      "y1": 198.9
      }
     ]
    }
@@ -687,6 +752,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 36,
       "y0": 441.8,
       "y1": 519.3
+     },
+     {
+      "p": 37,
+      "y0": 0,
+      "y1": 198.9
      }
     ]
    },
@@ -723,6 +793,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 36,
       "y0": 441.8,
       "y1": 519.3
+     },
+     {
+      "p": 37,
+      "y0": 0,
+      "y1": 198.9
      }
     ],
     "graduale": [
@@ -790,6 +865,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 39,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 40,
+      "y0": 0,
+      "y1": 17.3
      }
     ],
     "alleluia": [
@@ -847,6 +927,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 42,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 43,
+      "y0": 0,
+      "y1": 366.7
      }
     ],
     "graduale": [
@@ -914,6 +999,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 46,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 47,
+      "y0": 0,
+      "y1": 101.2
      }
     ],
     "alleluia": [
@@ -1170,6 +1260,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 51,
       "y0": 281.5,
       "y1": 519.3
+     },
+     {
+      "p": 52,
+      "y0": 0,
+      "y1": 95.4
      }
     ]
    }
@@ -1201,6 +1296,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 51,
       "y0": 281.5,
       "y1": 519.3
+     },
+     {
+      "p": 52,
+      "y0": 0,
+      "y1": 95.4
      }
     ]
    }
@@ -1242,6 +1342,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 54,
       "y0": 247.39999999999998,
       "y1": 519.3
+     },
+     {
+      "p": 55,
+      "y0": 0,
+      "y1": 37.8
      }
     ],
     "alleluia": [
@@ -1619,6 +1724,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 63,
       "y0": 434.9,
       "y1": 519.3
+     },
+     {
+      "p": 64,
+      "y0": 0,
+      "y1": 68.6
      }
     ]
    }
@@ -1657,6 +1767,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 63,
       "y0": 434.9,
       "y1": 519.3
+     },
+     {
+      "p": 64,
+      "y0": 0,
+      "y1": 68.6
      }
     ]
    }
@@ -1688,6 +1803,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 64,
       "y0": 279.9,
       "y1": 519.3
+     },
+     {
+      "p": 65,
+      "y0": 0,
+      "y1": 392.0
      }
     ]
    }
@@ -1717,6 +1837,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 66,
       "y0": 472.4,
       "y1": 519.3
+     },
+     {
+      "p": 67,
+      "y0": 0,
+      "y1": 332.4
      }
     ]
    }
@@ -1773,6 +1898,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 72,
       "y0": 444.1,
       "y1": 519.3
+     },
+     {
+      "p": 73,
+      "y0": 0,
+      "y1": 391.3
      }
     ],
     "graduale": [
@@ -1818,6 +1948,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 74,
       "y0": 240.9,
       "y1": 519.3
+     },
+     {
+      "p": 75,
+      "y0": 0,
+      "y1": 116.4
      }
     ]
    }
@@ -1862,6 +1997,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 76,
       "y0": 205.0,
       "y1": 519.3
+     },
+     {
+      "p": 77,
+      "y0": 0,
+      "y1": 53.3
      }
     ]
    }
@@ -1899,6 +2039,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 78,
       "y0": 348.8,
       "y1": 519.3
+     },
+     {
+      "p": 79,
+      "y0": 0,
+      "y1": 359.2
      }
     ]
    }
@@ -1931,6 +2076,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 79,
       "y0": 384.9,
       "y1": 519.3
+     },
+     {
+      "p": 80,
+      "y0": 0,
+      "y1": 223.1
      }
     ]
    }
@@ -1975,6 +2125,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 81,
       "y0": 315.2,
       "y1": 519.3
+     },
+     {
+      "p": 82,
+      "y0": 0,
+      "y1": 52.2
      }
     ]
    }
@@ -2005,6 +2160,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 83,
       "y0": 206.0,
       "y1": 519.3
+     },
+     {
+      "p": 84,
+      "y0": 0,
+      "y1": 159.8
      }
     ]
    }
@@ -2046,6 +2206,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 86,
       "y0": 327.1,
       "y1": 519.3
+     },
+     {
+      "p": 87,
+      "y0": 0,
+      "y1": 74.8
      }
     ],
     "communio": [
@@ -2184,6 +2349,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 89,
       "y0": 246.0,
       "y1": 519.3
+     },
+     {
+      "p": 90,
+      "y0": 0,
+      "y1": 56.6
      }
     ]
    }
@@ -2223,6 +2393,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 90,
       "y0": 317.8,
       "y1": 519.3
+     },
+     {
+      "p": 91,
+      "y0": 0,
+      "y1": 138.2
      }
     ]
    }
@@ -2262,6 +2437,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 90,
       "y0": 317.8,
       "y1": 519.3
+     },
+     {
+      "p": 91,
+      "y0": 0,
+      "y1": 138.2
      }
     ]
    }
@@ -2301,6 +2481,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 91,
       "y0": 316.5,
       "y1": 519.3
+     },
+     {
+      "p": 92,
+      "y0": 0,
+      "y1": 95.5
      }
     ]
    }
@@ -2361,6 +2546,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 95,
       "y0": 114.1,
       "y1": 519.3
+     },
+     {
+      "p": 96,
+      "y0": 0,
+      "y1": 87.5
      }
     ]
    },
@@ -2394,6 +2584,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 96,
       "y0": 387.8,
       "y1": 519.3
+     },
+     {
+      "p": 97,
+      "y0": 0,
+      "y1": 419.7
      }
     ]
    }
@@ -2431,6 +2626,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 98,
       "y0": 354.2,
       "y1": 519.3
+     },
+     {
+      "p": 99,
+      "y0": 0,
+      "y1": 178.2
      }
     ]
    }
@@ -2468,6 +2668,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 100,
       "y0": 327.1,
       "y1": 519.3
+     },
+     {
+      "p": 101,
+      "y0": 0,
+      "y1": 79.0
      }
     ]
    }
@@ -2507,6 +2712,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 101,
       "y0": 132.7,
       "y1": 519.3
+     },
+     {
+      "p": 102,
+      "y0": 0,
+      "y1": 32.5
      }
     ]
    }
@@ -2546,6 +2756,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 101,
       "y0": 132.7,
       "y1": 519.3
+     },
+     {
+      "p": 102,
+      "y0": 0,
+      "y1": 32.5
      }
     ]
    }
@@ -2590,6 +2805,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 103,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 104,
+      "y0": 0,
+      "y1": 84.5
      }
     ]
    }
@@ -2631,6 +2851,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 106,
       "y0": 473.5,
       "y1": 519.3
+     },
+     {
+      "p": 107,
+      "y0": 0,
+      "y1": 52.6
      }
     ],
     "introitus": [
@@ -2714,6 +2939,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 110,
       "y0": 329.0,
       "y1": 519.3
+     },
+     {
+      "p": 111,
+      "y0": 0,
+      "y1": 374.7
      }
     ]
    }
@@ -2746,6 +2976,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 111,
       "y0": 433.9,
       "y1": 519.3
+     },
+     {
+      "p": 112,
+      "y0": 0,
+      "y1": 255.60000000000002
      }
     ]
    }
@@ -2785,6 +3020,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 112,
       "y0": 327.9,
       "y1": 519.3
+     },
+     {
+      "p": 113,
+      "y0": 0,
+      "y1": 248.2
      }
     ]
    }
@@ -2824,6 +3064,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 112,
       "y0": 327.9,
       "y1": 519.3
+     },
+     {
+      "p": 113,
+      "y0": 0,
+      "y1": 248.2
      }
     ]
    }
@@ -2926,6 +3171,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 120,
       "y0": 54.2,
       "y1": 519.3
+     },
+     {
+      "p": 121,
+      "y0": 0,
+      "y1": 80.0
      }
     ],
     "offertorium": [
@@ -2959,6 +3209,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 121,
       "y0": 319.7,
       "y1": 519.3
+     },
+     {
+      "p": 122,
+      "y0": 0,
+      "y1": 222.5
      }
     ]
    }
@@ -3040,6 +3295,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 125,
       "y0": 20.700000000000003,
       "y1": 519.3
+     },
+     {
+      "p": 126,
+      "y0": 0,
+      "y1": 139.7
      }
     ]
    }
@@ -3225,6 +3485,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 145,
       "y0": 318.8,
       "y1": 519.3
+     },
+     {
+      "p": 146,
+      "y0": 0,
+      "y1": 62.8
      }
     ]
    }
@@ -3262,6 +3527,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 147,
       "y0": 383.8,
       "y1": 519.3
+     },
+     {
+      "p": 148,
+      "y0": 0,
+      "y1": 422.2
      }
     ]
    }
@@ -3311,6 +3581,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 150,
       "y0": 186.0,
       "y1": 519.3
+     },
+     {
+      "p": 151,
+      "y0": 0,
+      "y1": 69.7
      }
     ]
    }
@@ -3353,6 +3628,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 153,
       "y0": 228.3,
       "y1": 519.3
+     },
+     {
+      "p": 154,
+      "y0": 0,
+      "y1": 147.1
      }
     ]
    }
@@ -3414,6 +3694,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 157,
       "y0": 319.1,
       "y1": 519.3
+     },
+     {
+      "p": 158,
+      "y0": 0,
+      "y1": 160.5
      }
     ]
    }
@@ -3553,6 +3838,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 165,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 166,
+      "y0": 0,
+      "y1": 35.3
      }
     ]
    }
@@ -3578,6 +3868,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 167,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 168,
+      "y0": 0,
+      "y1": 241.0
      }
     ]
    }
@@ -3658,6 +3953,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 191,
       "y0": 23.700000000000003,
       "y1": 519.3
+     },
+     {
+      "p": 192,
+      "y0": 0,
+      "y1": 62.3
      }
     ]
    }
@@ -3854,6 +4154,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 206,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 207,
+      "y0": 0,
+      "y1": 211.7
      }
     ]
    }
@@ -3928,6 +4233,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 211,
       "y0": 448.5,
       "y1": 519.3
+     },
+     {
+      "p": 212,
+      "y0": 0,
+      "y1": 37.4
      }
     ]
    }
@@ -3962,6 +4272,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 214,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 215,
+      "y0": 0,
+      "y1": 234.8
      }
     ],
     "offertorium": [
@@ -4019,6 +4334,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 217,
       "y0": 259.4,
       "y1": 519.3
+     },
+     {
+      "p": 218,
+      "y0": 0,
+      "y1": 36.8
      }
     ],
     "alleluia": [
@@ -4083,6 +4403,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 220,
       "y0": 160.1,
       "y1": 519.3
+     },
+     {
+      "p": 221,
+      "y0": 0,
+      "y1": 167.7
      }
     ],
     "alleluia": [
@@ -4131,6 +4456,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 224,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 225,
+      "y0": 0,
+      "y1": 187.2
      }
     ],
     "alleluia": [
@@ -4309,6 +4639,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 234,
       "y0": 207.0,
       "y1": 519.3
+     },
+     {
+      "p": 235,
+      "y0": 0,
+      "y1": 73.4
      }
     ],
     "alleluia": [
@@ -4356,6 +4691,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 236,
       "y0": 219.3,
       "y1": 519.3
+     },
+     {
+      "p": 237,
+      "y0": 0,
+      "y1": 91.0
      }
     ]
    }
@@ -4385,6 +4725,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 238,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 239,
+      "y0": 0,
+      "y1": 20.8
      }
     ],
     "alleluia": [
@@ -4452,6 +4797,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 239,
       "y0": 387.1,
       "y1": 519.3
+     },
+     {
+      "p": 240,
+      "y0": 0,
+      "y1": 251.60000000000002
      }
     ]
    }
@@ -4581,6 +4931,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 247,
       "y0": 197.2,
       "y1": 519.3
+     },
+     {
+      "p": 248,
+      "y0": 0,
+      "y1": 73.0
      }
     ]
    },
@@ -4627,6 +4982,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 247,
       "y0": 197.2,
       "y1": 519.3
+     },
+     {
+      "p": 248,
+      "y0": 0,
+      "y1": 73.0
      }
     ],
     "alleluia": [
@@ -4924,6 +5284,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 266,
       "y0": 335.6,
       "y1": 519.3
+     },
+     {
+      "p": 267,
+      "y0": 0,
+      "y1": 287.9
      }
     ],
     "introitus": [
@@ -4990,6 +5355,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 270,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 271,
+      "y0": 0,
+      "y1": 60.0
      }
     ],
     "alleluia": [
@@ -5053,6 +5423,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 273,
       "y0": 177.9,
       "y1": 519.3
+     },
+     {
+      "p": 274,
+      "y0": 0,
+      "y1": 286.3
      }
     ],
     "alleluia": [
@@ -5114,6 +5489,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 276,
       "y0": 292.5,
       "y1": 519.3
+     },
+     {
+      "p": 277,
+      "y0": 0,
+      "y1": 246.9
      }
     ],
     "alleluia": [
@@ -5229,6 +5609,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 283,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 284,
+      "y0": 0,
+      "y1": 66.7
      }
     ],
     "introitus": [
@@ -5349,6 +5734,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 289,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 290,
+      "y0": 0,
+      "y1": 378.8
      }
     ]
    },
@@ -5440,6 +5830,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 295,
       "y0": 217.8,
       "y1": 519.3
+     },
+     {
+      "p": 296,
+      "y0": 0,
+      "y1": 282.5
      }
     ],
     "introitus": [
@@ -5508,6 +5903,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 298,
       "y0": 326.8,
       "y1": 519.3
+     },
+     {
+      "p": 299,
+      "y0": 0,
+      "y1": 345.1
      }
     ],
     "alleluia": [
@@ -5576,6 +5976,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 302,
       "y0": 265.3,
       "y1": 519.3
+     },
+     {
+      "p": 303,
+      "y0": 0,
+      "y1": 173.6
      }
     ],
     "alleluia": [
@@ -5630,6 +6035,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 305,
       "y0": 159.8,
       "y1": 519.3
+     },
+     {
+      "p": 306,
+      "y0": 0,
+      "y1": 180.5
      }
     ],
     "alleluia": [
@@ -5713,6 +6123,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 310,
       "y0": 29.200000000000003,
       "y1": 519.3
+     },
+     {
+      "p": 311,
+      "y0": 0,
+      "y1": 212.4
      }
     ],
     "alleluia": [
@@ -5765,6 +6180,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 314,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 315,
+      "y0": 0,
+      "y1": 393.8
      }
     ],
     "alleluia": [
@@ -5836,6 +6256,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 318,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 319,
+      "y0": 0,
+      "y1": 134.3
      }
     ],
     "alleluia": [
@@ -5916,6 +6341,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 321,
       "y0": 443.6,
       "y1": 519.3
+     },
+     {
+      "p": 322,
+      "y0": 0,
+      "y1": 180.7
      }
     ],
     "alleluia": [
@@ -5982,6 +6412,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 325,
       "y0": 134.9,
       "y1": 519.3
+     },
+     {
+      "p": 326,
+      "y0": 0,
+      "y1": 70.1
      }
     ],
     "alleluia": [
@@ -6031,6 +6466,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 327,
       "y0": 261.0,
       "y1": 519.3
+     },
+     {
+      "p": 328,
+      "y0": 0,
+      "y1": 342.2
      }
     ],
     "alleluia": [
@@ -6104,6 +6544,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 331,
       "y0": 186.4,
       "y1": 519.3
+     },
+     {
+      "p": 332,
+      "y0": 0,
+      "y1": 63.7
      }
     ],
     "alleluia": [
@@ -6153,6 +6598,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 334,
       "y0": 387.9,
       "y1": 519.3
+     },
+     {
+      "p": 335,
+      "y0": 0,
+      "y1": 202.8
      }
     ],
     "alleluia": [
@@ -6209,6 +6659,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 337,
       "y0": 176.1,
       "y1": 519.3
+     },
+     {
+      "p": 338,
+      "y0": 0,
+      "y1": 280.1
      }
     ],
     "alleluia": [
@@ -6275,6 +6730,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 341,
       "y0": 387.0,
       "y1": 519.3
+     },
+     {
+      "p": 342,
+      "y0": 0,
+      "y1": 134.1
      }
     ],
     "alleluia": [
@@ -6341,6 +6801,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 345,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 346,
+      "y0": 0,
+      "y1": 97.6
      }
     ],
     "alleluia": [
@@ -6419,6 +6884,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 349,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 350,
+      "y0": 0,
+      "y1": 80.3
      }
     ],
     "alleluia": [
@@ -6468,6 +6938,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 352,
       "y0": 288.7,
       "y1": 519.3
+     },
+     {
+      "p": 353,
+      "y0": 0,
+      "y1": 284.8
      }
     ],
     "alleluia": [
@@ -6536,6 +7011,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 355,
       "y0": 311.9,
       "y1": 519.3
+     },
+     {
+      "p": 356,
+      "y0": 0,
+      "y1": 73.7
      }
     ],
     "alleluia": [
@@ -6590,6 +7070,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 358,
       "y0": 93.1,
       "y1": 519.3
+     },
+     {
+      "p": 359,
+      "y0": 0,
+      "y1": 174.0
      }
     ],
     "alleluia": [
@@ -6649,6 +7134,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 361,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 362,
+      "y0": 0,
+      "y1": 69.6
      }
     ],
     "alleluia": [
@@ -6712,6 +7202,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 364,
       "y0": 368.1,
       "y1": 519.3
+     },
+     {
+      "p": 365,
+      "y0": 0,
+      "y1": 156.7
      }
     ],
     "graduale": [
@@ -6856,6 +7351,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 372,
       "y0": 212.5,
       "y1": 519.3
+     },
+     {
+      "p": 373,
+      "y0": 0,
+      "y1": 70.2
      }
     ]
    }
@@ -6920,6 +7420,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 372,
       "y0": 212.5,
       "y1": 519.3
+     },
+     {
+      "p": 373,
+      "y0": 0,
+      "y1": 70.2
      }
     ],
     "alleluia": [
@@ -6990,6 +7495,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 379,
       "y0": 137.3,
       "y1": 519.3
+     },
+     {
+      "p": 380,
+      "y0": 0,
+      "y1": 95.2
      }
     ],
     "alleluia": [
@@ -7045,6 +7555,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 383,
       "y0": 178.4,
       "y1": 519.3
+     },
+     {
+      "p": 384,
+      "y0": 0,
+      "y1": 99.9
      }
     ],
     "graduale": [
@@ -7303,6 +7818,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 435,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 436,
+      "y0": 0,
+      "y1": 389.8
      }
     ]
    }
@@ -7330,6 +7850,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 435,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 436,
+      "y0": 0,
+      "y1": 389.8
      }
     ]
    }
@@ -7357,6 +7882,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 435,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 436,
+      "y0": 0,
+      "y1": 389.8
      }
     ]
    }
@@ -7400,6 +7930,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 440,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 441,
+      "y0": 0,
+      "y1": 144.4
      }
     ]
    }
@@ -7422,6 +7957,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 440,
       "y0": 0,
       "y1": 519.3
+     },
+     {
+      "p": 441,
+      "y0": 0,
+      "y1": 144.4
      }
     ]
    }
@@ -8409,6 +8949,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 847,
       "y0": 154.4,
       "y1": 519.3
+     },
+     {
+      "p": 848,
+      "y0": 0,
+      "y1": 316.6
      }
     ]
    }
@@ -8453,6 +8998,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 847,
       "y0": 154.4,
       "y1": 519.3
+     },
+     {
+      "p": 848,
+      "y0": 0,
+      "y1": 316.6
      }
     ]
    }
@@ -8497,6 +9047,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 848,
       "y0": 448.0,
       "y1": 519.3
+     },
+     {
+      "p": 849,
+      "y0": 0,
+      "y1": 71.5
      }
     ]
    }
@@ -8688,6 +9243,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 859,
       "y0": 144.6,
       "y1": 519.3
+     },
+     {
+      "p": 860,
+      "y0": 0,
+      "y1": 92.2
      }
     ]
    }
@@ -8732,6 +9292,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 860,
       "y0": 132.7,
       "y1": 519.3
+     },
+     {
+      "p": 861,
+      "y0": 0,
+      "y1": 92.7
      }
     ]
    }
@@ -8776,6 +9341,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 861,
       "y0": 133.1,
       "y1": 519.3
+     },
+     {
+      "p": 862,
+      "y0": 0,
+      "y1": 66.6
      }
     ]
    }
@@ -8820,6 +9390,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 861,
       "y0": 133.1,
       "y1": 519.3
+     },
+     {
+      "p": 862,
+      "y0": 0,
+      "y1": 66.6
      }
     ]
    }
@@ -8962,6 +9537,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 70,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 71,
+      "y0": 0,
+      "y1": 85.8
      }
     ]
    }
@@ -9033,6 +9613,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 70,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 71,
+      "y0": 0,
+      "y1": 85.8
      }
     ]
    }
@@ -9099,6 +9684,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 75,
       "y0": 85.0,
       "y1": 575.0
+     },
+     {
+      "p": 76,
+      "y0": 0,
+      "y1": 122.4
      }
     ]
    }
@@ -9162,6 +9752,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 81,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 82,
+      "y0": 0,
+      "y1": 113.7
      }
     ]
    }
@@ -9226,6 +9821,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 81,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 82,
+      "y0": 0,
+      "y1": 113.7
      }
     ]
    },
@@ -9298,6 +9898,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 87,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 88,
+      "y0": 0,
+      "y1": 111.5
      }
     ]
    },
@@ -9424,6 +10029,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 101,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 102,
+      "y0": 0,
+      "y1": 84.9
      }
     ]
    }
@@ -9478,6 +10088,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 101,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 102,
+      "y0": 0,
+      "y1": 84.9
      }
     ]
    }
@@ -9544,6 +10159,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 107,
       "y0": 49.2,
       "y1": 576.0
+     },
+     {
+      "p": 108,
+      "y0": 0,
+      "y1": 272.1
      }
     ]
    },
@@ -9611,6 +10231,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 113,
       "y0": 224.9,
       "y1": 576.0
+     },
+     {
+      "p": 114,
+      "y0": 0,
+      "y1": 268.4
      }
     ]
    },
@@ -9686,6 +10311,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 119,
       "y0": 261.2,
       "y1": 576.0
+     },
+     {
+      "p": 120,
+      "y0": 0,
+      "y1": 322.0
      }
     ]
    },
@@ -9801,6 +10431,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 140,
       "y0": 50.400000000000006,
       "y1": 576.0
+     },
+     {
+      "p": 141,
+      "y0": 0,
+      "y1": 409.6
      }
     ]
    }
@@ -9878,6 +10513,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 150,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 151,
+      "y0": 0,
+      "y1": 123.30000000000001
      }
     ]
    }
@@ -10022,6 +10662,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 183,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 184,
+      "y0": 0,
+      "y1": 93.3
      }
     ]
    }
@@ -10081,6 +10726,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 183,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 184,
+      "y0": 0,
+      "y1": 93.3
      }
     ]
    }
@@ -10140,6 +10790,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 189,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 190,
+      "y0": 0,
+      "y1": 103.1
      }
     ]
    }
@@ -10209,6 +10864,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 196,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 197,
+      "y0": 0,
+      "y1": 103.1
      }
     ]
    },
@@ -10279,6 +10939,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 206,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 207,
+      "y0": 0,
+      "y1": 112.6
      }
     ]
    },
@@ -10350,6 +11015,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 212,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 213,
+      "y0": 0,
+      "y1": 132.7
      }
     ]
    }
@@ -10421,6 +11091,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 212,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 213,
+      "y0": 0,
+      "y1": 132.7
      }
     ]
    },
@@ -10503,6 +11178,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 220,
       "y0": 0,
       "y1": 575.0
+     },
+     {
+      "p": 221,
+      "y0": 0,
+      "y1": 122.80000000000001
      }
     ]
    },
@@ -10575,6 +11255,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 226,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 227,
+      "y0": 0,
+      "y1": 96.9
      }
     ]
    },
@@ -10628,6 +11313,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 231,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 232,
+      "y0": 0,
+      "y1": 186.5
      }
     ]
    }
@@ -10694,6 +11384,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 236,
       "y0": 320.9,
       "y1": 576.0
+     },
+     {
+      "p": 237,
+      "y0": 0,
+      "y1": 327.3
      }
     ]
    }
@@ -10758,6 +11453,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 242,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 243,
+      "y0": 0,
+      "y1": 208.9
      }
     ]
    }
@@ -10829,6 +11529,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 248,
       "y0": 0,
       "y1": 575.0
+     },
+     {
+      "p": 249,
+      "y0": 0,
+      "y1": 99.6
      }
     ]
    }
@@ -10888,6 +11593,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 253,
       "y0": 50.3,
       "y1": 575.0
+     },
+     {
+      "p": 254,
+      "y0": 0,
+      "y1": 92.3
      }
     ]
    }
@@ -10937,6 +11647,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 256,
       "y0": 135.0,
       "y1": 574.1
+     },
+     {
+      "p": 257,
+      "y0": 0,
+      "y1": 206.1
      }
     ]
    }
@@ -10979,6 +11694,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 259,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 260,
+      "y0": 0,
+      "y1": 234.6
      }
     ]
    }
@@ -11038,6 +11758,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 264,
       "y0": 48.6,
       "y1": 574.1
+     },
+     {
+      "p": 265,
+      "y0": 0,
+      "y1": 153.1
      }
     ]
    }
@@ -11163,6 +11888,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 278,
       "y0": 0,
       "y1": 573.1
+     },
+     {
+      "p": 279,
+      "y0": 0,
+      "y1": 129.8
      }
     ]
    },
@@ -11217,6 +11947,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 282,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 283,
+      "y0": 0,
+      "y1": 116.9
      }
     ]
    },
@@ -11271,6 +12006,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 286,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 287,
+      "y0": 0,
+      "y1": 132.4
      }
     ]
    },
@@ -11347,6 +12087,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 293,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 294,
+      "y0": 0,
+      "y1": 148.9
      }
     ]
    },
@@ -11418,6 +12163,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 299,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 300,
+      "y0": 0,
+      "y1": 123.30000000000001
      }
     ]
    },
@@ -11489,6 +12239,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 305,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 306,
+      "y0": 0,
+      "y1": 118.1
      }
     ]
    },
@@ -11570,6 +12325,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 313,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 314,
+      "y0": 0,
+      "y1": 117.1
      }
     ]
    },
@@ -11619,6 +12379,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 316,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 317,
+      "y0": 0,
+      "y1": 123.9
      }
     ]
    },
@@ -11685,6 +12450,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 321,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 322,
+      "y0": 0,
+      "y1": 138.8
      }
     ]
    },
@@ -11761,6 +12531,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 328,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 329,
+      "y0": 0,
+      "y1": 118.0
      }
     ]
    },
@@ -11832,6 +12607,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 334,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 335,
+      "y0": 0,
+      "y1": 134.1
      }
     ]
    },
@@ -11941,6 +12721,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 347,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 348,
+      "y0": 0,
+      "y1": 119.5
      }
     ]
    }
@@ -11982,6 +12767,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 350,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 351,
+      "y0": 0,
+      "y1": 99.0
      }
     ]
    }
@@ -12254,6 +13044,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 396,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 397,
+      "y0": 0,
+      "y1": 95.9
      }
     ]
    }
@@ -12325,6 +13120,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 396,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 397,
+      "y0": 0,
+      "y1": 95.9
      }
     ]
    }
@@ -12371,6 +13171,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 397,
       "y0": 151.0,
       "y1": 576.0
+     },
+     {
+      "p": 398,
+      "y0": 0,
+      "y1": 140.3
      }
     ]
    }
@@ -12409,6 +13214,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 398,
       "y0": 315.2,
       "y1": 575.0
+     },
+     {
+      "p": 399,
+      "y0": 0,
+      "y1": 94.0
      }
     ]
    }
@@ -12448,6 +13258,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 398,
       "y0": 315.2,
       "y1": 575.0
+     },
+     {
+      "p": 399,
+      "y0": 0,
+      "y1": 94.0
      }
     ]
    }
@@ -12499,6 +13314,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 400,
       "y0": 144.8,
       "y1": 576.0
+     },
+     {
+      "p": 401,
+      "y0": 0,
+      "y1": 104.3
      }
     ]
    }
@@ -12545,6 +13365,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 401,
       "y0": 275.6,
       "y1": 576.0
+     },
+     {
+      "p": 402,
+      "y0": 0,
+      "y1": 99.5
      }
     ]
    }
@@ -12591,6 +13416,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 401,
       "y0": 275.6,
       "y1": 576.0
+     },
+     {
+      "p": 402,
+      "y0": 0,
+      "y1": 99.5
      }
     ]
    }
@@ -12657,6 +13487,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 406,
       "y0": 0,
       "y1": 576.0
+     },
+     {
+      "p": 407,
+      "y0": 0,
+      "y1": 294.5
      }
     ]
    }
@@ -12945,6 +13780,11 @@ export const GRADUALE_INDEX_DATA: Record<'romanum' | 'simplex', Record<string, M
       "p": 220,
       "y0": 0,
       "y1": 575.0
+     },
+     {
+      "p": 221,
+      "y0": 0,
+      "y1": 122.80000000000001
      }
     ]
    }
