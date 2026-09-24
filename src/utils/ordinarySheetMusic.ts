@@ -62,6 +62,31 @@ const PART_SYNONYMS: Record<string, string[]> = {
   'Rito de Aspersión': ['aspersion', 'asperges'],
 };
 
+/**
+ * Qué partitura sirve para la ASAMBLEA, cuando la carpeta de la Misa trae varias.
+ *
+ * La que va al folleto del pueblo tiene que ser la de la línea melódica principal y sin
+ * cifrado de acordes: el fiel canta la melodía, y los acordes son del que acompaña (y
+ * solo se muestran en el perfil de Coro y en el Modo Atril). Entre dos archivos de la
+ * misma parte y la misma Misa, esto inclina la elección — no descarta a nadie, porque
+ * quedarse sin partitura es peor que quedarse con la del tenor.
+ */
+const PREFIERE = ['pueblo', 'asamblea', 'melodia', 'melodica', 'voz unica', 'unisono', 'fieles'];
+const EVITA = [
+  'acorde', 'cifrado', 'guitarra', 'cifra',           // acompañamiento
+  'satb', 'sat ', 'coral', 'polifon',                  // arreglo a varias voces
+  'soprano', 'contralto', 'alto', 'tenor', 'bajo', 'barit',  // una voz suelta
+  'organo', 'teclado', 'piano',                        // reducción instrumental
+];
+
+/** Cuánto inclina el nombre de un archivo hacia la partitura de la asamblea. */
+function sesgoDeAsamblea(nombreNormalizado: string): number {
+  let sesgo = 0;
+  if (PREFIERE.some((t) => nombreNormalizado.includes(t))) sesgo += 1;
+  if (EVITA.some((t) => nombreNormalizado.includes(t))) sesgo -= 1;
+  return sesgo;
+}
+
 /** Último segmento de la ruta = nombre de la carpeta contenedora del archivo. */
 const folderOf = (f: DriveFile): string => {
   if (!f.path) return '';
@@ -106,7 +131,11 @@ export function pickOrdinarySheet(
 
     // La carpeta pesa más que el nombre: el modelo "una carpeta por Misa" es la
     // fuente de verdad. Sin Misa, cualquier archivo de la parte sirve (score 1).
-    const score = 1 + (folderMatch ? 3 : 0) + (nameMassMatch ? 2 : 0);
+    // El sesgo de asamblea desempata DENTRO de la misma calidad de coincidencia: pesa
+    // menos que la carpeta y que el nombre de la Misa, para no traer el Santo de otra
+    // Misa solo porque su archivo dice "pueblo".
+    const score = 1 + (folderMatch ? 3 : 0) + (nameMassMatch ? 2 : 0)
+      + sesgoDeAsamblea(n) * 0.5;
     if (score > bestScore) { bestScore = score; best = f; }
   }
   return best;

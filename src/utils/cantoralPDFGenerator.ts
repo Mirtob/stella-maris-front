@@ -14,7 +14,9 @@ import { getPdfFont, getPdfScale } from '../data/pdfStyle';
 import { renderPdfToImages, imposeBooklet } from './atrilBookletPDF';
 import { repartirEnColumnas, type Pieza } from './pdfColumns';
 import { partirFacsimil, type TrozoFacsimil } from './facsimilTrozos';
-import { sortCategoriesByMassOrder } from './ordinary';
+import { sortCategoriesByMassOrder, isOrdinary } from './ordinary';
+import { resolveOrdinarySheetMusic } from './ordinarySheetMusic';
+import { getDrivePdfProxyUrl } from './driveProxy';
 import { getCelebrationsForDate } from './liturgicalCalendar';
 import { celebracionesDePortada } from './celebracionesPortada';
 
@@ -86,6 +88,65 @@ async function loadCircularLogo(src: string): Promise<{ dataUrl: string; size: n
 const RESERVA_TITULO = 22;
 
 /** Carga una imagen y resuelve cuando está lista (o null si falla). */
+/**
+ * Quita los márgenes en blanco de una imagen, dejándola ajustada a la mancha.
+ *
+ * Una página de Drive viene con la hoja entera: si se pega tal cual en una columna de
+ * 90 mm, la pauta queda diminuta en medio de un mar de blanco. Los facsímiles del
+ * Graduale ya vienen recortados a la mancha desde el script que los genera; esto hace
+ * lo mismo, en el navegador, para las partituras que se leen de un PDF.
+ *
+ * Deja 8 px de aire alrededor, el mismo que usa scripts/render-graduale-webp.py, para
+ * que la pauta no quede ahogada contra el borde. Si la imagen es toda blanca o el
+ * canvas no se deja leer, devuelve la original: recortar es una mejora, no un requisito.
+ */
+async function recortarMargenes(img: HTMLImageElement): Promise<HTMLImageElement | null> {
+  const AIRE = 8;
+  const UMBRAL = 245;           // por encima de esto es papel, no tinta
+  try {
+    const W = img.naturalWidth;
+    const H = img.naturalHeight;
+    if (!W || !H) return img;
+    const lienzo = document.createElement('canvas');
+    lienzo.width = W;
+    lienzo.height = H;
+    const ctx = lienzo.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return img;
+    ctx.drawImage(img, 0, 0);
+    const { data } = ctx.getImageData(0, 0, W, H);
+    let x0 = W, y0 = H, x1 = -1, y1 = -1;
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * 4;
+        // Transparente = papel: un PDF rasterizado sin fondo deja alfa 0.
+        if (data[i + 3] < 16) continue;
+        if (data[i] > UMBRAL && data[i + 1] > UMBRAL && data[i + 2] > UMBRAL) continue;
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+    if (x1 < x0 || y1 < y0) return img;          // toda blanca: no hay qué recortar
+    x0 = Math.max(0, x0 - AIRE); y0 = Math.max(0, y0 - AIRE);
+    x1 = Math.min(W - 1, x1 + AIRE); y1 = Math.min(H - 1, y1 + AIRE);
+    const ancho = x1 - x0 + 1;
+    const alto = y1 - y0 + 1;
+    if (ancho === W && alto === H) return img;   // ya venía ajustada
+    const corte = document.createElement('canvas');
+    corte.width = ancho;
+    corte.height = alto;
+    const cctx = corte.getContext('2d');
+    if (!cctx) return img;
+    cctx.fillStyle = '#ffffff';
+    cctx.fillRect(0, 0, ancho, alto);
+    cctx.drawImage(lienzo, x0, y0, ancho, alto, 0, 0, ancho, alto);
+    return await loadImage(corte.toDataURL('image/png'));
+  } catch {
+    return img;
+  }
+}
+
 async function loadImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image();
@@ -586,6 +647,46 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
       if (trozos.length) facsimiles.set(String(s.id), trozos);
     }));
 
+  /**
+   * Y las partituras de las PARTES FIJAS de la Misa, aunque sean en español.
+   *
+   * El Kyrie, el Gloria, el Santo, el Cordero y el Padre Nuestro se cantan leyendo la
+   * música, no la letra: son las piezas que la asamblea repite domingo a domingo y que
+   * más se agradecen escritas. Hasta ahora sólo el gregoriano entraba al folleto con su
+   * tetragrama, y las mismas partes en español salían como un bloque de texto.
+   *
+   * La partitura vive como PDF en Drive, así que se rasteriza aquí (una imagen por
+   * página), se le quitan los márgenes en blanco —una página de Drive viene con la
+   * hoja entera; un facsímil del Graduale ya venía recortado a la mancha— y de ahí en
+   * adelante sigue el mismo camino que el gregoriano.
+   *
+   * Si algo falla —no hay partitura, Drive no responde, el PDF no se deja leer— no pasa
+   * nada: el canto cae a su letra, como antes. Nunca se queda la parte en blanco.
+   */
+  const conPartitura = cantoral.songs.filter(
+    (s) => !s.gradualeImage && isOrdinary(s) && !facsimiles.has(String(s.id)),
+  );
+  await Promise.all(conPartitura.map(async (s) => {
+    try {
+      const conHoja = s.sheetMusicUrl ? s : await resolveOrdinarySheetMusic(s);
+      const proxy = getDrivePdfProxyUrl(conHoja.sheetMusicUrl);
+      if (!proxy) return;
+      // A 1400 px de ancho la pauta aguanta el tamaño de columna sin verse pixelada.
+      const paginas = await renderPdfToImages({ url: proxy }, 1400);
+      const trozos: TrozoFacsimil[] = [];
+      for (const pagina of paginas) {
+        const img = await loadImage(pagina);
+        if (!img?.naturalWidth) continue;
+        const limpia = await recortarMargenes(img);
+        if (!limpia?.naturalWidth) continue;
+        trozos.push(...partirFacsimil(limpia, colW, colBottom - colTop, RESERVA_TITULO));
+      }
+      if (trozos.length) facsimiles.set(String(s.id), trozos);
+    } catch {
+      /* sin partitura se imprime la letra, que es lo que se hacía antes */
+    }
+  }));
+
   // QR del canal: se arma antes para poder incluirlo en la medición (así nunca es él
   // quien obliga a abrir una hoja más).
   let qrDataUrl: string | null = null;
@@ -822,7 +923,11 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
         const lyrics = cleanLyrics(letraAleluya);
         // El propio gregoriano no tiene letra que imprimir: tiene partitura, y el texto
         // va escrito bajo las neumas en el propio facsímil.
-        if (song.gradualeImage && facsimil(song)) {
+        // Con partitura cargada se imprime la partitura, no la letra: vale para el
+        // propio gregoriano y —desde el 24-sep-2026— para las partes fijas de la Misa,
+        // que se cantan leyendo la música aunque estén en español. Sin partitura, cae
+        // a la letra como siempre.
+        if (facsimil(song)) {
           // El facsímil ya se ató solo: ver `facsimil()`.
         } else if (lyrics) {
           const estrofas = parseStanzas(lyrics);
