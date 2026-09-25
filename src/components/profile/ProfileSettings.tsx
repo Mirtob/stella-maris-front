@@ -657,6 +657,27 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
           Guardar Cambios
         </button>
 
+        {/*
+          Qué versión de la app corre ESTE aparato.
+          Cuando algo se ve distinto en la tablet que en el teléfono, lo primero que hay
+          que descartar es un bundle viejo en caché — y hasta el 25-sep-2026 no había
+          manera de saberlo. Se toca para copiarlo y mandarlo por mensaje.
+        */}
+        <button
+          type="button"
+          onClick={() => {
+            const sello = `Stella Maris ${__BUILD_ID__} · ${__BUILD_TIME__}`;
+            navigator.clipboard?.writeText(sello).then(
+              () => toast.success('Versión copiada', { description: sello }),
+              () => toast.info(sello),
+            );
+          }}
+          className="mt-6 w-full text-center text-xs text-gray-500 dark:text-gray-400 font-mono py-2 active:opacity-60"
+          title="Tocar para copiar"
+        >
+          versión {__BUILD_ID__} · {__BUILD_TIME__}
+        </button>
+
         {/* Info Box */}
         <div className="mt-6 bg-purple-50 border-2 border-purple-200 rounded-xl p-6">
           <div className="flex gap-3">
