@@ -98,6 +98,20 @@ const segmentosDe = (f: DriveFile): string[] =>
  */
 const PALABRAS_VACIAS = new Set(['misa', 'del', 'las', 'los', 'para']);
 
+/**
+ * Una partitura es un PDF.
+ *
+ * La carpeta de cada parte trae además el MP3 de ensayo de cada voz y el .mscz de
+ * MuseScore, y varios de ellos se llaman EXACTAMENTE igual que el PDF salvo por la
+ * extensión: «Santo - Manzano-Voz.mp3» junto a «Santo - Manzano-Voz.pdf». Empataban en
+ * puntaje y ganaba el que Drive devolviera primero, que no es algo que uno controle: en
+ * la carpeta del Santo los MP3 venían antes, así que al folleto se le entregaba un audio,
+ * PDF.js no podía dibujarlo y la parte salía con la letra. En las carpetas del Kyrie y
+ * del Cordero el PDF venía primero y funcionaba de casualidad. Reportado el 25-sep-2026.
+ */
+const esPdf = (f: DriveFile): boolean =>
+  f?.mimeType === 'application/pdf' || /\.pdf$/i.test(f?.name ?? '');
+
 export function pickOrdinarySheet(
   category: string,
   massName: string | undefined,
@@ -111,6 +125,7 @@ export function pickOrdinarySheet(
   let best: DriveFile | null = null;
   let bestScore = 0;
   for (const f of files) {
+    if (!esPdf(f)) continue;          // el MP3 de ensayo no es una partitura
     const n = norm(f.name);
     const segs = segmentosDe(f);
     // La parte se identifica en el nombre del archivo O en alguna carpeta del camino.

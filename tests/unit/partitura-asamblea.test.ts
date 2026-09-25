@@ -66,6 +66,51 @@ check('el Señor ten piedad, con ñ y acento',
 check('el Gloria, que solo tiene Mujeres, no trae partitura',
   paraElFolleto('Gloria', MANZANO, carpetaManzano), null);
 
+console.log('\n== El Drive real de Manzano, en el orden que lo devuelve Drive ==');
+// Reportado el 25-sep-2026: el Santo salia con letra y el Kyrie y el Cordero bien, con
+// los tres archivos presentes. La causa no era el nombre sino el TIPO: cada carpeta trae
+// el mp3 de ensayo de cada voz, y «Santo - Manzano-Voz.mp3» se llama igual que el PDF
+// salvo la extension. Empataban en puntaje y ganaba el que Drive devolviera primero. En
+// la carpeta del Santo los mp3 venian antes; en las otras dos, el PDF. Funcionaba de
+// casualidad.
+const dir = (parte: string) => `Misas/Misa M. Manzano/${parte} - M. Manzano`;
+// Orden textual del listado de produccion: mp3 ANTES que pdf.
+const santoReal = [
+  f('Santo.mscz', dir('Santo')),
+  f('Santo - Manzano-Hombres.mp3', dir('Santo')),
+  f('Santo - Manzano-Mujeres.mp3', dir('Santo')),
+  f('Santo - Manzano-Voz.mp3', dir('Santo')),
+  f('Santo - Manzano.mp3', dir('Santo')),
+  f('Santo - Manzano-Hombres.pdf', dir('Santo')),
+  f('Santo - Manzano-Mujeres.pdf', dir('Santo')),
+  f('Santo - Manzano-Voz.pdf', dir('Santo')),
+  f('Santo - Manzano.pdf', dir('Santo')),
+];
+check('REGRESION: el Santo trae el PDF, no el mp3 que se llama igual',
+  paraElFolleto('Santo', MANZANO, santoReal), 'Santo - Manzano-Voz.pdf');
+check('y el .mscz de MuseScore tampoco se cuela',
+  paraElFolleto('Santo', MANZANO, [f('Santo.mscz', dir('Santo')), f('Santo - Manzano-Voz.pdf', dir('Santo'))]),
+  'Santo - Manzano-Voz.pdf');
+// El Kyrie y el Cordero, que ya funcionaban, siguen funcionando.
+check('el Señor ten piedad sigue bien',
+  paraElFolleto('Kyrie', MANZANO, [
+    f('Señor, ten piedad.mscz', dir('Señor, ten piedad')),
+    f('Señor, ten piedad - Manzano-Voz.pdf', dir('Señor, ten piedad')),
+    f('Señor, ten piedad - Manzano.pdf', dir('Señor, ten piedad')),
+    f('Señor, ten piedad - Manzano-Voz.mp3', dir('Señor, ten piedad')),
+  ]),
+  'Señor, ten piedad - Manzano-Voz.pdf');
+check('el Cordero de Dios tambien',
+  paraElFolleto('Cordero de Dios', MANZANO, [
+    f('Cordero de Dios - Manzano-Voz.pdf', dir('Cordero de Dios')),
+    f('Cordero de Dios - Manzano-Voz.mp3', dir('Cordero de Dios')),
+  ]),
+  'Cordero de Dios - Manzano-Voz.pdf');
+// El selector del coro sufria lo mismo: podia enlazarle un audio al Modo Atril.
+check('y el selector general tampoco entrega audios',
+  elegido('Santo', MANZANO, santoReal.filter((x) => !/-Voz\./.test(x.name)))?.endsWith('.pdf'),
+  true);
+
 console.log('\n== Sin archivo de Voz: letra, nunca otra voz ==');
 check('aunque exista la partitura completa',
   paraElFolleto('Santo', MANZANO, [f('Santo - Manzano.pdf', SUELTO)]), null);
