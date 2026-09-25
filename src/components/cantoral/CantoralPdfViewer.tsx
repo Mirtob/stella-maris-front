@@ -5,6 +5,7 @@ import { PublishedCantoral } from '../../types';
 import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
 import { PdfBlobViewer } from './PdfBlobViewer';
 import { abrirOGuardarPdf, guardarPdf, nombreDeFolleto } from '../../utils/descargarPdf';
+import { guardarFolletoAlDia } from '../../utils/guardarFolleto';
 
 /**
  * Visor del cantoral del Pueblo fiel (letra) para SEGUIR EN VIVO: PDF CONTINUO
@@ -17,11 +18,16 @@ import { abrirOGuardarPdf, guardarPdf, nombreDeFolleto } from '../../utils/desca
  * (ver services/catalogoVigente), pero el listado de Drive se guarda una hora porque
  * recorrerlo entero cuesta segundos; el botón es para cuando el coro acaba de subir la
  * partitura de una Misa y quiere verla ya, sin tener que republicar.
+ *
+ * `puedeGuardar` (el coro en su parroquia, no de visita) además SUBE el folleto nuevo a
+ * Storage al actualizar, para que «Descargar folleto» entregue la versión corregida (el
+ * enlace del QR, /c/{id}, arma el folleto en el momento y no depende de este archivo).
  */
-export function CantoralPdfViewer({ cantoral, onBack, puedeActualizar = false }: {
+export function CantoralPdfViewer({ cantoral, onBack, puedeActualizar = false, puedeGuardar = false }: {
   cantoral: PublishedCantoral;
   onBack: () => void;
   puedeActualizar?: boolean;
+  puedeGuardar?: boolean;
 }) {
   const [blob, setBlob] = useState<Blob | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,6 +35,26 @@ export function CantoralPdfViewer({ cantoral, onBack, puedeActualizar = false }:
   const [printing, setPrinting] = useState(false);
   // Cuántas veces se pidió «Actualizar partituras». Distinto de cero = armar sin cachés.
   const [refrescos, setRefrescos] = useState(0);
+  // El PDF del servidor, y si se está volviendo a subir tras actualizar.
+  const [pdfUrl, setPdfUrl] = useState(cantoral.pdfUrl);
+  const [guardando, setGuardando] = useState(false);
+
+  /** Sube el cuadernillo recién releído. Las cachés ya quedaron frescas. */
+  const subirFolleto = async () => {
+    setGuardando(true);
+    const r = await guardarFolletoAlDia(cantoral);
+    setGuardando(false);
+    if (r.ok && r.url) {
+      setPdfUrl(r.url);
+      toast.success('Folleto guardado', { description: '«Descargar folleto» ya entrega esta versión.' });
+    } else {
+      console.error('Folleto: no se pudo guardar la versión actualizada:', r.error);
+      toast.warning('El folleto se actualizó en pantalla, pero no se pudo guardar', {
+        description: '«Descargar folleto» sigue entregando la versión anterior. Vuelve a tocar «Actualizar partituras».',
+        duration: 8000,
+      });
+    }
+  };
 
   /**
    * Guarda el cantoral que YA está generado y en memoria.
@@ -43,10 +69,11 @@ export function CantoralPdfViewer({ cantoral, onBack, puedeActualizar = false }:
    */
   const descargar = () => {
     const nombre = nombreDeFolleto(cantoral.liturgicalDate, cantoral.date);
-    // Recién actualizado, el PDF guardado en el servidor es el de ANTES: se descarga el
-    // que se acaba de armar.
-    if (cantoral.pdfUrl && refrescos === 0) {
-      window.open(cantoral.pdfUrl, '_blank');
+    // Recién actualizado y mientras el nuevo no termina de subir, el PDF del servidor es
+    // el de ANTES: se descarga el que se acaba de armar.
+    const servidorAlDia = refrescos === 0 || (pdfUrl !== cantoral.pdfUrl && !guardando);
+    if (pdfUrl && servidorAlDia) {
+      window.open(pdfUrl, '_blank');
       return;
     }
     if (!blob) { toast.error('El cantoral todavía se está preparando'); return; }
@@ -71,7 +98,9 @@ export function CantoralPdfViewer({ cantoral, onBack, puedeActualizar = false }:
       .then(({ blob }) => {
         if (cancelled) return;
         setBlob(blob);
-        if (refrescar) toast.success('Folleto actualizado', { description: 'Con las letras y partituras de este momento.' });
+        if (!refrescar) return;
+        toast.success('Folleto actualizado', { description: 'Con las letras y partituras de este momento.' });
+        if (puedeGuardar) void subirFolleto();
       })
       .catch(() => { if (!cancelled) setFailed(true); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -154,13 +183,13 @@ export function CantoralPdfViewer({ cantoral, onBack, puedeActualizar = false }:
         {puedeActualizar && (
           <button
             onClick={() => setRefrescos((n) => n + 1)}
-            disabled={loading}
+            disabled={loading || guardando}
             title="Volver a leer letras y partituras (también las recién subidas a Drive)"
             aria-label="Actualizar partituras"
             className="ml-auto flex items-center gap-2 bg-white/20 hover:bg-white/30 border-2 border-white/30 rounded-xl px-3 py-2 font-bold active:scale-95 transition-all disabled:opacity-60 flex-shrink-0"
           >
-            <RefreshCw className={`w-5 h-5 ${loading && refrescos > 0 ? 'animate-spin' : ''}`} strokeWidth={2.5} />
-            <span className="hidden md:inline">Actualizar partituras</span>
+            <RefreshCw className={`w-5 h-5 ${(loading && refrescos > 0) || guardando ? 'animate-spin' : ''}`} strokeWidth={2.5} />
+            <span className="hidden md:inline">{guardando ? 'Guardando folleto…' : 'Actualizar partituras'}</span>
           </button>
         )}
         {/* Descargar va PRIMERO y siempre disponible: es la salida que funciona aunque

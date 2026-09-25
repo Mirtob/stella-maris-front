@@ -45,7 +45,11 @@ export async function uploadCantoralPDF(
 
       if (!uploadError) {
         const { data } = sb.storage.from(BUCKET).getPublicUrl(path);
-        return { ok: true, publicUrl: data.publicUrl };
+        // El archivo se SOBREESCRIBE en la misma ruta y se sirve con caché de una hora:
+        // sin algo que cambie la URL, «Descargar folleto» seguiría entregando el folleto
+        // de antes tras editar o actualizar. `?v=` no cambia el archivo, solo la llave
+        // de caché.
+        return { ok: true, publicUrl: `${data.publicUrl}?v=${Date.now()}` };
       }
 
       lastError = uploadError;

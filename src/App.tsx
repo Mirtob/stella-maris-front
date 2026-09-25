@@ -113,6 +113,7 @@ import { olvidarDatosDeLaMisa } from './utils/borradorMisa';
 import { refrescarCantos } from './utils/refrescarCantos';
 import { leerCatalogoVigente } from './services/catalogoVigente';
 import { EVENTO_CATALOGO } from './services/songs';
+import { EVENTO_FOLLETO, type FolletoGuardado } from './utils/guardarFolleto';
 import { getSupabaseClient } from './services/supabaseClient';
 import { uploadCantoralPDF } from './services/cantoralPDF';
 import { cacheCantoralsForOffline, getOfflineCantorals } from './services/offlineCache';
@@ -631,6 +632,19 @@ function AppContent() {
       document.removeEventListener('visibilitychange', alVolver);
     };
   }, [route.screen]);
+
+  // El folleto se volvió a subir desde el visor («Actualizar partituras»): la lista y el
+  // diálogo del QR (su «Descargar folleto») tienen que apuntar a la URL nueva, que lleva otra `?v=` para saltar la caché.
+  useEffect(() => {
+    const alGuardar = (e: Event) => {
+      const { id, url } = (e as CustomEvent<FolletoGuardado>).detail ?? {};
+      if (!id || !url) return;
+      setPublishedCantorals((prev) => prev.map((c) => (c.id === id ? { ...c, pdfUrl: url } : c)));
+      setQrCantoral((prev) => (prev && prev.id === id ? { ...prev, pdfUrl: url } : prev));
+    };
+    window.addEventListener(EVENTO_FOLLETO, alGuardar);
+    return () => window.removeEventListener(EVENTO_FOLLETO, alGuardar);
+  }, []);
 
   // Cargar las CELEBRACIONES personalizadas (persistidas) visibles para el usuario:
   // las globales (del Admin, para todos) + las de sus parroquias/capillas. Se guardan
