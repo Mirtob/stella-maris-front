@@ -1162,8 +1162,12 @@ function AppContent() {
         description: 'Se actualizó el cantoral publicado. No se envió ningún aviso.',
       });
       setPublishedCantorals(await refrescarCantorales());
-      // Regenerar el PDF del coro EN SEGUNDO PLANO (no bloquea la edición).
-      void generateAndUploadCantoralPDF(updated, false);
+      // Regenerar el folleto EN SEGUNDO PLANO (no bloquea la edición), pero DICIENDO si
+      // falla. Iba en silencio, y con la subida a Storage rota eso significaba que el
+      // folleto guardado no se rehacía nunca sin que nadie se enterara: el cantoral
+      // quedaba con la versión vieja o sin ninguna. Un fallo que no se ve es un fallo
+      // que no se arregla.
+      void generateAndUploadCantoralPDF(updated, true);
       return;
     }
 
