@@ -44,12 +44,19 @@ async function loadSheets(): Promise<DriveFile[]> {
   return inFlight;
 }
 
-/** Normaliza: sin acentos, minúsculas, separadores → espacios. */
+/**
+ * Normaliza para comparar: sin acentos, minúsculas, y TODO lo que no sea letra o dígito
+ * pasa a ser un espacio.
+ *
+ * Antes solo se convertían `_ - .`, y la puntuación que quedaba rompía calces buenos: el
+ * archivo «Señor, ten piedad - Nebreda-Voz.pdf» daba "senor, ten piedad …" con la coma
+ * pegada, que no es el "senor ten piedad" que busca el sinónimo. Se salvaba de milagro
+ * porque hay un segundo sinónimo más corto.
+ */
 const norm = (s: string) =>
-  s.normalize('NFD').replace(/[̀-ͯ]/g, '')
+  (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '')
     .toLowerCase()
-    .replace(/[_\-.]+/g, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 
 // Sinónimos por parte para el match contra el nombre del archivo en Drive.
@@ -118,8 +125,16 @@ export function pickOrdinarySheet(
   files: DriveFile[],
 ): DriveFile | null {
   const parts = PART_SYNONYMS[category] ?? [norm(category)];
-  const massTokens = massName
-    ? norm(massName).split(' ').filter(t => t.length > 2 && !PALABRAS_VACIAS.has(t))
+  // Lo que va ENTRE PARÉNTESIS es un matiz, no la identidad de la Misa: «Nebreda (Do
+  // mayor)» y «Nebreda» son la misma, y en Drive la carpeta se llama «Misa Nebreda» a
+  // secas. Exigir esas palabras dejaba fuera al Kyrie y al Cordero de Nebreda aunque su
+  // partitura estuviera ahí. Así que el paréntesis no se exige: SUMA si además calza,
+  // para poder desempatar entre dos variantes de la misma Misa si algún día se separan.
+  const tokensDe = (texto: string) =>
+    norm(texto).split(' ').filter(t => t.length > 2 && !PALABRAS_VACIAS.has(t));
+  const massTokens = massName ? tokensDe(massName.replace(/\([^)]*\)/g, ' ')) : [];
+  const matices = massName
+    ? tokensDe([...massName.matchAll(/\(([^)]*)\)/g)].map(m => m[1]).join(' '))
     : [];
 
   let best: DriveFile | null = null;
@@ -151,7 +166,9 @@ export function pickOrdinarySheet(
     // de la Misa correcta.
     // La carpeta pesa más que el nombre: el modelo "una carpeta por Misa" es la
     // fuente de verdad. Sin Misa, cualquier archivo de la parte sirve (score 1).
-    const score = 1 + (folderMatch ? 3 : 0) + (nameMassMatch ? 2 : 0);
+    // El matiz del paréntesis solo desempata: nunca decide por sí solo.
+    const matiz = matices.filter(t => n.includes(t) || segs.some(g => g.includes(t))).length;
+    const score = 1 + (folderMatch ? 3 : 0) + (nameMassMatch ? 2 : 0) + matiz * 0.25;
     if (score > bestScore) { bestScore = score; best = f; }
   }
   return best;

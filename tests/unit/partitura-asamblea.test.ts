@@ -133,6 +133,48 @@ check('la palabra "misa" no se exige',
   paraElFolleto('Santo', 'Misa M. Manzano', [f('Santo - Manzano-Voz.pdf', SUELTO)]),
   'Santo - Manzano-Voz.pdf');
 
+console.log('\n== La Misa de Nebreda, con el Drive real ==');
+// Reportado el 25-sep-2026. En el catalogo la misma Misa esta escrita de tres formas
+// —"Nebreda", "Nebreda (Do mayor)", "Nebreda (Do Mayor)"— y en Drive la carpeta se llama
+// "Misa Nebreda" a secas. Al partir el nombre en palabras quedaban los tokens
+// ['nebreda','(do','mayor)'] CON LOS PARENTESIS PEGADOS, que no estan en ningun lado, y
+// el Kyrie se rechazaba de plano aunque su partitura estuviera ahi.
+const kyrieNebreda = 'Misas/Misa Nebreda/Señor, ten piedad - Nebreda';
+const gloriaNebreda = 'Misas/Misa Nebreda/Gloria -Nebreda';
+const nebreda = [
+  f('Señor, ten piedad - Nebreda-Voz.mp3', kyrieNebreda),
+  f('Señor, ten piedad - Nebreda-Soprano.pdf', kyrieNebreda),
+  f('Señor, ten piedad - Nebreda-Voz.pdf', kyrieNebreda),
+  f('Señor, ten piedad - Nebreda.pdf', kyrieNebreda),
+  f('Gloria -Nebreda-Voz.pdf', gloriaNebreda),
+  f('Gloria -Nebreda-Soprano.pdf', gloriaNebreda),
+  f('Gloria -Nebreda-Voz.mp3', gloriaNebreda),
+  f('Santo - Nebreda.pdf', 'Misas/Misa Nebreda'),
+  f('Cordero de Dios - Nebreda.pdf', 'Misas/Misa Nebreda'),
+];
+check('REGRESION: el Kyrie con "(Do mayor)" en el nombre de la Misa',
+  paraElFolleto('Kyrie', 'Nebreda (Do mayor)', nebreda), 'Señor, ten piedad - Nebreda-Voz.pdf');
+check('y con la otra grafia, "(Do Mayor)"',
+  paraElFolleto('Cordero de Dios', 'Nebreda (Do Mayor)',
+    [...nebreda, f('Cordero de Dios - Nebreda-Voz.pdf', 'Misas/Misa Nebreda')]),
+  'Cordero de Dios - Nebreda-Voz.pdf');
+check('el Gloria, que se escribe "Nebreda" a secas',
+  paraElFolleto('Gloria', 'Nebreda', nebreda), 'Gloria -Nebreda-Voz.pdf');
+// Santo y Cordero de Nebreda no tienen archivo -Voz: va la letra, no la version completa.
+check('el Santo de Nebreda, sin -Voz, no trae partitura',
+  paraElFolleto('Santo', 'Nebreda (Do mayor)', nebreda), null);
+// La coma de "Señor, ten piedad" ya no depende del sinonimo corto para salvarse.
+check('la coma del nombre no rompe el sinonimo largo',
+  paraElFolleto('Kyrie', 'Nebreda', [f('Señor, ten piedad - Nebreda-Voz.pdf', kyrieNebreda)]),
+  'Señor, ten piedad - Nebreda-Voz.pdf');
+// El parentesis no decide, pero desempata si dos variantes conviven.
+check('entre dos variantes, el matiz del parentesis desempata',
+  paraElFolleto('Gloria', 'Nebreda (Fa mayor)', [
+    f('Gloria - Nebreda-Voz.pdf', 'Misas/Misa Nebreda Do mayor'),
+    f('Gloria - Nebreda-Voz.pdf', 'Misas/Misa Nebreda Fa mayor'),
+  ].map((x, i) => ({ ...x, id: `v${i}` })))!,
+  'Gloria - Nebreda-Voz.pdf');
+
 console.log('\n== El selector general (el del coro) sigue como estaba ==');
 // Este alimenta la partitura del Atril, que SI es la completa: no se le puso sesgo.
 check('encuentra la parte por el nombre',
