@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Download, Loader, Printer } from 'lucide-react';
+import { ArrowLeft, Download, Loader, Printer, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { PublishedCantoral } from '../../types';
 import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
@@ -11,12 +11,24 @@ import { abrirOGuardarPdf, guardarPdf, nombreDeFolleto } from '../../utils/desca
  * (vertical, decorado), cómodo de leer en pantalla. El botón "Imprimir folleto" genera
  * la versión impuesta como CUADERNILLO (booklet) — así, en pantalla es continuo y para
  * imprimir es folleto.
+ *
+ * `puedeActualizar` (Coro y Admin) muestra «Actualizar partituras»: vuelve a armar el
+ * folleto recorriendo el Drive sin cachés. Las letras ya se releen cada vez que se abre
+ * (ver services/catalogoVigente), pero el listado de Drive se guarda una hora porque
+ * recorrerlo entero cuesta segundos; el botón es para cuando el coro acaba de subir la
+ * partitura de una Misa y quiere verla ya, sin tener que republicar.
  */
-export function CantoralPdfViewer({ cantoral, onBack }: { cantoral: PublishedCantoral; onBack: () => void }) {
+export function CantoralPdfViewer({ cantoral, onBack, puedeActualizar = false }: {
+  cantoral: PublishedCantoral;
+  onBack: () => void;
+  puedeActualizar?: boolean;
+}) {
   const [blob, setBlob] = useState<Blob | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [printing, setPrinting] = useState(false);
+  // Cuántas veces se pidió «Actualizar partituras». Distinto de cero = armar sin cachés.
+  const [refrescos, setRefrescos] = useState(0);
 
   /**
    * Guarda el cantoral que YA está generado y en memoria.
@@ -31,7 +43,9 @@ export function CantoralPdfViewer({ cantoral, onBack }: { cantoral: PublishedCan
    */
   const descargar = () => {
     const nombre = nombreDeFolleto(cantoral.liturgicalDate, cantoral.date);
-    if (cantoral.pdfUrl) {
+    // Recién actualizado, el PDF guardado en el servidor es el de ANTES: se descarga el
+    // que se acaba de armar.
+    if (cantoral.pdfUrl && refrescos === 0) {
       window.open(cantoral.pdfUrl, '_blank');
       return;
     }
@@ -52,12 +66,17 @@ export function CantoralPdfViewer({ cantoral, onBack }: { cantoral: PublishedCan
     let cancelled = false;
     setLoading(true);
     setFailed(false);
-    generateCantoralPDF({ cantoral, download: false, booklet: false })
-      .then(({ blob }) => { if (!cancelled) setBlob(blob); })
+    const refrescar = refrescos > 0;
+    generateCantoralPDF({ cantoral, download: false, booklet: false, refrescar })
+      .then(({ blob }) => {
+        if (cancelled) return;
+        setBlob(blob);
+        if (refrescar) toast.success('Folleto actualizado', { description: 'Con las letras y partituras de este momento.' });
+      })
       .catch(() => { if (!cancelled) setFailed(true); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [cantoral]);
+  }, [cantoral, refrescos]);
 
   const printBooklet = async () => {
     if (printing) return;
@@ -132,11 +151,23 @@ export function CantoralPdfViewer({ cantoral, onBack }: { cantoral: PublishedCan
           <ArrowLeft className="w-6 h-6" strokeWidth={2.5} /> Volver
         </button>
         <span className="font-bold truncate min-w-0">Cantoral (letra)</span>
+        {puedeActualizar && (
+          <button
+            onClick={() => setRefrescos((n) => n + 1)}
+            disabled={loading}
+            title="Volver a leer letras y partituras (también las recién subidas a Drive)"
+            aria-label="Actualizar partituras"
+            className="ml-auto flex items-center gap-2 bg-white/20 hover:bg-white/30 border-2 border-white/30 rounded-xl px-3 py-2 font-bold active:scale-95 transition-all disabled:opacity-60 flex-shrink-0"
+          >
+            <RefreshCw className={`w-5 h-5 ${loading && refrescos > 0 ? 'animate-spin' : ''}`} strokeWidth={2.5} />
+            <span className="hidden md:inline">Actualizar partituras</span>
+          </button>
+        )}
         {/* Descargar va PRIMERO y siempre disponible: es la salida que funciona aunque
             la vista previa no se dibuje o el cuadernillo no se pueda imponer. */}
         <button
           onClick={descargar}
-          className="ml-auto flex items-center gap-2 bg-white/20 hover:bg-white/30 border-2 border-white/30 rounded-xl px-3 py-2 font-bold active:scale-95 transition-all flex-shrink-0"
+          className={`${puedeActualizar ? '' : 'ml-auto '}flex items-center gap-2 bg-white/20 hover:bg-white/30 border-2 border-white/30 rounded-xl px-3 py-2 font-bold active:scale-95 transition-all flex-shrink-0`}
         >
           <Download className="w-5 h-5" strokeWidth={2.5} />
           <span className="hidden sm:inline">Descargar</span>
@@ -155,7 +186,7 @@ export function CantoralPdfViewer({ cantoral, onBack }: { cantoral: PublishedCan
       {loading ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 text-white/80">
           <Loader className="w-8 h-8 animate-spin" />
-          <p className="text-sm">Preparando el cantoral…</p>
+          <p className="text-sm">{refrescos > 0 ? 'Releyendo letras y partituras…' : 'Preparando el cantoral…'}</p>
         </div>
       ) : blob ? (
         <PdfBlobViewer blob={blob} onDescargar={descargar} />

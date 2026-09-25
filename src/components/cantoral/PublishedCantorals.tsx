@@ -578,7 +578,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
       )}
       {/* Cantoral (letra) como PDF continuo para seguir en vivo (+ imprimir folleto). */}
       {pdfCantoral && (
-        <CantoralPdfViewer cantoral={pdfCantoral} onBack={() => setPdfCantoral(null)} />
+        <CantoralPdfViewer cantoral={pdfCantoral} onBack={() => setPdfCantoral(null)} puedeActualizar={isCoro} />
       )}
       <div className="pt-16">
         {/* Header */}
