@@ -32,6 +32,24 @@ export function idDeCatalogo(id: string): string {
   return i === -1 ? (id ?? '') : id.slice(0, i);
 }
 
+/** Los ids del catálogo son UUID. Los sintéticos (salmo-…, padre-nuestro-…) no. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Los ids de catálogo que vale la pena consultar.
+ *
+ * Se quita el sufijo de la parte (`<id>::comunion`) y se descarta lo que no es UUID: la
+ * columna `id` es uuid y un solo valor que no lo sea hace fallar la consulta ENTERA.
+ */
+export function idsConsultables(songs: Song[]): string[] {
+  const ids = new Set<string>();
+  for (const s of songs ?? []) {
+    const id = idDeCatalogo(String(s?.id ?? ''));
+    if (UUID.test(id)) ids.add(id);
+  }
+  return Array.from(ids);
+}
+
 /** Los campos que el folleto imprime y que, por tanto, vale la pena refrescar. */
 const refrescables = (fuente: Song): Partial<Song> => ({
   title: fuente.title,
@@ -70,6 +88,15 @@ export function refrescarCantos(songs: Song[], catalogo: Song[] | Map<string, So
     // Los campos vacíos del catálogo SÍ pisan a los de la copia: si se le quitó el autor
     // a un canto, el folleto tiene que dejar de imprimirlo. Por eso se asigna el objeto
     // entero de campos refrescables y no solo los que traen valor.
-    return { ...s, ...refrescables(alDia) };
+    const puesto = { ...s, ...refrescables(alDia) };
+    // Una excepción: la partitura de una parte del ordinario que el constructor RESOLVIÓ
+    // desde la carpeta de la Misa en Drive (ver resolveOrdinarySheetMusic). Esa URL no
+    // viene del catálogo —el canto no tiene `drive_file_id`— y pisarla con el vacío del
+    // catálogo dejaría al Atril sin partitura. Se reconoce porque la copia tampoco tenía
+    // `driveFileId`: si lo tenía y el catálogo se lo quitó, sí se borra.
+    if (!alDia.driveFileId && !alDia.sheetMusicUrl && !s.driveFileId && s.sheetMusicUrl) {
+      puesto.sheetMusicUrl = s.sheetMusicUrl;
+    }
+    return puesto;
   });
 }

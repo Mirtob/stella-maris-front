@@ -111,7 +111,8 @@ import {
 } from './services/cantorals';
 import { olvidarDatosDeLaMisa } from './utils/borradorMisa';
 import { refrescarCantos } from './utils/refrescarCantos';
-import { getSongs } from './services/songLoader';
+import { leerCatalogoVigente } from './services/catalogoVigente';
+import { EVENTO_CATALOGO } from './services/songs';
 import { getSupabaseClient } from './services/supabaseClient';
 import { uploadCantoralPDF } from './services/cantoralPDF';
 import { cacheCantoralsForOffline, getOfflineCantorals } from './services/offlineCache';
@@ -346,19 +347,20 @@ async function cargarCantoralesVisibles(
  * nada de lo ya publicado: ni la pantalla, ni el folleto, ni lo que abre el QR. El coro
  * corregía y no pasaba nada. Reportado el 24-sep-2026.
  *
- * Se hace al cargar, en un solo sitio, para que valga en toda la app a la vez. El
- * catálogo viene del caché de módulo de `getSongs`, así que después de la primera vez no
- * cuesta una llamada. Si no se puede leer, se muestran las copias guardadas, que es lo
- * que se hacía antes: nunca se queda un cantoral sin cantos por esto.
+ * Se hace al cargar, en un solo sitio, para que valga en toda la app a la vez, y otra
+ * vez cuando el catálogo cambia o la app vuelve a primer plano (ver AppContent). Se leen
+ * de Supabase solo los cantos de estos cantorales, sin caché: hasta el 25-sep-2026 se
+ * usaba el catálogo legacy de YouTube, que no es donde escribe «Gestión de cantos», y la
+ * corrección no llegaba nunca. Si no se puede leer, se muestran las copias guardadas,
+ * que es lo que se hacía antes: nunca se queda un cantoral sin cantos por esto.
  *
  * Ver utils/refrescarCantos — la categoría no se toca y lo sintético se respeta.
  */
 async function ponerLetrasAlDia(cantorales: PublishedCantoral[]): Promise<PublishedCantoral[]> {
   if (cantorales.length === 0) return cantorales;
   try {
-    const catalogo = await getSongs();
-    if (!catalogo.length) return cantorales;
-    const indice = new Map(catalogo.map((s) => [String(s.id), s]));
+    const indice = await leerCatalogoVigente(cantorales.flatMap((c) => c.songs ?? []));
+    if (indice.size === 0) return cantorales;
     return cantorales.map((c) => ({ ...c, songs: refrescarCantos(c.songs, indice) }));
   } catch {
     return cantorales;
@@ -590,6 +592,45 @@ function AppContent() {
       .finally(() => setLoadingCantorals(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route.screen, userProfile, isVerifiedAdmin]);
+
+  /**
+   * Releer las letras y partituras de lo que ya está en memoria.
+   *
+   * Los cantorales se ponen al día al cargarlos, pero la app puede quedar abierta horas
+   * — el coro corrige una letra en «Gestión de cantos», o desde otro teléfono cinco
+   * minutos antes de la Misa, y la pantalla del pueblo seguía mostrando la de antes. Se
+   * relee (1) cuando esta misma app escribe en el catálogo y (2) cuando vuelve a primer
+   * plano, a lo más una vez por minuto. Solo se consultan los cantos de estos
+   * cantorales; lo que no se pueda leer se queda como estaba.
+   */
+  const cantoralesRef = useRef(publishedCantorals);
+  cantoralesRef.current = publishedCantorals;
+  const constructorRef = useRef(cantoral);
+  constructorRef.current = cantoral;
+  useEffect(() => {
+    if (route.screen !== 'app') return;
+    let ultima = Date.now();
+    let cancelado = false;
+    const releer = async () => {
+      ultima = Date.now();
+      const enMemoria = [...cantoralesRef.current.flatMap((c) => c.songs ?? []), ...constructorRef.current];
+      const indice = await leerCatalogoVigente(enMemoria);
+      if (cancelado || indice.size === 0) return;
+      setPublishedCantorals((prev) => prev.map((c) => ({ ...c, songs: refrescarCantos(c.songs, indice) })));
+      setCantoral((prev) => refrescarCantos(prev, indice));
+    };
+    const alCambiarCatalogo = () => { void releer(); };
+    const alVolver = () => {
+      if (document.visibilityState === 'visible' && Date.now() - ultima > 60_000) void releer();
+    };
+    window.addEventListener(EVENTO_CATALOGO, alCambiarCatalogo);
+    document.addEventListener('visibilitychange', alVolver);
+    return () => {
+      cancelado = true;
+      window.removeEventListener(EVENTO_CATALOGO, alCambiarCatalogo);
+      document.removeEventListener('visibilitychange', alVolver);
+    };
+  }, [route.screen]);
 
   // Cargar las CELEBRACIONES personalizadas (persistidas) visibles para el usuario:
   // las globales (del Admin, para todos) + las de sus parroquias/capillas. Se guardan

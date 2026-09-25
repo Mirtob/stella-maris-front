@@ -23,6 +23,7 @@ import { FavoriteButton } from '../songs/FavoriteButton';
 import { VoiceMixer } from './VoiceMixer';
 import { getSongTracks, tieneMezclador, type AudioTrack } from '../../services/songAudio';
 import { esAleluyaDeCanto } from '../../utils/aleluyaEstrofa';
+import { useCantosAlDia } from '../../hooks/useCantosAlDia';
 
 interface AtrilModeProps {
   songs: Song[];
@@ -70,8 +71,11 @@ const writeListPref = (open: boolean) => {
  * La transposición es POR CANTO; la notación (latino/americano) y el zoom son globales.
  * La pantalla se mantiene encendida (useWakeLock).
  */
-export function AtrilMode({ songs, userRole, userInstrument, userVoicePart, onClose }: AtrilModeProps) {
+export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, userVoicePart, onClose }: AtrilModeProps) {
   useWakeLock(true);
+  // La letra, los acordes y la partitura de HOY, no los del día en que se publicó el
+  // cantoral: una corrección de último minuto tiene que llegar al atril. Ver el hook.
+  const songs = useCantosAlDia(cantosRecibidos);
 
   // Voz efectiva: la del perfil, pero se puede cambiar aquí mismo para este ensayo
   // (el que hoy dobla en trompeta no debería tener que ir a Ajustes).

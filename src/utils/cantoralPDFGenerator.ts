@@ -16,8 +16,7 @@ import { repartirEnColumnas, type Pieza } from './pdfColumns';
 import { partirFacsimil, type TrozoFacsimil } from './facsimilTrozos';
 import { sortCategoriesByMassOrder, isOrdinary } from './ordinary';
 import { resolveSheetForFolleto } from './ordinarySheetMusic';
-import { refrescarCantos } from './refrescarCantos';
-import { getSongs, clearSongsCache } from '../services/songLoader';
+import { ponerCantosAlDia } from '../services/catalogoVigente';
 import { getDrivePdfProxyUrl } from './driveProxy';
 import { getCelebrationsForDate } from './liturgicalCalendar';
 import { celebracionesDePortada } from './celebracionesPortada';
@@ -464,12 +463,15 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
    * los campos que el folleto imprime, y lo sintético (salmo del libro, propios del
    * Graduale, antífonas) se queda como estaba. Si el catálogo no se puede leer, se
    * imprime la copia guardada, que es lo que se hacía antes.
+   *
+   * Se relee SIEMPRE, también al solo mirar un folleto: es una consulta chica a
+   * Supabase (solo los cantos de este cantoral) y es justo lo que pide una corrección de
+   * último minuto. Hasta el 25-sep-2026 se leía el catálogo legacy de YouTube, que no es
+   * donde escribe «Gestión de cantos». `refrescar` queda para lo caro: el listado de Drive.
    */
   let cantoral = options.cantoral;
   try {
-    if (options.refrescar) clearSongsCache();
-    const catalogo = await getSongs();
-    cantoral = { ...cantoral, songs: refrescarCantos(cantoral.songs, catalogo) };
+    cantoral = { ...cantoral, songs: await ponerCantosAlDia(cantoral.songs) };
   } catch {
     /* sin catálogo se imprime la copia guardada */
   }

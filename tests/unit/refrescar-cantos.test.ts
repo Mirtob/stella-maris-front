@@ -12,7 +12,7 @@
  *    están en el catálogo;
  *  · los cantos BORRADOS del catálogo, que conservan su copia — para eso se guardó.
  */
-import { refrescarCantos, idDeCatalogo } from '../../src/utils/refrescarCantos';
+import { refrescarCantos, idDeCatalogo, idsConsultables } from '../../src/utils/refrescarCantos';
 import type { Song } from '../../src/types';
 
 let pass = 0, fail = 0;
@@ -66,6 +66,31 @@ check('un canto sintetico se queda como estaba',
   'antifona del libro');
 check('un canto borrado del catalogo conserva su copia',
   refrescarCantos([canto({ id: 'ya-no-existe' })], catalogo)[0].lyrics, 'letra vieja');
+
+console.log('\n== La partitura resuelta desde la carpeta de la Misa ==');
+// El constructor le pone al Kyrie la partitura que encuentra en la carpeta de la Misa
+// en Drive (resolveOrdinarySheetMusic); el catálogo no la tiene. Releer no puede
+// dejar al Atril sin ella.
+const kyrie = canto({ category: 'Kyrie', sheetMusicUrl: 'https://drive.google.com/file/d/CARPETA/preview' });
+check('una partitura resuelta desde Drive sobrevive a la relectura',
+  refrescarCantos([kyrie], [canto({ category: 'Kyrie' })])[0].sheetMusicUrl,
+  'https://drive.google.com/file/d/CARPETA/preview');
+check('pero si el catalogo trae partitura propia, manda el catalogo',
+  refrescarCantos([kyrie], [canto({ driveFileId: 'NUEVA', sheetMusicUrl: 'https://drive.google.com/file/d/NUEVA/view' })])[0].sheetMusicUrl,
+  'https://drive.google.com/file/d/NUEVA/view');
+check('y si el catalogo le QUITO la partitura vinculada, se quita',
+  refrescarCantos([canto({ driveFileId: 'VIEJA', sheetMusicUrl: 'https://drive.google.com/file/d/VIEJA/view' })], [canto()])[0].sheetMusicUrl,
+  undefined);
+
+console.log('\n== Que ids se consultan en Supabase ==');
+// La columna id es uuid: un solo valor que no lo sea (salmo-…, un id de YouTube) hace
+// fallar la consulta ENTERA y el cantoral se quedaba con las copias viejas.
+const U = '0f8e2a4c-1b3d-4e5f-8a9b-0c1d2e3f4a5b';
+check('solo UUID, sin la parte y sin repetir',
+  idsConsultables([canto({ id: U }), canto({ id: `${U}::comunion` }), canto({ id: 'salmo-2026-09-27' }),
+                   canto({ id: 'padre-nuestro-es-123' }), canto({ id: 'dQw4w9WgXcQ' })]),
+  [U]);
+check('un cantoral vacio no consulta nada', idsConsultables([]), []);
 
 console.log('\n== Nunca se pierde ni se reordena nada ==');
 const tres = [canto({ id: 'a' }), canto({ id: 'salmo-x' }), canto({ id: 'b' })];

@@ -199,18 +199,27 @@ export async function listPendingSongs(): Promise<Song[]> {
   }
 }
 
-/** Add a new song to the catalog (admin only). */
 /**
- * Cualquier escritura sobre el catálogo tira la caché.
+ * Cualquier escritura sobre el catálogo tira la caché y lo avisa al resto de la app.
  *
  * `getSongs()` guarda los cantos en localStorage DURANTE UNA HORA, y hasta el
  * 25-sep-2026 nadie llamaba a `clearSongsCache()`: estaba exportada y sin usar. Se
  * corregía la letra de un canto o se cambiaba su partitura y el cambio podía tardar una
  * hora en verse — en el folleto, en el Atril y en la vista del pueblo. El coro lo notó
  * al ir pasando las Misas a español: corregía y no pasaba nada.
+ *
+ * El aviso (`EVENTO_CATALOGO`) lo escuchan las pantallas con cantos en memoria —los
+ * cantorales cargados al entrar— para releer sin salir y volver a entrar. Ver
+ * services/catalogoVigente.
  */
-const invalidarCatalogo = () => clearSongsCache();
+export const EVENTO_CATALOGO = 'stella:catalogo-cambiado';
 
+const invalidarCatalogo = () => {
+  clearSongsCache();
+  try { window.dispatchEvent(new Event(EVENTO_CATALOGO)); } catch { /* sin window (tests) */ }
+};
+
+/** Add a new song to the catalog (admin only). */
 export async function addSong(input: SongInput): Promise<{ ok: boolean; song?: Song; error?: string }> {
   try {
     const sb = getSupabaseClient();
