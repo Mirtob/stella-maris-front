@@ -110,12 +110,22 @@ function sesgoDeVozPrincipal(nombreNormalizado: string): number {
   return (PREFERENCIA_VOZ.length - nivel) * 0.3;    // voz 0,9 · órgano 0,6 · soprano 0,3
 }
 
-/** Último segmento de la ruta = nombre de la carpeta contenedora del archivo. */
-const folderOf = (f: DriveFile): string => {
-  if (!f.path) return '';
-  const segs = f.path.split('/').filter(Boolean);
-  return segs.length ? segs[segs.length - 1] : '';
-};
+/**
+ * Las carpetas del camino del archivo, normalizadas.
+ *
+ * Se miran TODAS y no solo la contenedora porque la parte y la Misa pueden repartirse
+ * entre el nombre del archivo y las carpetas de tres maneras, y las tres son razonables:
+ *
+ *   Misa X/Gloria voz.pdf      — todo en el nombre
+ *   Misa X/Voz/Gloria.pdf      — una carpeta por voz
+ *   Misa X/Gloria/Voz.pdf      — una carpeta por parte (la misma forma que ya se usa
+ *                                para los cantos polifónicos)
+ *
+ * Con la versión anterior, que exigía la parte en el NOMBRE y la Misa en la carpeta
+ * contenedora, las dos últimas se quedaban sin partitura sin que nada lo dijera.
+ */
+const segmentosDe = (f: DriveFile): string[] =>
+  (f.path ?? '').split('/').filter(Boolean).map(norm);
 
 /**
  * Elige el archivo de Drive que corresponde a una parte del ordinario.
@@ -140,12 +150,13 @@ export function pickOrdinarySheet(
   let bestScore = 0;
   for (const f of files) {
     const n = norm(f.name);
-    const hasPart = parts.some(p => n.includes(p));
-    if (!hasPart) continue; // el nombre del archivo debe identificar la parte
+    const segs = segmentosDe(f);
+    // La parte se identifica en el nombre del archivo O en alguna carpeta del camino.
+    const hasPart = parts.some(p => n.includes(p)) || segs.some(s => parts.some(p => s.includes(p)));
+    if (!hasPart) continue;
 
-    // Coincidencia de Misa por CARPETA (preferido) o por el propio nombre.
-    const folder = norm(folderOf(f));
-    const folderMatch = massTokens.length > 0 && massTokens.every(t => folder.includes(t));
+    // Coincidencia de Misa por CARPETA (preferido, en cualquier nivel) o por el nombre.
+    const folderMatch = massTokens.length > 0 && segs.some(s => massTokens.every(t => s.includes(t)));
     const nameMassMatch = massTokens.length > 0 && massTokens.every(t => n.includes(t));
 
     // Si la parte declara una Misa, exigir que la carpeta o el nombre la mencionen
@@ -161,8 +172,15 @@ export function pickOrdinarySheet(
     // 0,9, siempre menos que acertar la carpeta (3) o el nombre de la Misa (2). Traer el
     // Santo de otra Misa porque su archivo dice "voz" sería peor que traer el del tenor
     // de la Misa correcta.
-    const score = 1 + (folderMatch ? 3 : 0) + (nameMassMatch ? 2 : 0)
-      + sesgoDeVozPrincipal(n);
+    // La voz puede venir en el archivo ("Gloria voz.pdf", "Gloria/Voz.pdf") o en la
+    // carpeta que lo contiene ("Voz/Gloria.pdf"). Se toma la señal más fuerte, pero si
+    // CUALQUIERA de las dos dice que no es la melodía, manda esa: más vale no elegir la
+    // del tenor por estar guardada en una carpeta que se llama "Voz".
+    const contenedora = segs.length ? segs[segs.length - 1] : '';
+    const sesgos = [sesgoDeVozPrincipal(n), sesgoDeVozPrincipal(contenedora)];
+    const sesgo = sesgos.some(v => v < 0) ? -0.5 : Math.max(...sesgos);
+
+    const score = 1 + (folderMatch ? 3 : 0) + (nameMassMatch ? 2 : 0) + sesgo;
     if (score > bestScore) { bestScore = score; best = f; }
   }
   return best;

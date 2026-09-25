@@ -78,6 +78,32 @@ check('los parentesis no rompen el calce',
   elegido('Gloria', MISA, [f('Gloria (tenor).pdf', carpeta), f('Gloria (voz).pdf', carpeta)]),
   'Gloria (voz).pdf');
 
+console.log('\n== Da igual como se aniden las carpetas ==');
+// Las tres formas razonables de guardar "la Voz del Gloria de esta Misa". Antes solo
+// servia la primera: la parte tenia que estar en el NOMBRE del archivo, asi que
+// "Misa X/Gloria/Voz.pdf" —la misma forma que ya se usa para los polifonicos— se
+// quedaba sin partitura sin que nada lo dijera.
+check('todo en el nombre del archivo',
+  elegido('Gloria', MISA, [f('Gloria voz.pdf', carpeta)]), 'Gloria voz.pdf');
+check('una carpeta por voz',
+  elegido('Gloria', MISA, [f('Gloria.pdf', `${carpeta}/Voz`)]), 'Gloria.pdf');
+check('una carpeta por parte',
+  elegido('Gloria', MISA, [f('Voz.pdf', `${carpeta}/Gloria`)]), 'Voz.pdf');
+check('y con carpeta por parte no se cruzan las partes',
+  elegido('Santo', MISA, [f('Voz.pdf', `${carpeta}/Gloria`), f('Voz.pdf', `${carpeta}/Santo`)]),
+  'Voz.pdf');
+check('con carpeta por parte, la Voz le gana al Tenor',
+  elegido('Santo', MISA, [f('Tenor.pdf', `${carpeta}/Santo`), f('Voz.pdf', `${carpeta}/Santo`)]),
+  'Voz.pdf');
+// Guardar la del tenor dentro de una carpeta "Voz" no la convierte en la melodia.
+check('si el archivo dice que no es la melodia, manda el archivo',
+  elegido('Gloria', MISA, [f('Gloria tenor.pdf', `${carpeta}/Voz`), f('Gloria.pdf', carpeta)]),
+  'Gloria.pdf');
+check('la Misa se reconoce en cualquier nivel del camino',
+  elegido('Gloria', MISA, [f('Voz.pdf', `/Partituras/${MISA}/Gloria`)]), 'Voz.pdf');
+check('y una Misa ajena sigue sin colarse',
+  elegido('Gloria', MISA, [f('Voz.pdf', '/Partituras/Misa T. Aragues/Gloria')]), null);
+
 console.log('\n== Pero acertar la Misa pesa mas que el sesgo ==');
 // El sesgo desempata DENTRO de la misma calidad de coincidencia; no la atropella.
 check('no trae el de otra Misa por decir "voz"',
