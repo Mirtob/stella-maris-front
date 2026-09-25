@@ -43,6 +43,12 @@ const refrescables = (fuente: Song): Partial<Song> => ({
   driveFolderId: fuente.driveFolderId,
   sheetMusicUrl: fuente.sheetMusicUrl,
   sheets: fuente.sheets,
+  // De qué Misa es esta parte. Va aquí y no entre lo intocable porque es un dato del
+  // CATÁLOGO, no una decisión del cantoral — a diferencia de la categoría. Y es con lo
+  // que el folleto busca la partitura en Drive, así que arreglar la grafía de una Misa
+  // tiene que llegar también a los cantorales ya publicados: si no, siguen buscando por
+  // el nombre viejo. (Las cuatro partes de Nebreda estaban escritas de tres formas.)
+  massName: fuente.massName,
 });
 
 /**

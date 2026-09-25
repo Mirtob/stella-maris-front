@@ -45,6 +45,13 @@ check('y de donde sale la partitura',
 check('vaciar un campo en el catalogo TAMBIEN se propaga',
   refrescarCantos([canto({ author: 'viejo' })], [canto({ author: undefined })])[0].author, undefined);
 
+// Arreglar la grafia de una Misa tiene que llegar a los cantorales ya publicados: es
+// con mass_name con lo que el folleto busca la partitura en Drive.
+check('la Misa a la que pertenece la parte tambien se actualiza',
+  refrescarCantos([canto({ massName: 'Nebreda (Do mayor)' })],
+                  [canto({ massName: 'Misa Nebreda' })])[0].massName,
+  'Misa Nebreda');
+
 console.log('\n== Lo que no se toca ==');
 check('la categoria la decide el cantoral, no el catalogo',
   refrescarCantos([canto({ category: 'Comunión' })], [canto({ category: 'Entrada' })])[0].category,
