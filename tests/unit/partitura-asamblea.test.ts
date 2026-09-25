@@ -114,5 +114,29 @@ check('si solo hay una, esa va aunque sea la cifrada',
   elegido('Gloria', MISA, [f('Gloria acordes.pdf', carpeta)]), 'Gloria acordes.pdf');
 check('sin archivos no hay partitura', elegido('Gloria', MISA, []), null);
 
+console.log('\n== Los nombres reales del coro (Misa de M. Manzano) ==');
+// Reportado el 25-sep-2026 con estos archivos exactos. Dos cosas los dejaban fuera:
+// el nombre no dice "misa" por ningun lado —y se exigia esa palabra, que esta en TODAS
+// las Misas y por tanto no discrimina nada—, y el folleto ni siquiera llegaba a buscar
+// porque el canto ya traia una partitura vinculada.
+const MANZANO = 'Misa M. Manzano';
+const suelto = '/Partituras';
+check('el Santo, por el nombre del archivo y sin carpeta de Misa',
+  elegido('Santo', MANZANO, [f('Santo - Manzano.pdf', suelto), f('Santo - Manzano-Voz.pdf', suelto)]),
+  'Santo - Manzano-Voz.pdf');
+check('el Cordero de Dios',
+  elegido('Cordero de Dios', MANZANO,
+          [f('Cordero de Dios - Manzano-SATB.pdf', suelto), f('Cordero de Dios - Manzano-Voz.pdf', suelto)]),
+  'Cordero de Dios - Manzano-Voz.pdf');
+check('el Señor ten piedad, con ñ y acento',
+  elegido('Kyrie', MANZANO,
+          [f('Señor ten piedad - Manzano.pdf', suelto), f('Señor ten piedad - Manzano-Voz.pdf', suelto)]),
+  'Señor ten piedad - Manzano-Voz.pdf');
+check('y el Gloria',
+  elegido('Gloria', MANZANO, [f('Gloria - Manzano-Voz.pdf', suelto)]),
+  'Gloria - Manzano-Voz.pdf');
+check('sigue sin traer la Voz de OTRA Misa',
+  elegido('Santo', MANZANO, [f('Santo - Aragues-Voz.pdf', suelto)]), null);
+
 console.log(`\n${pass} ok, ${fail} fallas`);
 if (fail > 0) process.exit(1);

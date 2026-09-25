@@ -15,7 +15,7 @@ import { renderPdfToImages, imposeBooklet } from './atrilBookletPDF';
 import { repartirEnColumnas, type Pieza } from './pdfColumns';
 import { partirFacsimil, type TrozoFacsimil } from './facsimilTrozos';
 import { sortCategoriesByMassOrder, isOrdinary } from './ordinary';
-import { resolveOrdinarySheetMusic } from './ordinarySheetMusic';
+import { resolveSheetForFolleto } from './ordinarySheetMusic';
 import { refrescarCantos } from './refrescarCantos';
 import { getSongs } from '../services/songLoader';
 import { getDrivePdfProxyUrl } from './driveProxy';
@@ -692,8 +692,9 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   );
   await Promise.all(conPartitura.map(async (s) => {
     try {
-      const conHoja = s.sheetMusicUrl ? s : await resolveOrdinarySheetMusic(s);
-      const proxy = getDrivePdfProxyUrl(conHoja.sheetMusicUrl);
+      // La del PUEBLO, no la del coro: se busca el archivo de la voz principal aunque el
+      // canto ya traiga una partitura vinculada. Ver resolveSheetForFolleto.
+      const proxy = getDrivePdfProxyUrl(await resolveSheetForFolleto(s));
       if (!proxy) return;
       // A 1400 px de ancho la pauta aguanta el tamaño de columna sin verse pixelada.
       const paginas = await renderPdfToImages({ url: proxy }, 1400);

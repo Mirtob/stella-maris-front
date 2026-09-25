@@ -136,6 +136,16 @@ const segmentosDe = (f: DriveFile): string[] =>
  * Compartido por el agregado al cantoral y por la sincronización de YouTube para
  * que no diverjan (evita tomar el "Kyrie" de otra Misa).
  */
+/**
+ * Palabras del nombre de una Misa que no sirven para identificarla.
+ *
+ * "Misa" está en el nombre de TODAS, así que exigirla no descarta ninguna equivocada y sí
+ * descarta las correctas: el archivo «Santo - Manzano-Voz.pdf» no dice "misa" por ningún
+ * lado, y con la palabra exigida se quedaba fuera aunque fuera exactamente el que se
+ * buscaba. Reportado el 25-sep-2026.
+ */
+const PALABRAS_VACIAS = new Set(['misa', 'del', 'las', 'los', 'para']);
+
 export function pickOrdinarySheet(
   category: string,
   massName: string | undefined,
@@ -143,7 +153,7 @@ export function pickOrdinarySheet(
 ): DriveFile | null {
   const parts = PART_SYNONYMS[category] ?? [norm(category)];
   const massTokens = massName
-    ? norm(massName).split(' ').filter(t => t.length > 2)
+    ? norm(massName).split(' ').filter(t => t.length > 2 && !PALABRAS_VACIAS.has(t))
     : [];
 
   let best: DriveFile | null = null;
@@ -202,4 +212,43 @@ export async function resolveOrdinarySheetMusic(song: Song): Promise<Song> {
     return { ...song, sheetMusicUrl: `https://drive.google.com/file/d/${best.id}/preview` };
   }
   return song;
+}
+
+/** ¿El nombre del archivo, o el de su carpeta, dice que es la voz principal? */
+export function esDeVozPrincipal(f: DriveFile): boolean {
+  const segs = segmentosDe(f);
+  const contenedora = segs.length ? segs[segs.length - 1] : '';
+  const sesgos = [sesgoDeVozPrincipal(norm(f.name)), sesgoDeVozPrincipal(contenedora)];
+  if (sesgos.some(v => v < 0)) return false;
+  return Math.max(...sesgos) > 0;
+}
+
+/**
+ * La partitura que va al FOLLETO DEL PUEBLO: la de la voz principal.
+ *
+ * No se queda con la que el canto ya tenga vinculada, y esa es la diferencia con
+ * `resolveOrdinarySheetMusic`. La vinculada es la del CORO —la que se abre en el Atril,
+ * normalmente la partitura completa con el cifrado— y el folleto necesita la línea
+ * melódica. Son dos necesidades distintas sobre el mismo canto, así que el folleto
+ * resuelve la suya en vez de heredar la del coro.
+ *
+ * Mientras el folleto preguntaba "¿ya tiene partitura?", la respuesta era que sí en el
+ * 99 % de los cantos y el archivo «-Voz» no se buscaba nunca.
+ *
+ * Se pisa la vinculada SOLO si lo encontrado dice ser la voz principal. Si en esa Misa
+ * no hay un archivo así, manda la que eligió el coro: sabe más que una heurística sobre
+ * nombres de archivo.
+ */
+export async function resolveSheetForFolleto(song: Song): Promise<string | undefined> {
+  if (!isOrdinary(song)) return song.sheetMusicUrl;
+  try {
+    const files = await loadSheets();
+    if (!files.length) return song.sheetMusicUrl;
+    const best = pickOrdinarySheet(song.category, song.massName, files);
+    if (!best) return song.sheetMusicUrl;
+    if (song.sheetMusicUrl && !esDeVozPrincipal(best)) return song.sheetMusicUrl;
+    return `https://drive.google.com/file/d/${best.id}/preview`;
+  } catch {
+    return song.sheetMusicUrl;
+  }
 }
