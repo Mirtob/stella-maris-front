@@ -1,4 +1,5 @@
 import { Song, MassMoment, LiturgicalSeason, InstrumentType } from '../types';
+import { clearSongsCache } from './songLoader';
 import { getSupabaseClient } from './supabaseClient';
 import { normalizeCategory } from '../utils/category';
 
@@ -199,6 +200,17 @@ export async function listPendingSongs(): Promise<Song[]> {
 }
 
 /** Add a new song to the catalog (admin only). */
+/**
+ * Cualquier escritura sobre el catálogo tira la caché.
+ *
+ * `getSongs()` guarda los cantos en localStorage DURANTE UNA HORA, y hasta el
+ * 25-sep-2026 nadie llamaba a `clearSongsCache()`: estaba exportada y sin usar. Se
+ * corregía la letra de un canto o se cambiaba su partitura y el cambio podía tardar una
+ * hora en verse — en el folleto, en el Atril y en la vista del pueblo. El coro lo notó
+ * al ir pasando las Misas a español: corregía y no pasaba nada.
+ */
+const invalidarCatalogo = () => clearSongsCache();
+
 export async function addSong(input: SongInput): Promise<{ ok: boolean; song?: Song; error?: string }> {
   try {
     const sb = getSupabaseClient();
@@ -208,6 +220,7 @@ export async function addSong(input: SongInput): Promise<{ ok: boolean; song?: S
       .select()
       .single();
     if (error) return { ok: false, error: error.message };
+    invalidarCatalogo();
     return { ok: true, song: rowToSong(data) };
   } catch (err: unknown) {
     return { ok: false, error: (err as Error).message };
@@ -244,6 +257,7 @@ export async function updateSong(
 
     const { error } = await sb.from('songs').update(row).eq('id', id);
     if (error) return { ok: false, error: error.message };
+    invalidarCatalogo();
     return { ok: true };
   } catch (err: unknown) {
     return { ok: false, error: (err as Error).message };
@@ -264,6 +278,7 @@ export async function approveSong(
       rejection_reason: null,
     }).eq('id', id);
     if (error) return { ok: false, error: error.message };
+    invalidarCatalogo();
     return { ok: true };
   } catch (err: unknown) {
     return { ok: false, error: (err as Error).message };
@@ -282,6 +297,7 @@ export async function rejectSong(
       rejection_reason: reason,
     }).eq('id', id);
     if (error) return { ok: false, error: error.message };
+    invalidarCatalogo();
     return { ok: true };
   } catch (err: unknown) {
     return { ok: false, error: (err as Error).message };
@@ -294,6 +310,7 @@ export async function deleteSong(id: string): Promise<{ ok: boolean; error?: str
     const sb = getSupabaseClient();
     const { error } = await sb.from('songs').delete().eq('id', id);
     if (error) return { ok: false, error: error.message };
+    invalidarCatalogo();
     return { ok: true };
   } catch (err: unknown) {
     return { ok: false, error: (err as Error).message };

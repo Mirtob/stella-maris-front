@@ -1097,7 +1097,11 @@ function AppContent() {
       // Folleto del Pueblo fiel en formato LIBRO (cuadernillo, carta horizontal): el
       // mismo diseño decorado de la vista previa, impuesto 2-por-cara para imprimir y
       // doblar. Es el que se sube a Storage y se descarga por QR.
-      const { blob } = await generateCantoralPDF({ cantoral: c, download: false, booklet: true });
+      // `refrescar`: el folleto que se GUARDA se arma releyendo el catálogo y el listado
+      // de Drive, sin las cachés de una hora. Es el momento en que el coro acaba de
+      // corregir una letra o de subir la partitura de una Misa en español, y salir con
+      // la versión de antes es justo lo que no puede pasar.
+      const { blob } = await generateCantoralPDF({ cantoral: c, download: false, booklet: true, refrescar: true });
       const up = await uploadCantoralPDF(c.id, blob);
       if (up.ok && up.publicUrl) {
         const url = up.publicUrl;

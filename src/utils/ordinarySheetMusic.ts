@@ -23,12 +23,26 @@ export interface DriveFile { id: string; name: string; mimeType?: string; path?:
 let sheetsCache: DriveFile[] | null = null;
 let inFlight: Promise<DriveFile[]> | null = null;
 
-async function loadSheets(): Promise<DriveFile[]> {
+/**
+ * Olvida el listado de Drive que se tenía en memoria.
+ *
+ * Se llama antes de armar el folleto que se guarda: si acabas de subir o renombrar una
+ * partitura, el listado en memoria es de antes y el folleto saldría sin ella.
+ */
+export function invalidarPartituras(): void {
+  sheetsCache = null;
+  inFlight = null;
+}
+
+async function loadSheets(fresco = false): Promise<DriveFile[]> {
+  if (fresco) invalidarPartituras();
   if (sheetsCache) return sheetsCache;
   if (!inFlight) {
     inFlight = (async () => {
       try {
-        const r = await fetch('/api/sheets');
+        // `?fresh=1` salta también la caché de una hora del servidor: recorrer el Drive
+        // entero es caro, pero al publicar se hace UNA vez y vale la pena acertar.
+        const r = await fetch(fresco ? '/api/sheets?fresh=1' : '/api/sheets');
         if (!r.ok) return [];
         const data = await r.json();
         const files = (data.files || []) as DriveFile[];
@@ -224,10 +238,10 @@ export function esLaVoz(f: DriveFile): boolean {
  * a ninguna otra voz. Sin archivo de Voz devuelve `undefined` y el folleto imprime la
  * letra, que es exactamente lo que pidió el coro el 25-sep-2026.
  */
-export async function resolveSheetForFolleto(song: Song): Promise<string | undefined> {
+export async function resolveSheetForFolleto(song: Song, fresco = false): Promise<string | undefined> {
   if (!isOrdinary(song)) return undefined;
   try {
-    const files = (await loadSheets()).filter(esLaVoz);
+    const files = (await loadSheets(fresco)).filter(esLaVoz);
     if (!files.length) return undefined;
     const best = pickOrdinarySheet(song.category, song.massName, files);
     return best ? `https://drive.google.com/file/d/${best.id}/preview` : undefined;

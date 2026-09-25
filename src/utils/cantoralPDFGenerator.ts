@@ -17,7 +17,7 @@ import { partirFacsimil, type TrozoFacsimil } from './facsimilTrozos';
 import { sortCategoriesByMassOrder, isOrdinary } from './ordinary';
 import { resolveSheetForFolleto } from './ordinarySheetMusic';
 import { refrescarCantos } from './refrescarCantos';
-import { getSongs } from '../services/songLoader';
+import { getSongs, clearSongsCache } from '../services/songLoader';
 import { getDrivePdfProxyUrl } from './driveProxy';
 import { getCelebrationsForDate } from './liturgicalCalendar';
 import { celebracionesDePortada } from './celebracionesPortada';
@@ -33,6 +33,15 @@ interface PDFGeneratorOptions {
    * Se imprime a doble faz (voltear por el borde largo) y se dobla al medio → librito.
    */
   booklet?: boolean;
+  /**
+   * Tirar las cachés antes de leer.
+   *
+   * El catálogo se guarda una hora en localStorage y el listado de Drive queda en
+   * memoria mientras dure la página. Para mirar un folleto eso está bien; para el que se
+   * GUARDA al publicar o al editar, no: si acabas de corregir una letra o de subir una
+   * partitura, saldría la versión de antes. Cuesta unos segundos y se paga una vez.
+   */
+  refrescar?: boolean;
 }
 
 /**
@@ -458,6 +467,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
    */
   let cantoral = options.cantoral;
   try {
+    if (options.refrescar) clearSongsCache();
     const catalogo = await getSongs();
     cantoral = { ...cantoral, songs: refrescarCantos(cantoral.songs, catalogo) };
   } catch {
@@ -694,7 +704,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     try {
       // La del PUEBLO, no la del coro: se busca el archivo de la voz principal aunque el
       // canto ya traiga una partitura vinculada. Ver resolveSheetForFolleto.
-      const proxy = getDrivePdfProxyUrl(await resolveSheetForFolleto(s));
+      const proxy = getDrivePdfProxyUrl(await resolveSheetForFolleto(s, options.refrescar));
       if (!proxy) return;
       // A 1400 px de ancho la pauta aguanta el tamaño de columna sin verse pixelada.
       const paginas = await renderPdfToImages({ url: proxy }, 1400);
