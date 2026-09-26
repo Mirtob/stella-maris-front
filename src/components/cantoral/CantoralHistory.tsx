@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { History, Calendar, Church, ChevronDown, ChevronUp, Play, Clock, Trash2, Filter, Download, Loader, Search, Copy } from 'lucide-react';
 import { PublishedCantoral, Song } from '../../types';
+import { sortCategoriesByMassOrder, massCategoryIcon } from '../../utils/ordinary';
 import { generateChoirBooklet, voicesInCantoral } from '../../utils/atrilBookletPDF';
 import { abrirOGuardarPdf } from '../../utils/descargarPdf';
 import { listCantorals, listCantoralYears } from '../../services/cantorals';
@@ -218,40 +219,11 @@ export function CantoralHistory({ onPlaySong, onDeleteCantoral, onClone, isAdmin
   const formatDate = (dateStr: string) =>
     formatYmdForDisplay(dateStr, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-  const categoryOrder = ['Entrada', 'Kyrie', 'Gloria', 'Salmo', 'Aleluya', 'Post Evangelio', 'Ofertorio', 'Santo', 'Padre Nuestro', 'Cordero de Dios', 'Comunión', 'Salida'];
+  // Orden e íconos: fuente única en utils/ordinary (lo desconocido va al final).
+  const groupSongsByCategory = (songs: Song[]) =>
+    sortCategoriesByMassOrder(Array.from(new Set(songs.map(s => s.category))));
 
-  const groupSongsByCategory = (songs: Song[]) => {
-    const grouped = songs.reduce((acc, song) => {
-      if (!acc[song.category]) {
-        acc[song.category] = [];
-      }
-      acc[song.category].push(song);
-      return acc;
-    }, {} as Record<string, Song[]>);
-
-    return Object.keys(grouped).sort((a, b) => {
-      return categoryOrder.indexOf(a) - categoryOrder.indexOf(b);
-    });
-  };
-
-  const getCategoryIcon = (category: string) => {
-    const icons: Record<string, string> = {
-      'Entrada': '⛪',
-      'Kyrie': '🙏',
-      'Gloria': '✨',
-      'Santo': '✝️',
-      'Cordero de Dios': '🐑',
-      'Credo': '📿',
-      'Padre Nuestro': '🙏',
-      'Salmo': '📖',
-      'Aleluya': '🎺',
-      'Post Evangelio': '📿',
-      'Ofertorio': '🍇',
-      'Comunión': '🫓',
-      'Salida': '⛪',
-    };
-    return icons[category] || '🎵';
-  };
+  const getCategoryIcon = massCategoryIcon;
 
   if (loading && yearCantorals.length === 0 && availableYears.length === 0) {
     return (

@@ -15,6 +15,7 @@ import { filterByInstrument } from '../../utils/instrument';
 import { parseYmdLocal } from '../../utils/dateLocal';
 import { isOrdinary } from '../../utils/ordinary';
 import { resolveOrdinarySheetMusic } from '../../utils/ordinarySheetMusic';
+import { ACLAMACIONES, AclamacionId } from '../../data/aclamaciones';
 import { previousUseOf, type PreviousUsage, type UsageOccurrence } from '../../utils/previousUsage';
 import { RepeatSongDialog } from '../cantoral/RepeatSongDialog';
 import { FavoriteButton } from './FavoriteButton';
@@ -305,11 +306,85 @@ export function CategorySearch({
     return candidates.find(s => (isLatin ? isLatinSong(s) : !isLatinSong(s))) ?? candidates[0];
   };
 
-  // Confirma agregar el Padre Nuestro cantado, en español o en gregoriano (latín).
+  // La Misa del ordinario que ya está en el cantoral: las aclamaciones se buscan en SU
+  // carpeta de Drive, como el Santo y el Cordero que se agregan tras el Kyrie. El Santo
+  // manda porque la aclamación de la consagración y el Amén vienen justo después.
+  const misaDelCantoral = (): string | undefined =>
+    ['Santo', 'Kyrie', 'Cordero de Dios', 'Gloria']
+      .map(cat => cantoral.find(s => s.category === cat && s.massName)?.massName)
+      .find(Boolean);
+
+  // Aclamaciones que el cantoral ya tiene (no se vuelven a ofrecer en el diálogo).
+  const aclamacionesYaAgregadas = ACLAMACIONES
+    .filter(a => cantoral.some(s => s.category === a.category))
+    .map(a => a.id);
+
+  /**
+   * Agrega las aclamaciones marcadas junto al Padre Nuestro.
+   *
+   * Mismo criterio que el Kyrie, el Gloria, el Santo y el Cordero: primero el canto del
+   * catálogo de esa parte y de esa Misa; si no, la partitura en la carpeta de la Misa en
+   * Drive (resolveOrdinarySheetMusic). Si tampoco hay, va solo la letra de la respuesta.
+   * La letra viaja siempre: sin partitura es lo que imprime el folleto.
+   */
+  const addAclamaciones = async (ids: AclamacionId[]) => {
+    const misa = misaDelCantoral();
+    const baseMisa = (x?: string) =>
+      (x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+        .replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+    const sinPartitura: string[] = [];
+
+    for (const a of ACLAMACIONES.filter(x => ids.includes(x.id))) {
+      const deLaParte = instrumentSongs.filter(s => songInCategory(s, a.category));
+      const delCatalogo = (misa && deLaParte.find(s => s.massName && baseMisa(s.massName) === baseMisa(misa)))
+        || (!misa ? deLaParte[0] : undefined);
+
+      const base: Song = delCatalogo
+        ? {
+            ...delCatalogo,
+            id: `${delCatalogo.id}::${a.id}`,
+            category: a.category,
+            lyrics: delCatalogo.lyrics || a.letra,
+          }
+        : {
+            id: `aclamacion-${a.id}-${Date.now()}`,
+            title: a.titulo,
+            category: a.category,
+            youtubeId: '',
+            duration: '0:00',
+            author: misa ?? 'Misa',
+            version: 'Coro',
+            massName: misa,
+            lyrics: a.letra,
+            isLiturgical: true,
+          };
+
+      const song = await resolveOrdinarySheetMusic(base).catch(() => base);
+      if (!song.sheetMusicUrl) sinPartitura.push(a.titulo);
+      onAddToCantoral(song);
+    }
+
+    if (sinPartitura.length) {
+      toast.info('Aclamaciones agregadas con su letra', {
+        description: `No hallé partitura${misa ? ` de la ${misa}` : ''} para: ${sinPartitura.join(', ')}.`,
+      });
+    }
+  };
+
+  // Confirma el diálogo del Padre Nuestro: el Padre Nuestro (si se eligió idioma) y las
+  // aclamaciones marcadas.
+  const handleConfirmPadreNuestro = async (language: PadreNuestroLanguage | null, aclamaciones: AclamacionId[] = []) => {
+    setShowPadreNuestroDialog(false);
+    if (language) await addPadreNuestro(language);
+    if (aclamaciones.length) await addAclamaciones(aclamaciones);
+    setTimeout(() => onClose(), 300);
+  };
+
+  // Agrega el Padre Nuestro cantado, en español o en gregoriano (latín).
   // Prioridad de origen: (1) el canto del catálogo cargado manualmente (trae la
   // partitura desde su driveFileId y, si tiene, la letra); (2) respaldo: el PDF
   // por nombre en la carpeta de partituras de Drive.
-  const handleConfirmPadreNuestro = async (language: PadreNuestroLanguage) => {
+  const addPadreNuestro = async (language: PadreNuestroLanguage) => {
     const isLatin = language === 'la';
 
     const catalogSong = findCatalogPadreNuestro(language);
@@ -343,9 +418,6 @@ export function CategorySearch({
         description: `Agregué el Padre Nuestro, pero no hallé el «${isLatin ? 'Pater noster' : 'Padre nuestro'}» ni en el catálogo ni en Drive.`,
       });
     }
-
-    setShowPadreNuestroDialog(false);
-    setTimeout(() => onClose(), 300);
   };
 
   const handleCancelPadreNuestro = () => {
@@ -782,6 +854,7 @@ export function CategorySearch({
         <AddPadreNuestroDialog
           onConfirm={handleConfirmPadreNuestro}
           onCancel={handleCancelPadreNuestro}
+          yaAgregadas={aclamacionesYaAgregadas}
         />
       )}
 

@@ -81,7 +81,38 @@ const PART_SYNONYMS: Record<string, string[]> = {
   'Cordero de Dios': ['cordero', 'agnus'],
   'Padre Nuestro': ['padre nuestro', 'pater noster'],
   'Rito de Aspersión': ['aspersion', 'asperges'],
+  'Respuesta a Oración Universal': [
+    'oracion universal', 'oracion de los fieles', 'roguemos al senor', 'senor escuchanos',
+    'escuchanos', 'te rogamos oyenos', 'preces',
+  ],
+  'Aclamación Consagración': [
+    'misterio de la fe', 'anunciamos tu muerte', 'mysterium fidei', 'anamnesis',
+    'aclamacion consagracion', 'aclamacion de la consagracion', 'aclamacion memorial',
+  ],
+  'Amén (Doxología)': ['triple amen', 'gran amen', 'amen', 'doxologia'],
 };
+
+/**
+ * Partes cuyo sinónimo tiene que calzar como PALABRA completa y no como trozo.
+ *
+ * "amen" está dentro de «sacramento» y de «examen», y "preces" podría estar dentro de
+ * otra palabra: con el "contiene" de siempre, el Amén se quedaría con la partitura de un
+ * canto al Santísimo Sacramento. Las partes de siempre no lo necesitan y se dejan igual.
+ */
+const PALABRA_COMPLETA = new Set([
+  'Respuesta a Oración Universal', 'Aclamación Consagración', 'Amén (Doxología)',
+]);
+
+/**
+ * La carpeta común de las aclamaciones: «Aclamaciones y respuestas».
+ *
+ * Las respuestas breves casi nunca se componen por Misa: una sola partitura del «Señor,
+ * escúchanos» sirve para todas. Por eso, si la carpeta de la Misa no trae la suya, se
+ * toma la de esta carpeta. Pesa menos que cualquier coincidencia con la Misa: si algún
+ * día una Misa trae su propio Amén, gana el de la Misa.
+ */
+const enCarpetaAclamaciones = (f: DriveFile): boolean =>
+  segmentosDe(f).some((s) => s.includes('aclamaciones'));
 
 /**
  * Las carpetas del camino del archivo, normalizadas.
@@ -139,6 +170,9 @@ export function pickOrdinarySheet(
   files: DriveFile[],
 ): DriveFile | null {
   const parts = PART_SYNONYMS[category] ?? [norm(category)];
+  const contiene = PALABRA_COMPLETA.has(category)
+    ? (texto: string, p: string) => ` ${texto} `.includes(` ${p} `)
+    : (texto: string, p: string) => texto.includes(p);
   // Lo que va ENTRE PARÉNTESIS es un matiz, no la identidad de la Misa: «Nebreda (Do
   // mayor)» y «Nebreda» son la misma, y en Drive la carpeta se llama «Misa Nebreda» a
   // secas. Exigir esas palabras dejaba fuera al Kyrie y al Cordero de Nebreda aunque su
@@ -158,7 +192,7 @@ export function pickOrdinarySheet(
     const n = norm(f.name);
     const segs = segmentosDe(f);
     // La parte se identifica en el nombre del archivo O en alguna carpeta del camino.
-    const hasPart = parts.some(p => n.includes(p)) || segs.some(s => parts.some(p => s.includes(p)));
+    const hasPart = parts.some(p => contiene(n, p)) || segs.some(s => parts.some(p => contiene(s, p)));
     if (!hasPart) continue;
 
     // Coincidencia de Misa por CARPETA (preferido, en cualquier nivel) o por el nombre.
@@ -167,7 +201,9 @@ export function pickOrdinarySheet(
 
     // Si la parte declara una Misa, exigir que la carpeta o el nombre la mencionen
     // (evita traer el Santo de otra Misa). Sin Misa declarada → basta la parte.
-    if (massTokens.length > 0 && !folderMatch && !nameMassMatch) continue;
+    // Excepción: las aclamaciones, que caen a su carpeta común (enCarpetaAclamaciones).
+    const deLaCarpetaComun = PALABRA_COMPLETA.has(category) && enCarpetaAclamaciones(f);
+    if (massTokens.length > 0 && !folderMatch && !nameMassMatch && !deLaCarpetaComun) continue;
 
     // La carpeta pesa más que el nombre: el modelo "una carpeta por Misa" es la
     // fuente de verdad. Sin Misa, cualquier archivo de la parte sirve (score 1).
@@ -182,7 +218,8 @@ export function pickOrdinarySheet(
     // fuente de verdad. Sin Misa, cualquier archivo de la parte sirve (score 1).
     // El matiz del paréntesis solo desempata: nunca decide por sí solo.
     const matiz = matices.filter(t => n.includes(t) || segs.some(g => g.includes(t))).length;
-    const score = 1 + (folderMatch ? 3 : 0) + (nameMassMatch ? 2 : 0) + matiz * 0.25;
+    const score = (folderMatch || nameMassMatch || massTokens.length === 0 ? 1 : 0.5)
+      + (folderMatch ? 3 : 0) + (nameMassMatch ? 2 : 0) + matiz * 0.25;
     if (score > bestScore) { bestScore = score; best = f; }
   }
   return best;
@@ -238,10 +275,28 @@ export function esLaVoz(f: DriveFile): boolean {
  * a ninguna otra voz. Sin archivo de Voz devuelve `undefined` y el folleto imprime la
  * letra, que es exactamente lo que pidió el coro el 25-sep-2026.
  */
+/**
+ * Sufijos de los archivos que son de una voz del CORO y no de la asamblea.
+ * Solo se usan en la carpeta común de aclamaciones (ver `esDelPueblo`).
+ */
+const OTRA_VOZ = /(^|\s)(hombres|mujeres|satb|soprano|contralto|alto|tenor|bajo|baritono|coro|organo|acompanamiento|guitarra)$/;
+
+/**
+ * ¿Sirve para el folleto del pueblo?
+ *
+ * En las carpetas de cada Misa, solo el archivo de la Voz (esLaVoz). En la carpeta común
+ * de aclamaciones las respuestas suelen ser de una sola línea y no siempre dicen "Voz",
+ * así que ahí basta con que el nombre no diga que es de otra voz.
+ */
+export function esDelPueblo(f: DriveFile): boolean {
+  if (esLaVoz(f)) return true;
+  return enCarpetaAclamaciones(f) && !OTRA_VOZ.test(norm(sinExtension(f?.name ?? '')));
+}
+
 export async function resolveSheetForFolleto(song: Song, fresco = false): Promise<string | undefined> {
   if (!isOrdinary(song)) return undefined;
   try {
-    const files = (await loadSheets(fresco)).filter(esLaVoz);
+    const files = (await loadSheets(fresco)).filter(esDelPueblo);
     if (!files.length) return undefined;
     const best = pickOrdinarySheet(song.category, song.massName, files);
     return best ? `https://drive.google.com/file/d/${best.id}/preview` : undefined;

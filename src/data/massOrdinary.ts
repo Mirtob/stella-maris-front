@@ -229,6 +229,14 @@ export const massOrdinary: MassSection[] = [
     icon: '🙏',
     color: 'bg-purple-100 dark:bg-purple-900/30 border-purple-400 dark:border-purple-600'
   },
+  {
+    id: 'prayers-song',
+    title: 'Respuesta cantada a las peticiones',
+    type: 'song',
+    posture: 'standing',
+    category: 'Respuesta a Oración Universal',
+    icon: '🎵'
+  },
 
   // LITURGIA EUCARÍSTICA
   {
@@ -305,12 +313,20 @@ export const massOrdinary: MassSection[] = [
   {
     id: 'consecration',
     title: 'Consagración',
-    text: '(El sacerdote consagra el pan y el vino)\n\nSacerdote: Este es el Sacramento de nuestra fe.\n\nR/ Anunciamos tu muerte, proclamamos tu resurrección. ¡Ven, Señor Jesús!',
+    text: '(El sacerdote consagra el pan y el vino)\n\nSacerdote: Este es el misterio de la fe.\n\nR/ Anunciamos tu muerte, proclamamos tu resurrección. ¡Ven, Señor Jesús!',
     latin: '(Sacerdos panem et vinum consecrat)\n\nSacerdos: Mysterium fidei.\n\nR/ Mortem tuam annuntiamus, Domine, et tuam resurrectionem confitemur, donec venias.',
     type: 'liturgy',
     posture: 'kneeling',
     icon: '✝️',
     color: 'bg-red-100 dark:bg-red-900/30 border-red-400 dark:border-red-600'
+  },
+  {
+    id: 'consecration-song',
+    title: 'Aclamación después de la Consagración',
+    type: 'song',
+    posture: 'kneeling',
+    category: 'Aclamación Consagración',
+    icon: '🎵'
   },
   {
     id: 'eucharistic-prayer',
@@ -338,6 +354,14 @@ export const massOrdinary: MassSection[] = [
     posture: 'standing',
     icon: '🙏',
     color: 'bg-red-100 dark:bg-red-900/30 border-red-400 dark:border-red-600'
+  },
+  {
+    id: 'doxology-song',
+    title: 'Amén cantado',
+    type: 'song',
+    posture: 'standing',
+    category: 'Amén (Doxología)',
+    icon: '🎵'
   },
 
   // RITO DE LA COMUNIÓN

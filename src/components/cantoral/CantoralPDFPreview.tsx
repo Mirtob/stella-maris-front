@@ -1,6 +1,7 @@
 import { abrirOGuardarPdf } from '../../utils/descargarPdf';
 import { X, Download, Music } from 'lucide-react';
 import { Song, InstrumentType, PublishedCantoral } from '../../types';
+import { sortCategoriesByMassOrder, massCategoryIcon } from '../../utils/ordinary';
 import { useState } from 'react';
 import { formatYmdForDisplay } from '../../utils/dateLocal';
 import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
@@ -38,22 +39,7 @@ export function CantoralPDFPreview({
 }: CantoralPDFPreviewProps) {
   const [downloading, setDownloading] = useState(false);
 
-  // Agrupar cantos por categoría
-  const categoryOrder = [
-    'Entrada',
-    'Kyrie',
-    'Gloria',
-    'Salmo',
-    'Aleluya',
-    'Aclamación al Evangelio',
-    'Post Evangelio',
-    'Ofertorio',
-    'Santo',
-    'Cordero de Dios',
-    'Comunión',
-    'Salida'
-  ];
-
+  // Agrupar cantos por categoría (orden de la Misa: utils/ordinary)
   const groupedSongs = cantoral.reduce((acc, song) => {
     if (!acc[song.category]) {
       acc[song.category] = [];
@@ -62,31 +48,8 @@ export function CantoralPDFPreview({
     return acc;
   }, {} as Record<string, Song[]>);
 
-  const sortedCategories = Object.keys(groupedSongs).sort((a, b) => {
-    const indexA = categoryOrder.indexOf(a);
-    const indexB = categoryOrder.indexOf(b);
-    if (indexA === -1 && indexB === -1) return 0;
-    if (indexA === -1) return 1;
-    if (indexB === -1) return -1;
-    return indexA - indexB;
-  });
+  const sortedCategories = sortCategoriesByMassOrder(Object.keys(groupedSongs));
 
-  const categoryIcons: Record<string, string> = {
-    'Entrada': '⛪',
-    'Kyrie': '🙏',
-    'Gloria': '✨',
-    'Santo': '✝️',
-    'Cordero de Dios': '🐑',
-    'Credo': '📿',
-    'Padre Nuestro': '🙏',
-    'Salmo': '📖',
-    'Aleluya': '🎺',
-    'Aclamación al Evangelio': '📯',
-    'Post Evangelio': '📿',
-    'Ofertorio': '🍇',
-    'Comunión': '🫓',
-    'Salida': '⛪',
-  };
 
   // Folleto del Pueblo fiel en formato LIBRO (cuadernillo): el mismo diseño decorado de
   // la vista previa (portada + guirnalda + cabeceras de sección + colores + QR),
@@ -191,7 +154,7 @@ export function CantoralPDFPreview({
             <div key={category} className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg border-2 border-blue-200 dark:border-blue-900 transition-colors">
               {/* Título de Categoría */}
               <div className="flex items-center gap-3 mb-4 pb-3 border-b-2 border-blue-200 dark:border-blue-900">
-                <span className="text-3xl">{categoryIcons[category] || '🎵'}</span>
+                <span className="text-3xl">{massCategoryIcon(category)}</span>
                 <h3 className="text-2xl font-bold text-blue-950 dark:text-blue-100">{category}</h3>
               </div>
 

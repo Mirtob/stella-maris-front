@@ -15,7 +15,7 @@ import { useCurrentUserId } from '../../services/currentUser';
  * En esos casos no mostramos el corazón (el canto real sí es favoritable en su ficha).
  */
 function isPersistableSongId(id: string): boolean {
-  return !!id && !id.includes('::') && !/^(psalm-|padre-nuestro-)/.test(id);
+  return !!id && !id.includes('::') && !/^(psalm-|padre-nuestro-|aclamacion-)/.test(id);
 }
 
 export function FavoriteButton({ songId, userId, className = '' }: { songId: string; userId?: string; className?: string }) {

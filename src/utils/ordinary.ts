@@ -2,14 +2,18 @@ import { Song } from '../types';
 
 /**
  * Partes del ordinario de la Misa que se cantan desde la partitura (no desde
- * letra/acordes). Incluye el Padre Nuestro (si se canta) y el Rito de Aspersión
- * (que en Pascua reemplaza al Kyrie). Fuente única para PDF y Modo Atril.
+ * letra/acordes). Incluye el Padre Nuestro (si se canta), el Rito de Aspersión
+ * (que en Pascua reemplaza al Kyrie) y las aclamaciones breves que se agregan junto
+ * con el Padre Nuestro (data/aclamaciones). Fuente única para PDF y Modo Atril.
  */
 export const ORDINARY_CATEGORIES = [
   'Kyrie',
   'Rito de Aspersión',
   'Gloria',
+  'Respuesta a Oración Universal',
   'Santo',
+  'Aclamación Consagración',
+  'Amén (Doxología)',
   'Cordero de Dios',
   'Padre Nuestro',
 ] as const;
