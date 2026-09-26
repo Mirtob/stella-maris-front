@@ -1,8 +1,9 @@
 import { jsPDF } from 'jspdf';
 import { Song, InstrumentType, UserRole } from '../types';
 import { sheetForPart, FULL_SCORE } from './sheetParts';
+import { modoDelAtril, partituraDelAtril } from './atrilModo';
 import { getDrivePdfProxyUrl } from './driveProxy';
-import { sortByMassOrder, isOrdinary } from './ordinary';
+import { sortByMassOrder } from './ordinary';
 import { transposeContent, getChordNotation, getTransposedKey, keyPrefersFlats, type ChordNotation } from './chordTranspose';
 import { getOfflinePdf } from '../services/offlineCache';
 import { stripLyricsFormatting } from './lyricsFormat';
@@ -271,6 +272,8 @@ export interface AtrilPrintOptions {
   /** Transposición por canto, index-alineada con el orden de Misa (como en el atril). */
   transpositions?: Record<number, number>;
   notation?: ChordNotation;
+  /** Voz del corista: imprime SU partitura, como la ve en pantalla. */
+  voicePart?: string;
 }
 
 export async function generateAtrilPrintable(opts: AtrilPrintOptions): Promise<{ blob: Blob; url: string }> {
@@ -283,12 +286,9 @@ export async function generateAtrilPrintable(opts: AtrilPrintOptions): Promise<{
   const isOrgano = instrument === 'Órgano';
   const hasChords = !isPuebloFiel;
 
-  // Mismo criterio que AtrilMode.modeFor.
-  const modeFor = (s: Song): 'score' | 'chords' | 'lyrics' => {
-    if (isPuebloFiel) return isOrdinary(s) && s.sheetMusicUrl ? 'score' : 'lyrics';
-    if (isOrgano) return s.sheetMusicUrl ? 'score' : 'chords';
-    return 'chords';
-  };
+  // El mismo criterio que la pantalla del Atril (utils/atrilModo).
+  const perfil = { puebloFiel: isPuebloFiel, organo: isOrgano, voicePart: opts.voicePart };
+  const modeFor = (s: Song) => modoDelAtril(s, perfil);
 
   // Carta vertical.
   const PW = 215.9, PH = 279.4, M = 15;
@@ -357,7 +357,7 @@ export async function generateAtrilPrintable(opts: AtrilPrintOptions): Promise<{
     const titleLines = doc.splitTextToSize(clean(s.title), CW) as string[];
     titleLines.forEach((ln) => { need(7); doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(15, 23, 42); doc.text(ln, M, y); y += 7; });
 
-    const proxy = mode === 'score' ? getDrivePdfProxyUrl(s.sheetMusicUrl) : null;
+    const proxy = mode === 'score' ? getDrivePdfProxyUrl(partituraDelAtril(s, perfil)) : null;
     const showChordsHere = mode === 'chords' || (mode === 'score' && !proxy && hasChords);
 
     if (showChordsHere && s.originalKey) {

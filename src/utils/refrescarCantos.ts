@@ -97,6 +97,12 @@ export function refrescarCantos(songs: Song[], catalogo: Song[] | Map<string, So
     if (!alDia.driveFileId && !alDia.sheetMusicUrl && !s.driveFileId && s.sheetMusicUrl) {
       puesto.sheetMusicUrl = s.sheetMusicUrl;
     }
+    // Lo mismo con las partituras POR VOZ que el constructor sacó de la carpeta de Drive
+    // (aclamaciones, Padre Nuestro): si el catálogo no trae ni voces ni carpeta, no hay
+    // de dónde sacarlas de nuevo y el coro se quedaría sin su voz en el Atril.
+    if (!alDia.sheets?.length && !alDia.driveFolderId && s.sheets?.length) {
+      puesto.sheets = s.sheets;
+    }
     return puesto;
   });
 }

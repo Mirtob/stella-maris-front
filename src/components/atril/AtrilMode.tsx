@@ -5,7 +5,7 @@ import { X, ZoomIn, ZoomOut, ChevronUp, ChevronDown, RotateCcw, Play, Pause, Max
 import { toast } from 'sonner';
 import { Song, UserRole, InstrumentType } from '../../types';
 import { transposeContent, getTransposedKey, keyPrefersFlats, formatTransposition, getChordNotation, setChordNotation, type ChordNotation } from '../../utils/chordTranspose';
-import { sheetForPart, hasPartSheet, FULL_SCORE } from '../../utils/sheetParts';
+import { FULL_SCORE } from '../../utils/sheetParts';
 import { LyricsWithChords } from '../songs/LyricsWithChords';
 import { LyricsOnly } from '../songs/LyricsOnly';
 import { useWakeLock } from '../../hooks/useWakeLock';
@@ -13,6 +13,7 @@ import { useMetronome } from '../../hooks/useMetronome';
 import { Tour } from '../tour/Tour';
 import { atrilTips, hasSeenTip, markTipSeen } from '../tour/tours';
 import { isOrdinary, sortByMassOrder } from '../../utils/ordinary';
+import { modoDelAtril, partituraDelAtril, type ContentMode } from '../../utils/atrilModo';
 import { getDrivePdfProxyUrl } from '../../utils/driveProxy';
 import { cycleForBookId } from '../../data/psalmIndex';
 import { generateAtrilPrintable } from '../../utils/atrilBookletPDF';
@@ -34,7 +35,6 @@ interface AtrilModeProps {
   onClose: () => void;
 }
 
-type ContentMode = 'score' | 'chords' | 'lyrics';
 
 /**
  * ¿Tener los audios de ensayo a mano en este dispositivo?
@@ -200,15 +200,9 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
     }
   };
 
-  /** Qué mostrar de cada canto según rol + instrumento. */
-  const modeFor = (s: Song): ContentMode => {
-    if (isPuebloFiel) return isOrdinary(s) && s.sheetMusicUrl ? 'score' : 'lyrics';
-    // Polifonía: quien tiene voz asignada y el canto trae SU partitura, ve la partitura
-    // aunque no sea organista — es justamente para lo que la subió el coro.
-    if (hasPartSheet(s.sheets, voicePart)) return 'score';
-    if (isOrgano) return s.sheetMusicUrl ? 'score' : 'chords';
-    return 'chords'; // Guitarra u otro instrumento del coro
-  };
+  /** Qué mostrar de cada canto según rol + instrumento (utils/atrilModo). */
+  const perfil = { puebloFiel: isPuebloFiel, organo: isOrgano, voicePart };
+  const modeFor = (s: Song): ContentMode => modoDelAtril(s, perfil);
 
   const setTransposition = (i: number, v: number) =>
     setTranspositions(prev => ({ ...prev, [i]: ((v % 12) + 12) % 12 }));
@@ -319,6 +313,7 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
         role: userRole,
         transpositions,
         notation,
+        voicePart,
       });
       // En iPhone la ventana se bloquea (el toque se perdió mientras se generaba) y el
       // atributo `download` Safari lo ignora: el botón parecía no hacer nada.
@@ -566,12 +561,9 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
               // Salmo del libro: se muestra la página del PDF del libro (coro) + antífona.
               const isPsalm = s.psalmPage != null && !!s.psalmBookId;
               const mode = modeFor(s);
-              // Partitura que le toca a esta persona: la de su voz si el canto la trae,
-              // y si no el full score (sheetForPart nunca deja sin partitura).
-              const mySheet = sheetForPart(s.sheets ?? [], voicePart);
-              const scoreUrl = mySheet
-                ? `https://drive.google.com/file/d/${mySheet.fileId}/view`
-                : s.sheetMusicUrl;
+              // Partitura que le toca a esta persona: al Pueblo la Voz; al coro la de
+              // su voz si el canto la trae, y si no el full score (utils/atrilModo).
+              const scoreUrl = partituraDelAtril(s, perfil);
               const proxy = mode === 'score' ? getDrivePdfProxyUrl(scoreUrl) : null;
               const showScore = mode === 'score' && !!proxy;
               // Respaldo si se pedía partitura pero no hay proxy válido.

@@ -34,6 +34,9 @@ export function invalidarPartituras(): void {
   inFlight = null;
 }
 
+/** El listado de partituras de Drive (en memoria; `fresco` lo vuelve a pedir). */
+export const listarPartituras = (fresco = false): Promise<DriveFile[]> => loadSheets(fresco);
+
 async function loadSheets(fresco = false): Promise<DriveFile[]> {
   if (fresco) invalidarPartituras();
   if (sheetsCache) return sheetsCache;
@@ -73,9 +76,6 @@ const norm = (s: string) =>
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 
-/** Clave interna para buscar solo el Padre Nuestro gregoriano (ver elegirParaElFolleto). */
-const PATER_NOSTER = 'Padre Nuestro (latín)';
-
 // Sinónimos por parte para el match contra el nombre del archivo en Drive.
 const PART_SYNONYMS: Record<string, string[]> = {
   'Kyrie': ['kyrie', 'senor ten piedad', 'ten piedad'],
@@ -83,7 +83,6 @@ const PART_SYNONYMS: Record<string, string[]> = {
   'Santo': ['santo', 'sanctus'],
   'Cordero de Dios': ['cordero', 'agnus'],
   'Padre Nuestro': ['padre nuestro', 'pater noster'],
-  [PATER_NOSTER]: ['pater noster'],
   'Rito de Aspersión': ['aspersion', 'asperges'],
   'Respuesta a Oración Universal': [
     'oracion universal', 'oracion de los fieles', 'roguemos al senor', 'senor escuchanos',
@@ -262,25 +261,49 @@ export function esPaterNoster(song: Pick<Song, 'id' | 'title' | 'author'>): bool
 }
 
 /**
- * La partitura del folleto para un canto del ordinario, ya filtrada a la Voz.
+ * Los PDF del Padre Nuestro en un idioma, según la convención del Drive:
+ *  · gregoriano: «Padre Nuestro/Pater noster.pdf» (tetragrama, un solo PDF);
+ *  · español: la subcarpeta «Padre Nuestro/Padre Nuestro», con la Voz y las demás voces.
  *
- * El Padre Nuestro tiene dos reglas propias:
- *  · Se busca por IDIOMA y por el NOMBRE del archivo. La carpeta «Padre Nuestro» guarda
- *    también el «Pater noster», y con el sinónimo compartido el gregoriano podía llevarse
- *    la partitura en español (y al revés).
- *  · No se compone por Misa: si el canto trae una Misa y su carpeta no tiene Padre
- *    Nuestro, se toma el de la carpeta del Padre Nuestro.
+ * Se mira el NOMBRE del archivo y que esté bajo una carpeta «Padre Nuestro»: buscar solo
+ * por texto se llevaba el «Padre nuestro, recibid» del Ofertorio.
+ */
+export function pdfsDelPadreNuestro(files: DriveFile[], latin: boolean): DriveFile[] {
+  return files.filter((f) => {
+    if (!esPdf(f)) return false;
+    const n = norm(f.name);
+    const enSuCarpeta = segmentosDe(f).some((s) => s === 'padre nuestro');
+    if (latin) return n.includes('pater noster');
+    return enSuCarpeta && n.startsWith('padre nuestro') && !n.includes('pater noster');
+  });
+}
+
+/**
+ * La partitura del folleto para un canto del ordinario.
+ *
+ * Recibe TODO el listado y filtra aquí, porque la regla no es igual para todos:
+ *  · lo general: solo la Voz de esa parte y esa Misa;
+ *  · el Padre Nuestro en español: la Voz de su carpeta (no se compone por Misa);
+ *  · el Pater noster: su PDF de tetragrama, que es a una sola voz y no dice "Voz".
  */
 export function elegirParaElFolleto(song: Song, files: DriveFile[]): DriveFile | null {
-  if (song.category !== 'Padre Nuestro') return pickOrdinarySheet(song.category, song.massName, files);
+  if (song.category !== 'Padre Nuestro') {
+    return pickOrdinarySheet(song.category, song.massName, files.filter(esLaVoz));
+  }
   const latin = esPaterNoster(song);
-  const categoria = latin ? PATER_NOSTER : 'Padre Nuestro';
-  const delIdioma = files.filter((f) => {
-    const n = norm(f.name);
-    return latin ? n.includes('pater noster') : n.includes('padre nuestro') && !n.includes('pater noster');
-  });
-  return pickOrdinarySheet(categoria, song.massName, delIdioma)
-    ?? pickOrdinarySheet(categoria, undefined, delIdioma);
+  const propios = pdfsDelPadreNuestro(files, latin);
+  if (latin) return propios.find(esLaVoz) ?? propios[0] ?? null;
+  return propios.find(esLaVoz) ?? null;
+}
+
+/**
+ * La partitura del PUEBLO en un canto ya armado: la Voz entre sus partituras por voz, o
+ * la del canto si no las trae. La usa el Modo Atril del Pueblo fiel, que no debe ver la
+ * partitura coral completa.
+ */
+export function partituraDelPueblo(song: Pick<Song, 'sheets' | 'sheetMusicUrl'>): string | undefined {
+  const voz = (song.sheets ?? []).find((sh) => esLaVoz({ id: sh.fileId, name: sh.fileName }));
+  return voz ? `https://drive.google.com/file/d/${voz.fileId}/preview` : song.sheetMusicUrl;
 }
 
 /** El nombre sin su extensión ("Santo - Manzano-Voz.pdf" → "Santo - Manzano-Voz"). */
@@ -320,7 +343,7 @@ export function esLaVoz(f: DriveFile): boolean {
 export async function resolveSheetForFolleto(song: Song, fresco = false): Promise<string | undefined> {
   if (!isOrdinary(song)) return undefined;
   try {
-    const files = (await loadSheets(fresco)).filter(esLaVoz);
+    const files = await loadSheets(fresco);
     if (!files.length) return undefined;
     const best = elegirParaElFolleto(song, files);
     return best ? `https://drive.google.com/file/d/${best.id}/preview` : undefined;

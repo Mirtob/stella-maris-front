@@ -16,6 +16,8 @@ import { PsalmFromBook } from '../songs/PsalmFromBook';
 import { MassAntiphon } from '../songs/MassAntiphon';
 import { GradualeChoice } from '../songs/GradualeChoice';
 import { KyrialeChoice } from '../songs/KyrialeChoice';
+import { PadreNuestroYAclamaciones } from '../cantoral/PadreNuestroYAclamaciones';
+import { esPadreNuestroDelCantoral } from '../../utils/padreNuestroYAclamaciones';
 import { getCelebrationsForDate, getLiturgicalDateForDate, getPersistedCustomDates, setPersistedCustomDates } from '../../utils/liturgicalCalendar';
 import { getSundayCycle } from '../../utils/liturgicalCycle';
 import { resolvePsalm } from '../../data/psalmIndex';
@@ -892,7 +894,12 @@ export function ChoirView({
             gloriaDe={gloriaGregoriano}
             onGloriaChange={setGloriaGregoriano}
             paterNoster={paterGregoriano}
-            onPaterChange={setPaterGregoriano}
+            onPaterChange={(tono) => {
+              // Un solo Padre Nuestro por Misa: el tono del Kyriale reemplaza al del Drive.
+              if (tono) cantoral.filter(esPadreNuestroDelCantoral)
+                .forEach((s) => onRemoveFromCantoral(s.id, s.category));
+              setPaterGregoriano(tono);
+            }}
           />
         </div>
 
@@ -1168,6 +1175,18 @@ export function ChoirView({
               </div>
             );
           })}
+        </div>
+
+        {/* Padre Nuestro y aclamaciones: siempre a la vista, también al EDITAR un
+            cantoral (el diálogo del Ofertorio solo aparece al agregarlo). */}
+        <div className="mt-6">
+          <PadreNuestroYAclamaciones
+            cantoral={cantoral}
+            onAdd={onAddToCantoral}
+            onRemove={onRemoveFromCantoral}
+            paterDelKyriale={paterGregoriano}
+            onQuitarPaterDelKyriale={() => setPaterGregoriano(null)}
+          />
         </div>
 
         {/* Spacer so the last category isn't covered by the sticky CTA (que en
