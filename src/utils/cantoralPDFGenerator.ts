@@ -13,7 +13,7 @@ import { guardarPdf } from './descargarPdf';
 import { getPdfFont, getPdfScale } from '../data/pdfStyle';
 import { renderPdfToImages, imposeBooklet } from './atrilBookletPDF';
 import { repartirEnColumnas, type Pieza } from './pdfColumns';
-import { partirFacsimil, type TrozoFacsimil } from './facsimilTrozos';
+import { partirEnSistemas, type TrozoFacsimil } from './facsimilTrozos';
 import { sortCategoriesByMassOrder, isOrdinary } from './ordinary';
 import { resolveSheetForFolleto } from './ordinarySheetMusic';
 import { ponerCantosAlDia } from '../services/catalogoVigente';
@@ -679,7 +679,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     .map(async (s) => {
       const img = await loadImage(s.gradualeImage!);
       if (!img?.naturalWidth) return;
-      const trozos = partirFacsimil(img, colW, colBottom - colTop, RESERVA_TITULO);
+      const trozos = partirEnSistemas(img, colW, colBottom - colTop, RESERVA_TITULO);
       if (trozos.length) facsimiles.set(String(s.id), trozos);
     }));
 
@@ -716,7 +716,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
         if (!img?.naturalWidth) continue;
         const limpia = await recortarMargenes(img);
         if (!limpia?.naturalWidth) continue;
-        trozos.push(...partirFacsimil(limpia, colW, colBottom - colTop, RESERVA_TITULO));
+        trozos.push(...partirEnSistemas(limpia, colW, colBottom - colTop, RESERVA_TITULO));
       }
       if (trozos.length) facsimiles.set(String(s.id), trozos);
     } catch {
