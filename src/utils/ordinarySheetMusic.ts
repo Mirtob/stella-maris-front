@@ -73,6 +73,9 @@ const norm = (s: string) =>
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 
+/** Clave interna para buscar solo el Padre Nuestro gregoriano (ver elegirParaElFolleto). */
+const PATER_NOSTER = 'Padre Nuestro (latín)';
+
 // Sinónimos por parte para el match contra el nombre del archivo en Drive.
 const PART_SYNONYMS: Record<string, string[]> = {
   'Kyrie': ['kyrie', 'senor ten piedad', 'ten piedad'],
@@ -80,6 +83,7 @@ const PART_SYNONYMS: Record<string, string[]> = {
   'Santo': ['santo', 'sanctus'],
   'Cordero de Dios': ['cordero', 'agnus'],
   'Padre Nuestro': ['padre nuestro', 'pater noster'],
+  [PATER_NOSTER]: ['pater noster'],
   'Rito de Aspersión': ['aspersion', 'asperges'],
   'Respuesta a Oración Universal': [
     'oracion universal', 'oracion de los fieles', 'roguemos al senor', 'senor escuchanos',
@@ -218,8 +222,16 @@ export function pickOrdinarySheet(
     // fuente de verdad. Sin Misa, cualquier archivo de la parte sirve (score 1).
     // El matiz del paréntesis solo desempata: nunca decide por sí solo.
     const matiz = matices.filter(t => n.includes(t) || segs.some(g => g.includes(t))).length;
+    // Y entre dos archivos de la misma carpeta, el que NOMBRA la parte: en la carpeta
+    // «Anunciamos tu muerte» también están los de «Anunciaremos tu Reino», que calzan
+    // solo por la carpeta.
+    const nombraLaParte = parts.some(p => contiene(n, p)) ? 0.1 : 0;
+    // Y, si todavía empatan, la partitura completa antes que la de una sola voz: para el
+    // coro (tarjeta y Atril) es la que sirve. Al folleto no le afecta: ahí ya se filtró a
+    // la Voz antes de elegir.
+    const completa = /(^|\s)(voz( \d)?|soprano|alto|contralto|tenor|bajo|hombres|mujeres)$/.test(norm(sinExtension(f.name))) ? 0 : 0.05;
     const score = (folderMatch || nameMassMatch || massTokens.length === 0 ? 1 : 0.5)
-      + (folderMatch ? 3 : 0) + (nameMassMatch ? 2 : 0) + matiz * 0.25;
+      + (folderMatch ? 3 : 0) + (nameMassMatch ? 2 : 0) + matiz * 0.25 + nombraLaParte + completa;
     if (score > bestScore) { bestScore = score; best = f; }
   }
   return best;
@@ -243,6 +255,34 @@ export async function resolveOrdinarySheetMusic(song: Song): Promise<Song> {
   return song;
 }
 
+/** ¿Este Padre Nuestro es el gregoriano (Pater noster)? */
+export function esPaterNoster(song: Pick<Song, 'id' | 'title' | 'author'>): boolean {
+  if (String(song.id ?? '').startsWith('padre-nuestro-la')) return true;
+  return /\bpater\b|latin|gregor/.test(norm(`${song.title ?? ''} ${song.author ?? ''}`));
+}
+
+/**
+ * La partitura del folleto para un canto del ordinario, ya filtrada a la Voz.
+ *
+ * El Padre Nuestro tiene dos reglas propias:
+ *  · Se busca por IDIOMA y por el NOMBRE del archivo. La carpeta «Padre Nuestro» guarda
+ *    también el «Pater noster», y con el sinónimo compartido el gregoriano podía llevarse
+ *    la partitura en español (y al revés).
+ *  · No se compone por Misa: si el canto trae una Misa y su carpeta no tiene Padre
+ *    Nuestro, se toma el de la carpeta del Padre Nuestro.
+ */
+export function elegirParaElFolleto(song: Song, files: DriveFile[]): DriveFile | null {
+  if (song.category !== 'Padre Nuestro') return pickOrdinarySheet(song.category, song.massName, files);
+  const latin = esPaterNoster(song);
+  const categoria = latin ? PATER_NOSTER : 'Padre Nuestro';
+  const delIdioma = files.filter((f) => {
+    const n = norm(f.name);
+    return latin ? n.includes('pater noster') : n.includes('padre nuestro') && !n.includes('pater noster');
+  });
+  return pickOrdinarySheet(categoria, song.massName, delIdioma)
+    ?? pickOrdinarySheet(categoria, undefined, delIdioma);
+}
+
 /** El nombre sin su extensión ("Santo - Manzano-Voz.pdf" → "Santo - Manzano-Voz"). */
 const sinExtension = (nombre: string): string => (nombre ?? '').replace(/\.[^.]+$/, '');
 
@@ -262,9 +302,11 @@ const sinExtension = (nombre: string): string => (nombre ?? '').replace(/\.[^.]+
  * forma de decir lo mismo.
  */
 export function esLaVoz(f: DriveFile): boolean {
-  if (/(^|\s)voz$/.test(norm(sinExtension(f?.name ?? '')))) return true;
+  // «-Voz» o «-Voz 1» / «-Voz_1»: cuando hay dos voces, la 1 es la melodía de la
+  // asamblea. «-Voz_2» es la segunda voz del coro y no va al folleto.
+  if (/(^|\s)voz( 1)?$/.test(norm(sinExtension(f?.name ?? '')))) return true;
   const segs = segmentosDe(f);
-  return segs.length > 0 && segs[segs.length - 1] === 'voz';
+  return segs.length > 0 && /^voz( 1)?$/.test(segs[segs.length - 1]);
 }
 
 /**
@@ -275,30 +317,12 @@ export function esLaVoz(f: DriveFile): boolean {
  * a ninguna otra voz. Sin archivo de Voz devuelve `undefined` y el folleto imprime la
  * letra, que es exactamente lo que pidió el coro el 25-sep-2026.
  */
-/**
- * Sufijos de los archivos que son de una voz del CORO y no de la asamblea.
- * Solo se usan en la carpeta común de aclamaciones (ver `esDelPueblo`).
- */
-const OTRA_VOZ = /(^|\s)(hombres|mujeres|satb|soprano|contralto|alto|tenor|bajo|baritono|coro|organo|acompanamiento|guitarra)$/;
-
-/**
- * ¿Sirve para el folleto del pueblo?
- *
- * En las carpetas de cada Misa, solo el archivo de la Voz (esLaVoz). En la carpeta común
- * de aclamaciones las respuestas suelen ser de una sola línea y no siempre dicen "Voz",
- * así que ahí basta con que el nombre no diga que es de otra voz.
- */
-export function esDelPueblo(f: DriveFile): boolean {
-  if (esLaVoz(f)) return true;
-  return enCarpetaAclamaciones(f) && !OTRA_VOZ.test(norm(sinExtension(f?.name ?? '')));
-}
-
 export async function resolveSheetForFolleto(song: Song, fresco = false): Promise<string | undefined> {
   if (!isOrdinary(song)) return undefined;
   try {
-    const files = (await loadSheets(fresco)).filter(esDelPueblo);
+    const files = (await loadSheets(fresco)).filter(esLaVoz);
     if (!files.length) return undefined;
-    const best = pickOrdinarySheet(song.category, song.massName, files);
+    const best = elegirParaElFolleto(song, files);
     return best ? `https://drive.google.com/file/d/${best.id}/preview` : undefined;
   } catch {
     return undefined;

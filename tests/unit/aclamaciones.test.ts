@@ -6,7 +6,8 @@
  * Gloria, el Santo y el Cordero (carpeta de la Misa en Drive; al folleto solo la Voz) y,
  * si no hay, va solo la letra.
  */
-import { esLaVoz, esDelPueblo, pickOrdinarySheet, type DriveFile } from '../../src/utils/ordinarySheetMusic';
+import { esLaVoz, pickOrdinarySheet, elegirParaElFolleto, type DriveFile } from '../../src/utils/ordinarySheetMusic';
+import type { Song } from '../../src/types';
 import { isOrdinary, sortCategoriesByMassOrder } from '../../src/utils/ordinary';
 import { ACLAMACIONES } from '../../src/data/aclamaciones';
 
@@ -71,25 +72,57 @@ check('sin partitura de esa Misa no inventa (va la letra)',
 check('la parte puede venir en la carpeta',
   elegido(ORACION, MANZANO, [f('Voz.pdf', '/P/Misa M. Manzano/Oracion universal')]), 'Voz.pdf');
 
-console.log('\n== Carpeta común «Aclamaciones y respuestas» ==');
-const comun = [
-  f('Señor escúchanos.pdf', '/P/Aclamaciones y respuestas'),
-  f('Anunciamos tu muerte.pdf', '/P/Aclamaciones y respuestas'),
-  f('Triple Amén - SATB.pdf', '/P/Aclamaciones y respuestas'),
-  f('Triple Amén.pdf', '/P/Aclamaciones y respuestas'),
+console.log('\n== Carpeta «Aclamaciones» del Drive (nombres reales, 26-sep-2026) ==');
+const A = '/Partituras/Aclamaciones';
+const drive = [
+  f('Triple amen voces-Voz.pdf', `${A}/Triple amen voces`),
+  f('Triple amen voces-Bajo.pdf', `${A}/Triple amen voces`),
+  f('Triple amen voces-Soprano.pdf', `${A}/Triple amen voces`),
+  f('Triple amen voces.pdf', `${A}/Triple amen voces`),
+  f('Triple amen voces-Voz.mp3', `${A}/Triple amen voces`),
+  f('Oración universal-Voz_2.pdf', `${A}/Roguemos al Señor`),
+  f('Oración universal-Voz_1.pdf', `${A}/Roguemos al Señor`),
+  f('Oración universal.pdf', `${A}/Roguemos al Señor`),
+  f('Anunciaremos tu Reino-Tenor.pdf', `${A}/Anunciamos tu muerte`),
+  f('Anunciaremos tu Reino.pdf', `${A}/Anunciamos tu muerte`),
+  f('Anunciamos tu muerte-Voz_2.pdf', `${A}/Anunciamos tu muerte`),
+  f('Anunciamos tu muerte.pdf', `${A}/Anunciamos tu muerte`),
+  f('Anunciamos tu muerte-Voz.pdf', `${A}/Anunciamos tu muerte`),
+  f('Alabado sea el Santísimo sacramento del altar.pdf', '/Partituras/Comunion/Alabado sea el santísimo'),
 ];
-const folletoComun = (cat: string, misa: string | undefined, files: DriveFile[]) =>
-  pickOrdinarySheet(cat, misa, files.filter(esDelPueblo))?.name ?? null;
-check('sin la de la Misa, toma la de la carpeta común', elegido(ORACION, MANZANO, comun), 'Señor escúchanos.pdf');
-check('también sin Misa', elegido(CONSAGRACION, undefined, comun), 'Anunciamos tu muerte.pdf');
+check('Voz 1 es la Voz', esLaVoz(f('Oración universal-Voz_1.pdf')), true);
+check('Voz 2 no', esLaVoz(f('Oración universal-Voz_2.pdf')), false);
+check('folleto: Amén → la Voz', paraElFolleto(AMEN, MANZANO, drive), 'Triple amen voces-Voz.pdf');
+check('folleto: Oración universal → la Voz 1', paraElFolleto(ORACION, MANZANO, drive), 'Oración universal-Voz_1.pdf');
+check('folleto: Consagración → la Voz, no la Voz 2', paraElFolleto(CONSAGRACION, MANZANO, drive), 'Anunciamos tu muerte-Voz.pdf');
+check('también sin Misa', paraElFolleto(CONSAGRACION, undefined, drive), 'Anunciamos tu muerte-Voz.pdf');
+check('tarjeta: nunca «Anunciaremos tu Reino»', /Anunciamos/.test(elegido(CONSAGRACION, MANZANO, drive) ?? ''), true);
+check('tarjeta: nunca el MP3', /\.pdf$/.test(elegido(AMEN, MANZANO, drive) ?? ''), true);
+check('el Santísimo Sacramento no es un Amén',
+  elegido(AMEN, undefined, drive.filter(x => /Alabado/.test(x.name))), null);
 check('la de la Misa gana a la común',
-  elegido(AMEN, MANZANO, [...comun, f('Amen - Manzano-Voz.pdf', '/P/Misa M. Manzano')]), 'Amen - Manzano-Voz.pdf');
+  paraElFolleto(AMEN, MANZANO, [...drive, f('Amen - Manzano-Voz.pdf', '/P/Misa M. Manzano')]), 'Amen - Manzano-Voz.pdf');
 check('el Kyrie no cae a la carpeta común',
-  elegido('Kyrie', MANZANO, [f('Kyrie.pdf', '/P/Aclamaciones y respuestas')]), null);
-check('al folleto va aunque no diga Voz', folletoComun(ORACION, MANZANO, comun), 'Señor escúchanos.pdf');
-check('pero no la de otra voz (SATB)', folletoComun(AMEN, MANZANO, comun), 'Triple Amén.pdf');
-check('fuera de la carpeta común, sigue exigiendo la Voz',
-  folletoComun(AMEN, MANZANO, [f('Amen - Manzano.pdf', '/P/Misa M. Manzano')]), null);
+  elegido('Kyrie', MANZANO, [f('Kyrie-Voz.pdf', A)]), null);
+
+console.log('\n== Padre Nuestro: cada idioma su partitura ==');
+const PN = '/Partituras/Padre Nuestro';
+const padre = [
+  f('Pater noster.pdf', PN),
+  f('Pater noster-Voz.pdf', PN),
+  f('Padre nuestro-Voz_2.pdf', `${PN}/Padre Nuestro`),
+  f('Padre nuestro-Voz.pdf', `${PN}/Padre Nuestro`),
+  f('Padre nuestro.pdf', `${PN}/Padre Nuestro`),
+  f('Padre nuestro, recibid.pdf', '/Partituras/Ofertorio'),
+].filter(esLaVoz);
+const pn = (o: Partial<Song>) =>
+  elegirParaElFolleto({ id: 'padre-nuestro-es-1', title: 'Padre Nuestro', category: 'Padre Nuestro', ...o } as Song, padre)?.name ?? null;
+const LATIN = { id: 'padre-nuestro-la-1', title: 'Padre Nuestro (Gregoriano)', author: 'Pater noster (latín)' };
+check('español → Padre nuestro-Voz', pn({}), 'Padre nuestro-Voz.pdf');
+check('gregoriano → Pater noster, nunca el español', pn(LATIN), 'Pater noster-Voz.pdf');
+check('gregoriano sin su Voz → nada (va la letra), no el español',
+  elegirParaElFolleto({ ...LATIN, category: 'Padre Nuestro' } as Song, padre.filter(x => !/Pater/.test(x.name)))?.name ?? null, null);
+check('con Misa sin Padre Nuestro propio, toma el de su carpeta', pn({ massName: MANZANO }), 'Padre nuestro-Voz.pdf');
 
 console.log(`\n${pass} ok, ${fail} fallas`);
 if (fail > 0) process.exit(1);
