@@ -86,3 +86,23 @@ export function instrumentoPorDefecto(
 ): InstrumentType {
   return instrumentos?.length === 1 ? instrumentos[0] : preferido;
 }
+
+/**
+ * La lista de instrumentos del perfil después de elegir uno en Configuración.
+ *
+ * Configuración solo guardaba el campo `instrument`, pero Supabase guarda la LISTA
+ * `instruments`, y de ahí sale el instrumento al volver a cargar el perfil (y, si la
+ * lista trae uno solo, manda en el constructor: `instrumentoPorDefecto`). Así el cambio
+ * no duraba ni se aplicaba. Reportado el 26-sep-2026.
+ *
+ * Quien tocaba uno solo pasa a tocar el elegido. Quien declaraba varios los conserva
+ * todos, con el elegido primero, para que se le siga preguntando en cada Misa.
+ */
+export function instrumentosAlElegir(
+  actuales: InstrumentType[] | undefined,
+  elegido: InstrumentType,
+): InstrumentType[] {
+  const lista = actuales ?? [];
+  if (lista.length <= 1) return [elegido];
+  return [elegido, ...lista.filter((i) => i !== elegido)];
+}

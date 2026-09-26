@@ -1406,7 +1406,13 @@ function AppContent() {
     // Sincronizar a Supabase cuando cambian datos persistentes del perfil (p. ej. el
     // conjunto de parroquias editado en Configuración). Fire-and-forget: el flujo local
     // sigue aunque falle. activeParishName/activeRole son de sesión, pero no estorban.
-    upsertCurrentUserProfile(updated).catch(() => undefined);
+    // Si el servidor no lo guarda, decirlo: el cambio se ve aquí pero se perdería al
+    // volver a entrar o en otro teléfono.
+    upsertCurrentUserProfile(updated)
+      .then((r) => {
+        if (!r.ok) toast.error('No se pudo guardar tu perfil en el servidor', { description: r.error });
+      })
+      .catch(() => undefined);
   };
 
   const handleDeleteCantoral = async (id: string) => {

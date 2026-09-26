@@ -8,6 +8,7 @@ import { resetAllTutorials } from '../tour/tours';
 import { ParishPicker } from './ParishPicker';
 import { PushNotificationsCard } from './PushNotificationsCard';
 import { COMMON_PARTS } from '../../utils/sheetParts';
+import { instrumentoPorDefecto, instrumentosAlElegir } from '../../utils/instrument';
 import { ChoirContactCard } from './ChoirContactCard';
 import { deleteMyAccount } from '../../services/account';
 import { signOutOnly } from '../../services/googleAuth';
@@ -32,7 +33,12 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
   // initial ProfileSetup step.
   const initialActive = userProfile.activeParishName || userProfile.parishName || '';
   const [activeParish, setActiveParish] = useState(initialActive);
-  const [instrument, setInstrument] = useState<InstrumentType>(userProfile.instrument || 'Guitarra');
+  // El que manda es el de la lista `instruments` (la que guarda Supabase), no el campo
+  // suelto `instrument`: así la pantalla muestra lo mismo que usa el constructor.
+  const [instrument, setInstrument] = useState<InstrumentType>(() => instrumentoPorDefecto(
+    userProfile.instruments,
+    userProfile.instrument || userProfile.instruments?.[0] || 'Guitarra',
+  ));
   // Voz/instrumento para la polifonía: decide QUÉ partitura se le muestra a esta
   // persona cuando el canto trae un PDF por voz. Texto libre (ver utils/sheetParts).
   const [voicePart, setVoicePart] = useState<string>(userProfile.voicePart || '');
@@ -155,6 +161,7 @@ export function ProfileSettings({ userProfile, effectiveRole, onSave, onClose }:
     // Only update instrument for choir members
     if (canChangeInstrument) {
       updates.instrument = instrument;
+      updates.instruments = instrumentosAlElegir(userProfile.instruments, instrument);
       updates.voicePart = voicePart.trim() || undefined;
     }
 
