@@ -12,7 +12,7 @@ interface PDFViewerProps {
 }
 
 // Worker servido desde nuestro propio dominio — más confiable que CDN
-const WORKER_URL = '/pdf.worker.min.mjs';
+const WORKER_URL = '/pdf.worker.entry.mjs';
 
 // Velocidad de scroll por defecto cuando no hay duración conocida (px/s).
 const FALLBACK_PX_PER_SEC = 30;

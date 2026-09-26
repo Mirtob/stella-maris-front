@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Loader, ExternalLink, Download } from 'lucide-react';
 import { getOfflinePdf } from '../../services/offlineCache';
 
-const WORKER_URL = '/pdf.worker.min.mjs';
+const WORKER_URL = '/pdf.worker.entry.mjs';
 
 interface PdfPagesProps {
   proxyUrl: string;

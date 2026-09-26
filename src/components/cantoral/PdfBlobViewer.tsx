@@ -3,7 +3,7 @@ import { Download, Loader, RefreshCw } from 'lucide-react';
 
 // Worker servido desde nuestro propio dominio (igual que PDFViewer). El CSP permite
 // worker-src 'self' blob:.
-const WORKER_URL = '/pdf.worker.min.mjs';
+const WORKER_URL = '/pdf.worker.entry.mjs';
 
 /**
  * Techo de resolución. Un teléfono moderno reporta `devicePixelRatio` 3, y a esa escala

@@ -18,7 +18,7 @@ import { partirFacsimil, cargarFacsimil } from './facsimilTrozos';
 // y se coloca 2-por-hoja, así sirve igual para letra o para partituras.
 // =============================================================================
 
-const WORKER_URL = '/pdf.worker.min.mjs';
+const WORKER_URL = '/pdf.worker.entry.mjs';
 
 // Media carta (portrait) en mm — la "página lógica" del cuadernillo.
 const HALF_W = 139.7;   // 5.5"
