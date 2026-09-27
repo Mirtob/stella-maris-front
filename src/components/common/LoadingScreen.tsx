@@ -1,5 +1,6 @@
 import logoStellaMaris from 'figma:asset/logo-stella-maris.webp';
 import { useAvanceEstimado } from '../../hooks/useAvanceEstimado';
+import { FraseMagisterio } from './FraseMagisterio';
 
 interface LoadingScreenProps {
   message?: string;
@@ -32,9 +33,9 @@ export function LoadingScreen({ message = 'Cargando...', progress }: LoadingScre
       </div>
 
       {/* Contenedor principal */}
-      <div className="relative z-10 flex flex-col items-center gap-8">
+      <div className="relative z-10 flex flex-col items-center gap-6 px-4">
         {/* Logo girando en 3D sobre eje Y */}
-        <div className="relative w-80 h-80 sm:w-96 sm:h-96 md:w-[28rem] md:h-[28rem]">
+        <div className="relative w-52 h-52 sm:w-72 sm:h-72 md:w-80 md:h-80">
           {/* Resplandor dorado pulsante */}
           <div className="absolute inset-0 rounded-full animate-pulse opacity-30 bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 blur-3xl"></div>
           
@@ -64,10 +65,8 @@ export function LoadingScreen({ message = 'Cargando...', progress }: LoadingScre
 
         {/* Texto de carga */}
         <div className="text-center space-y-3">
-          <h2 className="text-4xl sm:text-2xl sm:text-lg sm:text-2xl font-bold text-white drop-shadow-lg">
-            {message}
-          </h2>
-          
+          {/* El "Cargando…" ya no se muestra: queda como nombre de la barra para los
+              lectores de pantalla. En su lugar, una enseñanza del Magisterio. */}
           {/* Porcentaje: que se vea que avanza */}
           <div
             role="progressbar"
@@ -87,10 +86,8 @@ export function LoadingScreen({ message = 'Cargando...', progress }: LoadingScre
           </div>
         </div>
 
-        {/* Versículo bíblico opcional */}
-        <p className="text-amber-200 text-lg italic max-w-md text-center px-3 sm:px-4 opacity-80">
-          "María, Estrella del Mar, guía a la Iglesia en su navegación"
-        </p>
+        {/* Una enseñanza del Magisterio sobre la música sacra, que cambia sola */}
+        <FraseMagisterio />
       </div>
 
     </div>
