@@ -1,7 +1,7 @@
 import { abrirOGuardarPdf } from '../../utils/descargarPdf';
 import { X, Download, Music } from 'lucide-react';
 import { Song, InstrumentType, PublishedCantoral } from '../../types';
-import { sortCategoriesByMassOrder, massCategoryIcon } from '../../utils/ordinary';
+import { sortCategoriesByMassOrder, massCategoryIcon, rotuloDeParte, tituloVisible } from '../../utils/ordinary';
 import { useState } from 'react';
 import { formatYmdForDisplay } from '../../utils/dateLocal';
 import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
@@ -155,7 +155,7 @@ export function CantoralPDFPreview({
               {/* Título de Categoría */}
               <div className="flex items-center gap-3 mb-4 pb-3 border-b-2 border-blue-200 dark:border-blue-900">
                 <span className="text-3xl">{massCategoryIcon(category)}</span>
-                <h3 className="text-2xl font-bold text-blue-950 dark:text-blue-100">{category}</h3>
+                <h3 className="text-2xl font-bold text-blue-950 dark:text-blue-100">{rotuloDeParte(category)}</h3>
               </div>
 
               {/* Cantos de la categoría */}
@@ -169,9 +169,9 @@ export function CantoralPDFPreview({
                     <div className="flex items-start gap-2 mb-2">
                       <span className="text-blue-900 dark:text-blue-300 font-bold text-lg">{index + 1}.</span>
                       <div className="flex-1">
-                        <h4 className="text-lg font-bold text-gray-900 dark:text-white">{song.title}</h4>
-                        {song.author && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 italic">Por: {song.author}</p>
+                        <h4 className="text-lg font-bold text-gray-900 dark:text-white">{tituloVisible(song).title}</h4>
+                        {tituloVisible(song).author && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400 italic">Por: {tituloVisible(song).author}</p>
                         )}
                         {song.originalKey && (
                           <p className="text-sm text-purple-600 dark:text-purple-400 font-semibold">

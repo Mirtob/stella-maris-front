@@ -8,7 +8,7 @@ import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
 import { PlaylistPlayer } from '../songs/PlaylistPlayer';
 import { LyricsOnly } from '../songs/LyricsOnly';
 import { esAleluyaDeCanto } from '../../utils/aleluyaEstrofa';
-import { groupSongsByMassPart, massCategoryIcon } from '../../utils/ordinary';
+import { groupSongsByMassPart, massCategoryIcon, rotuloDeParte, tituloVisible } from '../../utils/ordinary';
 import { hasAnyVideo } from '../../utils/songVideo';
 import {
   getDeferredInstallPrompt,
@@ -236,15 +236,15 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onOpenInstall, onCan
                   <section key={category}>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-2xl">{massCategoryIcon(category)}</span>
-                      <h2 className="text-xl font-bold text-brand-ink">{category}</h2>
+                      <h2 className="text-xl font-bold text-brand-ink">{rotuloDeParte(category)}</h2>
                     </div>
                     <div className="space-y-3">
                       {songs.map((song) => (
                         <div key={`${song.id}::${song.category}`}>
                           <h3 className="text-lg font-bold text-brand-ink-soft mb-1">
-                            {song.title}
-                            {song.author && (
-                              <span className="text-sm font-normal text-blue-700 dark:text-blue-300"> · {song.author}</span>
+                            {tituloVisible(song).title}
+                            {tituloVisible(song).author && (
+                              <span className="text-sm font-normal text-blue-700 dark:text-blue-300"> · {tituloVisible(song).author}</span>
                             )}
                           </h3>
                           <LyricsOnly lyrics={song.lyrics ?? ''} esAleluya={esAleluyaDeCanto(song)} />

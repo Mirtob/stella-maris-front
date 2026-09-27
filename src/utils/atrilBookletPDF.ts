@@ -3,7 +3,7 @@ import { Song, InstrumentType, UserRole } from '../types';
 import { sheetForPart, FULL_SCORE } from './sheetParts';
 import { modoDelAtril, partituraDelAtril } from './atrilModo';
 import { getDrivePdfProxyUrl } from './driveProxy';
-import { sortByMassOrder } from './ordinary';
+import { sortByMassOrder, rotuloDeParte, tituloVisible } from './ordinary';
 import { transposeContent, getChordNotation, getTransposedKey, keyPrefersFlats, type ChordNotation } from './chordTranspose';
 import { getOfflinePdf } from '../services/offlineCache';
 import { stripLyricsFormatting } from './lyricsFormat';
@@ -352,9 +352,9 @@ export async function generateAtrilPrintable(opts: AtrilPrintOptions): Promise<{
     // Cabecera: momento + título (+ tono si aplica).
     need(16);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(180, 83, 9);
-    doc.text(clean(s.category || '').toUpperCase(), M, y); y += 5;
+    doc.text(clean(rotuloDeParte(s.category || '')).toUpperCase(), M, y); y += 5;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(15, 23, 42);
-    const titleLines = doc.splitTextToSize(clean(s.title), CW) as string[];
+    const titleLines = doc.splitTextToSize(clean(tituloVisible(s).title), CW) as string[];
     titleLines.forEach((ln) => { need(7); doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(15, 23, 42); doc.text(ln, M, y); y += 7; });
 
     const proxy = mode === 'score' ? getDrivePdfProxyUrl(partituraDelAtril(s, perfil)) : null;

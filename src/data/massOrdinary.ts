@@ -231,7 +231,7 @@ export const massOrdinary: MassSection[] = [
   },
   {
     id: 'prayers-song',
-    title: 'Respuesta cantada a las peticiones',
+    title: 'Oración universal',
     type: 'song',
     posture: 'standing',
     category: 'Respuesta a Oración Universal',
@@ -322,7 +322,7 @@ export const massOrdinary: MassSection[] = [
   },
   {
     id: 'consecration-song',
-    title: 'Aclamación después de la Consagración',
+    title: 'Aclamación post consagración',
     type: 'song',
     posture: 'kneeling',
     category: 'Aclamación Consagración',
@@ -357,7 +357,7 @@ export const massOrdinary: MassSection[] = [
   },
   {
     id: 'doxology-song',
-    title: 'Amén cantado',
+    title: 'Triple amén (Aclamación doxología)',
     type: 'song',
     posture: 'standing',
     category: 'Amén (Doxología)',

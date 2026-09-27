@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { History, Calendar, Church, ChevronDown, ChevronUp, Play, Clock, Trash2, Filter, Download, Loader, Search, Copy } from 'lucide-react';
 import { PublishedCantoral, Song } from '../../types';
-import { sortCategoriesByMassOrder, massCategoryIcon } from '../../utils/ordinary';
+import { sortCategoriesByMassOrder, massCategoryIcon, rotuloDeParte, tituloVisible } from '../../utils/ordinary';
 import { generateChoirBooklet, voicesInCantoral } from '../../utils/atrilBookletPDF';
 import { abrirOGuardarPdf } from '../../utils/descargarPdf';
 import { listCantorals, listCantoralYears } from '../../services/cantorals';
@@ -587,7 +587,7 @@ export function CantoralHistory({ onPlaySong, onDeleteCantoral, onClone, isAdmin
                             <div key={category} className="bg-purple-50 dark:bg-purple-900/20 rounded-2xl p-5 border-3 border-purple-200 dark:border-purple-700 transition-colors">
                               <div className="flex items-center gap-3 mb-4">
                                 <span className="text-3xl">{getCategoryIcon(category)}</span>
-                                <h4 className="text-2xl font-bold text-purple-900 dark:text-purple-200">{category}</h4>
+                                <h4 className="text-2xl font-bold text-purple-900 dark:text-purple-200">{rotuloDeParte(category)}</h4>
                               </div>
                               <div className="space-y-3">
                                 {cantoral.songs
@@ -609,7 +609,7 @@ export function CantoralHistory({ onPlaySong, onDeleteCantoral, onClone, isAdmin
                                         </button>
                                         <div className="flex-1 min-w-0">
                                           <h5 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white leading-tight line-clamp-2">
-                                            {song.title}
+                                            {tituloVisible(song).title}
                                           </h5>
                                           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 truncate">
                                             {song.artist || 'Artista desconocido'}

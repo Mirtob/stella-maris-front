@@ -90,11 +90,10 @@ export function construirPadreNuestro(idioma: PadreNuestroIdioma, files: DriveFi
   const principal = (latin ? (pdfs.find(esLaVoz) ?? pdfs[0]) : pdfs.find(esLaVoz)) ?? pdfs[0] ?? null;
   return {
     id: `padre-nuestro-${idioma}-${Date.now()}`,
-    title: latin ? 'Pater noster' : 'Padre Nuestro',
+    title: latin ? 'Pater noster' : 'Padre nuestro',
     category: 'Padre Nuestro',
     youtubeId: '',
     duration: '0:00',
-    author: latin ? 'Gregoriano' : undefined,
     version: 'Coro',
     isLiturgical: true,
     sheetMusicUrl: principal ? urlDe(principal) : undefined,
@@ -138,7 +137,8 @@ export function construirAclamacion(
     category: a.category,
     youtubeId: '',
     duration: '0:00',
-    author: misa,
+    // Sin autor: la aclamación es universal, no "de la Misa X". La Misa se guarda solo
+    // para buscar su partitura en la carpeta de esa Misa, si la tuviera.
     version: 'Coro',
     massName: misa,
     isLiturgical: true,

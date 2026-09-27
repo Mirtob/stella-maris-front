@@ -154,3 +154,40 @@ export const MASS_CATEGORY_ICON: Record<string, string> = {
 export function massCategoryIcon(category: string): string {
   return MASS_CATEGORY_ICON[category] ?? '🎵';
 }
+
+/**
+ * Cómo se ROTULA una parte en lo que ve la gente (folleto, Atril, enlace del QR).
+ *
+ * La categoría guardada no cambia —es la clave de la BD y del orden de la Misa—, solo el
+ * rótulo impreso. Las aclamaciones son universales y así las nombra el coro (pedido del
+ * 27-sep-2026); "Respuesta a Oración Universal" o "Amén (Doxología)" eran rótulos
+ * internos.
+ */
+const ROTULO_DE_PARTE: Record<string, string> = {
+  'Respuesta a Oración Universal': 'Oración universal',
+  'Aclamación Consagración': 'Aclamación post consagración',
+  'Amén (Doxología)': 'Triple amén (Aclamación doxología)',
+  'Padre Nuestro': 'Padre nuestro',
+};
+
+export function rotuloDeParte(category: string): string {
+  return ROTULO_DE_PARTE[category] ?? category;
+}
+
+/**
+ * Título y autor de un canto tal como se muestran.
+ *
+ * Las aclamaciones y el Padre Nuestro que arma la app desde el Drive NO pertenecen a una
+ * Misa: se les quita el autor, porque en los cantorales publicados antes del 27-sep-2026
+ * salía el nombre de la Misa («Oración universal (Misa Reunidos en su nombre)»), y en los
+ * de antes aún «Padre Nuestro (Misa)». Se decide por el id, que los identifica aunque el
+ * cantoral ya esté guardado, así que se corrige sin volver a publicar.
+ */
+export function tituloVisible(song: Pick<Song, 'id' | 'title' | 'author' | 'category'>): { title: string; author?: string } {
+  const id = String(song.id ?? '');
+  if (id.startsWith('aclamacion-')) return { title: rotuloDeParte(song.category) };
+  if (id.startsWith('padre-nuestro-')) {
+    return { title: id.startsWith('padre-nuestro-la') ? 'Pater noster' : 'Padre nuestro' };
+  }
+  return { title: song.title, author: song.author };
+}

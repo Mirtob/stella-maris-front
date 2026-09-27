@@ -11,7 +11,7 @@ import { CantoralWithOrdinary } from './CantoralWithOrdinary';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { parseYmdLocal, formatYmdForDisplay } from '../../utils/dateLocal';
 import { massTypeBadge, cantoralYaPaso, fechaEnQueSeCanta } from '../../utils/massType';
-import { groupSongsByMassPart, massCategoryIcon } from '../../utils/ordinary';
+import { groupSongsByMassPart, massCategoryIcon, rotuloDeParte, tituloVisible } from '../../utils/ordinary';
 import { parseParishChapel, splitActiveParish } from '../../utils/parish';
 import { cantoralVisiblePara, esCantoralDeSalida } from '../../utils/cantoralVisibilidad';
 import { LiturgicalColorBadge } from '../liturgy/LiturgicalColorBadge';
@@ -369,7 +369,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                 <div key={category}>
                   <div className="flex items-center gap-2 mb-3 text-lg font-bold" style={{ color: colors.text }}>
                     <span className="text-2xl">{getCategoryIcon(category)}</span>
-                    <span>{category}</span>
+                    <span>{rotuloDeParte(category)}</span>
                   </div>
 
                   <div className="space-y-2">
@@ -389,7 +389,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
                           </div>
                           <div className="text-left flex-1 min-w-0">
                             <div className="font-bold text-base text-brand-ink truncate">
-                              {song.title}
+                              {tituloVisible(song).title}
                             </div>
                             {song.version && (
                               <div className="text-sm text-blue-800 dark:text-blue-200 opacity-90">

@@ -16,7 +16,7 @@ import { FavoriteButton } from '../songs/FavoriteButton';
 import { LyricsWithChords } from '../songs/LyricsWithChords';
 import { transposeContent, getChordNotation, keyPrefersFlats } from '../../utils/chordTranspose';
 import { AtrilMode } from '../atril/AtrilMode';
-import { groupSongsByMassPart, massCategoryIcon } from '../../utils/ordinary';
+import { groupSongsByMassPart, massCategoryIcon, rotuloDeParte } from '../../utils/ordinary';
 import { esAleluyaDeCanto } from '../../utils/aleluyaEstrofa';
 
 // Extrae el Drive file ID de una URL de Drive y arma la URL del proxy (PDF embebido).
@@ -372,7 +372,7 @@ export function CantoralWithOrdinary({ cantoral, onBack, onPlaySong, userRole, u
                 {sueltas.map(({ category }) =>
                   renderSection({
                     id: `extra-${category}`,
-                    title: category,
+                    title: rotuloDeParte(category),
                     type: 'song',
                     posture: 'standing',
                     category,

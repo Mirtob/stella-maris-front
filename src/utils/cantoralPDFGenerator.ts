@@ -14,7 +14,7 @@ import { getPdfFont, getPdfScale } from '../data/pdfStyle';
 import { renderPdfToImages, imposeBooklet } from './atrilBookletPDF';
 import { repartirEnColumnas, type Pieza } from './pdfColumns';
 import { partirEnSistemas, type TrozoFacsimil } from './facsimilTrozos';
-import { sortCategoriesByMassOrder, isOrdinary } from './ordinary';
+import { sortCategoriesByMassOrder, isOrdinary, rotuloDeParte, tituloVisible } from './ordinary';
 import { resolveSheetForFolleto } from './ordinarySheetMusic';
 import { ponerCantosAlDia } from '../services/catalogoVigente';
 import { getDrivePdfProxyUrl } from './driveProxy';
@@ -804,7 +804,8 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     // Título del canto: centrado, en cursiva negrita, con el autor entre paréntesis
     // en la misma línea — como en el folleto impreso ("Hija de Sión (L. Deiss)").
     const titulo = (song: Song) => {
-      const texto = cleanText(song.title) + (song.author ? ` (${cleanText(song.author)})` : '');
+      const visible = tituloVisible(song);
+      const texto = cleanText(visible.title) + (visible.author ? ` (${cleanText(visible.author)})` : '');
       pdf.setFont('helvetica', 'bolditalic');
       pdf.setFontSize(11);
       const lineas = pdf.splitTextToSize(texto, colW) as string[];
@@ -942,7 +943,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
 
     sortedCategories.forEach((category, catIdx) => {
       if (catIdx > 0) espacio(adv(4));
-      encabezado(category);
+      encabezado(rotuloDeParte(category));
       espacio(adv(2), true);
 
       byCategory[category].forEach((song, idx) => {
