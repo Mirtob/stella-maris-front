@@ -35,16 +35,12 @@ export async function signInWithGoogle() {
 // El usuario solo escribe un nombre de usuario; por debajo se mapea a un email
 // SINTÉTICO interno (no se envía ningún correo). El correo real es opcional y se
 // usa solo para recuperación de clave (recovery_email, asistida por admin).
-export const USERNAME_EMAIL_DOMAIN = 'usuario.stellamaris.app';
+export { USERNAME_EMAIL_DOMAIN, isUsernameAccount, nombreParaMostrar } from '../utils/cuentaUsuario';
+import { USERNAME_EMAIL_DOMAIN } from '../utils/cuentaUsuario';
 
 /** Normaliza un nombre de usuario a su email sintético interno. */
 export function usernameToEmail(username: string): string {
   return `${username.trim().toLowerCase()}@${USERNAME_EMAIL_DOMAIN}`;
-}
-
-/** ¿El email corresponde a una cuenta de usuario/clave (no Google)? */
-export function isUsernameAccount(email?: string | null): boolean {
-  return !!email && email.toLowerCase().endsWith(`@${USERNAME_EMAIL_DOMAIN}`);
 }
 
 /** Login con usuario + clave (mapeado al email sintético). */

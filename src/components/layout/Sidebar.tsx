@@ -4,6 +4,7 @@ import { UserProfile, UserRole } from '../../types';
 import { esVisita, parroquiasDelPerfil } from '../../utils/parishVisit';
 import { formatActiveParishLabel } from '../../utils/parish';
 import { IconButton } from '../common/IconButton';
+import { nombreParaMostrar } from '../../services/supabaseClient';
 import logoStellaMaris from 'figma:asset/logo-stella-maris.webp';
 
 interface SidebarProps {
@@ -107,7 +108,7 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
 
       {/* Sidebar — above the overlay */}
       <div
-        className={`fixed top-0 left-0 h-full w-[85vw] max-w-xs sm:max-w-sm bg-white dark:bg-slate-900 shadow-2xl z-[70] transform transition-transform duration-300 flex flex-col ${
+        className={`fixed top-0 left-0 h-full w-[85vw] max-w-xs sm:max-w-sm bg-white dark:bg-slate-900 shadow-2xl z-[70] transform transition-transform duration-300 flex flex-col overflow-hidden ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         aria-hidden={!isOpen}
@@ -142,8 +143,11 @@ export function Sidebar({ isOpen, onClose, userProfile, currentView, onNavigate,
               <div className="w-10 h-10 bg-gradient-to-br from-gold to-gold-strong rounded-full flex items-center justify-center border-2 border-amber-400/50 shadow-lg">
                 <User className="w-6 h-6 text-white" />
               </div>
-              <div className="flex-1">
-                <div className="text-base font-bold truncate">{userProfile.name}</div>
+              {/* min-w-0: sin él, `truncate` no recorta dentro de un flex y un nombre largo
+                  sin espacios se salía del menú — asomaba sobre la pantalla con el menú
+                  cerrado (reportado el 26-sep-2026). */}
+              <div className="flex-1 min-w-0">
+                <div className="text-base font-bold truncate">{nombreParaMostrar(userProfile.name, userProfile.email)}</div>
                 <div className="text-sm opacity-90 flex items-center gap-1">
                   <span className="inline-block w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
                   {effectiveRole}

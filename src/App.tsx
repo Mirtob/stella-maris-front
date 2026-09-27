@@ -114,7 +114,7 @@ import { refrescarCantos } from './utils/refrescarCantos';
 import { leerCatalogoVigente } from './services/catalogoVigente';
 import { EVENTO_CATALOGO } from './services/songs';
 import { EVENTO_FOLLETO, type FolletoGuardado } from './utils/guardarFolleto';
-import { getSupabaseClient } from './services/supabaseClient';
+import { getSupabaseClient, nombreParaMostrar } from './services/supabaseClient';
 import { uploadCantoralPDF } from './services/cantoralPDF';
 import { cacheCantoralsForOffline, getOfflineCantorals } from './services/offlineCache';
 import { listChapels } from './services/chapels';
@@ -810,7 +810,7 @@ function AppContent() {
           upsertCurrentUserProfile(profile).catch(() => undefined);
           // Sentry: contexto sin PII — solo rol y ID anónimo (UUID Supabase).
           setSentryUserContext(profile.role, profile.id);
-          toast.success(`¡Bienvenido ${profile.name}! 🎵`);
+          toast.success(`¡Bienvenido ${nombreParaMostrar(profile.name, profile.email)}! 🎵`);
 
           // Pick up a pending cantoral from a previous QR scan that required login.
           // sanitizeCantoralId() guards against tampered localStorage values.

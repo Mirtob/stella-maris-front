@@ -1,5 +1,5 @@
 import { UserProfile } from '../types';
-import { getSupabaseClient } from './supabaseClient';
+import { getSupabaseClient, nombreParaMostrar } from './supabaseClient';
 
 const TABLE = 'user_profiles';
 
@@ -23,7 +23,7 @@ function rowToProfile(row: UserProfileRow): UserProfile & { createdAt?: string; 
   return {
     id: row.id,
     email: row.email,
-    name: row.name ?? row.email,
+    name: nombreParaMostrar(row.name, row.email),
     role: row.role,
     instruments: (row.instruments ?? []) as any,
     voicePart: (row.voice_part ?? undefined) as any,
