@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { History, Calendar, Church, ChevronDown, ChevronUp, Play, Clock, Trash2, Filter, Download, Loader, Search, Copy } from 'lucide-react';
+import { CargandoLogo } from '../common/CargandoLogo';
+import { History, Calendar, Church, ChevronDown, ChevronUp, Play, Clock, Trash2, Filter, Download, Search, Copy } from 'lucide-react';
 import { PublishedCantoral, Song } from '../../types';
 import { sortCategoriesByMassOrder, massCategoryIcon, rotuloDeParte, tituloVisible } from '../../utils/ordinary';
 import { generateChoirBooklet, voicesInCantoral } from '../../utils/atrilBookletPDF';
@@ -228,8 +229,7 @@ export function CantoralHistory({ onPlaySong, onDeleteCantoral, onClone, isAdmin
   if (loading && yearCantorals.length === 0 && availableYears.length === 0) {
     return (
       <div className="w-full min-h-screen flex flex-col items-center justify-center gap-4 bg-gradient-to-br from-purple-50 via-blue-50 to-amber-50 dark:from-slate-900 dark:via-indigo-950 dark:to-blue-950 transition-colors">
-        <Loader className="w-10 h-10 animate-spin text-purple-600 dark:text-purple-300" />
-        <p className="text-lg font-semibold text-purple-800 dark:text-purple-200">Cargando el historial…</p>
+        <CargandoLogo sobre="claro" mensaje="Cargando el historial…" />
       </div>
     );
   }
@@ -428,9 +428,8 @@ export function CantoralHistory({ onPlaySong, onDeleteCantoral, onClone, isAdmin
 
         {/* Grouped Cantorals by Month */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-16 text-purple-700 dark:text-purple-300">
-            <Loader className="w-8 h-8 animate-spin" />
-            <p className="font-semibold">Cargando {selectedYear}…</p>
+          <div className="flex items-center justify-center py-16">
+            <CargandoLogo sobre="claro" mensaje={`Cargando ${selectedYear}…`} />
           </div>
         ) : filteredCantorals.length === 0 ? (
           <div className="text-center py-12 text-purple-700 dark:text-purple-300">

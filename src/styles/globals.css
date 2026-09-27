@@ -372,6 +372,12 @@ html {
   }
 }
 
+/* Logo de la app girando sobre su eje (pantallas de carga: CargandoLogo, LoadingScreen) */
+@keyframes spin3d {
+  0% { transform: perspective(1000px) rotateY(0deg); }
+  100% { transform: perspective(1000px) rotateY(360deg); }
+}
+
 /* Reduce motion for accessibility */
 @media (prefers-reduced-motion: reduce) {
   *,

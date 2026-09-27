@@ -4,6 +4,8 @@ import { toast } from 'sonner';
 import { PublishedCantoral } from '../../types';
 import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
 import { PdfBlobViewer } from './PdfBlobViewer';
+import { CargandoLogo } from '../common/CargandoLogo';
+import { CargandoFolleto } from '../common/CargandoFolleto';
 import { abrirOGuardarPdf, guardarPdf, nombreDeFolleto } from '../../utils/descargarPdf';
 import { guardarFolletoAlDia } from '../../utils/guardarFolleto';
 
@@ -33,6 +35,9 @@ export function CantoralPdfViewer({ cantoral, onBack, puedeActualizar = false, p
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [printing, setPrinting] = useState(false);
+  // Avance real del armado (0-100): de la vista y de la impresión.
+  const [avance, setAvance] = useState(0);
+  const [avanceImpresion, setAvanceImpresion] = useState(0);
   // Cuántas veces se pidió «Actualizar partituras». Distinto de cero = armar sin cachés.
   const [refrescos, setRefrescos] = useState(0);
   // El PDF del servidor, y si se está volviendo a subir tras actualizar.
@@ -93,8 +98,12 @@ export function CantoralPdfViewer({ cantoral, onBack, puedeActualizar = false, p
     let cancelled = false;
     setLoading(true);
     setFailed(false);
+    setAvance(0);
     const refrescar = refrescos > 0;
-    generateCantoralPDF({ cantoral, download: false, booklet: false, refrescar })
+    generateCantoralPDF({
+      cantoral, download: false, booklet: false, refrescar,
+      onProgress: (p) => { if (!cancelled) setAvance(p); },
+    })
       .then(({ blob }) => {
         if (cancelled) return;
         setBlob(blob);
@@ -110,9 +119,9 @@ export function CantoralPdfViewer({ cantoral, onBack, puedeActualizar = false, p
   const printBooklet = async () => {
     if (printing) return;
     setPrinting(true);
-    toast.info('Preparando el folleto para imprimir…');
+    setAvanceImpresion(0);
     try {
-      const { url } = await generateCantoralPDF({ cantoral, download: false, booklet: true });
+      const { url } = await generateCantoralPDF({ cantoral, download: false, booklet: true, onProgress: setAvanceImpresion });
 
       // Respaldo: abrir el PDF en una pestaña (el usuario imprime con Ctrl/Cmd+P).
       const openInTab = () => {
@@ -160,7 +169,8 @@ export function CantoralPdfViewer({ cantoral, onBack, puedeActualizar = false, p
       document.body.appendChild(iframe);
 
       toast.success('Abriendo el diálogo de impresión…', {
-        description: 'Imprime a doble faz y dobla al medio. Si no calzan, cambia el volteo a "borde corto".',
+        description: 'Viene listo en carta horizontal, a tamaño real y a doble faz por el borde corto. Si tu impresora no imprime a doble faz, elige la doble faz manual. Luego dobla al medio.',
+        duration: 8000,
       });
     } catch (e: any) {
       // Se dice QUÉ pasó y se ofrece la salida que no depende de volver a generar nada.
@@ -212,10 +222,14 @@ export function CantoralPdfViewer({ cantoral, onBack, puedeActualizar = false, p
         </button>
       </div>
 
+      {printing && <CargandoFolleto porcentaje={avanceImpresion} mensaje="Preparando el folleto para imprimir…" />}
+
       {loading ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-white/80">
-          <Loader className="w-8 h-8 animate-spin" />
-          <p className="text-sm">{refrescos > 0 ? 'Releyendo letras y partituras…' : 'Preparando el cantoral…'}</p>
+        <div className="flex-1 flex items-center justify-center">
+          <CargandoLogo
+            porcentaje={avance}
+            mensaje={refrescos > 0 ? 'Releyendo letras y partituras…' : 'Preparando el cantoral…'}
+          />
         </div>
       ) : blob ? (
         <PdfBlobViewer blob={blob} onDescargar={descargar} />

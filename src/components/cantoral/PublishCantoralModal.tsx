@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { CargandoFolleto } from '../common/CargandoFolleto';
 import { X, Send, Calendar, Church, Clock, Plus, Eye, ExternalLink } from 'lucide-react';
 import { Song, InstrumentType, PublishedCantoral } from '../../types';
 import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
@@ -196,6 +197,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], invi
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [generatingPreview, setGeneratingPreview] = useState(false);
+  const [avancePreview, setAvancePreview] = useState(0);
   const [showAddSolemnityModal, setShowAddSolemnityModal] = useState(false);
   const [showDownloadPDFModal, setShowDownloadPDFModal] = useState(false);
   const [showPostPublishModal, setShowPostPublishModal] = useState(false);
@@ -406,8 +408,9 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], invi
   const handlePreview = async () => {
     if (generatingPreview || cantoral.length === 0) return;
     setGeneratingPreview(true);
+    setAvancePreview(0);
     try {
-      const { blob, url } = await generateCantoralPDF({ cantoral: buildPreviewCantoral(), download: false });
+      const { blob, url } = await generateCantoralPDF({ cantoral: buildPreviewCantoral(), download: false, onProgress: setAvancePreview });
       setPreviewBlob(blob);
       setPreviewUrl(prev => { if (prev) URL.revokeObjectURL(prev); return url; });
     } catch (e: any) {
@@ -476,6 +479,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], invi
 
   return (
     <>
+      {generatingPreview && <CargandoFolleto porcentaje={avancePreview} mensaje="Armando la vista previa del folleto…" />}
       {!showDownloadPDFModal && !showAddSolemnityModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div

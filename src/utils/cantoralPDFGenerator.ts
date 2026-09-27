@@ -11,7 +11,7 @@ import { getGarland } from '../data/garlands';
 import { soloLaAclamacion, AVISO_ESTROFA } from './aleluyaEstrofa';
 import { guardarPdf } from './descargarPdf';
 import { getPdfFont, getPdfScale } from '../data/pdfStyle';
-import { renderPdfToImages, imposeBooklet } from './atrilBookletPDF';
+import { renderPdfToImages, imposeBooklet, recortarAlComun, MARGEN_ESTRECHO } from './atrilBookletPDF';
 import { repartirEnColumnas, type Pieza } from './pdfColumns';
 import { partirEnSistemas, type TrozoFacsimil } from './facsimilTrozos';
 import { sortCategoriesByMassOrder, isOrdinary, rotuloDeParte, tituloVisible } from './ordinary';
@@ -41,6 +41,12 @@ interface PDFGeneratorOptions {
    * partitura, saldría la versión de antes. Cuesta unos segundos y se paga una vez.
    */
   refrescar?: boolean;
+  /**
+   * Avance de 0 a 100, para que la pantalla de carga muestre un porcentaje REAL: armar
+   * el folleto tarda varios segundos (sobre todo rasterizar las partituras de Drive) y
+   * con un círculo girando sin más la gente creía que la app se había quedado pegada.
+   */
+  onProgress?: (porcentaje: number) => void;
 }
 
 /**
@@ -450,6 +456,15 @@ function cleanLyrics(lyrics: string): string {
 
 export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise<{ blob: Blob; url: string }> {
   const { download = true, booklet = false } = options;
+  // El avance nunca retrocede (las partituras terminan en cualquier orden).
+  let avance = 0;
+  const avanzar = (p: number) => {
+    const n = Math.min(100, Math.round(p));
+    if (n <= avance) return;
+    avance = n;
+    try { options.onProgress?.(n); } catch { /* la barra no debe romper el folleto */ }
+  };
+  avanzar(2);
 
   /**
    * La letra que se imprime es la de HOY, no la del día en que se publicó.
@@ -475,6 +490,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   } catch {
     /* sin catálogo se imprime la copia guardada */
   }
+  avanzar(8);
 
   const colors = getColorsForDate(cantoral.date);
 
@@ -516,6 +532,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   const garlandStyle = getGarland(cantoral.garland);
   const garlandImg = await loadImage(garlandStyle.src);
   const garland = garlandImg ? clipWhite(garlandImg) : null;
+  avanzar(12);
 
   /** Recorta con «…» midiendo con la fuente y el tamaño puestos ahora (ver utils/pdfText). */
   const recortarAlAncho = (texto: string, maxW: number): string =>
@@ -682,6 +699,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
       const trozos = partirEnSistemas(img, colW, colBottom - colTop, RESERVA_TITULO);
       if (trozos.length) facsimiles.set(String(s.id), trozos);
     }));
+  avanzar(22);
 
   /**
    * Y las partituras de las PARTES FIJAS de la Misa, aunque sean en español.
@@ -702,6 +720,12 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   const conPartitura = cantoral.songs.filter(
     (s) => !s.gradualeImage && isOrdinary(s) && !facsimiles.has(String(s.id)),
   );
+  // Lo más lento: bajar y rasterizar cada partitura de Drive. Va de 22 % a 70 %.
+  let partiturasListas = 0;
+  const partituraLista = () => {
+    partiturasListas++;
+    avanzar(22 + (48 * partiturasListas) / Math.max(1, conPartitura.length));
+  };
   await Promise.all(conPartitura.map(async (s) => {
     try {
       // La del PUEBLO, no la del coro: se busca el archivo de la voz principal aunque el
@@ -721,8 +745,11 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
       if (trozos.length) facsimiles.set(String(s.id), trozos);
     } catch {
       /* sin partitura se imprime la letra, que es lo que se hacía antes */
+    } finally {
+      partituraLista();
     }
   }));
+  avanzar(70);
 
   // QR del canal: se arma antes para poder incluirlo en la medición (así nunca es él
   // quien obliga a abrir una hoja más).
@@ -1058,9 +1085,12 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   const INTERLINEADOS = [5.5, 5.2, 4.9];
 
   let mejor: { escala: number; interlineado: number; hojas: number; elementos: Elem[] } | null = null;
+  const intentos = ESCALAS.length * INTERLINEADOS.length;
+  let intento = 0;
   buscar:
   for (const s of ESCALAS) {
     for (const il of INTERLINEADOS) {
+      avanzar(72 + (14 * ++intento) / intentos);
       scale = s;
       interlineado = il;
       const els = construirElementos();
@@ -1093,9 +1123,14 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   // achicar la letra a la mitad y dejar dos medias hojas en blanco. En ese caso se
   // entrega el folleto tal cual.
   const paginas = 1 + mejor!.hojas;
+  avanzar(88);
   if (booklet && paginas > 2) {
     const images = await renderPdfToImages({ data: pdf.output('arraybuffer') }, anchoDeRasterizado());
-    const bookletBlob = imposeBooklet(images);
+    avanzar(95);
+    // Márgenes estrechos: se quita el blanco que TODAS las páginas comparten y cada una
+    // se agranda hasta llenar su media hoja (ver recortarAlComun).
+    const bookletBlob = imposeBooklet(await recortarAlComun(images), { margen: MARGEN_ESTRECHO });
+    avanzar(100);
     if (download) guardarPdf(bookletBlob, `Cantoral_${safeFileName}_cuadernillo.pdf`);
     return { blob: bookletBlob, url: URL.createObjectURL(bookletBlob) };
   }
@@ -1106,7 +1141,10 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   // NO se usa `pdf.save()`: por dentro es un enlace con el atributo `download`, y Safari
   // en iPhone lo IGNORA para blobs — el botón parecía no hacer nada. `guardarPdf` abre
   // el PDF en iPhone, que es desde donde se guarda y se imprime de verdad.
+  // Preferencias de impresión: carta a tamaño real y doble faz (ver imposeBooklet).
+  pdf.viewerPreferences({ PrintScaling: 'None', Duplex: 'DuplexFlipLongEdge', PickTrayByPDFSize: true });
   const blob = pdf.output('blob');
+  avanzar(100);
   if (download) guardarPdf(blob, `Cantoral_${safeFileName}.pdf`);
   return { blob, url: URL.createObjectURL(blob) };
 }

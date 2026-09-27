@@ -1,4 +1,5 @@
 import { abrirOGuardarPdf } from '../../utils/descargarPdf';
+import { CargandoFolleto } from '../common/CargandoFolleto';
 import { X, Download, Music } from 'lucide-react';
 import { Song, InstrumentType, PublishedCantoral } from '../../types';
 import { sortCategoriesByMassOrder, massCategoryIcon, rotuloDeParte, tituloVisible } from '../../utils/ordinary';
@@ -38,6 +39,7 @@ export function CantoralPDFPreview({
   onClose
 }: CantoralPDFPreviewProps) {
   const [downloading, setDownloading] = useState(false);
+  const [avance, setAvance] = useState(0);
 
   // Agrupar cantos por categoría (orden de la Misa: utils/ordinary)
   const groupedSongs = cantoral.reduce((acc, song) => {
@@ -57,6 +59,7 @@ export function CantoralPDFPreview({
   const handleDownloadPDF = async () => {
     if (downloading) return;
     setDownloading(true);
+    setAvance(0);
     try {
       const previewCantoral: PublishedCantoral = {
         id: 'preview',
@@ -73,12 +76,12 @@ export function CantoralPDFPreview({
         pdfFont,
         pdfSize,
       };
-      const { url } = await generateCantoralPDF({ cantoral: previewCantoral, download: false, booklet: true });
+      const { url } = await generateCantoralPDF({ cantoral: previewCantoral, download: false, booklet: true, onProgress: setAvance });
       // En iPhone la ventana se bloquea (el toque se perdió mientras se generaba) y el
       // atributo `download` Safari lo ignora: el botón parecía no hacer nada.
       abrirOGuardarPdf(url, 'cantoral-cuadernillo.pdf');
       toast.success('Cuadernillo listo', {
-        description: 'Imprime a doble faz y dobla al medio. Si no calzan, cambia el volteo a "borde corto".'
+        description: 'Viene en carta horizontal, a tamaño real y a doble faz por el borde corto. Imprime y dobla al medio.'
       });
     } catch (error) {
       console.error('Error al generar PDF:', error);
@@ -92,6 +95,7 @@ export function CantoralPDFPreview({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+      {downloading && <CargandoFolleto porcentaje={avance} />}
       <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl max-w-4xl w-full h-[90vh] flex flex-col border-4 border-brand-border transition-colors">
         {/* Header */}
         <div className="bg-gradient-to-r from-brand to-brand-strong text-white p-6 rounded-t-3xl border-b-4 border-brand-border flex-shrink-0">

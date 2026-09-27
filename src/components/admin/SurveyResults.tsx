@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { ArrowLeft, BarChart3, RefreshCw, Loader, Radio, BookOpen, Music, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { CargandoLogo } from '../common/CargandoLogo';
+import { ArrowLeft, BarChart3, RefreshCw, Radio, BookOpen, Music, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { getSurveyResults, type SurveyResults as Results, type UsefulMode, PRELAUNCH } from '../../services/survey';
 
 const MODE_META: { id: UsefulMode; label: string; icon: typeof Radio; bar: string }[] = [
@@ -56,9 +57,8 @@ export function SurveyResults({ onBack }: { onBack: () => void }) {
         </button>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-16 text-brand-ink-soft">
-            <Loader className="w-8 h-8 animate-spin" />
-            <p>Cargando resultados…</p>
+          <div className="flex items-center justify-center py-16">
+            <CargandoLogo sobre="claro" mensaje="Cargando resultados…" />
           </div>
         ) : error ? (
           <div className="bg-red-50 dark:bg-red-950/40 border-2 border-red-300 dark:border-red-800 rounded-2xl p-6 text-center text-red-800 dark:text-red-200 font-semibold">

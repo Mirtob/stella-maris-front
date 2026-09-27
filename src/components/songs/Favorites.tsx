@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Heart, Play, Loader, Music } from 'lucide-react';
+import { CargandoLogo } from '../common/CargandoLogo';
+import { Heart, Play, Music } from 'lucide-react';
 import { Song } from '../../types';
 import { useFavorites } from '../../hooks/useFavorites';
 import { listSongsByIds } from '../../services/songs';
@@ -47,7 +48,7 @@ export function Favorites({ userId, onPlaySong }: { userId?: string; onPlaySong:
         </div>
 
         {(!ready || loading) ? (
-          <div className="flex justify-center py-16"><Loader className="w-8 h-8 animate-spin text-brand" /></div>
+          <div className="flex justify-center py-16"><CargandoLogo sobre="claro" mensaje="Cargando tus cantos…" /></div>
         ) : songs.length === 0 ? (
           <div className="mt-10 text-center bg-white/60 dark:bg-white/10 rounded-2xl p-8 border-2 border-blue-200 dark:border-blue-800">
             <Heart className="w-12 h-12 text-rose-300 mx-auto mb-3" strokeWidth={2} />

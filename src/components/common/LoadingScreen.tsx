@@ -1,10 +1,16 @@
 import logoStellaMaris from 'figma:asset/logo-stella-maris.webp';
+import { useAvanceEstimado } from '../../hooks/useAvanceEstimado';
 
 interface LoadingScreenProps {
   message?: string;
+  /** Avance real (0-100). Sin él, uno estimado: el navegador no informa cuánto lleva
+   *  bajado un módulo, y una pantalla quieta hace creer que la app se colgó. */
+  progress?: number;
 }
 
-export function LoadingScreen({ message = 'Cargando...' }: LoadingScreenProps) {
+export function LoadingScreen({ message = 'Cargando...', progress }: LoadingScreenProps) {
+  const estimado = useAvanceEstimado(progress === undefined);
+  const valor = Math.max(0, Math.min(100, Math.round(progress ?? estimado)));
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-blue-900 via-blue-950 to-indigo-950 flex items-center justify-center z-50">
       {/* Fondo animado con estrellas */}
@@ -62,20 +68,22 @@ export function LoadingScreen({ message = 'Cargando...' }: LoadingScreenProps) {
             {message}
           </h2>
           
-          {/* Puntos animados */}
-          <div className="flex items-center justify-center gap-2">
-            <div 
-              className="w-3 h-3 bg-amber-400 rounded-full animate-bounce"
-              style={{ animationDelay: '0s' }}
-            ></div>
-            <div 
-              className="w-3 h-3 bg-amber-400 rounded-full animate-bounce"
-              style={{ animationDelay: '0.2s' }}
-            ></div>
-            <div 
-              className="w-3 h-3 bg-amber-400 rounded-full animate-bounce"
-              style={{ animationDelay: '0.4s' }}
-            ></div>
+          {/* Porcentaje: que se vea que avanza */}
+          <div
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={valor}
+            aria-label={message}
+            className="flex flex-col items-center gap-2"
+          >
+            <span className="text-2xl font-bold text-amber-300 tabular-nums">{valor} %</span>
+            <div className="w-56 h-2 rounded-full bg-white/15 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 transition-[width] duration-300"
+                style={{ width: `${valor}%` }}
+              />
+            </div>
           </div>
         </div>
 
@@ -85,17 +93,6 @@ export function LoadingScreen({ message = 'Cargando...' }: LoadingScreenProps) {
         </p>
       </div>
 
-      {/* CSS para rotación 3D sobre eje Y */}
-      <style>{`
-        @keyframes spin3d {
-          0% {
-            transform: perspective(1000px) rotateY(0deg);
-          }
-          100% {
-            transform: perspective(1000px) rotateY(360deg);
-          }
-        }
-      `}</style>
     </div>
   );
 }

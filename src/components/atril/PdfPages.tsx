@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Loader, ExternalLink, Download } from 'lucide-react';
+import { CargandoLogo } from '../common/CargandoLogo';
+import { ExternalLink, Download } from 'lucide-react';
 import { getOfflinePdf } from '../../services/offlineCache';
 
 const WORKER_URL = '/pdf.worker.entry.mjs';
@@ -35,6 +36,8 @@ export function PdfPages({ proxyUrl, driveViewUrl, title, zoom, fromPage, toPage
   const raizRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [pdf, setPdf] = useState<any>(null);
+  // Cuánto lleva bajado la partitura (pdf.js lo informa); undefined = no se sabe.
+  const [bajado, setBajado] = useState<number | undefined>(undefined);
   const [error, setError] = useState(false);
   /** Cerca de la pantalla: merece cargarse y pintarse. */
   const [cerca, setCerca] = useState(false);
@@ -106,7 +109,14 @@ export function PdfPages({ proxyUrl, driveViewUrl, title, zoom, fromPage, toPage
       // wasmUrl: pdf.js 5 decodifica JBIG2 / JPEG2000 con WASM (las partituras escaneadas
       // del libro de salmos usan JBIG2). Sin esto, "JBig2 failed to initialize" → hoja en
       // blanco. Los .wasm viven en public/wasm y se sirven en /wasm/.
-      const load = async (url: string) => (await pdfjsLib.getDocument({ url, wasmUrl: '/wasm/' }).promise);
+      const load = async (url: string) => {
+        const tarea = pdfjsLib.getDocument({ url, wasmUrl: '/wasm/' });
+        // La descarga es el 90 %; el 10 % que falta es dibujarla.
+        tarea.onProgress = ({ loaded, total }: { loaded: number; total: number }) => {
+          if (!cancelled && total > 0) setBajado(Math.min(90, (loaded / total) * 90));
+        };
+        return await tarea.promise;
+      };
       try {
         const doc = await load(proxyUrl);
         if (cancelled) return;
@@ -215,9 +225,8 @@ export function PdfPages({ proxyUrl, driveViewUrl, title, zoom, fromPage, toPage
   return (
     <div className="relative" ref={raizRef}>
       {cargando && (
-        <div className="flex flex-col items-center justify-center gap-2 py-8 text-white/60">
-          <Loader className="w-6 h-6 animate-spin" />
-          <p className="text-xs">Cargando partitura…</p>
+        <div className="flex items-center justify-center py-8">
+          <CargandoLogo tamano="sm" porcentaje={pdf ? 95 : bajado} mensaje="Cargando partitura…" />
         </div>
       )}
       {error && (

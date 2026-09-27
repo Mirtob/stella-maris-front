@@ -177,16 +177,45 @@ function bookletPairs(n: number): [number, number][] {
   return pairs;
 }
 
+/**
+ * Margen "estrecho" de cada media hoja del folleto, en mm (¼ de pulgada).
+ *
+ * Es lo más angosto que se puede sin que la impresora se coma el borde: casi todas
+ * dejan de 3 a 5 mm sin imprimir. Pedido del coro el 27-sep-2026: aprovechar al máximo
+ * la hoja.
+ */
+export const MARGEN_ESTRECHO = 6.35;
+
+/**
+ * Preferencias de impresión que viajan DENTRO del PDF del cuadernillo.
+ *
+ * Una página web no puede fijar las opciones del cuadro de impresión; el PDF sí puede
+ * sugerirlas y los visores las toman como punto de partida (Chrome, Edge y Acrobat):
+ *  · PrintScaling None → tamaño real: sin achicar la hoja "para que quepa", que es lo
+ *    que agrandaba los márgenes.
+ *  · Duplex DuplexFlipShortEdge → doble faz volteando por el borde CORTO, que es como
+ *    se imprime un librito en carta horizontal.
+ *  · PickTrayByPDFSize → la bandeja según el tamaño del PDF: carta.
+ * Qué hace cada visor con ellas depende del visor y de la impresora (si no tiene doble
+ * faz, el cuadro ofrece la manual o nada); por eso el aviso al imprimir lo recuerda.
+ */
+const PREFERENCIAS_CUADERNILLO = {
+  PrintScaling: 'None',
+  Duplex: 'DuplexFlipShortEdge',
+  PickTrayByPDFSize: true,
+} as const;
+
 // ── Coloca las imágenes 2-por-hoja (carta horizontal) en orden de cuadernillo ──
-export function imposeBooklet(images: string[]): Blob {
+export function imposeBooklet(images: string[], opciones: { margen?: number } = {}): Blob {
   if (images.length === 0) {
     throw new Error('No se pudo generar el contenido (sin letras ni partituras legibles).');
   }
   // Padear a múltiplo de 4 con páginas en blanco.
   const n = Math.max(4, Math.ceil(images.length / 4) * 4);
-  const pad = 4; // margen dentro de cada media-hoja (mm)
+  const pad = opciones.margen ?? 4; // margen dentro de cada media-hoja (mm)
 
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' });
+  doc.viewerPreferences({ ...PREFERENCIAS_CUADERNILLO });
   const pairs = bookletPairs(n);
 
   const placeAt = (img: string | null, xHalf: number) => {
@@ -209,6 +238,80 @@ export function imposeBooklet(images: string[]): Blob {
   });
 
   return doc.output('blob');
+}
+
+/**
+ * Quita a todas las páginas el blanco que TODAS comparten, con el mismo corte.
+ *
+ * Cada página del folleto es una carta vertical con sus propios márgenes (13 mm), y al
+ * achicarla a media hoja esos márgenes se sumaban a los del cuadernillo: la letra
+ * quedaba chica en medio de mucho blanco. Recortando la caja común —la unión de lo que
+ * tiene tinta en cualquier página— cada página se agranda hasta llenar su media hoja.
+ *
+ * El corte es EL MISMO para todas: recortar cada una a su propio contenido haría que la
+ * última, con media columna, saliera ampliada al doble que las demás.
+ *
+ * Si algo falla (lienzo manchado, imagen que no carga), devuelve las originales.
+ */
+export async function recortarAlComun(images: string[]): Promise<string[]> {
+  try {
+    const cargar = (src: string) => new Promise<HTMLImageElement | null>((res) => {
+      const img = new Image();
+      img.onload = () => res(img.naturalWidth ? img : null);
+      img.onerror = () => res(null);
+      img.src = src;
+    });
+    const imgs = await Promise.all(images.map(cargar));
+    if (imgs.some((i) => !i)) return images;
+
+    // La caja común, en fracciones de la página (se mide a 400 px: basta y es rápido).
+    const MEDIDA = 400;
+    let x0 = 1, y0 = 1, x1 = 0, y1 = 0;
+    for (const img of imgs as HTMLImageElement[]) {
+      const w = MEDIDA;
+      const h = Math.round((img.naturalHeight / img.naturalWidth) * MEDIDA);
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return images;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      const d = ctx.getImageData(0, 0, w, h).data;
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const i = (y * w + x) * 4;
+          if (d[i] > 240 && d[i + 1] > 240 && d[i + 2] > 240) continue;
+          if (x / w < x0) x0 = x / w;
+          if (x / w > x1) x1 = x / w;
+          if (y / h < y0) y0 = y / h;
+          if (y / h > y1) y1 = y / h;
+        }
+      }
+    }
+    if (x1 <= x0 || y1 <= y0) return images;
+    // Un pelo de aire para no rozar la tinta.
+    const AIRE = 0.006;
+    x0 = Math.max(0, x0 - AIRE); y0 = Math.max(0, y0 - AIRE);
+    x1 = Math.min(1, x1 + AIRE); y1 = Math.min(1, y1 + AIRE);
+    if (x1 - x0 > 0.97 && y1 - y0 > 0.97) return images;   // no hay nada que ganar
+
+    return (imgs as HTMLImageElement[]).map((img) => {
+      const W = img.naturalWidth, H = img.naturalHeight;
+      const sx = Math.round(x0 * W), sy = Math.round(y0 * H);
+      const sw = Math.round((x1 - x0) * W), sh = Math.round((y1 - y0) * H);
+      const c = document.createElement('canvas');
+      c.width = sw; c.height = sh;
+      const ctx = c.getContext('2d');
+      if (!ctx) return img.src;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, sw, sh);
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+      return c.toDataURL('image/jpeg', 0.9);
+    });
+  } catch {
+    return images;
+  }
 }
 
 /** Ordena los cantos como en la Misa y arma la lista de imágenes de página lógica.

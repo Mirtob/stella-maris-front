@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { CargandoFolleto } from '../common/CargandoFolleto';
 import { createPortal } from 'react-dom';
 import { Download, Share2, Copy, Check, X, FileDown, Printer } from 'lucide-react';
 import QRCode from 'qrcode';
@@ -39,6 +40,7 @@ export function CantoralQRDialog({
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [generando, setGenerando] = useState(false);
+  const [avance, setAvance] = useState(0);
   /**
    * Por qué NO se pudo dejar el folleto guardado en el servidor.
    *
@@ -60,13 +62,14 @@ export function CantoralQRDialog({
   const generarFolleto = async () => {
     if (generando) return;
     setGenerando(true);
+    setAvance(0);
     try {
       const cantoral = await getCantoralById(cantoralId);
       if (!cantoral) {
         toast.error('No se pudo leer el cantoral para armar el folleto.');
         return;
       }
-      const { blob } = await generateCantoralPDF({ cantoral, download: true, booklet: true });
+      const { blob } = await generateCantoralPDF({ cantoral, download: true, booklet: true, onProgress: setAvance });
 
       // Y de paso se deja guardado en el servidor, si todavía no lo está. Así el
       // siguiente que lo abra —en el teléfono que sea— se lo descarga hecho, en vez de
@@ -361,5 +364,10 @@ export function CantoralQRDialog({
     </div>
   );
 
-  return createPortal(dialogContent, document.body);
+  return (
+    <>
+      {createPortal(dialogContent, document.body)}
+      {generando && <CargandoFolleto porcentaje={avance} />}
+    </>
+  );
 }

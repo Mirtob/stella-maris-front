@@ -2,6 +2,7 @@ import { abrirOGuardarPdf } from '../../utils/descargarPdf';
 import { useEffect, useState } from 'react';
 import { Download, ArrowLeft, FileX, Share, Plus, Smartphone, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
+import { CargandoFolleto } from '../common/CargandoFolleto';
 import { PublishedCantoral } from '../../types';
 import { getCantoralById } from '../../services/cantorals';
 import { generateCantoralPDF } from '../../utils/cantoralPDFGenerator';
@@ -42,6 +43,7 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onOpenInstall, onCan
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [avancePdf, setAvancePdf] = useState(0);
   // Notificación con ?r=1 → abrir PRIMERO el modo radio (genera vistas en el canal) y,
   // al cerrarlo, mostrar el cantoral. Ver api/notify-cantoral.
   const [showRadio, setShowRadio] = useState(() => {
@@ -84,8 +86,9 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onOpenInstall, onCan
   const handleDownloadPDF = async () => {
     if (!cantoral || generatingPdf) return;
     setGeneratingPdf(true);
+    setAvancePdf(0);
     try {
-      const { url } = await generateCantoralPDF({ cantoral, download: false, booklet: true });
+      const { url } = await generateCantoralPDF({ cantoral, download: false, booklet: true, onProgress: setAvancePdf });
       // En iPhone la ventana se bloquea (el toque se perdió mientras se generaba) y el
       // atributo `download` Safari lo ignora: el botón parecía no hacer nada.
       abrirOGuardarPdf(url, 'cantoral-cuadernillo.pdf');
@@ -208,6 +211,8 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onOpenInstall, onCan
               </div>
             )}
 
+            {generatingPdf && <CargandoFolleto porcentaje={avancePdf} />}
+
             {/* Acciones */}
             <div className="flex flex-col sm:flex-row gap-3 mb-6">
               {hasSongs && (
@@ -217,7 +222,7 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onOpenInstall, onCan
                   className="flex-1 bg-gradient-to-br from-emerald-700 to-emerald-900 text-white py-4 px-4 rounded-2xl flex items-center justify-center gap-2 hover:opacity-95 active:scale-95 transition-all border-2 border-emerald-600 shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <Download className="w-5 h-5" />
-                  <span className="font-bold">{generatingPdf ? 'Generando PDF…' : 'Descargar PDF (letras)'}</span>
+                  <span className="font-bold">{generatingPdf ? `Generando PDF… ${avancePdf} %` : 'Descargar PDF (letras)'}</span>
                 </button>
               )}
               <button
