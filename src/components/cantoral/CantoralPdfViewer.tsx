@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { SelectorPapel, usePapelFolleto } from '../common/SelectorPapel';
 import { ArrowLeft, Download, Loader, Printer, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { PublishedCantoral } from '../../types';
@@ -38,6 +39,7 @@ export function CantoralPdfViewer({ cantoral, onBack, puedeActualizar = false, p
   // Avance real del armado (0-100): de la vista y de la impresión.
   const [avance, setAvance] = useState(0);
   const [avanceImpresion, setAvanceImpresion] = useState(0);
+  const [papel, setPapel] = usePapelFolleto();
   // Cuántas veces se pidió «Actualizar partituras». Distinto de cero = armar sin cachés.
   const [refrescos, setRefrescos] = useState(0);
   // El PDF del servidor, y si se está volviendo a subir tras actualizar.
@@ -121,7 +123,7 @@ export function CantoralPdfViewer({ cantoral, onBack, puedeActualizar = false, p
     setPrinting(true);
     setAvanceImpresion(0);
     try {
-      const { url } = await generateCantoralPDF({ cantoral, download: false, booklet: true, onProgress: setAvanceImpresion });
+      const { url } = await generateCantoralPDF({ cantoral, download: false, booklet: true, onProgress: setAvanceImpresion, papel });
 
       // Respaldo: abrir el PDF en una pestaña (el usuario imprime con Ctrl/Cmd+P).
       const openInTab = () => {
@@ -169,7 +171,7 @@ export function CantoralPdfViewer({ cantoral, onBack, puedeActualizar = false, p
       document.body.appendChild(iframe);
 
       toast.success('Abriendo el diálogo de impresión…', {
-        description: 'Viene listo en carta horizontal, a tamaño real y a doble faz por el borde corto. Si tu impresora no imprime a doble faz, elige la doble faz manual. Luego dobla al medio.',
+        description: `Viene listo en ${papel === 'oficio' ? 'oficio' : 'carta'} horizontal, a tamaño real y a doble faz por el borde corto. Si tu impresora no imprime a doble faz, elige la doble faz manual. Luego dobla al medio.`,
         duration: 8000,
       });
     } catch (e: any) {
@@ -220,6 +222,11 @@ export function CantoralPdfViewer({ cantoral, onBack, puedeActualizar = false, p
           <span className="hidden sm:inline">Imprimir folleto</span>
           <span className="sm:hidden">Imprimir</span>
         </button>
+      </div>
+
+      {/* Papel para imprimir el cuadernillo (recordado en este equipo) */}
+      <div className="flex-shrink-0 flex justify-center bg-slate-800 py-2 px-3">
+        <SelectorPapel papel={papel} onChange={setPapel} sobre="oscuro" />
       </div>
 
       {printing && <CargandoFolleto porcentaje={avanceImpresion} mensaje="Preparando el folleto para imprimir…" />}

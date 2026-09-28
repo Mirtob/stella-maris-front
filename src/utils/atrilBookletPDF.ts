@@ -27,6 +27,16 @@ const HALF_H = 215.9;   // 8.5"
 // Carta horizontal (landscape) — la hoja física (2 páginas lógicas por cara).
 const SHEET_H = 215.9;  // 8.5"
 
+/**
+ * El papel en que se imprime el folleto (pedido del 27-sep-2026: "carta u oficio").
+ *
+ * Oficio es el de Chile: 21,6 × 33 cm (8,5 × 13"). Doblada al medio, la media hoja de
+ * oficio (16,5 × 21,6 cm) tiene casi la misma proporción que una carta vertical, así que
+ * el folleto llena casi toda la media hoja; en carta sobra algo de alto.
+ */
+export type PapelFolleto = 'carta' | 'oficio';
+const LARGO_DEL_PAPEL: Record<PapelFolleto, number> = { carta: 279.4, oficio: 330.2 };
+
 /** Solo Latin-1 (jsPDF con fuentes estándar). */
 function clean(t: string): string {
   return (t || '')
@@ -206,7 +216,7 @@ const PREFERENCIAS_CUADERNILLO = {
 } as const;
 
 // ── Coloca las imágenes 2-por-hoja (carta horizontal) en orden de cuadernillo ──
-export function imposeBooklet(images: string[], opciones: { margen?: number } = {}): Blob {
+export function imposeBooklet(images: string[], opciones: { margen?: number; papel?: PapelFolleto } = {}): Blob {
   if (images.length === 0) {
     throw new Error('No se pudo generar el contenido (sin letras ni partituras legibles).');
   }
@@ -214,14 +224,18 @@ export function imposeBooklet(images: string[], opciones: { margen?: number } = 
   const n = Math.max(4, Math.ceil(images.length / 4) * 4);
   const pad = opciones.margen ?? 4; // margen dentro de cada media-hoja (mm)
 
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' });
+  // La hoja física, apaisada: el largo del papel de ancho y la carta de alto.
+  const largo = LARGO_DEL_PAPEL[opciones.papel ?? 'carta'];
+  const mitad = largo / 2;
+  const formato: [number, number] = [SHEET_H, largo];
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: formato });
   doc.viewerPreferences({ ...PREFERENCIAS_CUADERNILLO });
   const pairs = bookletPairs(n);
 
   const placeAt = (img: string | null, xHalf: number) => {
     if (!img) return;
     // Área disponible de la media-hoja
-    const areaX = xHalf + pad, areaY = pad, areaW = HALF_W - 2 * pad, areaH = SHEET_H - 2 * pad;
+    const areaX = xHalf + pad, areaY = pad, areaW = mitad - 2 * pad, areaH = SHEET_H - 2 * pad;
     const props = doc.getImageProperties(img);
     const ar = props.width / props.height;
     let w = areaW, h = w / ar;
@@ -232,9 +246,9 @@ export function imposeBooklet(images: string[], opciones: { margen?: number } = 
   };
 
   pairs.forEach(([leftNum, rightNum], idx) => {
-    if (idx > 0) doc.addPage('letter', 'landscape');
+    if (idx > 0) doc.addPage(formato, 'landscape');
     placeAt(images[leftNum - 1] ?? null, 0);
-    placeAt(images[rightNum - 1] ?? null, HALF_W);
+    placeAt(images[rightNum - 1] ?? null, mitad);
   });
 
   return doc.output('blob');

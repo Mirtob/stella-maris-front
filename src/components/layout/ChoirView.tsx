@@ -18,6 +18,7 @@ import { GradualeChoice } from '../songs/GradualeChoice';
 import { KyrialeChoice } from '../songs/KyrialeChoice';
 import { PadreNuestroYAclamaciones } from '../cantoral/PadreNuestroYAclamaciones';
 import { esPadreNuestroDelCantoral } from '../../utils/padreNuestroYAclamaciones';
+import { marcarPartituraOrdinario, llevaPartituraOrdinario } from '../../utils/ordinary';
 import { getCelebrationsForDate, getLiturgicalDateForDate, getPersistedCustomDates, setPersistedCustomDates } from '../../utils/liturgicalCalendar';
 import { getSundayCycle } from '../../utils/liturgicalCycle';
 import { resolvePsalm } from '../../data/psalmIndex';
@@ -296,6 +297,8 @@ export function ChoirView({
   const [gloriaGregoriano, setGloriaGregoriano] = useState<EleccionKyriale | null>(null);
   /** Tono del Padre Nuestro gregoriano. Va suelto: no pertenece a ninguna Misa. */
   const [paterGregoriano, setPaterGregoriano] = useState<string | null>(null);
+  /** ¿El folleto lleva la partitura del ordinario, o solo su letra? (casilla del constructor) */
+  const [partituraOrdinario, setPartituraOrdinario] = useState(true);
 
   /**
    * Cuál de las varias Misas del día se canta, en cada libro.
@@ -365,7 +368,7 @@ export function ChoirView({
    * ninguna parte y daba por hecho que no había viajado.
    */
   const songsForPublish = useMemo<Song[]>(
-    () => conAntifonas(conSalmoDelLibro(cantoral, psalmSong), [
+    () => marcarPartituraOrdinario(conAntifonas(conSalmoDelLibro(cantoral, psalmSong), [
       buildAntiphonSong(massDate, 'Entrada', antifonaEntrada, incluirEntrada),
       buildAntiphonSong(massDate, 'Comunión', antifonaComunion, incluirComunion),
       // Los propios gregorianos se colocan igual que las antífonas: cada uno dentro de
@@ -381,10 +384,10 @@ export function ChoirView({
       // El ordinario gregoriano: las cuatro partes salen de una sola elección.
       ...buildKyrialeSongs(massDate, misaGregoriana, gloriaGregoriano),
       buildPaterNosterSong(massDate, 'romanum', paterGregoriano),
-    ]),
+    ]), partituraOrdinario),
     [cantoral, psalmSong, massDate, antifonaEntrada, antifonaComunion, incluirEntrada,
      incluirComunion, libroGregoriano, misaElegida, tiempoDeLaMisa,
-     misaGregoriana, gloriaGregoriano, paterGregoriano],
+     misaGregoriana, gloriaGregoriano, paterGregoriano, partituraOrdinario],
   );
   /**
    * Al ENTRAR a editar un cantoral publicado, reponer su fecha, su horario y su tipo
@@ -434,6 +437,8 @@ export function ChoirView({
     setGloriaGregoriano(gloriaDelCantoral(editingCantoral.songs, editingCantoral.date));
     setPaterGregoriano(
       paterNosterDelCantoral(editingCantoral.songs, editingCantoral.date)?.tono ?? null);
+    // Y si el folleto llevaba la partitura del ordinario o solo la letra.
+    setPartituraOrdinario(llevaPartituraOrdinario(editingCantoral.songs));
     setMassDate(editingCantoral.date);
     // Y DÓNDE se canta: un cantoral publicado en la parroquia que invitó se edita para
     // allá, no para la propia. Sin esto, guardar los cambios lo mandaba a casa.
@@ -1179,7 +1184,22 @@ export function ChoirView({
 
         {/* Padre Nuestro y aclamaciones: siempre a la vista, también al EDITAR un
             cantoral (el diálogo del Ofertorio solo aparece al agregarlo). */}
-        <div className="mt-6">
+        <div className="mt-6 space-y-4">
+          {/* La partitura del ordinario en el folleto, o solo la letra. */}
+          <label className="flex items-start gap-3 p-4 rounded-2xl border-2 border-blue-200 dark:border-blue-800 bg-white/70 dark:bg-white/5 cursor-pointer transition-colors">
+            <input
+              type="checkbox"
+              checked={partituraOrdinario}
+              onChange={(e) => setPartituraOrdinario(e.target.checked)}
+              className="mt-1 w-5 h-5 flex-shrink-0 accent-blue-700"
+            />
+            <span className="text-sm sm:text-base text-brand-ink-soft">
+              <strong className="text-brand-ink">📄 Incluir la partitura del ordinario en el folleto</strong>
+              <br />
+              Kyrie, Gloria, Santo, Cordero, Padre nuestro y aclamaciones. Si la desmarcas, en el
+              folleto va solo la letra.
+            </span>
+          </label>
           <PadreNuestroYAclamaciones
             cantoral={cantoral}
             onAdd={onAddToCantoral}

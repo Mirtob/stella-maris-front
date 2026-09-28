@@ -18,7 +18,7 @@ import { CantoralPDFPreview } from './CantoralPDFPreview';
 import { PostPublishModal } from './PostPublishModal';
 import { PdfBlobViewer } from './PdfBlobViewer';
 import { GARLANDS, DEFAULT_GARLAND_ID } from '../../data/garlands';
-import { PDF_FONTS, PDF_SIZES, DEFAULT_PDF_FONT, DEFAULT_PDF_SIZE } from '../../data/pdfStyle';
+import { PDF_FONTS, DEFAULT_PDF_FONT, DEFAULT_PDF_SIZE } from '../../data/pdfStyle';
 import { toast } from 'sonner';
 import { type ChoirInvitation } from '../../utils/choirInvitations';
 
@@ -190,7 +190,8 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], invi
   const [garland, setGarland] = useState<string>(DEFAULT_GARLAND_ID);
   // Fuente y tamaño de letra del folleto PDF (editables por el usuario).
   const [pdfFont, setPdfFont] = useState<string>(DEFAULT_PDF_FONT);
-  const [pdfSize, setPdfSize] = useState<string>(DEFAULT_PDF_SIZE);
+  // El tamaño ya no se elige (es automático); queda el de siempre para la portada.
+  const [pdfSize] = useState<string>(DEFAULT_PDF_SIZE);
   // Vista previa del folleto (PDF real con la guirnalda) antes de publicar.
   // `previewBlob` se renderiza en canvas con PDF.js; `previewUrl` es solo para el
   // botón de descarga (el CSP no permite blob: en <iframe>).
@@ -974,23 +975,11 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], invi
                 </div>
 
                 <div className="text-sm font-bold text-brand-ink mb-1.5">Tamaño de letra</div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {PDF_SIZES.map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setPdfSize(s.id)}
-                      aria-pressed={pdfSize === s.id}
-                      className={`px-2 py-2 rounded-lg text-xs font-bold border-2 transition-all active:scale-95 ${
-                        pdfSize === s.id
-                          ? 'bg-gradient-to-br from-blue-700 to-blue-900 text-white border-brand-border'
-                          : 'bg-white/60 dark:bg-white/10 text-brand-ink border-blue-200 dark:border-white/20'
-                      }`}
-                    >
-                      {s.name}
-                    </button>
-                  ))}
-                </div>
+                {/* Ya no se elige: el folleto busca solo la letra más grande que llene sus
+                    4 planas (pedido del 27-sep-2026). */}
+                <p className="text-sm text-brand-ink-soft">
+                  Automático: la app elige la letra más grande que llene las 4 planas del folleto.
+                </p>
                 <p className="text-xs text-blue-800 dark:text-blue-300 mt-2">
                   Tip: usa "Vista previa del folleto" para ver cómo queda antes de publicar.
                 </p>

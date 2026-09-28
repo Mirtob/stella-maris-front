@@ -1,4 +1,5 @@
 import { abrirOGuardarPdf } from '../../utils/descargarPdf';
+import { SelectorPapel, usePapelFolleto } from '../common/SelectorPapel';
 import { useEffect, useState } from 'react';
 import { Download, ArrowLeft, FileX, Share, Plus, Smartphone, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
@@ -44,6 +45,7 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onOpenInstall, onCan
   const [error, setError] = useState<string | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [avancePdf, setAvancePdf] = useState(0);
+  const [papel, setPapel] = usePapelFolleto();
   // Notificación con ?r=1 → abrir PRIMERO el modo radio (genera vistas en el canal) y,
   // al cerrarlo, mostrar el cantoral. Ver api/notify-cantoral.
   const [showRadio, setShowRadio] = useState(() => {
@@ -88,7 +90,7 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onOpenInstall, onCan
     setGeneratingPdf(true);
     setAvancePdf(0);
     try {
-      const { url } = await generateCantoralPDF({ cantoral, download: false, booklet: true, onProgress: setAvancePdf });
+      const { url } = await generateCantoralPDF({ cantoral, download: false, booklet: true, onProgress: setAvancePdf, papel });
       // En iPhone la ventana se bloquea (el toque se perdió mientras se generaba) y el
       // atributo `download` Safari lo ignora: el botón parecía no hacer nada.
       abrirOGuardarPdf(url, 'cantoral-cuadernillo.pdf');
@@ -214,6 +216,11 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onOpenInstall, onCan
             {generatingPdf && <CargandoFolleto porcentaje={avancePdf} />}
 
             {/* Acciones */}
+            {hasSongs && (
+              <div className="flex justify-center mb-3">
+                <SelectorPapel papel={papel} onChange={setPapel} />
+              </div>
+            )}
             <div className="flex flex-col sm:flex-row gap-3 mb-6">
               {hasSongs && (
                 <button

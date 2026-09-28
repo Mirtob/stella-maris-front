@@ -11,7 +11,7 @@ import { getGarland } from '../data/garlands';
 import { soloLaAclamacion, AVISO_ESTROFA } from './aleluyaEstrofa';
 import { guardarPdf } from './descargarPdf';
 import { getPdfFont, getPdfScale } from '../data/pdfStyle';
-import { renderPdfToImages, imposeBooklet, recortarAlComun, MARGEN_ESTRECHO } from './atrilBookletPDF';
+import { renderPdfToImages, imposeBooklet, recortarAlComun, MARGEN_ESTRECHO, type PapelFolleto } from './atrilBookletPDF';
 import { repartirEnColumnas, type Pieza } from './pdfColumns';
 import { partirEnSistemas, type TrozoFacsimil } from './facsimilTrozos';
 import { sortCategoriesByMassOrder, isOrdinary, rotuloDeParte, tituloVisible } from './ordinary';
@@ -47,6 +47,8 @@ interface PDFGeneratorOptions {
    * con un círculo girando sin más la gente creía que la app se había quedado pegada.
    */
   onProgress?: (porcentaje: number) => void;
+  /** Papel del cuadernillo impreso: carta (por defecto) u oficio. */
+  papel?: PapelFolleto;
 }
 
 /**
@@ -493,6 +495,12 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   avanzar(8);
 
   const colors = getColorsForDate(cantoral.date);
+  /**
+   * ¿Esta parte del ordinario va sin partitura? El coro lo elige en el constructor con
+   * la casilla «Incluir la partitura del ordinario» (pedido del 27-sep-2026); la marca
+   * viaja en cada canto (ver marcarPartituraOrdinario).
+   */
+  const soloLetra = (s: Song) => isOrdinary(s) && !!s.folletoSoloLetra;
 
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
 
@@ -692,7 +700,8 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
    */
   const facsimiles = new Map<string, TrozoFacsimil[]>();
   await Promise.all(cantoral.songs
-    .filter((s) => s.gradualeImage)
+    // El ordinario marcado "solo letra" no lleva su facsímil (si tiene letra que poner).
+    .filter((s) => s.gradualeImage && !(soloLetra(s) && s.lyrics?.trim()))
     .map(async (s) => {
       const img = await loadImage(s.gradualeImage!);
       if (!img?.naturalWidth) return;
@@ -718,7 +727,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
    * nada: el canto cae a su letra, como antes. Nunca se queda la parte en blanco.
    */
   const conPartitura = cantoral.songs.filter(
-    (s) => !s.gradualeImage && isOrdinary(s) && !facsimiles.has(String(s.id)),
+    (s) => !s.gradualeImage && isOrdinary(s) && !soloLetra(s) && !facsimiles.has(String(s.id)),
   );
   // Lo más lento: bajar y rasterizar cada partitura de Drive. Va de 22 % a 70 %.
   let partiturasListas = 0;
@@ -1074,29 +1083,38 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     }
   };
 
-  // ── Ajuste a una sola hoja ──
-  // Con la letra elegida al publicar puede no caber. Se prueba achicando de a poco
-  // hasta un piso legible (el folleto lo lee gente de todas las edades) y se elige la
-  // letra MÁS GRANDE que logre el menor número de hojas: achicar solo sirve si ahorra
-  // una hoja; si no la ahorra, la letra chica no compra nada y se descarta.
-  const ESCALA_MINIMA = Math.max(0.85, escalaBase * 0.7);
+  // ── La letra que llena las 4 planas ──
+  // Pedido del coro el 27-sep-2026: el folleto es UNA hoja doblada (portada + 3 planas
+  // de cantos) y la letra debe ser la más grande que quepa en esas 3 planas, para que
+  // se lea bien. Antes se apretaba todo en una sola plana y quedaba chica.
+  //
+  // Se prueba de la letra más grande hacia abajo y se queda con la primera que cabe. Si
+  // ni con la más chica legible caben en 3 planas, se hace lo de antes: la letra más
+  // grande que logre el menor número de planas (y el folleto pasa a 8).
+  const PLANAS_DE_CANTOS = 3;
+  const ESCALA_MAXIMA = 1.8;
+  const ESCALA_MINIMA = 0.85;
   const ESCALAS: number[] = [];
-  for (let s = escalaBase; s > ESCALA_MINIMA - 1e-9; s -= 0.05) ESCALAS.push(Number(s.toFixed(3)));
+  for (let s = ESCALA_MAXIMA; s > ESCALA_MINIMA - 1e-9; s -= 0.05) ESCALAS.push(Number(s.toFixed(3)));
   const INTERLINEADOS = [5.5, 5.2, 4.9];
 
   let mejor: { escala: number; interlineado: number; hojas: number; elementos: Elem[] } | null = null;
-  const intentos = ESCALAS.length * INTERLINEADOS.length;
+  const intentos = ESCALAS.length;
   let intento = 0;
   buscar:
   for (const s of ESCALAS) {
+    avanzar(72 + (14 * ++intento) / intentos);
+    // A la letra más grande, con el interlineado más holgado que alcance.
     for (const il of INTERLINEADOS) {
-      avanzar(72 + (14 * ++intento) / intentos);
       scale = s;
       interlineado = il;
       const els = construirElementos();
       const hojas = medir(els);
       if (!mejor || hojas < mejor.hojas) mejor = { escala: s, interlineado: il, hojas, elementos: els };
-      if (hojas === 1) break buscar;
+      if (hojas <= PLANAS_DE_CANTOS) {
+        mejor = { escala: s, interlineado: il, hojas, elementos: els };
+        break buscar;
+      }
     }
   }
   scale = mejor!.escala;
@@ -1129,7 +1147,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     avanzar(95);
     // Márgenes estrechos: se quita el blanco que TODAS las páginas comparten y cada una
     // se agranda hasta llenar su media hoja (ver recortarAlComun).
-    const bookletBlob = imposeBooklet(await recortarAlComun(images), { margen: MARGEN_ESTRECHO });
+    const bookletBlob = imposeBooklet(await recortarAlComun(images), { margen: MARGEN_ESTRECHO, papel: options.papel });
     avanzar(100);
     if (download) guardarPdf(bookletBlob, `Cantoral_${safeFileName}_cuadernillo.pdf`);
     return { blob: bookletBlob, url: URL.createObjectURL(bookletBlob) };

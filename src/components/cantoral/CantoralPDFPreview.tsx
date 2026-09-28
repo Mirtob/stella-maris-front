@@ -1,4 +1,5 @@
 import { abrirOGuardarPdf } from '../../utils/descargarPdf';
+import { SelectorPapel, usePapelFolleto } from '../common/SelectorPapel';
 import { CargandoFolleto } from '../common/CargandoFolleto';
 import { X, Download, Music } from 'lucide-react';
 import { Song, InstrumentType, PublishedCantoral } from '../../types';
@@ -40,6 +41,7 @@ export function CantoralPDFPreview({
 }: CantoralPDFPreviewProps) {
   const [downloading, setDownloading] = useState(false);
   const [avance, setAvance] = useState(0);
+  const [papel, setPapel] = usePapelFolleto();
 
   // Agrupar cantos por categoría (orden de la Misa: utils/ordinary)
   const groupedSongs = cantoral.reduce((acc, song) => {
@@ -76,7 +78,7 @@ export function CantoralPDFPreview({
         pdfFont,
         pdfSize,
       };
-      const { url } = await generateCantoralPDF({ cantoral: previewCantoral, download: false, booklet: true, onProgress: setAvance });
+      const { url } = await generateCantoralPDF({ cantoral: previewCantoral, download: false, booklet: true, onProgress: setAvance, papel });
       // En iPhone la ventana se bloquea (el toque se perdió mientras se generaba) y el
       // atributo `download` Safari lo ignora: el botón parecía no hacer nada.
       abrirOGuardarPdf(url, 'cantoral-cuadernillo.pdf');
@@ -230,6 +232,9 @@ export function CantoralPDFPreview({
 
         {/* Footer - Botones de Acción */}
         <div className="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 p-6 rounded-b-3xl border-t-4 border-brand-border flex-shrink-0 space-y-3 transition-colors">
+          <div className="flex justify-center">
+            <SelectorPapel papel={papel} onChange={setPapel} />
+          </div>
           {/* Botones principales */}
           <div className="flex gap-3">
             <button

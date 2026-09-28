@@ -191,3 +191,25 @@ export function tituloVisible(song: Pick<Song, 'id' | 'title' | 'author' | 'cate
   }
   return { title: song.title, author: song.author };
 }
+
+/**
+ * Marca las partes del ordinario según la casilla «Incluir la partitura del ordinario»
+ * del constructor (pedido del 27-sep-2026). Sin partitura, el folleto imprime la letra.
+ *
+ * La marca viaja en cada canto y no en una columna del cantoral: así se guarda con él,
+ * vuelve al editarlo y no hace falta tocar la base de datos.
+ */
+export function marcarPartituraOrdinario<T extends Pick<Song, 'category' | 'folletoSoloLetra'>>(
+  songs: T[], incluir: boolean,
+): T[] {
+  return songs.map((s) => {
+    if (!isOrdinary(s)) return s;
+    const { folletoSoloLetra: _, ...resto } = s;
+    return (incluir ? resto : { ...resto, folletoSoloLetra: true }) as T;
+  });
+}
+
+/** ¿El cantoral lleva la partitura del ordinario? (Sí, salvo que se haya quitado.) */
+export function llevaPartituraOrdinario(songs: Pick<Song, 'category' | 'folletoSoloLetra'>[]): boolean {
+  return !songs.some((s) => isOrdinary(s) && s.folletoSoloLetra);
+}

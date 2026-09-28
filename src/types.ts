@@ -92,6 +92,9 @@ export interface Song {
   /** Partituras por voz detectadas en esa carpeta. Vacío en cantos a una voz,
    *  que siguen usando solo `sheetMusicUrl`. Ver utils/sheetParts.ts. */
   sheets?: { part: string; fileId: string; fileName: string }[];
+  /** Parte del ordinario que en el folleto va SOLO con su letra, sin la partitura. Lo
+   *  elige el coro en el constructor (ver marcarPartituraOrdinario en utils/ordinary). */
+  folletoSoloLetra?: boolean;
   duration: string;
   artist?: string;
   author?: string;
