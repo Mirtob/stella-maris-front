@@ -54,14 +54,18 @@ function cantoDe(
  * Los cantos del ordinario gregoriano para el cantoral.
  *
  * @param gloriaDe Misa de la que se toma el Gloria. Si se omite, el de la propia Misa.
+ * @param sinKyrie Hay Rito de Aspersión (Pascua): reemplaza al acto penitencial y el
+ *                 Kyrie se omite, así que la Misa aporta solo Gloria, Santo y Cordero.
  */
 export function buildKyrialeSongs(
   massDate: string,
   eleccion: EleccionKyriale | null,
   gloriaDe?: EleccionKyriale | null,
+  sinKyrie = false,
 ): Song[] {
   if (!eleccion) return [];
-  const salida = ATADAS.map((p) => cantoDe(massDate, eleccion, p));
+  const salida = ATADAS.filter((p) => !(sinKyrie && p === 'kyrie'))
+    .map((p) => cantoDe(massDate, eleccion, p));
   salida.push(cantoDe(massDate, gloriaDe ?? eleccion, 'gloria'));
   return salida.filter((s): s is Song => s !== null);
 }

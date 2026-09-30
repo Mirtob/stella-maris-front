@@ -78,6 +78,12 @@ check('el Kyrie lleva su partitura',
 check('el id lleva la fecha, para no arrastrarlo al editar',
   cantos.find((s) => s.category === 'Kyrie')?.id, 'kyriale-kyrie-2026-09-20');
 check('sin Misa elegida no viaja nada', buildKyrialeSongs(FECHA, null), []);
+// 30-sep-2026: en Pascua, con el Rito de Aspersión se omite el Kyrie; la Misa gregoriana
+// sigue aportando el Gloria, el Santo y el Cordero.
+check('con aspersión, la Misa va sin Kyrie',
+  buildKyrialeSongs(FECHA, ORBIS, null, true).map((s) => s.category).includes('Kyrie'), false);
+check('con aspersión, el resto de la Misa sigue',
+  buildKyrialeSongs(FECHA, ORBIS, null, true).length, cantos.length - 1);
 
 // ── La regla: sólo el Gloria se puede cambiar ──────────────────────────────
 const mezclado = buildKyrialeSongs(FECHA, ORBIS, ANGELIS);

@@ -992,6 +992,19 @@ function AppContent() {
     setRoute({ screen: 'app', view: 'main' });
   };
 
+  /**
+   * Cada parroquia abre su constructor vacío y en la fecha de hoy: los cantos, la
+   * edición en curso y la fecha/lugar recordados eran de la parroquia anterior, y
+   * dejarlos puestos terminaba publicando el cantoral de una en la otra.
+   */
+  const vaciarConstructor = () => {
+    setCantoral([]);
+    setEditingCantoralId(null);
+    setFechaParaConstructor(null);
+    setParroquiaParaConstructor(null);
+    olvidarDatosDeLaMisa();
+  };
+
   const handleSelectActiveParish = (parish: string, role: UserRole) => {
     if (!userProfile) return;
     // Save both the active session state AND remember this selection for next time
@@ -1009,6 +1022,7 @@ function AppContent() {
         ? recordarVisita(userProfile.recentVisits, parish, propias)
         : userProfile.recentVisits,
     };
+    if (parish !== (userProfile.activeParishName || userProfile.parishName)) vaciarConstructor();
     setUserProfile(updated);
     saveUserProfile(updated);
     setShowParishSelector(false);
@@ -1037,6 +1051,7 @@ function AppContent() {
         ? recordarVisita(userProfile.recentVisits, parish, propias)
         : userProfile.recentVisits,
     };
+    vaciarConstructor();
     setUserProfile(updated);
     saveUserProfile(updated);
     upsertCurrentUserProfile(updated).catch(() => undefined);
@@ -1868,6 +1883,7 @@ function renderView(p: ViewProps): ReactElement | null {
       if (p.effectiveRole === 'Coro') {
         return (
           <ChoirView
+            key={p.activeParishName}
             preferredInstrument={p.userProfile.instrument || 'Guitarra'}
             userVoicePart={effectiveVoicePart(p.userProfile.voicePart, p.userProfile.instrument)}
             userInstruments={p.userProfile.instruments}

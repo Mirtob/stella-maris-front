@@ -3,7 +3,6 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { Send, AlertCircle, Music } from 'lucide-react';
 import { toast } from 'sonner';
 import { CategorySearch } from '../songs/CategorySearch';
-import { Modal } from '../common/Modal';
 import { PublishCantoralModal, PublishTarget } from '../cantoral/PublishCantoralModal';
 import { LiturgicalSuggestions } from '../liturgy/LiturgicalSuggestions';
 import { SelectInstrumentModal } from '../cantoral/SelectInstrumentModal';
@@ -17,8 +16,8 @@ import { MassAntiphon } from '../songs/MassAntiphon';
 import { GradualeChoice } from '../songs/GradualeChoice';
 import { KyrialeChoice } from '../songs/KyrialeChoice';
 import { PadreNuestroYAclamaciones } from '../cantoral/PadreNuestroYAclamaciones';
-import { esPadreNuestroDelCantoral } from '../../utils/padreNuestroYAclamaciones';
-import { marcarPartituraOrdinario, llevaPartituraOrdinario } from '../../utils/ordinary';
+import { marcarPartituras, llevaPartitura } from '../../utils/ordinary';
+import { isKyrialeSong } from '../../utils/kyrialeSong';
 import { getCelebrationsForDate, getLiturgicalDateForDate, getPersistedCustomDates, setPersistedCustomDates } from '../../utils/liturgicalCalendar';
 import { getSundayCycle } from '../../utils/liturgicalCycle';
 import { resolvePsalm } from '../../data/psalmIndex';
@@ -81,6 +80,9 @@ interface ChoirViewProps {
   initialParish?: string;
 }
 
+/** Las partes que trae una Misa del ordinario (catálogo o Kyriale). */
+const PARTES_DE_LA_MISA = ['Kyrie', 'Gloria', 'Santo', 'Cordero de Dios'];
+
 // Horarios de Misa seleccionables cada 30 min (06:00–22:00). Valor 'HH:MM' (24h).
 const MASS_TIME_OPTIONS: string[] = (() => {
   const out: string[] = [];
@@ -119,11 +121,10 @@ export function ChoirView({
   // Un coro puede tocar hoy con guitarra aunque su perfil tenga el órgano primero:
   // el video que se abra debe ser el de la versión que se va a tocar en esta Misa.
   const playSongForThisMass = (song: Song) => onPlaySong(song, selectedInstrumentForMass);
-  // Tiempo Pascual: en lugar del acto penitencial puede hacerse el rito de
-  // aspersión (IGMR 51), que cambia el canto de ese momento (y omite el Kyrie).
-  // 'null' = aún no se preguntó; al tocar el Kyrie en Pascua preguntamos.
-  const [penitentialChoice, setPenitentialChoice] = useState<'kyrie' | 'aspersion' | null>(null);
-  const [showAspersionDialog, setShowAspersionDialog] = useState(false);
+  // Tiempo Pascual: en lugar del acto penitencial puede hacerse el rito de aspersión
+  // (IGMR 51), y entonces se omite el Kyrie. Ya no se pregunta antes: la tarjeta del
+  // Kyrie ofrece en Pascua los cantos de ambos y el canto elegido lo decide.
+  const conAspersion = cantoral.some((s) => s.category === 'Rito de Aspersión');
   const [showAtril, setShowAtril] = useState(false);
   const [showAddSolemnity, setShowAddSolemnity] = useState(false);
   const [celebTick, setCelebTick] = useState(0);
@@ -137,10 +138,17 @@ export function ChoirView({
    *
    * La fecha que llega del calendario o de una invitación MANDA: si apunta a otro día,
    * lo recordado es de otra Misa y no se mezcla.
+   *
+   * Solo se recuerda si hay un cantoral a medio armar Y es de esta misma parroquia. Un
+   * constructor vacío es un cantoral nuevo: abre en la fecha de hoy, no en el domingo
+   * que quedó de la vez anterior (después de recargar, los cantos ya no están y la
+   * fecha vieja parecía un error). Y cada parroquia arranca con lo suyo.
    */
   const recordado = useMemo(() => {
+    if (cantoral.length === 0) return null;
     const guardado = leerDatosDeLaMisa(getTodayLocal());
-    if (initialMassDate && guardado && guardado.fecha !== initialMassDate) return null;
+    if (!guardado || guardado.parroquia !== parishName) return null;
+    if (initialMassDate && guardado.fecha !== initialMassDate) return null;
     return guardado;
   }, []);
   // Fecha de la Misa para la que se arma el cantoral: fija la celebración/ciclo desde el
@@ -262,8 +270,8 @@ export function ChoirView({
    */
   useEffect(() => {
     if (editingCantoral) return;
-    guardarDatosDeLaMisa({ fecha: massDate, hora: massTime, tipo: massType, destino });
-  }, [massDate, massTime, massType, destino, editingCantoral]);
+    guardarDatosDeLaMisa({ fecha: massDate, hora: massTime, tipo: massType, destino, parroquia: parishName });
+  }, [massDate, massTime, massType, destino, editingCantoral, parishName]);
   // Antífona del salmo (editable): por defecto la del índice de la celebración; el coro
   // puede cambiarla si no usa la misma. Viaja al cantoral publicado (y al PDF/pueblo).
   const [psalmAntiphon, setPsalmAntiphon] = useState('');
@@ -297,8 +305,38 @@ export function ChoirView({
   const [gloriaGregoriano, setGloriaGregoriano] = useState<EleccionKyriale | null>(null);
   /** Tono del Padre Nuestro gregoriano. Va suelto: no pertenece a ninguna Misa. */
   const [paterGregoriano, setPaterGregoriano] = useState<string | null>(null);
-  /** ¿El folleto lleva la partitura del ordinario, o solo su letra? (casilla del constructor) */
-  const [partituraOrdinario, setPartituraOrdinario] = useState(true);
+  /**
+   * ¿El folleto lleva la partitura, o solo la letra? Una respuesta por cada bloque del
+   * ordinario, y cada una se pregunta donde se elige ese bloque (ver utils/ordinary):
+   * la Misa del catálogo en «Completar la Misa», la del Kyriale en su tarjeta, y el
+   * Padre Nuestro con las aclamaciones en la suya.
+   */
+  const [partituraMisa, setPartituraMisa] = useState(true);
+  const [partituraGregoriano, setPartituraGregoriano] = useState(true);
+  const [partituraPadreNuestro, setPartituraPadreNuestro] = useState(true);
+
+  /**
+   * Una sola Misa del ordinario: la del catálogo O la del Kyriale. Antes se podían tener
+   * las dos y el cantoral salía con dos Kyries. Elegir una saca a la otra.
+   */
+  const elegirMisaGregoriana = (eleccion: EleccionKyriale | null) => {
+    if (eleccion) {
+      cantoral
+        .filter((s) => PARTES_DE_LA_MISA.includes(s.category) && !isKyrialeSong(s))
+        .forEach((s) => onRemoveFromCantoral(s.id, s.category));
+    }
+    setMisaGregoriana(eleccion);
+  };
+  const agregarAlCantoral = (song: Song) => {
+    if (misaGregoriana && PARTES_DE_LA_MISA.includes(song.category)) {
+      setMisaGregoriana(null);
+      setGloriaGregoriano(null);
+      toast.info('Se quitó la Misa gregoriana', {
+        description: 'El ordinario va con una sola Misa: la que acabas de elegir.',
+      });
+    }
+    onAddToCantoral(song);
+  };
 
   /**
    * Cuál de las varias Misas del día se canta, en cada libro.
@@ -368,7 +406,7 @@ export function ChoirView({
    * ninguna parte y daba por hecho que no había viajado.
    */
   const songsForPublish = useMemo<Song[]>(
-    () => marcarPartituraOrdinario(conAntifonas(conSalmoDelLibro(cantoral, psalmSong), [
+    () => marcarPartituras(conAntifonas(conSalmoDelLibro(cantoral, psalmSong), [
       buildAntiphonSong(massDate, 'Entrada', antifonaEntrada, incluirEntrada),
       buildAntiphonSong(massDate, 'Comunión', antifonaComunion, incluirComunion),
       // Los propios gregorianos se colocan igual que las antífonas: cada uno dentro de
@@ -382,12 +420,14 @@ export function ChoirView({
         );
       }),
       // El ordinario gregoriano: las cuatro partes salen de una sola elección.
-      ...buildKyrialeSongs(massDate, misaGregoriana, gloriaGregoriano),
+      // Con la aspersión se omite el Kyrie: la Misa gregoriana aporta el resto.
+      ...buildKyrialeSongs(massDate, misaGregoriana, gloriaGregoriano, conAspersion),
       buildPaterNosterSong(massDate, 'romanum', paterGregoriano),
-    ]), partituraOrdinario),
+    ]), { misa: partituraMisa, gregoriano: partituraGregoriano, padreNuestro: partituraPadreNuestro }),
     [cantoral, psalmSong, massDate, antifonaEntrada, antifonaComunion, incluirEntrada,
      incluirComunion, libroGregoriano, misaElegida, tiempoDeLaMisa,
-     misaGregoriana, gloriaGregoriano, paterGregoriano, partituraOrdinario],
+     misaGregoriana, gloriaGregoriano, paterGregoriano, conAspersion,
+     partituraMisa, partituraGregoriano, partituraPadreNuestro],
   );
   /**
    * Al ENTRAR a editar un cantoral publicado, reponer su fecha, su horario y su tipo
@@ -437,8 +477,10 @@ export function ChoirView({
     setGloriaGregoriano(gloriaDelCantoral(editingCantoral.songs, editingCantoral.date));
     setPaterGregoriano(
       paterNosterDelCantoral(editingCantoral.songs, editingCantoral.date)?.tono ?? null);
-    // Y si el folleto llevaba la partitura del ordinario o solo la letra.
-    setPartituraOrdinario(llevaPartituraOrdinario(editingCantoral.songs));
+    // Y si el folleto llevaba la partitura de cada bloque del ordinario o solo la letra.
+    setPartituraMisa(llevaPartitura(editingCantoral.songs, 'misa'));
+    setPartituraGregoriano(llevaPartitura(editingCantoral.songs, 'gregoriano'));
+    setPartituraPadreNuestro(llevaPartitura(editingCantoral.songs, 'padreNuestro'));
     setMassDate(editingCantoral.date);
     // Y DÓNDE se canta: un cantoral publicado en la parroquia que invitó se edita para
     // allá, no para la propia. Sin esto, guardar los cambios lo mandaba a casa.
@@ -488,6 +530,14 @@ export function ChoirView({
   const isEaster = currentSeason === 'Pascua'
     || selectedCelebration === 'DomingoResurreccion'
     || selectedCelebration === 'VigiliaPascual';
+  // Fuera de Pascua no hay aspersión ni tarjeta donde verla: si la fecha cambió y quedó
+  // un canto de aspersión, se saca (iría al cantoral publicado sin que nadie lo vea).
+  useEffect(() => {
+    if (isEaster || !conAspersion) return;
+    cantoral.filter((s) => s.category === 'Rito de Aspersión')
+      .forEach((s) => onRemoveFromCantoral(s.id, s.category));
+    toast.info('Se quitó el canto de aspersión', { description: 'La aspersión es propia del Tiempo Pascual.' });
+  }, [isEaster, conAspersion]);
 
   // Nombre dinámico del Aleluya: "Aclamación al Evangelio" si la Misa cae en Cuaresma.
   const gospelAcclamationName = getGospelAcclamationName(massDateObj);
@@ -598,14 +648,6 @@ export function ChoirView({
     }));
   };
 
-  // Respuesta a la pregunta de Pascua: acto penitencial (Kyrie) o rito de aspersión.
-  const handleChoosePenitential = (mode: 'kyrie' | 'aspersion') => {
-    setPenitentialChoice(mode);
-    setShowAspersionDialog(false);
-    const cat = mode === 'aspersion' ? 'Rito de Aspersión' : 'Kyrie';
-    setExpandedCategories(prev => ({ ...prev, [cat]: true }));
-  };
-
   // Genera un UUID v4 real. La policy de Storage `is_cantoral_pdf_owner` rechaza
   // nombres de objeto que no tengan forma de UUID v4, así que el PDF no se sube si
   // usamos un prefijo custom tipo `pc_${timestamp}`.
@@ -672,6 +714,19 @@ export function ChoirView({
     if (!showAtril) return;
     return registrarCapa(() => setShowAtril(false));
   }, [showAtril]);
+
+  /** La tarjeta del Padre Nuestro: una sola, en su lugar de la Misa (ver más abajo). */
+  const tarjetaPadreNuestro = (
+    <PadreNuestroYAclamaciones
+      cantoral={cantoral}
+      onAdd={onAddToCantoral}
+      onRemove={onRemoveFromCantoral}
+      paterDelKyriale={paterGregoriano}
+      onPaterDelKyrialeChange={setPaterGregoriano}
+      partitura={partituraPadreNuestro}
+      onPartituraChange={setPartituraPadreNuestro}
+    />
+  );
 
   return (
     <>
@@ -767,15 +822,17 @@ export function ChoirView({
           </div>
           {/* Dónde se canta. Se elige aquí, con la fecha, porque las dos juntas son la
               respuesta a "¿para dónde va este cantoral?" — y porque un coro invitado
-              arma el cantoral de OTRA parroquia. */}
-          {destinosPosibles.length > 0 && (
+              arma el cantoral de OTRA parroquia.
+              Solo se pregunta si HAY algo que elegir: el coro de varias parroquias o
+              capillas, o el que tiene una invitación para ese día. El coro de una sola
+              parroquia arma siempre para la suya — preguntárselo es ruido. */}
+          {destinosPosibles.length > 1 && (
             <div className="mt-3">
               <label htmlFor="mass-parish" className="text-xs font-bold text-brand-ink-soft mb-1 block">Dónde se canta</label>
               <select
                 id="mass-parish"
                 value={destino}
                 onChange={(e) => setDestino(e.target.value)}
-                disabled={destinosPosibles.length === 1}
                 className="w-full px-3 py-2.5 rounded-xl border-2 border-blue-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-brand-ink font-semibold focus:outline-none focus:border-brand disabled:opacity-70"
               >
                 {destinosPosibles.map((d) => (
@@ -892,34 +949,6 @@ export function ChoirView({
           )}
         </div>
 
-        <div className="mt-4">
-          <KyrialeChoice
-            valor={misaGregoriana}
-            onChange={setMisaGregoriana}
-            gloriaDe={gloriaGregoriano}
-            onGloriaChange={setGloriaGregoriano}
-            paterNoster={paterGregoriano}
-            onPaterChange={(tono) => {
-              // Un solo Padre Nuestro por Misa: el tono del Kyriale reemplaza al del Drive.
-              if (tono) cantoral.filter(esPadreNuestroDelCantoral)
-                .forEach((s) => onRemoveFromCantoral(s.id, s.category));
-              setPaterGregoriano(tono);
-            }}
-          />
-        </div>
-
-        {/* Modo Atril — leer el repertorio durante la Misa */}
-        {cantoral.length > 0 && (
-          <button
-            onClick={() => setShowAtril(true)}
-            data-tour="coro-atril"
-            className="w-full mt-4 bg-gradient-to-br from-slate-800 to-slate-950 text-white py-3 px-4 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg border-2 border-slate-700 font-bold"
-          >
-            <Music className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
-            <span>Modo Atril</span>
-          </button>
-        )}
-
         {/* Selector de celebración — el constructor se adapta a la liturgia elegida.
             En Cuaresma/Semana Santa aparecen los oficios del Triduo para prepararlos. */}
         {celebrations.length > 1 && (
@@ -940,7 +969,6 @@ export function ChoirView({
                     onClick={() => {
                       setSelectedCelebration(c.key);
                       setExpandedCategories({});
-                      setPenitentialChoice(null);
                     }}
                     className={`px-3 py-2 rounded-xl text-sm font-bold border-2 transition-all active:scale-95 ${
                       active
@@ -959,7 +987,7 @@ export function ChoirView({
         {/* Liturgical Suggestions */}
         <div className="mt-4" data-tour="coro-sugerencias">
           <LiturgicalSuggestions
-            onAddToCantoral={onAddToCantoral}
+            onAddToCantoral={agregarAlCantoral}
             onPlaySong={playSongForThisMass}
             cantoral={cantoral}
             preferredInstrument={preferredInstrument}
@@ -1061,15 +1089,12 @@ export function ChoirView({
         {/* Category Searches - DINÁMICAS según el día litúrgico */}
         <div className="mt-8 space-y-6" data-tour="coro-categorias">
           {visibleCategories.map((rawCategory) => {
-            // En Pascua, el Kyrie puede convertirse en el Rito de Aspersión según
-            // lo que elija el coro (se le pregunta al tocar el Kyrie).
-            const afterPenitential = (isEaster && rawCategory === 'Kyrie' && penitentialChoice === 'aspersion')
-              ? 'Rito de Aspersión'
-              : rawCategory;
+            // En Pascua la tarjeta del Kyrie ofrece también la aspersión (ver conAspersion).
+            const kyrieOAspersion = isEaster && rawCategory === 'Kyrie';
             // En Cuaresma el Aleluya se omite y la tarjeta pasa a llamarse
             // "Aclamación al Evangelio". Solo cambia el rótulo: el canto sigue
             // perteneciendo al momento 'aleluya' de la BD.
-            const category = displayCategoryForDate(afterPenitential, massDateObj);
+            const category = displayCategoryForDate(rawCategory, massDateObj);
             // Obtener el ícono según la categoría
             const getCategoryIcon = (cat: string): string => {
               const icons: Record<string, string> = {
@@ -1108,8 +1133,6 @@ export function ChoirView({
 
             const icon = getCategoryIcon(category);
 
-            // Al tocar el Kyrie en Pascua, preguntar primero: acto penitencial o aspersión.
-            const askFirst = isEaster && rawCategory === 'Kyrie' && penitentialChoice === null;
 
             // El Salmo NO se elige del catálogo: viene del libro musicalizado según la
             // fecha (partitura para el coro + antífona editable). Reemplaza a la tarjeta.
@@ -1136,16 +1159,22 @@ export function ChoirView({
             // gregoriano. Son más que las dos del Misal: el gradual, el aleluya y el
             // ofertorio también tienen melodía propia en el libro.
             const conGregoriano = parteTienePropio(category);
+            const conKyriale = rawCategory === 'Kyrie';
+            // El Padre Nuestro va en su lugar del rito de comunión: antes del Cordero.
+            const antesPadreNuestro = rawCategory === 'Cordero de Dios';
 
             return (
-              <div key={rawCategory} className={conAntifona || conGregoriano ? 'space-y-3' : undefined}>
+              <div key={rawCategory} className={conAntifona || conGregoriano || conKyriale || antesPadreNuestro ? 'space-y-3' : undefined}>
+              {antesPadreNuestro && <div className="mb-6">{tarjetaPadreNuestro}</div>}
               <CategorySearch
                 category={category}
                 icon={icon}
                 isExpanded={expandedCategories[category] || false}
-                onToggle={askFirst ? () => setShowAspersionDialog(true) : () => handleToggleCategory(category)}
+                onToggle={() => handleToggleCategory(category)}
+                partesAlternativas={kyrieOAspersion ? ['Rito de Aspersión'] : undefined}
+                titulo={kyrieOAspersion ? 'Kyrie o Rito de Aspersión' : undefined}
                 onClose={() => handleCloseCategory(category)}
-                onAddToCantoral={onAddToCantoral}
+                onAddToCantoral={agregarAlCantoral}
                 onRemoveFromCantoral={onRemoveFromCantoral}
                 cantoral={cantoral}
                 onPlaySong={playSongForThisMass}
@@ -1154,7 +1183,22 @@ export function ChoirView({
                 userVoicePart={userVoicePart}
                 previousUsage={previousUsage}
                 massDate={massDate}
+                partituraMisa={partituraMisa}
+                onPartituraMisaChange={setPartituraMisa}
               />
+              {/* La otra forma de cantar el ordinario: una Misa del Kyriale. Va con el
+                  Kyrie porque es la misma elección — una Misa u otra, nunca las dos. */}
+              {conKyriale && (
+                <KyrialeChoice
+                  valor={misaGregoriana}
+                  onChange={elegirMisaGregoriana}
+                  gloriaDe={gloriaGregoriano}
+                  onGloriaChange={setGloriaGregoriano}
+                  partitura={partituraGregoriano}
+                  onPartituraChange={setPartituraGregoriano}
+                  sinKyrie={conAspersion}
+                />
+              )}
               {conAntifona && (
                 <MassAntiphon
                   date={massDate}
@@ -1182,32 +1226,23 @@ export function ChoirView({
           })}
         </div>
 
-        {/* Padre Nuestro y aclamaciones: siempre a la vista, también al EDITAR un
-            cantoral (el diálogo del Ofertorio solo aparece al agregarlo). */}
-        <div className="mt-6 space-y-4">
-          {/* La partitura del ordinario en el folleto, o solo la letra. */}
-          <label className="flex items-start gap-3 p-4 rounded-2xl border-2 border-blue-200 dark:border-blue-800 bg-white/70 dark:bg-white/5 cursor-pointer transition-colors">
-            <input
-              type="checkbox"
-              checked={partituraOrdinario}
-              onChange={(e) => setPartituraOrdinario(e.target.checked)}
-              className="mt-1 w-5 h-5 flex-shrink-0 accent-blue-700"
-            />
-            <span className="text-sm sm:text-base text-brand-ink-soft">
-              <strong className="text-brand-ink">📄 Incluir la partitura del ordinario en el folleto</strong>
-              <br />
-              Kyrie, Gloria, Santo, Cordero, Padre nuestro y aclamaciones. Si la desmarcas, en el
-              folleto va solo la letra.
-            </span>
-          </label>
-          <PadreNuestroYAclamaciones
-            cantoral={cantoral}
-            onAdd={onAddToCantoral}
-            onRemove={onRemoveFromCantoral}
-            paterDelKyriale={paterGregoriano}
-            onQuitarPaterDelKyriale={() => setPaterGregoriano(null)}
-          />
-        </div>
+        {/* Padre Nuestro y aclamaciones al final solo si esta celebración no tiene
+            Cordero (lo normal es que vaya justo antes de él, en el recorrido). */}
+        {!visibleCategories.includes('Cordero de Dios') && (
+          <div className="mt-6">{tarjetaPadreNuestro}</div>
+        )}
+
+        {/* Modo Atril — leer el repertorio durante la Misa */}
+        {cantoral.length > 0 && (
+          <button
+            onClick={() => setShowAtril(true)}
+            data-tour="coro-atril"
+            className="w-full mt-6 bg-gradient-to-br from-slate-800 to-slate-950 text-white py-3 px-4 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg border-2 border-slate-700 font-bold"
+          >
+            <Music className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
+            <span>Modo Atril</span>
+          </button>
+        )}
 
         {/* Spacer so the last category isn't covered by the sticky CTA (que en
             móvil/tablet va por encima de la BottomNav → necesita más aire). */}
@@ -1309,49 +1344,6 @@ export function ChoirView({
         />
       )}
 
-      {/* Pregunta de Pascua: acto penitencial vs rito de aspersión (IGMR 51) */}
-      <Modal
-        open={showAspersionDialog}
-        onClose={() => setShowAspersionDialog(false)}
-        labelledById="aspersion-title"
-        panelClassName="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border-4 border-sky-700 dark:border-sky-600"
-      >
-        <div className="bg-gradient-to-br from-sky-600 to-blue-700 text-white p-6 border-b-4 border-sky-800">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl flex-shrink-0">💧</span>
-            <div className="min-w-0">
-              <h3 id="aspersion-title" className="text-xl font-bold leading-tight">Tiempo Pascual</h3>
-              <p className="text-sm text-sky-100 mt-1">¿Cómo será el inicio de la Misa?</p>
-            </div>
-          </div>
-        </div>
-        <div className="p-6 space-y-3">
-          <p className="text-base text-blue-950 dark:text-blue-100 mb-2 leading-relaxed">
-            En Pascua puede hacerse el <strong>Rito de Aspersión</strong> en lugar del acto
-            penitencial. Eso cambia el canto de este momento (y se omite el Kyrie).
-          </p>
-          <button
-            onClick={() => handleChoosePenitential('kyrie')}
-            className="w-full bg-white dark:bg-slate-700 text-brand-ink p-4 rounded-2xl flex items-center gap-3 border-2 border-blue-300 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-slate-600 active:scale-95 transition-all text-left"
-          >
-            <span className="text-2xl flex-shrink-0">🙏</span>
-            <span className="min-w-0">
-              <span className="block font-bold">Acto penitencial (Kyrie)</span>
-              <span className="block text-sm text-blue-700 dark:text-blue-300">Señor, ten piedad</span>
-            </span>
-          </button>
-          <button
-            onClick={() => handleChoosePenitential('aspersion')}
-            className="w-full bg-gradient-to-br from-sky-600 to-blue-700 text-white p-4 rounded-2xl flex items-center gap-3 border-2 border-sky-800 hover:opacity-90 active:scale-95 transition-all text-left"
-          >
-            <span className="text-2xl flex-shrink-0">💧</span>
-            <span className="min-w-0">
-              <span className="block font-bold">Rito de aspersión</span>
-              <span className="block text-sm text-sky-100">Canto de aspersión (memoria del Bautismo)</span>
-            </span>
-          </button>
-        </div>
-      </Modal>
     </>
   );
 }

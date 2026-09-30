@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Music4, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import {
   misasDelKyriale, misasConGloria, misaDelKyriale, kyrialeImageUrl,
-  tonosDelPaterNoster, paterNosterImageUrl,
   CATEGORIA_DE_LA_PARTE, type MisaDelKyriale, type ParteKyriale,
 } from '../../data/kyrialeIndex';
+import { CasillaPartitura } from '../cantoral/CasillaPartitura';
 import { LIBROS, type LibroGraduale } from '../../data/gradualeIndex';
 import type { EleccionKyriale } from '../../utils/kyrialeSong';
 
@@ -15,9 +15,11 @@ interface KyrialeChoiceProps {
   /** Misa de la que se toma el Gloria, si no es la misma. */
   gloriaDe: EleccionKyriale | null;
   onGloriaChange: (eleccion: EleccionKyriale | null) => void;
-  /** Tono del Padre Nuestro ('A', 'B', 'C'), o `null` si no va en gregoriano. */
-  paterNoster: string | null;
-  onPaterChange: (tono: string | null) => void;
+  /** ¿El folleto lleva el facsímil de esta Misa, o solo su texto latino? */
+  partitura: boolean;
+  onPartituraChange: (incluir: boolean) => void;
+  /** Hay Rito de Aspersión (Pascua): el Kyrie se omite y la Misa aporta el resto. */
+  sinKyrie?: boolean;
 }
 
 const VACIO = '';
@@ -43,9 +45,12 @@ function desdeValor(v: string): EleccionKyriale | null {
  *
  * El candado que ven el Santo y el Cordero está ahí para que la regla se entienda sin
  * tener que descubrirla: es mejor decir por qué no se puede que dejar un menú muerto.
+ *
+ * El Padre Nuestro gregoriano NO se elige aquí: va en la tarjeta del Padre Nuestro, que
+ * es la única donde se decide si se canta y en qué versión.
  */
 export function KyrialeChoice({
-  valor, onChange, gloriaDe, onGloriaChange, paterNoster, onPaterChange,
+  valor, onChange, gloriaDe, onGloriaChange, partitura, onPartituraChange, sinKyrie = false,
 }: KyrialeChoiceProps) {
   const [abierta, setAbierta] = useState<ParteKyriale | null>(null);
   const misas = misasDelKyriale();
@@ -89,7 +94,14 @@ export function KyrialeChoice({
 
       {elegida && (
         <div className="mt-3 space-y-2">
-          {(['kyrie', 'gloria', 'sanctus', 'agnus'] as ParteKyriale[]).map((parte) => {
+          {sinKyrie && (
+            <p className="text-xs text-brand-ink-soft">
+              💧 Con el Rito de Aspersión se omite el Kyrie: de esta Misa van el Gloria, el Santo y el Cordero.
+            </p>
+          )}
+          {(['kyrie', 'gloria', 'sanctus', 'agnus'] as ParteKyriale[])
+            .filter((parte) => !(sinKyrie && parte === 'kyrie'))
+            .map((parte) => {
             const misa = parte === 'gloria' ? paraGloria : elegida;
             const hay = misa?.partes.includes(parte);
             return (
@@ -153,86 +165,15 @@ export function KyrialeChoice({
             );
           })}
           <Aviso elegida={elegida} />
+          {/* Se pregunta al elegir la Misa, y solo aquí: vale para sus cuatro partes. */}
+          <CasillaPartitura
+            checked={partitura}
+            onChange={onPartituraChange}
+            detalle="Sin la partitura, el folleto lleva el texto en latín."
+          />
         </div>
       )}
-
-      <PaterNoster tono={paterNoster} onChange={onPaterChange} />
     </div>
-  );
-}
-
-/**
- * El Padre Nuestro, aparte.
- *
- * No entra en la regla del Santo y el Cordero porque en el libro no pertenece a ninguna
- * Misa del Kyriale: vive en el rito de comunión y sus tres tonos sirven con cualquiera.
- * Por eso también se puede cantar solo, sin ordinario gregoriano — que es justo lo que
- * hacen muchas parroquias.
- */
-function PaterNoster({ tono, onChange }: { tono: string | null; onChange: (t: string | null) => void }) {
-  const [ver, setVer] = useState(false);
-  const tonos = tonosDelPaterNoster('romanum');
-  if (tonos.length === 0) return null;
-
-  return (
-    <div className="mt-4 pt-3 border-t border-stone-200 dark:border-stone-700">
-      <label className="block text-xs font-bold text-brand-ink mb-1">
-        Padre Nuestro
-      </label>
-      <p className="text-xs text-brand-ink-soft mb-2">
-        Va aparte: no pertenece a ninguna Misa del Kyriale y sirve con todas.
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <Chip activo={!tono} onClick={() => onChange(null)} rotulo="Sin gregoriano" />
-        {tonos.map((t) => (
-          <Chip
-            key={t.tono}
-            activo={tono === t.tono}
-            onClick={() => onChange(tono === t.tono ? null : t.tono)}
-            rotulo={`Tono ${t.tono}`}
-          />
-        ))}
-      </div>
-      {tono && (
-        <>
-          <button
-            type="button"
-            onClick={() => setVer((v) => !v)}
-            className="mt-2 flex items-center gap-1 text-xs font-bold text-stone-700 dark:text-stone-300"
-          >
-            {ver ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            Ver la partitura
-          </button>
-          {ver && (
-            <div className="mt-2 overflow-x-auto rounded-lg bg-white p-2">
-              <img
-                src={paterNosterImageUrl('romanum', tono)}
-                alt={`Padre Nuestro, tono ${tono}`}
-                loading="lazy"
-                className="block mx-auto w-full"
-              />
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
-function Chip({ activo, onClick, rotulo }: { activo: boolean; onClick: () => void; rotulo: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={activo}
-      className={`px-3 py-2 rounded-xl text-sm font-bold border-2 transition-colors ${
-        activo
-          ? 'bg-stone-800 text-white border-stone-800 dark:bg-stone-200 dark:text-stone-900 dark:border-stone-200'
-          : 'bg-white/70 dark:bg-white/10 text-brand-ink border-stone-300 dark:border-stone-600'
-      }`}
-    >
-      {rotulo}
-    </button>
   );
 }
 

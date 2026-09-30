@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, ChevronDown, ChevronUp, Music, Cross, CheckCircle, Play, Sparkles, X } from 'lucide-react';
-import { toast } from 'sonner';
 import { Song, InstrumentType } from '../../types';
 import { useSongs } from '../../hooks/useSongs';
 import { getCategoryColors } from '../../utils/colors';
@@ -8,17 +7,13 @@ import { matchesSearch } from '../../utils/textSearch';
 import { songMatchesSeason } from '../../utils/songSeason';
 import { estaEnParte, partesUsadas as usadoEnPartes, ordenarSugerencias } from '../../utils/cantoralParts';
 import { AddGloriaDialog } from '../cantoral/AddGloriaDialog';
-import { AddPadreNuestroDialog, PadreNuestroLanguage } from '../cantoral/AddPadreNuestroDialog';
+import { CasillaPartitura } from '../cantoral/CasillaPartitura';
 import { getCurrentLiturgicalSeason, isAlleluiaTitleInLent } from '../../utils/liturgicalSeason';
 import { categoryToMoment } from '../../utils/category';
 import { filterByInstrument } from '../../utils/instrument';
 import { parseYmdLocal } from '../../utils/dateLocal';
 import { isOrdinary } from '../../utils/ordinary';
-import { resolveOrdinarySheetMusic, listarPartituras } from '../../utils/ordinarySheetMusic';
-import { ACLAMACIONES, AclamacionId } from '../../data/aclamaciones';
-import {
-  construirPadreNuestro, construirAclamacion, aclamacionesEnElCantoral, misaDelCantoral,
-} from '../../utils/padreNuestroYAclamaciones';
+import { resolveOrdinarySheetMusic } from '../../utils/ordinarySheetMusic';
 import { previousUseOf, type PreviousUsage, type UsageOccurrence } from '../../utils/previousUsage';
 import { RepeatSongDialog } from '../cantoral/RepeatSongDialog';
 import { FavoriteButton } from './FavoriteButton';
@@ -46,6 +41,16 @@ interface CategorySearchProps {
    *  rótulo del Aleluya se calculan contra ESTA fecha, no contra la de hoy: un
    *  cantoral de Cuaresma armado en julio debe comportarse como Cuaresma. */
   massDate?: string;
+  /** ¿El folleto lleva la partitura de la Misa del catálogo? Se pregunta en el diálogo
+   *  «Completar la Misa», que es donde se elige esa Misa. */
+  partituraMisa?: boolean;
+  onPartituraMisaChange?: (incluir: boolean) => void;
+  /** Otras partes que se ofrecen en ESTA tarjeta, en lugar de la suya. En Pascua la
+   *  tarjeta del Kyrie ofrece también los cantos del Rito de Aspersión: la aspersión
+   *  reemplaza al acto penitencial, así que se elige uno u otro, en el mismo lugar. */
+  partesAlternativas?: string[];
+  /** Rótulo del encabezado, si no es el de la parte («Kyrie o Aspersión»). */
+  titulo?: string;
 }
 
 export function CategorySearch({ 
@@ -63,6 +68,10 @@ export function CategorySearch({
   userInstrument,
   previousUsage,
   massDate,
+  partituraMisa = true,
+  onPartituraMisaChange,
+  partesAlternativas = [],
+  titulo,
 }: CategorySearchProps) {
   const { songs } = useSongs();
   const [searchTerm, setSearchTerm] = useState('');
@@ -72,7 +81,6 @@ export function CategorySearch({
   const [pendingKyrie, setPendingKyrie] = useState<Song | null>(null);
   const [pendingSanto, setPendingSanto] = useState<Song | null>(null);
   const [pendingCordero, setPendingCordero] = useState<Song | null>(null);
-  const [showPadreNuestroDialog, setShowPadreNuestroDialog] = useState(false);
   // Canto que ya se usó en el cantoral anterior: se pide confirmación antes de agregarlo.
   const [pendingRepeat, setPendingRepeat] = useState<{ song: Song; occ: UsageOccurrence[]; title: string } | null>(null);
 
@@ -93,13 +101,16 @@ export function CategorySearch({
    * para Entrada, Comunión y Salida se bloqueaba entero al usarlo una vez. Ahora se
    * bloquea solo aquí y sigue disponible en sus otras partes, hasta usarlo en todas.
    */
-  const isInCantoral = (songId: string) => estaEnParte(cantoral, songId, category);
+  const isInCantoral = (songId: string) =>
+    partesDeLaTarjeta.some(p => estaEnParte(cantoral, songId, p));
 
   /** Partes de la Misa donde este canto YA se está usando (para avisarlo en la ficha). */
   const partesUsadas = (songId: string) => usadoEnPartes(cantoral, songId, category);
 
-  /** Cantos agregados a ESTA parte (para el contador del encabezado). */
-  const añadidosAquí = cantoral.filter(s => s.category === category).length;
+  /** Las partes que se eligen en esta tarjeta: la suya y sus alternativas. */
+  const partesDeLaTarjeta = [category, ...partesAlternativas];
+  /** Cantos agregados a ESTA tarjeta (para el contador del encabezado). */
+  const añadidosAquí = cantoral.filter(s => partesDeLaTarjeta.includes(s.category)).length;
 
   const isMassPart = (category: string) => {
     return ['Kyrie', 'Gloria', 'Santo', 'Cordero de Dios'].includes(category);
@@ -117,6 +128,15 @@ export function CategorySearch({
     return song.extraMoments?.includes(moment) ?? false;
   };
 
+  /** ¿Se ofrece en esta tarjeta? (su parte, o una de las alternativas) */
+  const enEstaTarjeta = (song: Song) => partesDeLaTarjeta.some(p => songInCategory(song, p));
+  /** En qué parte entra el canto al agregarlo: la de la tarjeta si sirve para ella; si
+   *  no, la alternativa a la que pertenece (un canto de aspersión entra como aspersión). */
+  const parteDe = (song: Song) =>
+    songInCategory(song, category)
+      ? category
+      : (partesAlternativas.find(p => songInCategory(song, p)) ?? category);
+
   // En Cuaresma se omite el Aleluya: no ofrecer cantos que lo anuncian en el título.
   //
   // Excepción: el "Aleluya Triple" de la Vigilia Pascual es precisamente el canto
@@ -132,7 +152,7 @@ export function CategorySearch({
   // **SUGERENCIAS LITÚRGICAS**: Filtrar cantos por categoría Y tiempo litúrgico
   const getSuggestedSongs = (): Song[] => {
     // Obtener todos los cantos de esta categoría (sin los Aleluyas si es Cuaresma)
-    const categorySongs = songs.filter(song => songInCategory(song, category) && !hiddenByLent(song));
+    const categorySongs = songs.filter(song => enEstaTarjeta(song) && !hiddenByLent(song));
 
     // Filtrar por tiempo litúrgico. La regla vive en utils/songSeason y la comparte
     // el carrusel de sugerencias: tenerla en dos sitios fue justo lo que las hizo
@@ -163,7 +183,7 @@ export function CategorySearch({
   // de aplicar el instrumento: sirve para distinguir "no hay nada en el catálogo"
   // de "hay, pero no para tu instrumento".
   const categorySongsAnyInstrument = songs.filter(
-    song => songInCategory(song, category) && !hiddenByLent(song),
+    song => enEstaTarjeta(song) && !hiddenByLent(song),
   );
 
   // Listado que ve el coro: SOLO su instrumento.
@@ -211,13 +231,15 @@ export function CategorySearch({
     // Si el canto se agrega desde una parte distinta a su principal (porque sirve
     // para varias), fijar la categoría a la de esta tarjeta para que caiga en el
     // lugar correcto del cantoral.
-    const song = rawSong.category === category ? rawSong : { ...rawSong, category };
+    const destino = parteDe(rawSong);
+    const song = rawSong.category === destino ? rawSong : { ...rawSong, category: destino };
 
     // Solo Comunión permite múltiples cantos
     if (category !== 'Comunión') {
-      // Remover cualquier canto existente de esta categoría
-      const existingInCategory = cantoral.filter(s => s.category === category);
-      existingInCategory.forEach(s => onRemoveFromCantoral(s.id, category));
+      // Remover lo que hubiera en esta tarjeta — también la alternativa: la aspersión
+      // y el Kyrie no van juntos.
+      const existingInCategory = cantoral.filter(s => partesDeLaTarjeta.includes(s.category));
+      existingInCategory.forEach(s => onRemoveFromCantoral(s.id, s.category));
     }
 
     // Caso especial: Kyrie
@@ -260,58 +282,10 @@ export function CategorySearch({
     } else {
       // Para otros cantos, simplemente agregar (enriqueciendo si es ordinario)
       addSongEnriched(song);
-
-      // Si es Ofertorio y aún no hay Padre Nuestro en el cantoral, preguntar
-      if (song.category === 'Ofertorio' && !cantoral.some(s => s.category === 'Padre Nuestro')) {
-        setTimeout(() => setShowPadreNuestroDialog(true), 300);
-      } else {
-        // Cerrar card automáticamente después de agregar
-        setTimeout(() => { onClose(); }, 300);
-      }
+      // El Padre Nuestro y las aclamaciones ya no se preguntan aquí: tienen su tarjeta
+      // en el constructor, antes del Cordero, y es el único lugar donde se eligen.
+      setTimeout(() => { onClose(); }, 300);
     }
-  };
-
-  // Aclamaciones que el cantoral ya tiene (no se vuelven a ofrecer en el diálogo).
-  const aclamacionesYaAgregadas = aclamacionesEnElCantoral(cantoral);
-
-  /**
-   * Confirma el diálogo del Padre Nuestro: el Padre Nuestro (si se eligió idioma) y las
-   * aclamaciones marcadas. Se arman desde el Drive con la misma fuente que el panel del
-   * constructor (utils/padreNuestroYAclamaciones).
-   */
-  const handleConfirmPadreNuestro = async (language: PadreNuestroLanguage | null, aclamaciones: AclamacionId[] = []) => {
-    setShowPadreNuestroDialog(false);
-    const files = await listarPartituras();
-    if (language) {
-      const pn = construirPadreNuestro(language, files);
-      onAddToCantoral(pn);
-      if (!pn.sheetMusicUrl) {
-        toast.warning('No encontré la partitura', {
-          description: `Agregué el Padre Nuestro con su letra: no hallé «${language === 'la' ? 'Pater noster' : 'Padre nuestro-Voz'}» en la carpeta Padre Nuestro del Drive.`,
-        });
-      }
-    }
-    if (aclamaciones.length) {
-      const misa = misaDelCantoral(cantoral);
-      const catalogo = instrumentSongs.filter(s => ACLAMACIONES.some(a => songInCategory(s, a.category)));
-      const sinPartitura: string[] = [];
-      for (const a of ACLAMACIONES.filter(x => aclamaciones.includes(x.id))) {
-        const song = construirAclamacion(a, misa, files, catalogo);
-        if (!song.sheetMusicUrl) sinPartitura.push(a.titulo);
-        onAddToCantoral(song);
-      }
-      if (sinPartitura.length) {
-        toast.info('Aclamaciones agregadas con su letra', {
-          description: `No hallé partitura para: ${sinPartitura.join(', ')}.`,
-        });
-      }
-    }
-    setTimeout(() => onClose(), 300);
-  };
-
-  const handleCancelPadreNuestro = () => {
-    setShowPadreNuestroDialog(false);
-    setTimeout(() => onClose(), 300);
   };
 
   // Agrega un canto en una parte fija concreta. Si el canto es "prestado" de otra
@@ -427,7 +401,7 @@ export function CategorySearch({
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <span className="text-2xl sm:text-3xl flex-shrink-0 transform group-hover:scale-110 transition-transform">{icon}</span>
           <div className="text-left min-w-0">
-            <div className="text-base sm:text-xl font-bold leading-tight break-words">{category}</div>
+            <div className="text-base sm:text-xl font-bold leading-tight break-words">{titulo ?? category}</div>
             <div className="text-base opacity-90">
               {categorySongs.length} {categorySongs.length === 1 ? 'canto disponible' : 'cantos disponibles'}
             </div>
@@ -633,6 +607,11 @@ export function CategorySearch({
                       )}
 
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        {parteDe(song) !== category && (
+                          <span className="inline-flex items-center gap-1 bg-sky-600 text-white px-2.5 py-1 rounded-lg text-sm font-bold border border-sky-800 shadow-sm">
+                            {parteDe(song) === 'Rito de Aspersión' ? '💧 ' : ''}{parteDe(song)}
+                          </span>
+                        )}
                         {song.author && (
                           <span className="text-sm text-blue-900 dark:text-blue-200 bg-white/40 dark:bg-white/10 px-2 py-0.5 rounded border border-white/40">
                             <strong>Autor:</strong> {song.author}
@@ -738,15 +717,6 @@ export function CategorySearch({
         />
       )}
 
-      {/* Add Padre Nuestro Dialog */}
-      {showPadreNuestroDialog && (
-        <AddPadreNuestroDialog
-          onConfirm={handleConfirmPadreNuestro}
-          onCancel={handleCancelPadreNuestro}
-          yaAgregadas={aclamacionesYaAgregadas}
-        />
-      )}
-
       {/* Add Santo y Cordero Dialog */}
       {showSantoCordeloDialog && pendingKyrie && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
@@ -802,6 +772,17 @@ export function CategorySearch({
                   </div>
                 </div>
               </div>
+
+              {/* La partitura de ESTA Misa en el folleto: se decide al elegirla. */}
+              {onPartituraMisaChange && (
+                <div className="mb-6">
+                  <CasillaPartitura
+                    checked={partituraMisa}
+                    onChange={onPartituraMisaChange}
+                    detalle="Kyrie, Gloria, Santo y Cordero. Sin ella, el folleto lleva solo la letra."
+                  />
+                </div>
+              )}
 
               {/* Buttons */}
               <div className="flex flex-col gap-3">

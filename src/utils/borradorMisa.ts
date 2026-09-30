@@ -23,6 +23,9 @@ export interface DatosDeLaMisa {
   tipo: MassType;
   /** Dónde se canta: parroquia o capilla. Vacío = la parroquia activa. */
   destino?: string;
+  /** La parroquia activa con la que se armó. Un borrador de otra parroquia no se usa:
+   *  cada parroquia abre su constructor vacío y en la fecha de hoy. */
+  parroquia?: string;
 }
 
 export const CLAVE_BORRADOR_MISA = 'stellamaris.constructor.misa.v1';
@@ -55,7 +58,12 @@ export function parseDatosDeLaMisa(raw: string | null | undefined, hoy: string):
   // todavía cuenta como futuro. Comparar contra `hoy` a secas ya lo respeta.
   if (d.fecha < hoy) return null;
   const destino = typeof d.destino === 'string' ? d.destino.trim() : '';
-  return { fecha: d.fecha, hora: d.hora, tipo: d.tipo, destino: destino || undefined };
+  const parroquia = typeof d.parroquia === 'string' ? d.parroquia.trim() : '';
+  return {
+    fecha: d.fecha, hora: d.hora, tipo: d.tipo,
+    destino: destino || undefined,
+    parroquia: parroquia || undefined,
+  };
 }
 
 /** Lo guardado en este navegador, o `null`. `hoy` en formato 'YYYY-MM-DD'. */

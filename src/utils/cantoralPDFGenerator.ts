@@ -498,7 +498,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   /**
    * ¿Esta parte del ordinario va sin partitura? El coro lo elige en el constructor con
    * la casilla «Incluir la partitura del ordinario» (pedido del 27-sep-2026); la marca
-   * viaja en cada canto (ver marcarPartituraOrdinario).
+   * viaja en cada canto (ver marcarPartituras en utils/ordinary).
    */
   const soloLetra = (s: Song) => isOrdinary(s) && !!s.folletoSoloLetra;
 

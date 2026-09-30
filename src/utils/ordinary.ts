@@ -1,4 +1,5 @@
 import { Song } from '../types';
+import { massOrdinary } from '../data/massOrdinary';
 
 /**
  * Partes del ordinario de la Misa que se cantan desde la partitura (no desde
@@ -193,23 +194,53 @@ export function tituloVisible(song: Pick<Song, 'id' | 'title' | 'author' | 'cate
 }
 
 /**
- * Marca las partes del ordinario según la casilla «Incluir la partitura del ordinario»
- * del constructor (pedido del 27-sep-2026). Sin partitura, el folleto imprime la letra.
- *
- * La marca viaja en cada canto y no en una columna del cantoral: así se guarda con él,
- * vuelve al editarlo y no hace falta tocar la base de datos.
+ * Los tres bloques del ordinario que eligen su partitura por separado (pedido del
+ * 30-sep-2026). Cada uno se decide donde se elige ese bloque, y solo ahí:
+ *  · 'misa'         → la Misa del catálogo: en el diálogo «Completar la Misa» del Kyrie.
+ *  · 'gregoriano'   → la Misa del Kyriale: en su tarjeta, al elegirla.
+ *  · 'padreNuestro' → el Padre Nuestro y las aclamaciones: en su tarjeta.
  */
-export function marcarPartituraOrdinario<T extends Pick<Song, 'category' | 'folletoSoloLetra'>>(
-  songs: T[], incluir: boolean,
+export type GrupoPartitura = 'misa' | 'gregoriano' | 'padreNuestro';
+export type PartiturasElegidas = Record<GrupoPartitura, boolean>;
+
+const DEL_PADRE_NUESTRO = new Set([
+  'Padre Nuestro', 'Respuesta a Oración Universal', 'Aclamación Consagración', 'Amén (Doxología)',
+]);
+
+/** A qué bloque pertenece una parte del ordinario; `null` si no es del ordinario. */
+export function grupoDePartitura(song: Pick<Song, 'id' | 'category'>): GrupoPartitura | null {
+  if (!isOrdinary(song)) return null;
+  if (DEL_PADRE_NUESTRO.has(song.category)) return 'padreNuestro';
+  return String(song.id).startsWith('kyriale-') ? 'gregoriano' : 'misa';
+}
+
+/** El texto latino de la parte, para el gregoriano que va "solo letra" (no trae letra). */
+function letraLatina(category: string): string | undefined {
+  return massOrdinary.find((m) => m.category === category && m.latin)?.latin;
+}
+
+/**
+ * Marca cada parte del ordinario según la elección de SU bloque. El gregoriano no trae
+ * letra (es el facsímil), así que sin partitura se le pone el texto latino: si no, el
+ * folleto no tendría nada que imprimir y volvería a poner la imagen.
+ */
+export function marcarPartituras<T extends Pick<Song, 'id' | 'category' | 'folletoSoloLetra' | 'lyrics'>>(
+  songs: T[], elegidas: PartiturasElegidas,
 ): T[] {
   return songs.map((s) => {
-    if (!isOrdinary(s)) return s;
+    const grupo = grupoDePartitura(s);
+    if (!grupo) return s;
     const { folletoSoloLetra: _, ...resto } = s;
-    return (incluir ? resto : { ...resto, folletoSoloLetra: true }) as T;
+    if (elegidas[grupo]) return resto as T;
+    const lyrics = !s.lyrics?.trim() && String(s.id).startsWith('kyriale-')
+      ? letraLatina(s.category) : s.lyrics;
+    return { ...resto, lyrics, folletoSoloLetra: true } as T;
   });
 }
 
-/** ¿El cantoral lleva la partitura del ordinario? (Sí, salvo que se haya quitado.) */
-export function llevaPartituraOrdinario(songs: Pick<Song, 'category' | 'folletoSoloLetra'>[]): boolean {
-  return !songs.some((s) => isOrdinary(s) && s.folletoSoloLetra);
+/** ¿Ese bloque del cantoral lleva partitura? (Sí, salvo que se haya quitado.) */
+export function llevaPartitura(
+  songs: Pick<Song, 'id' | 'category' | 'folletoSoloLetra'>[], grupo: GrupoPartitura,
+): boolean {
+  return !songs.some((s) => grupoDePartitura(s) === grupo && s.folletoSoloLetra);
 }

@@ -26,12 +26,19 @@ const json = (o: unknown) => JSON.stringify(o);
 console.log('\n== Se recuerda lo que sirve ==');
 check('fecha, hora, tipo y lugar',
   parseDatosDeLaMisa(json({ fecha: '2026-10-11', hora: '19:00', tipo: 'visperas_i', destino: VALDIVIA }), HOY),
-  { fecha: '2026-10-11', hora: '19:00', tipo: 'visperas_i', destino: VALDIVIA });
+  { fecha: '2026-10-11', hora: '19:00', tipo: 'visperas_i', destino: VALDIVIA, parroquia: undefined });
 check('sin lugar guardado, no se inventa uno',
   parseDatosDeLaMisa(json({ fecha: '2026-10-11', hora: '10:00', tipo: 'dia' }), HOY),
-  { fecha: '2026-10-11', hora: '10:00', tipo: 'dia', destino: undefined });
+  { fecha: '2026-10-11', hora: '10:00', tipo: 'dia', destino: undefined, parroquia: undefined });
 check('un lugar en blanco es no tener lugar',
   parseDatosDeLaMisa(json({ fecha: '2026-10-11', hora: '10:00', tipo: 'dia', destino: '   ' }), HOY)?.destino,
+  undefined);
+// El borrador sabe de qué parroquia es: el constructor de otra no lo usa y abre vacío.
+check('recuerda la parroquia con la que se armó',
+  parseDatosDeLaMisa(json({ fecha: '2026-10-11', hora: '10:00', tipo: 'dia', parroquia: VALDIVIA }), HOY)?.parroquia,
+  VALDIVIA);
+check('una parroquia en blanco es no saber de cuál es',
+  parseDatosDeLaMisa(json({ fecha: '2026-10-11', hora: '10:00', tipo: 'dia', parroquia: '  ' }), HOY)?.parroquia,
   undefined);
 check('la Misa de hoy todavía sirve',
   parseDatosDeLaMisa(json({ fecha: HOY, hora: '10:00', tipo: 'dia' }), HOY)?.fecha, HOY);
