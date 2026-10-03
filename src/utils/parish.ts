@@ -65,3 +65,22 @@ export function formatActiveParishLabel(active?: string | null): string {
   if (!chapel) return parishFull;
   return `Capilla ${chapel} · ${parishFull}`;
 }
+
+/**
+ * De qué parroquias/capillas se ven las celebraciones personalizadas (además de las
+ * globales).
+ *
+ * Solo las de la unidad ACTIVA: un coro de Pintue y Pirque que entra como Pintue no debe
+ * ver el aniversario de la capilla de Pirque (3-oct-2026). Antes se juntaban todas las
+ * del perfil y la celebración de una parroquia aparecía en el constructor de la otra.
+ *
+ * Si la activa es una capilla, también las de su parroquia madre: lo que celebra la
+ * parroquia lo celebran sus capillas. Al revés no: lo de una capilla es solo suyo.
+ * Sin unidad activa (el Admin en su panel) se ven las de todas sus unidades.
+ */
+export function ambitosDeCelebraciones(activa: string | null | undefined, propias: string[]): string[] {
+  const actual = (activa ?? '').trim();
+  if (!actual) return Array.from(new Set(propias.map((p) => p.trim()).filter(Boolean)));
+  const { parishFull, chapel } = splitActiveParish(actual);
+  return chapel ? [actual, parishFull] : [actual];
+}

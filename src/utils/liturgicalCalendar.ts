@@ -164,7 +164,14 @@ export function getLiturgicalInfoForDate(date: string): LiturgicalInfo | null {
 // publicar, sugerencias). Las del Administrador son globales; las del coro, de su
 // parroquia. Ver services/liturgicalDates + App (carga y filtra el caché por scope).
 let _persistedCustom: LiturgicalDate[] = [];
-export function setPersistedCustomDates(list: LiturgicalDate[]): void { _persistedCustom = list; }
+/** Se avisa cada vez que cambian: las pantallas abiertas (el constructor) recalculan la
+ *  celebración del día. Sin esto, al cambiar de parroquia el constructor seguía con las
+ *  celebraciones de la anterior hasta tocar la fecha. */
+export const EVENTO_CELEBRACIONES = 'stellamaris:celebraciones';
+export function setPersistedCustomDates(list: LiturgicalDate[]): void {
+  _persistedCustom = list;
+  try { window.dispatchEvent(new Event(EVENTO_CELEBRACIONES)); } catch { /* sin window (pruebas) */ }
+}
 export function getPersistedCustomDates(): LiturgicalDate[] { return _persistedCustom; }
 /** Fusiona las persistidas (caché) con las que pase el llamador (sesión). */
 const mergeCustom = (cd?: LiturgicalDate[]): LiturgicalDate[] => [..._persistedCustom, ...(cd || [])];

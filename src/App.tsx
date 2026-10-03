@@ -129,7 +129,7 @@ import { getLiturgicalDateForDate, setPersistedCustomDates } from './utils/litur
 import { destinoAlVolver, hayCapaAbierta, cerrarCapaDeArriba } from './utils/navegacionAtras';
 import { getTodayLocal, addDaysLocal, isWithinInclusive, formatYmdForDisplay } from './utils/dateLocal';
 import { mergeProfile } from './utils/profileMerge';
-import { splitActiveParish, formatActiveParishLabel } from './utils/parish';
+import { splitActiveParish, formatActiveParishLabel, ambitosDeCelebraciones } from './utils/parish';
 import { esVisita, parroquiasDelPerfil, recordarVisita } from './utils/parishVisit';
 import { massTypeBadge } from './utils/massType';
 import { songsForBuilder } from './utils/psalmSong';
@@ -647,23 +647,25 @@ function AppContent() {
   }, []);
 
   // Cargar las CELEBRACIONES personalizadas (persistidas) visibles para el usuario:
-  // las globales (del Admin, para todos) + las de sus parroquias/capillas. Se guardan
+  // las globales (del Admin, para todos) + las de la parroquia/capilla ACTIVA (ver
+  // ambitosDeCelebraciones: la de una parroquia no se cuela en otra). Se guardan
   // en un caché del calendario para que aparezcan en TODA la app (publicar, calendario,
   // sugerencias). Ver services/liturgicalDates + utils/liturgicalCalendar.
   useEffect(() => {
     if (route.screen !== 'app' || !userProfile) return;
     let cancelled = false;
-    const parishes = Array.from(new Set([
-      ...(userProfile.parishes ?? []),
-      userProfile.parishName,
+    const parishes = ambitosDeCelebraciones(
       userProfile.activeParishName,
-    ].filter((x): x is string => !!x)));
+      [...(userProfile.parishes ?? []), userProfile.parishName].filter((x): x is string => !!x),
+    );
+    // Mientras llegan las de la parroquia nueva, no se muestran las de la anterior.
+    setPersistedCustomDates([]);
     listCustomLiturgicalDates(parishes).then((rows) => {
       if (cancelled) return;
       setPersistedCustomDates(rows.map(toLiturgicalDate));
     });
     return () => { cancelled = true; };
-  }, [route.screen, userProfile]);
+  }, [route.screen, userProfile?.activeParishName, userProfile?.parishName, userProfile?.parishes?.join('|')]);
 
   // Si el dispositivo ya está suscrito a notificaciones, mantener al día las parroquias
   // del suscriptor (para los avisos de "nuevo cantoral") cuando cambia el perfil.
@@ -2064,6 +2066,10 @@ function renderView(p: ViewProps): ReactElement | null {
             p.userProfile.parishName,
             p.userProfile.activeParishName,
           ].filter((x): x is string => !!x)))}
+          ambitosVisibles={ambitosDeCelebraciones(
+            p.userProfile.activeParishName,
+            [...(p.userProfile.parishes ?? []), p.userProfile.parishName].filter((x): x is string => !!x),
+          )}
           publishedCantorals={p.publishedCantorals}
           onViewCantoral={() => p.navigate('cantorals')}
           onCreateCantoral={(liturgicalDate, date) => {

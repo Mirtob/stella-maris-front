@@ -18,7 +18,7 @@ import { KyrialeChoice } from '../songs/KyrialeChoice';
 import { PadreNuestroYAclamaciones } from '../cantoral/PadreNuestroYAclamaciones';
 import { marcarPartituras, llevaPartitura } from '../../utils/ordinary';
 import { isKyrialeSong } from '../../utils/kyrialeSong';
-import { getCelebrationsForDate, getLiturgicalDateForDate, getPersistedCustomDates, setPersistedCustomDates } from '../../utils/liturgicalCalendar';
+import { getCelebrationsForDate, getLiturgicalDateForDate, getPersistedCustomDates, setPersistedCustomDates, EVENTO_CELEBRACIONES } from '../../utils/liturgicalCalendar';
 import { getSundayCycle } from '../../utils/liturgicalCycle';
 import { resolvePsalm } from '../../data/psalmIndex';
 import { buildPsalmSong, conSalmoDelLibro, debeReponerAntifona, esAntifonaEscritaAMano } from '../../utils/psalmSong';
@@ -128,6 +128,13 @@ export function ChoirView({
   const [showAtril, setShowAtril] = useState(false);
   const [showAddSolemnity, setShowAddSolemnity] = useState(false);
   const [celebTick, setCelebTick] = useState(0);
+  // Las celebraciones de la parroquia llegan del servidor DESPUÉS de abrir el
+  // constructor (y cambian al cambiar de parroquia): recalcular cuando lleguen.
+  useEffect(() => {
+    const alCambiar = () => setCelebTick((t) => t + 1);
+    window.addEventListener(EVENTO_CELEBRACIONES, alCambiar);
+    return () => window.removeEventListener(EVENTO_CELEBRACIONES, alCambiar);
+  }, []);
   /**
    * Los datos de la Misa que quedaron de la última vez (fecha, hora, tipo y LUGAR).
    *

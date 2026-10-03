@@ -61,13 +61,16 @@ interface LiturgicalCalendarProps {
   isAdmin?: boolean;
   /** Parroquias/capillas del perfil (alcance de las celebraciones del coro). */
   parishes?: string[];
+  /** De qué unidades se MUESTRAN las celebraciones (la activa; ver ambitosDeCelebraciones).
+   *  `parishes` sigue siendo la lista para elegir a quién se le agrega una nueva. */
+  ambitosVisibles?: string[];
   /** Cantorales publicados (para saber si hay uno en esa fecha/celebración). */
   publishedCantorals?: { date: string; liturgicalDate: string }[];
   /** Ir a ver el/los cantoral(es) publicados (Pueblo fiel). */
   onViewCantoral?: (liturgicalDate: string, date: string) => void;
 }
 
-export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false, parishes = [], publishedCantorals = [], onViewCantoral }: LiturgicalCalendarProps = {}) {
+export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false, parishes = [], ambitosVisibles, publishedCantorals = [], onViewCantoral }: LiturgicalCalendarProps = {}) {
   const [expandedMonth, setExpandedMonth] = useState<number | null>(null);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [showAlertDialog, setShowAlertDialog] = useState(false);
@@ -95,10 +98,11 @@ export function LiturgicalCalendar({ onCreateCantoral, userRole, isAdmin = false
   // Alert configuration
   const [alertDaysBefore, setAlertDaysBefore] = useState<number>(7);
 
-  const parishesKey = parishes.join('|');
+  const visibles = ambitosVisibles ?? parishes;
+  const parishesKey = visibles.join('|');
   useEffect(() => {
     let cancelled = false;
-    listCustomLiturgicalDates(parishes).then((rows) => {
+    listCustomLiturgicalDates(visibles).then((rows) => {
       if (cancelled) return;
       setPersistedEvents(rows.map(persistedToEvent));
       // Mantener también el caché del calendario (usado por el selector al publicar).
