@@ -12,7 +12,7 @@ import { soloLaAclamacion, AVISO_ESTROFA } from './aleluyaEstrofa';
 import { guardarPdf } from './descargarPdf';
 import { getPdfFont, getPdfScale } from '../data/pdfStyle';
 import { renderPdfToImages, imposeBooklet, recortarAlComun, MARGEN_ESTRECHO, type PapelFolleto } from './atrilBookletPDF';
-import { repartirEnColumnas, type Pieza } from './pdfColumns';
+import { repartirEnColumnas, huecosAlFinal, type Pieza, type Colocada } from './pdfColumns';
 import { partirEnSistemas, type TrozoFacsimil } from './facsimilTrozos';
 import { sortCategoriesByMassOrder, isOrdinary, rotuloDeParte, tituloVisible } from './ordinary';
 import { resolveSheetForFolleto } from './ordinarySheetMusic';
@@ -791,12 +791,63 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
 
   // QR del canal: se arma antes para poder incluirlo en la medición (así nunca es él
   // quien obliga a abrir una hoja más).
-  let qrDataUrl: string | null = null;
-  try {
-    qrDataUrl = await QRCode.toDataURL(getChannelUrl(), { margin: 0, width: 240 });
-  } catch {
-    // Si falla la generación del QR, el folleto se entrega igual.
-  }
+  // Dos QR al cierre (4-oct-2026): la descarga de la app y el canal de YouTube. Se
+  // generan grandes porque se agrandan hasta llenar el blanco del final.
+  const qrDe = async (url: string): Promise<string | null> => {
+    try {
+      return await QRCode.toDataURL(url, { margin: 0, width: 600, errorCorrectionLevel: 'M' });
+    } catch {
+      return null;                // sin ese QR el folleto se entrega igual
+    }
+  };
+  const qrs = (await Promise.all([
+    qrDe(`${window.location.origin}/instalar`)
+      .then((d) => d && { dataUrl: d, rotulo: ['Descarga la app', 'Stella Maris'] }),
+    qrDe(getChannelUrl())
+      .then((d) => d && { dataUrl: d, rotulo: ['Escucha los cantos', 'en YouTube'] }),
+  ])).filter((q): q is { dataUrl: string; rotulo: string[] } => !!q);
+
+  /** Medidas del cierre, en mm de la hoja carta (fijas: no siguen la escala de la letra). */
+  const QR_MIN = 28;              // ≈ 18 mm impreso en el cuadernillo: lo lee cualquier celular
+  const QR_MAX = 65;
+  const QR_ROTULO = 10;           // dos líneas de rótulo sobre cada QR
+  const QR_ENTRE = 8;             // aire entre los dos
+
+  /**
+   * El tamaño de QR que cabe en un rectángulo, uno al lado del otro o uno sobre otro.
+   */
+  const disposicionQR = (w: number, h: number) => {
+    const n = qrs.length;
+    const lado = n > 1 ? Math.min((w - QR_ENTRE) / 2, h - QR_ROTULO - 2) : Math.min(w, h - QR_ROTULO - 2);
+    const encima = n > 1 ? Math.min(w, (h - 2 * QR_ROTULO - QR_ENTRE - 2) / 2) : lado;
+    return lado >= encima
+      ? { s: Math.min(lado, QR_MAX), apilados: false }
+      : { s: Math.min(encima, QR_MAX), apilados: true };
+  };
+
+  /** Dibuja los QR centrados en el rectángulo, al tamaño `s`. */
+  const dibujarQRs = (x: number, y: number, w: number, h: number, s: number, apilados: boolean) => {
+    const bloqueW = apilados || qrs.length < 2 ? s : 2 * s + QR_ENTRE;
+    const bloqueH = apilados && qrs.length > 1 ? 2 * (QR_ROTULO + s) + QR_ENTRE : QR_ROTULO + s;
+    const x0 = x + (w - bloqueW) / 2;
+    const y0 = y + (h - bloqueH) / 2;
+    qrs.forEach((q, i) => {
+      const qx = apilados ? x0 : x0 + i * (s + QR_ENTRE);
+      const qy = apilados ? y0 + i * (QR_ROTULO + s + QR_ENTRE) : y0;
+      const cx = qx + s / 2;
+      pdf.setFont('helvetica', 'bold');
+      let fs = Math.min(12, 9 + (s - QR_MIN) / 12);
+      _setFontSize(fs);
+      while (Math.max(...q.rotulo.map((t) => pdf.getTextWidth(t))) > s + QR_ENTRE - 2 && fs > 6.5) {
+        fs -= 0.5;
+        _setFontSize(fs);
+      }
+      pdf.setTextColor(...colors.primary);
+      pdf.text(q.rotulo[0], cx, qy + 4, { align: 'center' });
+      pdf.text(q.rotulo[1], cx, qy + 8, { align: 'center' });
+      pdf.addImage(q.dataUrl, 'PNG', qx, qy + QR_ROTULO, s, s);
+    });
+  };
 
   // Parte la letra en estrofas: bloques de líneas separados por líneas en blanco.
   const parseStanzas = (lyrics: string): string[][] => {
@@ -824,6 +875,8 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     conSiguiente?: boolean;
     /** Es aire de separación: se omite si cae justo al empezar una columna. */
     espacio?: boolean;
+    /** El lugar reservado para los QR: no se dibuja, se reemplaza al final (ver cierre). */
+    cierre?: boolean;
   }
 
   // Interlineado de la letra (mm antes de escalar). El ajuste a una hoja lo aprieta un
@@ -1073,23 +1126,11 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
       });
     });
 
-    // Cierre: QR al canal, centrado al final del flujo (como el escudo del folleto
-    // impreso). Va dentro de la medición, así que nunca abre una hoja por su cuenta.
-    if (qrDataUrl) {
-      const lado = 22;
-      const h = adv(9) + lado;
-      els.push({
-        h,
-        draw: (x, y, w) => {
-          const cx = x + w / 2;
-          pdf.setFont('helvetica', 'bold');
-          pdf.setFontSize(8);
-          pdf.setTextColor(...colors.primary);
-          pdf.text('Escúchalos en nuestro', cx, y + adv(4), { align: 'center' });
-          pdf.text('canal de YouTube', cx, y + adv(7.5), { align: 'center' });
-          pdf.addImage(qrDataUrl!, 'PNG', cx - lado / 2, y + adv(9), lado, lado);
-        },
-      });
+    // Cierre: los QR de la app y del canal. En el flujo va solo el lugar mínimo para
+    // ellos, así se mide con él y nunca abren una hoja por su cuenta; después de
+    // repartir se agrandan hasta llenar el blanco que quede (ver huecosAlFinal).
+    if (qrs.length) {
+      els.push({ h: QR_ROTULO + QR_MIN + 4, cierre: true, draw: () => {} });
     }
 
     return els;
@@ -1100,7 +1141,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     repartirEnColumnas(els, { top: colTop, bottom: colBottom, columnas: 2 }).hojas;
 
   /** Dibuja las piezas ya repartidas, abriendo hoja (con encabezado y pie) al pasar. */
-  const dibujar = (els: Elem[]) => {
+  const dibujar = (els: Elem[]): Colocada[] => {
     const { colocadas } = repartirEnColumnas(els, { top: colTop, bottom: colBottom, columnas: 2 });
     let hojaActual = 1;
     for (const c of colocadas) {
@@ -1114,6 +1155,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
       if (c.anchoCompleto) els[c.pieza].draw(margenCuerpo, c.y, contentW);
       else els[c.pieza].draw(colX[c.columna], c.y, colW);
     }
+    return colocadas;
   };
 
   // ── La letra que llena las 4 planas ──
@@ -1177,7 +1219,35 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   pdf.addPage();
   pageNum++;
   addPageHeader();
-  dibujar(elementos);
+  const colocadas = dibujar(elementos);
+
+  // ── Cierre: los QR, tan grandes como permita el blanco del final ──
+  let planasExtra = 0;
+  if (qrs.length) {
+    const cierre = elementos.findIndex((e) => e.cierre);
+    const huecos = huecosAlFinal(elementos, colocadas, { top: colTop, bottom: colBottom, columnas: 2 }, [cierre]);
+    const opciones = huecos.map((h) => {
+      const x = h.zona === 'ancho' ? margenCuerpo : colX[h.zona as number];
+      const w = h.zona === 'ancho' ? contentW : colW;
+      return { x, y: h.top, w, h: h.alto, ...disposicionQR(w, h.alto) };
+    });
+    const mejorHueco = opciones.reduce((a, b) => (b.s > a.s ? b : a));
+    // Si el cuadernillo igual va a dejar planas en blanco al final, y aquí no alcanzan
+    // su tamaño máximo, van en una plana propia: es papel que ya se imprime.
+    const paginasSinQR = 1 + mejor!.hojas;
+    const sobranPlanas = booklet && paginasSinQR > 2 && paginasSinQR % 4 !== 0;
+    if (sobranPlanas && mejorHueco.s < QR_MAX - 1) {
+      addPageFooter();
+      pdf.addPage();
+      pageNum++;
+      addPageHeader();
+      planasExtra = 1;
+      const { s: lado, apilados } = disposicionQR(contentW, colBottom - colTop);
+      dibujarQRs(margenCuerpo, colTop, contentW, colBottom - colTop, lado, apilados);
+    } else {
+      dibujarQRs(mejorHueco.x, mejorHueco.y, mejorHueco.w, mejorHueco.h, mejorHueco.s, mejorHueco.apilados);
+    }
+  }
   addPageFooter();
 
   // El folleto del Pueblo fiel es SOLO la letra (sin acordes ni partituras).
@@ -1193,7 +1263,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   // hoja impresa por lado y lado, y pasarlas por la imposición solo serviría para
   // achicar la letra a la mitad y dejar dos medias hojas en blanco. En ese caso se
   // entrega el folleto tal cual.
-  const paginas = 1 + mejor!.hojas;
+  const paginas = 1 + mejor!.hojas + planasExtra;
   avanzar(88);
   if (booklet && paginas > 2) {
     const images = await renderPdfToImages({ data: pdf.output('arraybuffer') }, anchoDeRasterizado());

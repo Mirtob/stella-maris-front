@@ -5,7 +5,7 @@
  * portada queda como está y el resto pasa a dos columnas que llenan la hoja de arriba
  * abajo, para que el cantoral entre en una sola hoja.
  */
-import { repartirEnColumnas, planDeCorte, type Pieza } from '../../src/utils/pdfColumns';
+import { repartirEnColumnas, planDeCorte, huecosAlFinal, type Pieza } from '../../src/utils/pdfColumns';
 
 let pass = 0, fail = 0;
 function check(name: string, actual: unknown, expected: unknown) {
@@ -165,6 +165,21 @@ check('la letra que empieza al pie, debajo de una partitura, pasa a la hoja sigu
   marcas([partitura(95), tituloAtado(), linea()]), ['1.A@0', '2.0@0', '2.0@5']);
 check('cuenta bien las hojas con partituras',
   repartir([partitura(60), partitura(60), linea()]).hojas, 2);
+
+// ── Hueco al final para los QR (4-oct-2026) ────────────────────────────────
+console.log('\n== Hueco libre al final ==');
+const huecos = (piezas: Pieza[], excluir: number[] = []) => {
+  const { colocadas } = repartir(piezas);
+  return huecosAlFinal(piezas, colocadas, CAJA, excluir).map(h => `${h.zona}@${h.top}+${h.alto}`);
+};
+check('con la izquierda a medias, la derecha queda entera',
+  huecos([linea(), linea(), linea()]), ['ancho@30+70', '0@30+70', '1@0+100']);
+check('con las dos columnas usadas, el ancho empieza bajo la más larga',
+  huecos([...Array.from({ length: 12 }, () => linea())]), ['ancho@100+0', '0@100+0', '1@20+80']);
+check('bajo una partitura a todo el ancho, se cuenta desde ella',
+  huecos([linea(), partitura(40)]), ['ancho@50+50', '0@50+50', '1@50+50']);
+check('lo reservado para los QR no ocupa el hueco',
+  huecos([linea(), linea(20)], [1]), ['ancho@10+90', '0@10+90', '1@0+100']);
 
 console.log(`\n${pass} ok, ${fail} fallas`);
 if (fail > 0) process.exit(1);

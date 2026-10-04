@@ -230,3 +230,38 @@ export function repartirEnColumnas(piezas: Pieza[], caja: Caja): { colocadas: Co
   colocadas.sort((a, b) => a.pieza - b.pieza);
   return { colocadas, hojas: hoja };
 }
+
+/** Un hueco libre al final: en qué ancho (una columna o la plana entera), desde dónde y cuánto. */
+export interface HuecoLibre {
+  zona: 'ancho' | number;
+  top: number;
+  alto: number;
+}
+
+/**
+ * Los huecos que quedan libres en la ÚLTIMA hoja después de colocar todo menos las
+ * piezas indicadas en `excluir` (el lugar reservado para los QR del cierre).
+ *
+ * Son tres candidatos, y el que llama elige el que le dé más tamaño: lo que queda bajo
+ * la columna izquierda, lo que queda bajo la derecha, y la franja de ancho completo bajo
+ * lo más bajo de las dos. Lo que va a todo el ancho (una partitura) corta las columnas:
+ * solo cuenta lo que está debajo de la última.
+ */
+export function huecosAlFinal(
+  piezas: Pieza[], colocadas: Colocada[], caja: Caja, excluir: number[] = [],
+): HuecoLibre[] {
+  const { top, bottom, columnas } = caja;
+  const hoja = colocadas.reduce((m, c) => Math.max(m, c.hoja), 1);
+  const enLaHoja = colocadas.filter((c) => c.hoja === hoja && !excluir.includes(c.pieza));
+  const fin = (c: Colocada) => c.y + piezas[c.pieza].h;
+
+  const franja = enLaHoja.filter((c) => c.anchoCompleto).reduce((m, c) => Math.max(m, fin(c)), top);
+  const finDe = (col: number) => enLaHoja
+    .filter((c) => !c.anchoCompleto && c.columna === col && c.y >= franja)
+    .reduce((m, c) => Math.max(m, fin(c)), franja);
+
+  const finales = Array.from({ length: columnas }, (_, col) => finDe(col));
+  const huecos: HuecoLibre[] = [{ zona: 'ancho', top: Math.max(...finales), alto: 0 }];
+  if (columnas > 1) finales.forEach((t, col) => huecos.push({ zona: col, top: t, alto: 0 }));
+  return huecos.map((h) => ({ ...h, alto: Math.max(0, bottom - h.top) }));
+}
