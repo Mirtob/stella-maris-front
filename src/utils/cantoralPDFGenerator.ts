@@ -558,6 +558,8 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
       pdf.text('Stella Maris', margenCuerpo, 10);
     }
     pdf.setFont('helvetica', 'normal');
+    // Tamaño FIJO, sin la escala del cuerpo (ver addPageFooter).
+    _setFontSize(9.5);
     pdf.setTextColor(120, 120, 120);
     // El encabezado es UNA línea sobre la regla: una celebración de nombre largo
     // ("Solemnidad de …, patronos de la parroquia") se salía de la hoja y se metía
@@ -575,11 +577,17 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     pdf.setLineWidth(0.3);
     pdf.line(margenCuerpo, pageH - 12, pageW - margenCuerpo, pageH - 12);
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(9);
+    // Tamaño FIJO: `pdf.setFontSize` está interceptado y multiplica por la escala de la
+    // letra del cuerpo, que llega a ×1,8 cuando el folleto va solo con letra. Con eso el
+    // nombre de la parroquia crecía hasta montarse sobre «Pág. N» (4-oct-2026).
+    _setFontSize(9);
     pdf.setTextColor(140, 140, 140);
-    const parish = cleanText(cantoral.parishName);
+    const pagina = `Pág. ${pageNum}`;
+    // Y por si el nombre es muy largo: se recorta antes del número, con aire entre ambos.
+    const parish = recortarAlAncho(cleanText(cantoral.parishName),
+      pageW - margenCuerpo * 2 - pdf.getTextWidth(pagina) - 6);
     pdf.text(parish, margenCuerpo, pageH - 7);
-    pdf.text(`Pág. ${pageNum}`, pageW - margenCuerpo, pageH - 7, { align: 'right' });
+    pdf.text(pagina, pageW - margenCuerpo, pageH - 7, { align: 'right' });
   };
 
   // ─── PORTADA ───
