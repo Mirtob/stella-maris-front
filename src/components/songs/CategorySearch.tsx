@@ -779,7 +779,7 @@ export function CategorySearch({
                   <CasillaPartitura
                     checked={partituraMisa}
                     onChange={onPartituraMisaChange}
-                    detalle="Kyrie, Gloria, Santo y Cordero. Sin ella, el folleto lleva solo la letra."
+                    detalle="Kyrie, Gloria, Santo y Cordero: por ahora el folleto lleva solo la letra (una hoja)."
                   />
                 </div>
               )}

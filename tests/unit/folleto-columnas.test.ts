@@ -136,5 +136,35 @@ check('el título no se queda solo: va con el primer trozo',
   colocadas[0].hoja === colocadas[1].hoja && colocadas[0].columna === colocadas[1].columna,
   true);
 
+// ── Partituras a todo el ancho (4-oct-2026) ─────────────────────────────────
+// En una Misa real la partitura salía impresa a un tercio de su tamaño: a ancho de
+// columna y achicada otra vez por el cuadernillo. Ahora ocupa las dos columnas.
+console.log('\n== Partituras a todo el ancho ==');
+const partitura = (h = 30): Pieza => ({ h, anchoCompleto: true });
+const tituloAtado = (h = 5): Pieza => ({ h, conSiguiente: true });
+const marcas = (piezas: Pieza[], caja = CAJA) =>
+  repartir(piezas, caja).colocadas.map(c => `${c.hoja}.${c.anchoCompleto ? 'A' : c.columna}@${c.y}`);
+
+check('la partitura va a todo el ancho, debajo de la letra',
+  marcas([linea(), linea(), partitura()]).slice(2), ['1.A@10']);
+check('antes de la partitura, la letra se reparte pareja en las dos columnas',
+  marcas([linea(), linea(), linea(), linea(), partitura()]),
+  ['1.0@0', '1.0@10', '1.1@0', '1.1@10', '1.A@20']);
+check('después de la partitura, la letra sigue a dos columnas debajo de ella',
+  marcas([partitura(), linea(), linea()]), ['1.A@0', '1.0@30', '1.0@40']);
+check('el título viaja con su partitura, también a todo el ancho',
+  marcas([linea(), tituloAtado(), partitura()]), ['1.0@0', '1.A@10', '1.A@15']);
+check('si no cabe en lo que queda, la partitura (con su título) pasa a la hoja siguiente',
+  marcas([...Array.from({ length: 19 }, () => linea(10)), tituloAtado(), partitura(30)]).slice(-2),
+  ['2.A@0', '2.A@5']);
+check('una partitura en varios trozos sigue en la hoja siguiente',
+  marcas([partitura(60), partitura(60)]), ['1.A@0', '2.A@0']);
+check('sin partituras, el reparto es el de siempre',
+  marcas(Array.from({ length: 12 }, () => linea())).slice(9), ['1.0@90', '1.1@0', '1.1@10']);
+check('la letra que empieza al pie, debajo de una partitura, pasa a la hoja siguiente',
+  marcas([partitura(95), tituloAtado(), linea()]), ['1.A@0', '2.0@0', '2.0@5']);
+check('cuenta bien las hojas con partituras',
+  repartir([partitura(60), partitura(60), linea()]).hojas, 2);
+
 console.log(`\n${pass} ok, ${fail} fallas`);
 if (fail > 0) process.exit(1);

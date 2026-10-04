@@ -26,6 +26,14 @@ export interface Pieza {
   conSiguiente?: boolean;
   /** Aire de separación: se omite si cae justo al empezar una columna. */
   espacio?: boolean;
+  /**
+   * Ocupa el ancho de TODAS las columnas: las partituras (pedido del 4-oct-2026).
+   *
+   * A ancho de columna, y achicada otra vez al imponer el cuadernillo, una partitura
+   * del Drive quedaba impresa a un tercio de su tamaño y no se podía leer. A todo el
+   * ancho de la plana se lee como un cantoral impreso. La letra sigue a columnas.
+   */
+  anchoCompleto?: boolean;
 }
 
 export interface Colocada {
@@ -36,6 +44,8 @@ export interface Colocada {
   columna: number;
   /** Coordenada del borde superior de la pieza. */
   y: number;
+  /** Va a todo el ancho (ver Pieza.anchoCompleto); `columna` es 0. */
+  anchoCompleto?: boolean;
 }
 
 export interface Caja {
@@ -89,6 +99,82 @@ function altoDesde(piezas: Pieza[], i: number): number {
   return h;
 }
 
+/** Cómo quedó un tramo de piezas a columnas: dónde cayó cada una y dónde terminó. */
+interface Tramo {
+  colocadas: Colocada[];
+  hoja: number;
+  /** Borde inferior más bajo de la última hoja (el fondo de la columna más larga). */
+  fondo: number;
+}
+
+/**
+ * Llena columnas con `indices` empezando en (`hoja`, `y0`). En la primera hoja las
+ * columnas arrancan en `y0` (debajo de lo que ya hay); en las siguientes, en `top`.
+ */
+function fluir(
+  piezas: Pieza[], indices: number[], hoja: number, y0: number,
+  top: number, bottom: number, columnas: number,
+): Tramo {
+  const colocadas: Colocada[] = [];
+  let col = 0;
+  let inicio = y0;
+  let y = y0;
+  let fondo = y0;
+  for (const i of indices) {
+    const p = piezas[i];
+    if (p.espacio && y === inicio) continue;         // no empezar una columna con aire
+
+    const alto = altoDesde(piezas, i);
+    if (y > inicio && y + alto > bottom) {
+      col++;
+      if (col >= columnas) { col = 0; hoja++; inicio = top; fondo = top; }
+      y = inicio;
+      if (p.espacio) continue;
+    }
+    // Franja que empieza debajo de una partitura, casi al pie: si ni la columna vacía
+    // alcanza, las demás tampoco (empiezan a la misma altura). Se sigue en otra hoja; si
+    // no, el encabezado quedaba montado sobre el pie de página.
+    if (y === inicio && inicio > top && y + alto > bottom) {
+      col = 0; hoja++; inicio = top; fondo = top; y = top;
+      if (p.espacio) continue;
+    }
+
+    colocadas.push({ pieza: i, hoja, columna: col, y });
+    y += p.h;
+    fondo = Math.max(fondo, y);
+  }
+  return { colocadas, hoja, fondo };
+}
+
+/**
+ * Las columnas de la última hoja de un tramo, parejas: antes de una partitura a todo el
+ * ancho, la letra de arriba se reparte a la misma altura en las dos columnas en vez de
+ * bajar por la izquierda y dejar la derecha vacía. Busca el fondo más alto con el que
+ * esas piezas siguen cabiendo en esa misma hoja.
+ */
+function equilibrar(
+  piezas: Pieza[], tramo: Tramo, y0Primera: number, top: number, bottom: number, columnas: number,
+): Tramo {
+  if (columnas < 2 || tramo.colocadas.length === 0) return tramo;
+  const ultima = tramo.hoja;
+  const enLaUltima = tramo.colocadas.filter((c) => c.hoja === ultima);
+  if (!enLaUltima.some((c) => c.columna > 0) && enLaUltima.length < 2) return tramo;
+  const previas = tramo.colocadas.filter((c) => c.hoja !== ultima);
+  const inicio = previas.length ? top : y0Primera;
+  const indices = enLaUltima.map((c) => c.pieza);
+
+  let lo = inicio;
+  let hi = bottom;
+  let mejor: Tramo | null = null;
+  for (let k = 0; k < 24 && hi - lo > 0.25; k++) {
+    const medio = (lo + hi) / 2;
+    const prueba = fluir(piezas, indices, ultima, inicio, top, medio, columnas);
+    if (prueba.hoja === ultima) { mejor = prueba; hi = medio; } else { lo = medio; }
+  }
+  if (!mejor) return tramo;
+  return { colocadas: [...previas, ...mejor.colocadas], hoja: ultima, fondo: mejor.fondo };
+}
+
 /**
  * Coloca las piezas y dice cuántas hojas hicieron falta. No descarta nada: una pieza
  * más alta que la columna entera se dibuja igual (y se sale), porque perder letra de
@@ -97,24 +183,50 @@ function altoDesde(piezas: Pieza[], i: number): number {
 export function repartirEnColumnas(piezas: Pieza[], caja: Caja): { colocadas: Colocada[]; hojas: number } {
   const { top, bottom, columnas } = caja;
   const colocadas: Colocada[] = [];
-  let col = 0;
   let hoja = 1;
+  /** Dónde empieza la franja a columnas en curso (debajo de la última partitura). */
   let y = top;
+  /** Piezas a columnas que esperan la próxima pieza a todo el ancho (o el final). */
+  let pendientes: number[] = [];
+
+  const volcar = (antesDeAnchoCompleto: boolean) => {
+    if (!pendientes.length) return;
+    let tramo = fluir(piezas, pendientes, hoja, y, top, bottom, columnas);
+    if (antesDeAnchoCompleto) tramo = equilibrar(piezas, tramo, y, top, bottom, columnas);
+    colocadas.push(...tramo.colocadas);
+    hoja = tramo.hoja;
+    y = tramo.fondo;
+    pendientes = [];
+  };
 
   for (let i = 0; i < piezas.length; i++) {
     const p = piezas[i];
-    if (p.espacio && y === top) continue;         // no empezar una columna con aire
+    if (!p.anchoCompleto) { pendientes.push(i); continue; }
 
-    if (y > top && y + altoDesde(piezas, i) > bottom) {
-      col++;
-      if (col >= columnas) { col = 0; hoja++; }
-      y = top;
-      if (p.espacio) continue;
+    // Lo que viene atado a la partitura (el encabezado de la parte, el título del canto)
+    // va con ella, también a todo el ancho: si no, quedaría arriba en una columna y la
+    // partitura debajo, separada de su título.
+    const atadas: number[] = [];
+    while (pendientes.length && piezas[pendientes[pendientes.length - 1]].conSiguiente) {
+      atadas.unshift(pendientes.pop()!);
     }
+    volcar(true);
 
-    colocadas.push({ pieza: i, hoja, columna: col, y });
-    y += p.h;
+    for (const k of [...atadas, i]) {
+      const q = piezas[k];
+      if (q.espacio && y === top) continue;
+      // El bloque atado se mide entero UNA vez, al empezarlo (ver altoDesde).
+      if (y > top && y + altoDesde(piezas, k) > bottom) {
+        hoja++;
+        y = top;
+        if (q.espacio) continue;
+      }
+      colocadas.push({ pieza: k, hoja, columna: 0, y, anchoCompleto: true });
+      y += q.h;
+    }
   }
+  volcar(false);
 
+  colocadas.sort((a, b) => a.pieza - b.pieza);
   return { colocadas, hojas: hoja };
 }

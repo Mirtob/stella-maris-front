@@ -689,6 +689,21 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   const gutter = 7;                              // canal entre columnas
   const colW = (contentW - gutter) / 2;
   const colX = [margenCuerpo, margenCuerpo + colW + gutter];
+  /**
+   * Ancho de las partituras: el de la plana entera, no el de una columna (4-oct-2026).
+   * Probado en una Misa real: a ancho de columna, y achicada otra vez al imponer el
+   * cuadernillo, la pauta quedaba impresa en unos 2,5 mm y no se leía. A todo el ancho
+   * queda cerca de 5 mm, como un cantoral impreso. Ver Pieza.anchoCompleto.
+   */
+  const anchoPartitura = contentW;
+  /**
+   * El gregoriano, a 3/4 de la plana: a todo el ancho quedaba más grande que el propio
+   * Graduale y el Gloria solo ocupaba plana y media. Así queda cerca del tamaño del
+   * libro impreso, que es el que se canta de toda la vida, y va centrado.
+   */
+  const anchoGregoriano = contentW * 0.75;
+  /** Ancho con el que se cortó cada facsímil (se dibuja centrado a ese ancho). */
+  const anchoDelFacsimil = new Map<string, number>();
 
   /**
    * Los tetragramas del propio gregoriano, cargados ANTES de medir.
@@ -705,8 +720,11 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     .map(async (s) => {
       const img = await loadImage(s.gradualeImage!);
       if (!img?.naturalWidth) return;
-      const trozos = partirEnSistemas(img, colW, colBottom - colTop, RESERVA_TITULO);
-      if (trozos.length) facsimiles.set(String(s.id), trozos);
+      const trozos = partirEnSistemas(img, anchoGregoriano, colBottom - colTop, RESERVA_TITULO);
+      if (trozos.length) {
+        facsimiles.set(String(s.id), trozos);
+        anchoDelFacsimil.set(String(s.id), anchoGregoriano);
+      }
     }));
   avanzar(22);
 
@@ -749,9 +767,12 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
         if (!img?.naturalWidth) continue;
         const limpia = await recortarMargenes(img);
         if (!limpia?.naturalWidth) continue;
-        trozos.push(...partirEnSistemas(limpia, colW, colBottom - colTop, RESERVA_TITULO));
+        trozos.push(...partirEnSistemas(limpia, anchoPartitura, colBottom - colTop, RESERVA_TITULO));
       }
-      if (trozos.length) facsimiles.set(String(s.id), trozos);
+      if (trozos.length) {
+        facsimiles.set(String(s.id), trozos);
+        anchoDelFacsimil.set(String(s.id), anchoPartitura);
+      }
     } catch {
       /* sin partitura se imprime la letra, que es lo que se hacía antes */
     } finally {
@@ -878,17 +899,20 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
         const ultimo = i === trozos.length - 1;
         els.push({
           h: t.h + (ultimo ? adv(2) : 0),
+          anchoCompleto: true,
           // El pie ("Graduale Romanum · p. 738") no se despega del último trozo: solo,
           // al empezar una columna, se lee como si fuera de otro canto.
           conSiguiente: ultimo && !!song.gradualeFuente,
           draw: (x, y, ancho) => {
-            pdf.addImage(t.dataUrl, 'PNG', x, y, ancho, t.h, undefined, 'FAST');
+            const w = anchoDelFacsimil.get(String(song.id)) ?? ancho;
+            pdf.addImage(t.dataUrl, 'PNG', x + (ancho - w) / 2, y, w, t.h, undefined, 'FAST');
           },
         });
       });
       if (song.gradualeFuente) {
         els.push({
           h: adv(4.5),
+          anchoCompleto: true,
           draw: (x, y, ancho) => {
             pdf.setFont('helvetica', 'italic');
             pdf.setFontSize(8);
@@ -1079,7 +1103,8 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
         addPageHeader();
         hojaActual = c.hoja;
       }
-      els[c.pieza].draw(colX[c.columna], c.y, colW);
+      if (c.anchoCompleto) els[c.pieza].draw(margenCuerpo, c.y, contentW);
+      else els[c.pieza].draw(colX[c.columna], c.y, colW);
     }
   };
 
@@ -1114,6 +1139,26 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
       if (hojas <= PLANAS_DE_CANTOS) {
         mejor = { escala: s, interlineado: il, hojas, elementos: els };
         break buscar;
+      }
+    }
+  }
+  // Si no cupo en 3 planas, el cuadernillo sale de 8 (o 12…) igual: se busca la letra
+  // MÁS GRANDE que quepa en ese cuadernillo, no la más chica que ahorra una plana que
+  // de todos modos va en blanco. Probado en una Misa real (4-oct-2026): con el ordinario
+  // en partitura el folleto pasó a 8 y la letra había quedado al mínimo.
+  if (mejor!.hojas > PLANAS_DE_CANTOS) {
+    const capacidad = Math.ceil((1 + mejor!.hojas) / 4) * 4 - 1;
+    buscarCuadernillo:
+    for (const s of ESCALAS) {
+      for (const il of INTERLINEADOS) {
+        scale = s;
+        interlineado = il;
+        const els = construirElementos();
+        const hojas = medir(els);
+        if (hojas <= capacidad) {
+          mejor = { escala: s, interlineado: il, hojas, elementos: els };
+          break buscarCuadernillo;
+        }
       }
     }
   }

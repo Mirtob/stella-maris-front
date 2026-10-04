@@ -169,7 +169,7 @@ export function KyrialeChoice({
           <CasillaPartitura
             checked={partitura}
             onChange={onPartituraChange}
-            detalle="Sin la partitura, el folleto lleva el texto en latín."
+            detalle="Por ahora el folleto lleva solo el texto en latín (una hoja)."
           />
         </div>
       )}

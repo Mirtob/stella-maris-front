@@ -222,7 +222,7 @@ export function PadreNuestroYAclamaciones({
           <CasillaPartitura
             checked={partitura}
             onChange={onPartituraChange}
-            detalle="Vale para el Padre Nuestro y las aclamaciones. Sin ella, el folleto lleva solo la letra."
+            detalle="Padre Nuestro y aclamaciones: por ahora el folleto lleva solo la letra (una hoja)."
           />
         </div>
       )}

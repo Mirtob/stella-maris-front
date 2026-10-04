@@ -317,10 +317,13 @@ export function ChoirView({
    * ordinario, y cada una se pregunta donde se elige ese bloque (ver utils/ordinary):
    * la Misa del catálogo en «Completar la Misa», la del Kyriale en su tarjeta, y el
    * Padre Nuestro con las aclamaciones en la suya.
+   *
+   * Por defecto, SOLO LA LETRA (4-oct-2026): para leerse, la partitura va a todo el
+   * ancho y el folleto pasa de una hoja a dos. Quien la quiera la marca y se le avisa.
    */
-  const [partituraMisa, setPartituraMisa] = useState(true);
-  const [partituraGregoriano, setPartituraGregoriano] = useState(true);
-  const [partituraPadreNuestro, setPartituraPadreNuestro] = useState(true);
+  const [partituraMisa, setPartituraMisa] = useState(false);
+  const [partituraGregoriano, setPartituraGregoriano] = useState(false);
+  const [partituraPadreNuestro, setPartituraPadreNuestro] = useState(false);
 
   /**
    * Una sola Misa del ordinario: la del catálogo O la del Kyriale. Antes se podían tener
