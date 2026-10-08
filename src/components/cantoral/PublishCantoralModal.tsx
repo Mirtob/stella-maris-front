@@ -7,7 +7,8 @@ import { getTodayLocal, formatYmdForDisplay, addDaysLocal } from '../../utils/da
 import { formatActiveParishLabel } from '../../utils/parish';
 import { MassType } from '../../types';
 import { MASS_TYPE_LABEL, MASS_TYPE_RANGE, MASS_TIME_BY_TYPE } from '../../utils/massType';
-import { getLiturgicalDateForDate, getDateForLiturgicalName, isSunday, getLiturgicalDateNames } from '../../utils/liturgicalCalendar';
+import { getDateForLiturgicalName, isSunday, getLiturgicalDateNames, getCelebrationsForDate } from '../../utils/liturgicalCalendar';
+import { nombreDelDia, nombreDeFeria } from '../../utils/feria';
 import { celebracionInicial, motivoParaNoPublicar } from '../../utils/publishGate';
 import { LiturgicalColorBadge } from '../liturgy/LiturgicalColorBadge';
 import { validateCantoral, LiturgicalWarning } from '../../utils/liturgicalValidation';
@@ -164,7 +165,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], invi
     // Sembrar con los datos elegidos en el constructor (fecha/hora/tipo) para no
     // volver a pedirlos; si no vienen, cae a hoy.
     const date = initialDate || getTodayLocal();
-    const liturgical = getLiturgicalDateForDate(date) || '';
+    const liturgical = nombreDelDia(date);
     const time = initialMassTime || '';
     const type: MassType = initialMassType || 'dia';
     const init: Record<string, ParishSchedule> = {};
@@ -176,7 +177,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], invi
       init[i.hostParish] = {
         ...init[i.hostParish],
         date: i.date,
-        liturgicalDate: getLiturgicalDateForDate(i.date) || liturgical,
+        liturgicalDate: nombreDelDia(i.date) || liturgical,
         massType: i.massType,
         vigil: i.massType === 'visperas_i',
         massTime: '',
@@ -208,7 +209,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], invi
   // ── Efectos de sincronización fecha ↔ celebración (solo modo una parroquia) ─
   useEffect(() => {
     if (dateChangeSource === 'calendar') {
-      const liturgicalName = getLiturgicalDateForDate(selectedDate);
+      const liturgicalName = nombreDelDia(selectedDate);
 
       if (liturgicalName) {
         setLiturgicalDate(liturgicalName);
@@ -272,37 +273,23 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], invi
     // Una invitación es para un día concreto; moverle la fecha la invalida y el
     // servidor rechazaría la publicación con un error incomprensible.
     if (invitacionDe(parish)) return;
-    const derived = getLiturgicalDateForDate(date);
-    updateSchedule(parish, { date, liturgicalDate: derived || schedules[parish]?.liturgicalDate || '' });
+    // El nombre sigue a la fecha, siempre: dejar el de la fecha anterior era justo lo que
+    // permitía publicar un jueves con el nombre del domingo.
+    updateSchedule(parish, { date, liturgicalDate: nombreDelDia(date) });
   };
 
   // ── Publicar ──────────────────────────────────────────────────────────────
-  // Fecha base = la fecha CANÓNICA de la celebración elegida (si se reconoce en el
-  // calendario o en las solemnidades agregadas), NO la que haya quedado en el campo.
-  // Así I Vísperas siempre cae el día correcto aunque el campo de fecha no se haya
-  // sincronizado. Si la celebración no se reconoce, usa la fecha del campo.
-  const canonicalBaseDate = (litName: string, fallbackDate: string): string => {
-    const name = (litName || '').trim();
-    if (!name) return fallbackDate;
-    const year = new Date(fallbackDate || getTodayLocal()).getFullYear();
-    const derived = getDateForLiturgicalName(name, year);
-    if (derived) return derived;
-    const custom = customDates.find(cd => cd.name === name);
-    return custom?.date || fallbackDate;
-  };
-
-  // La fecha que se GUARDA es siempre la del día propio de la celebración (la que
-  // elige el usuario / la canónica de la celebración). El ajuste del I Vísperas
-  // (que se canta la tarde anterior) lo resuelve la VENTANA DE VIGENCIA, no la fecha.
-  const publishDate = (date: string, _type: MassType, litName: string) =>
-    canonicalBaseDate(litName, date);
+  // La fecha que se GUARDA es la que eligió el coro, y nada más (8-oct-2026). Antes se
+  // reemplazaba por la fecha «propia» de la celebración elegida: un cantoral de jueves
+  // al que se le puso el nombre de la celebración del domingo se guardaba el domingo,
+  // pegado al del fin de semana. Los cantorales se separan por fecha; la celebración es
+  // solo su nombre. El ajuste del I Vísperas lo resuelve la VENTANA DE VIGENCIA.
+  const publishDate = (date: string, _type: MassType, _litName: string) => date;
 
   // Fecha en que efectivamente se canta — solo para el aviso al usuario:
   // I Vísperas = la tarde del día anterior; el resto, el mismo día.
-  const singDate = (date: string, type: MassType, litName: string) => {
-    const base = canonicalBaseDate(litName, date);
-    return type === 'visperas_i' ? addDaysLocal(base, -1) : base;
-  };
+  const singDate = (date: string, type: MassType, _litName: string) =>
+    type === 'visperas_i' ? addDaysLocal(date, -1) : date;
 
   const buildTargets = (): PublishTarget[] => {
     if (isMulti) {
@@ -451,6 +438,21 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], invi
     ...customDates.map(cd => cd.name),
   ];
 
+  /**
+   * Los nombres posibles para UNA fecha ya elegida: lo que se celebra ese día (la del
+   * calendario y las agregadas) y, si es día de semana, su feria. Antes se ofrecía la
+   * lista del año entero, y elegir de ahí la celebración de otro día era cómo un
+   * cantoral de jueves terminaba guardado el domingo.
+   */
+  const opcionesDelDia = (fecha: string, actual?: string): string[] => {
+    if (!fecha) return [];
+    const { principal, ademas } = getCelebrationsForDate(fecha);
+    const agregadas = customDates.filter(cd => cd.date === fecha).map(cd => cd.name);
+    const lista = [principal, ...ademas, ...agregadas, nombreDeFeria(fecha), actual ?? '']
+      .map(n => n.trim()).filter(Boolean);
+    return Array.from(new Set(lista));
+  };
+
   // Aviso: la fecha EFECTIVA en que se publica (ya con el ajuste de I Vísperas)
   // quedó en el pasado → el Pueblo fiel no lo verá (solo muestra de hoy en adelante).
   const pastPublishDates = (() => {
@@ -542,7 +544,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], invi
                         <strong className="text-brand-ink">{formatYmdForDisplay(initialDate!, { weekday: 'long', day: 'numeric', month: 'long' })}</strong>
                         {initialMassTime ? ` · ${initialMassTime}` : ''}
                         {initialMassType === 'visperas_i' ? ' · I Vísperas' : initialMassType === 'visperas_ii' ? ' · II Vísperas' : ''}
-                        {getLiturgicalDateForDate(initialDate!) ? ` · ${getLiturgicalDateForDate(initialDate!)}` : ''}
+                        {nombreDelDia(initialDate!) ? ` · ${nombreDelDia(initialDate!)}` : ''}
                       </p>
                       <p className="text-xs text-brand-ink-soft mt-1">Datos de tu parroquia (elegidos al inicio). Otras parroquias pueden tener su propia fecha y horario abajo.</p>
                     </div>
@@ -559,7 +561,6 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], invi
                     {allParishes.map((parish) => {
                       const checked = selectedParishes.has(parish);
                       const s = schedules[parish];
-                      const year = new Date(s?.date || getTodayLocal()).getFullYear();
                       return (
                         <div
                           key={parish}
@@ -624,7 +625,7 @@ export function PublishCantoralModal({ cantoral, parishName, parishes = [], invi
                                   className="w-full px-3 py-3 text-base rounded-lg border-2 border-blue-300 dark:border-white/20 focus:outline-none focus:border-blue-600 bg-white/70 dark:bg-white/10 text-brand-ink font-bold"
                                 >
                                   <option value="">Seleccionar...</option>
-                                  {liturgicalOptions(year).map((name) => (
+                                  {opcionesDelDia(s.date, s.liturgicalDate).map((name) => (
                                     <option key={name} value={name}>{name}</option>
                                   ))}
                                 </select>

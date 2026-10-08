@@ -89,7 +89,7 @@ function genToLitDate(e: LiturgicalInfo): LiturgicalDate {
 // Fallback hand-rolled (solo para años fuera del rango generado)
 // ===========================================================================
 
-function calculateEaster(year: number): Date {
+export function calculateEaster(year: number): Date {
   const a = year % 19;
   const b = Math.floor(year / 100);
   const c = year % 100;
@@ -107,7 +107,7 @@ function calculateEaster(year: number): Date {
   return new Date(year, month - 1, day);
 }
 
-function getFirstSundayOfAdvent(year: number): Date {
+export function getFirstSundayOfAdvent(year: number): Date {
   const christmas = new Date(year, 11, 25);
   const dayOfWeek = christmas.getDay();
   const daysToSubtract = dayOfWeek === 0 ? 28 : 21 + dayOfWeek;

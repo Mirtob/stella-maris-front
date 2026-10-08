@@ -54,12 +54,14 @@ check('sin horario', motivoParaNoPublicar({ ...buin, horario: '', celebracion: '
 check('sin celebración, se ofrece agregarla',
   motivoParaNoPublicar({ ...buin, celebracion: '' })?.includes('Agrégala aquí abajo'), true);
 
-console.log('\n== Un día sin celebración: ahí sí se pide ==');
-// No es un fallo, es la realidad del calendario. Lo que importa es que se AVISE
-// y no que el botón quede gris sin motivo.
-check('el día libre no está en el calendario', celebracionInicial(diaLibre), '');
-check('y el portero lo explica',
-  motivoParaNoPublicar({ ...buin, fecha: diaLibre, celebracion: celebracionInicial(diaLibre) })?.startsWith('Falta la celebración'), true);
+console.log('\n== Un día de semana sin celebración: se publica con su feria ==');
+// 8-oct-2026: antes aquí se exigía agregar una celebración, y el coro eligió la del
+// domingo de la lista — el cantoral del jueves se guardó el domingo. Ahora el día de
+// semana trae su nombre propio y se publica sin agregar nada.
+check('el día libre abre con el nombre de su feria',
+  celebracionInicial(diaLibre), 'Martes de la 22.ª semana del Tiempo Ordinario');
+check('y se puede publicar sin agregar una celebración',
+  motivoParaNoPublicar({ ...buin, fecha: diaLibre, celebracion: celebracionInicial(diaLibre) }), null);
 
 console.log('\n== Varias parroquias: no se rompió lo que ya andaba ==');
 const cel = celebracionInicial(domingo);

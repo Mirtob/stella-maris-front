@@ -18,6 +18,7 @@ import { KyrialeChoice } from '../songs/KyrialeChoice';
 import { PadreNuestroYAclamaciones } from '../cantoral/PadreNuestroYAclamaciones';
 import { marcarPartituras, llevaPartitura } from '../../utils/ordinary';
 import { isKyrialeSong } from '../../utils/kyrialeSong';
+import { nombreDeFeria } from '../../utils/feria';
 import { getCelebrationsForDate, getLiturgicalDateForDate, getPersistedCustomDates, setPersistedCustomDates, EVENTO_CELEBRACIONES } from '../../utils/liturgicalCalendar';
 import { getSundayCycle } from '../../utils/liturgicalCycle';
 import { resolvePsalm } from '../../data/psalmIndex';
@@ -863,7 +864,10 @@ export function ChoirView({
           <p className="text-sm text-brand-ink-soft mt-3">
             {massCelebration
               ? <>{formatYmdForDisplay(massDate, { weekday: 'long', day: 'numeric', month: 'long' })} · <strong className="text-brand-ink">{massCelebration}</strong> · Año {massCycle}</>
-              : <>{formatYmdForDisplay(massDate, { weekday: 'long', day: 'numeric', month: 'long' })} — esta fecha no tiene una celebración en el calendario.</>}
+              : nombreDeFeria(massDate)
+                // Un día de semana sin celebración propia tiene su nombre: con ese se publica.
+                ? <>{formatYmdForDisplay(massDate, { weekday: 'long', day: 'numeric', month: 'long' })} · <strong className="text-brand-ink">{nombreDeFeria(massDate)}</strong></>
+                : <>{formatYmdForDisplay(massDate, { weekday: 'long', day: 'numeric', month: 'long' })} — esta fecha no tiene una celebración en el calendario.</>}
           </p>
           {enLugarDe && (
             <p className="text-sm text-brand-ink-soft mt-1">

@@ -1,4 +1,4 @@
-import { getLiturgicalDateForDate } from './liturgicalCalendar';
+import { nombreDelDia } from './feria';
 import { getTodayLocal } from './dateLocal';
 
 /**
@@ -19,7 +19,9 @@ import { getTodayLocal } from './dateLocal';
  * arreglarlo desde esa pantalla.
  */
 export function celebracionInicial(fecha?: string): string {
-  return getLiturgicalDateForDate(fecha || getTodayLocal()) || '';
+  // Un día de semana sin celebración propia abre con el nombre de su feria («Jueves de
+  // la 27.ª semana del Tiempo Ordinario»): publicarlo no exige agregar nada.
+  return nombreDelDia(fecha || getTodayLocal());
 }
 
 export interface EstadoPublicacion {
