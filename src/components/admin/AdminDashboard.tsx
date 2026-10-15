@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Users, Church, Music, ShieldCheck, Lock, AlertTriangle, Database, Youtube, LifeBuoy, KeyRound, BarChart3, GraduationCap, Megaphone } from 'lucide-react';
+import { Users, Church, Music, ShieldCheck, Lock, AlertTriangle, Youtube, LifeBuoy, KeyRound, BarChart3, GraduationCap, Megaphone, LayoutDashboard } from 'lucide-react';
 import { ProfileManager } from '../profile/ProfileManager';
 import { ParishManager } from '../profile/ParishManager';
 import { SongManager } from '../songs/SongManager';
-import { CatalogMigration } from './CatalogMigration';
 import { YouTubeSyncDialog } from './YouTubeSyncDialog';
+import { SongSummaryDashboard } from './SongSummaryDashboard';
 import { RecoveryManager } from '../profile/RecoveryManager';
 import { AdminUserAccounts } from './AdminUserAccounts';
 import { SurveyResults } from './SurveyResults';
@@ -12,7 +12,7 @@ import { CourseQuizEditor } from './CourseQuizEditor';
 import { AdminTeam } from './AdminTeam';
 import { BroadcastManager } from './BroadcastManager';
 
-type AdminView = 'menu' | 'users' | 'equipo' | 'avisos' | 'accounts' | 'parishes' | 'songs' | 'migration' | 'youtube-sync' | 'recovery' | 'survey' | 'quizzes';
+type AdminView = 'menu' | 'users' | 'equipo' | 'avisos' | 'accounts' | 'parishes' | 'songs' | 'resumen-cantos' | 'youtube-sync' | 'recovery' | 'survey' | 'quizzes';
 
 interface AdminDashboardProps {
   /**
@@ -33,7 +33,9 @@ export function AdminDashboard({ soloCantos = false, enviadoPor }: AdminDashboar
 
   // Red de seguridad: si por un enlace viejo o un estado raro se pidiera otra vista,
   // el ayudante vuelve al menú en vez de ver una pantalla que no puede usar.
-  const vistaEfectiva: AdminView = soloCantos && currentView !== 'songs' ? 'menu' : currentView;
+  // El resumen es solo lectura del catálogo (y del canal): también le sirve al ayudante.
+  const vistaEfectiva: AdminView =
+    soloCantos && currentView !== 'songs' && currentView !== 'resumen-cantos' ? 'menu' : currentView;
 
   if (vistaEfectiva === 'users') {
     return <ProfileManager />;
@@ -60,8 +62,8 @@ export function AdminDashboard({ soloCantos = false, enviadoPor }: AdminDashboar
     return <SongManager puedeBorrar={!soloCantos} />;
   }
 
-  if (vistaEfectiva === 'migration') {
-    return <CatalogMigration onBack={() => setCurrentView('menu')} />;
+  if (vistaEfectiva === 'resumen-cantos') {
+    return <SongSummaryDashboard onBack={() => setCurrentView('menu')} />;
   }
 
   if (vistaEfectiva === 'youtube-sync') {
@@ -196,22 +198,40 @@ export function AdminDashboard({ soloCantos = false, enviadoPor }: AdminDashboar
             </div>
           </button>
 
+          {/* Resumen de cantos (incluye la lectura del canal, solo inventario) */}
+          <button
+            data-tour="admin-resumen"
+            onClick={() => setCurrentView('resumen-cantos')}
+            className="w-full bg-gradient-to-br from-red-600 to-red-700 rounded-2xl shadow-xl p-6 border-2 border-red-500 hover:border-red-300 active:scale-98 transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
+                <LayoutDashboard className="w-9 h-9 text-white" strokeWidth={2.2} />
+              </div>
+              <div className="text-left flex-1 min-w-0">
+                <h2 className="text-2xl font-bold text-white mb-1">Resumen de cantos</h2>
+                <p className="text-base text-red-100">
+                  Catálogo, versiones de video y qué hay en el canal
+                </p>
+              </div>
+            </div>
+          </button>
+
           {!soloCantos && (
             <>
-          {/* YouTube Sync */}
+          {/* Videos de Cursos (YouTube) */}
           <button
-            data-tour="admin-sync"
             onClick={() => setCurrentView('youtube-sync')}
-            className="w-full bg-gradient-to-br from-red-600 to-red-700 rounded-2xl shadow-xl p-6 border-2 border-red-500 hover:border-red-300 active:scale-98 transition-all"
+            className="w-full bg-gradient-to-br from-teal-700 to-cyan-900 rounded-2xl shadow-xl p-6 border-2 border-teal-600 hover:border-teal-400 active:scale-98 transition-all"
           >
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
                 <Youtube className="w-9 h-9 text-white" strokeWidth={2} />
               </div>
               <div className="text-left flex-1 min-w-0">
-                <h2 className="text-2xl font-bold text-white mb-1">Sincronizar YouTube</h2>
-                <p className="text-base text-red-100">
-                  Importar canciones nuevas del canal
+                <h2 className="text-2xl font-bold text-white mb-1">Videos de Cursos</h2>
+                <p className="text-base text-teal-100">
+                  Vincular las cápsulas de formación con su video
                 </p>
               </div>
             </div>
@@ -249,24 +269,6 @@ export function AdminDashboard({ soloCantos = false, enviadoPor }: AdminDashboar
                 <h2 className="text-2xl font-bold text-white mb-1">Cuentas usuario/clave</h2>
                 <p className="text-base text-blue-100">
                   Crear cuentas sin correo y restablecer claves
-                </p>
-              </div>
-            </div>
-          </button>
-
-          {/* Catalog Migration */}
-          <button
-            onClick={() => setCurrentView('migration')}
-            className="w-full bg-gradient-to-br from-emerald-700 to-emerald-900 rounded-2xl shadow-xl p-6 border-2 border-emerald-600 hover:border-emerald-400 active:scale-98 transition-all"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
-                <Database className="w-9 h-9 text-white" strokeWidth={2} />
-              </div>
-              <div className="text-left flex-1 min-w-0">
-                <h2 className="text-2xl font-bold text-white mb-1">Migrar Catálogo</h2>
-                <p className="text-base text-emerald-100">
-                  Importar canciones locales a Supabase
                 </p>
               </div>
             </div>
@@ -345,7 +347,7 @@ export function AdminDashboard({ soloCantos = false, enviadoPor }: AdminDashboar
                 <ul className="space-y-2 ml-4">
                   <li className="flex items-start gap-2">
                     <span className="text-red-600 dark:text-red-400 mt-1">•</span>
-                    <span>Solo los administradores pueden subir cantos a través de esta aplicación</span>
+                    <span>Los cantos se agregan solo desde esta aplicación; el canal se lee únicamente para el inventario de videos</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-red-600 dark:text-red-400 mt-1">•</span>

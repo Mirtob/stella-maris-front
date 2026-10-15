@@ -1,5 +1,4 @@
 import { Song, MassMoment, LiturgicalSeason, InstrumentType } from '../types';
-import { clearSongsCache } from './songLoader';
 import { getSupabaseClient } from './supabaseClient';
 import { normalizeCategory } from '../utils/category';
 
@@ -200,13 +199,11 @@ export async function listPendingSongs(): Promise<Song[]> {
 }
 
 /**
- * Cualquier escritura sobre el catálogo tira la caché y lo avisa al resto de la app.
+ * Cualquier escritura sobre el catálogo lo avisa al resto de la app.
  *
- * `getSongs()` guarda los cantos en localStorage DURANTE UNA HORA, y hasta el
- * 25-sep-2026 nadie llamaba a `clearSongsCache()`: estaba exportada y sin usar. Se
- * corregía la letra de un canto o se cambiaba su partitura y el cambio podía tardar una
- * hora en verse — en el folleto, en el Atril y en la vista del pueblo. El coro lo notó
- * al ir pasando las Misas a español: corregía y no pasaba nada.
+ * (Hasta el 15-oct-2026 también tiraba la caché de una hora de `songLoader.getSongs()`,
+ * el cargador que leía el catálogo desde el canal; se eliminó junto con la importación
+ * desde YouTube: los cantos se agregan solo desde la app.)
  *
  * El aviso (`EVENTO_CATALOGO`) lo escuchan las pantallas con cantos en memoria —los
  * cantorales cargados al entrar— para releer sin salir y volver a entrar. Ver
@@ -215,7 +212,6 @@ export async function listPendingSongs(): Promise<Song[]> {
 export const EVENTO_CATALOGO = 'stella:catalogo-cambiado';
 
 const invalidarCatalogo = () => {
-  clearSongsCache();
   try { window.dispatchEvent(new Event(EVENTO_CATALOGO)); } catch { /* sin window (tests) */ }
 };
 

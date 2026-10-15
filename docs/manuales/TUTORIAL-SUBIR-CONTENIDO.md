@@ -4,12 +4,21 @@
 > cómo **sacar el ID del PDF** para pegarlo en la metadata del video. Al final, el
 > canto aparece en la app con su letra, acordes y partitura.
 
+> 🔴 **Cambio del 15-oct-2026 — el canal ya NO alimenta el catálogo.**
+> Los cantos se **agregan y editan solo desde la app** (Panel → **Gestión de Cantos → Agregar canto**),
+> pegando ahí el video de cada versión (🎹 Órgano, 🎶 Guitarra o Video único).
+> El canal se **lee solo como inventario**: Panel → **Resumen de cantos → Leer el canal** muestra qué
+> videos del canal ya están en la app y en qué versión, cuáles faltan por vincular y cuáles usa la
+> app sin estar en el canal. Leer el canal **no crea ni modifica cantos**. El bloque
+> `STELLA_MARIS_META` ya no es necesario para los cantos (sí para los videos de **Cursos**).
+> Las secciones de este manual que hablan de "Sincronizar YouTube" quedan como historia.
+
 ## Resumen del flujo
 
 1. Subes el **video** a YouTube con un bloque de **metadata** en la descripción.
 2. Subes el **PDF de la partitura** a la carpeta de Drive.
 3. Copias el **ID del PDF** y lo pegas en la metadata del video (`partitura: <ID>`).
-4. En la app, panel Admin → **Sincronizar YouTube**. Listo.
+4. En la app, **Gestión de Cantos** → agregar/editar el canto y pegar el video en su versión. Luego **Resumen de cantos → Leer el canal** para confirmar que quedó vinculado.
 
 > Atajo: si nombras el PDF **igual que el título del canto**, la app lo vincula sola
 > (no necesitas el ID). Y siempre puedes vincularlo después desde el editor de cantos
@@ -81,12 +90,13 @@
 
 ---
 
-## Paso 5 — Sincronizar en la app
+## Paso 5 — Cargar el canto en la app
 
 1. Entra a la app como **Administrador**.
-2. Panel Admin → **Sincronizar YouTube**.
-3. Al terminar, el canto aparece en el catálogo con su letra y, si el ID está bien,
-   con su **partitura**.
+2. Panel Admin → **Gestión de Cantos → Agregar canto** (o edita el canto si ya existe) y pega el
+   video en 🎹 Órgano, 🎶 Guitarra o Video único, más letra y partitura.
+3. Panel Admin → **Resumen de cantos → Leer el canal**: el video debe salir en **Ya en la app**
+   con su versión. Leer el canal no crea cantos.
 
 ---
 

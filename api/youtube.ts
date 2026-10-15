@@ -89,7 +89,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const params = new URLSearchParams();
   for (const [k, v] of Object.entries(q)) {
-    if (k === 'endpoint' || k === 'key') continue;
+    // `fresh` solo cambia la URL para saltar la caché del CDN (lectura del canal
+    // recién subido); no viaja a Google.
+    if (k === 'endpoint' || k === 'key' || k === 'fresh') continue;
     params.set(k, Array.isArray(v) ? v[0] : v);
   }
   // En búsquedas, forzar el canal oficial (no permitir buscar fuera de él).

@@ -152,18 +152,18 @@ export const adminTour: TourStep[] = [
     body: 'Desde aquí gestionas el contenido, los usuarios y las parroquias.',
   },
   {
-    id: 'sync',
-    target: 'admin-sync',
-    skipIfMissing: true,
-    title: 'Sincronizar YouTube',
-    body: 'Importa los cantos del canal (los videos con su metadata). Es lo que llena el catálogo que ve el coro.',
-  },
-  {
     id: 'songs',
     target: 'admin-songs',
     skipIfMissing: true,
     title: 'Gestión de Cantos',
-    body: 'Revisa, edita, aprueba/rechaza o elimina cantos del catálogo.',
+    body: 'Agrega, edita, aprueba/rechaza o elimina cantos. Es el único lugar donde se suman cantos al catálogo.',
+  },
+  {
+    id: 'resumen',
+    target: 'admin-resumen',
+    skipIfMissing: true,
+    title: 'Resumen de cantos',
+    body: 'El tablero del catálogo: qué versiones de video tiene cada canto y qué hay en el canal. Leer el canal no agrega cantos: eso se hace en Gestión de Cantos.',
   },
   {
     id: 'accounts',

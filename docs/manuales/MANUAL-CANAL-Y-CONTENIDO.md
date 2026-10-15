@@ -6,6 +6,15 @@ los etiqueta y los sincroniza con la app.
 > 🟢 **¿Primera vez subiendo un canto?** Sigue el paso a paso simple:
 > **[TUTORIAL-SUBIR-CONTENIDO.md](TUTORIAL-SUBIR-CONTENIDO.md)** (video + partitura + cómo sacar el ID de Drive).
 
+> 🔴 **Cambio del 15-oct-2026 — el canal ya NO alimenta el catálogo.**
+> Los cantos se **agregan y editan solo desde la app** (Panel → **Gestión de Cantos → Agregar canto**),
+> pegando ahí el video de cada versión (🎹 Órgano, 🎶 Guitarra o Video único).
+> El canal se **lee solo como inventario**: Panel → **Resumen de cantos → Leer el canal** muestra qué
+> videos del canal ya están en la app y en qué versión, cuáles faltan por vincular y cuáles usa la
+> app sin estar en el canal. Leer el canal **no crea ni modifica cantos**. El bloque
+> `STELLA_MARIS_META` ya no es necesario para los cantos (sí para los videos de **Cursos**).
+> Las secciones de este manual que hablan de "Sincronizar YouTube" quedan como historia.
+
 ---
 
 ## 0. Lo más importante de entender
@@ -151,17 +160,18 @@ La partitura (PDF o imagen) se sirve desde la carpeta de Drive de la app.
 
 ---
 
-## 4. Sincronizar el canal con la app
+## 4. Después de subir videos: leer el canal (solo inventario)
 
-1. Entra a la app e inicia sesión como **Administrador**.
-2. Ve a **Panel Administrativo → Sincronizar YouTube** (tarjeta roja ▶️).
-3. Toca **"Sincronizar ahora"**.
-4. La app lee el canal y **agrega solo los videos nuevos** que tengan metadatos. Te muestra:
-   **En YouTube** (total), **Nuevas** (agregadas) y **Ya existían** (saltadas).
-
-> Es **seguro repetir**: los cantos ya importados **no se modifican** ni se duplican.
-> Si actualizas la descripción de un video ya importado, vuelve a revisarlo desde **Gestión de
-> Cantos** (la re-sincronización no sobrescribe los existentes).
+1. Entra a la app como **Administrador** (o ayudante del catálogo).
+2. Panel Administrativo → **Resumen de cantos** (tarjeta roja).
+3. Toca **"Leer el canal"**. La app **no escribe nada**: solo cruza el canal con el catálogo y muestra
+   - **Ya en la app**: cada video con la versión en que está cargado (🎹 Órgano, 🎶 Guitarra, 🎬 Única).
+   - **Sin vincular**: videos del canal que todavía no están en ningún canto. Copia el enlace y pégalo
+     en la ficha del canto (**Gestión de Cantos**), en la versión que corresponda.
+   - **Fuera del canal**: videos que usa la app y el canal no lista (ocultos, de otro canal, o
+     borrados/privados — estos últimos no se reproducen).
+4. El mismo tablero muestra **qué video escucha cada instrumento**: si al organista o al guitarrista
+   le falta su versión, suena la versión única o, si no hay, la del otro instrumento (con aviso).
 
 ---
 
@@ -173,8 +183,8 @@ La partitura (PDF o imagen) se sirve desde la carpeta de Drive de la app.
 | **Gestión de Parroquias** | Crear **parroquias y capillas** (las capillas aparecen en la selección inicial de los usuarios; ver *Manual del Coro/Pueblo fiel*). |
 | **Gestión de Usuarios** | Administrar perfiles, roles y permisos. |
 | **Recuperación de Cuentas** | Buscar un perfil por email principal o de respaldo. |
-| **Migrar Catálogo** | Importar el catálogo local de ejemplo a Supabase (uso puntual/inicial). |
-| **Sincronizar YouTube** | Importar cantos nuevos del canal (sección 4). |
+| **Resumen de cantos** | Tablero del catálogo + lectura del canal como inventario (sección 4). |
+| **Videos de Cursos** | Vincular las cápsulas de formación con su video del canal. |
 
 > **Solo el Administrador** ve este panel. El Coro y el Pueblo fiel no tienen acceso.
 
@@ -323,7 +333,7 @@ El canal es el activo más valioso. Recomendaciones:
 - [ ] Bloque `STELLA_MARIS_META` en la descripción con al menos `categoria:`.
 - [ ] Letra después de `--- LETRA ---` (con acordes `[Am]` si aplica).
 - [ ] Partitura subida a Drive, compartida "con el enlace", e ID puesto en `partitura:`.
-- [ ] **Sincronizar YouTube** en la app y verificar que aparece en **Gestión de Cantos**.
+- [ ] Agregar o editar el canto en **Gestión de Cantos** y pegar el video en su versión; luego **Resumen de cantos → Leer el canal** y verificar que el video ya no sale "Sin vincular".
 - [ ] Las **dos versiones** del canto (órgano y guitarra) en sus campos correspondientes —
       salvo que sea **gregoriano**, que lleva una sola.
 - [ ] Revisar en **Reportería y planilla** que el canto quedó **sin "Falta: …"** (sección 5-bis).

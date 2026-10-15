@@ -58,8 +58,9 @@ const GENERIC_INSTRUMENTS = ['Coro', 'Guitarra', 'Órgano'] as unknown as Instru
  * Admin SongManager — conectado a la tabla `songs` de Supabase.
  * Lista, busca y elimina cantos del catálogo real (los mismos que ve el coro).
  *
- * Para agregar cantos: el admin sube el video a YouTube con el bloque
- * STELLA_MARIS_META y luego usa "Sincronizar YouTube" (YouTubeSyncDialog).
+ * Es el ÚNICO lugar donde se agregan cantos: se pega el video de cada versión
+ * (órgano, guitarra o único). El canal de YouTube no importa cantos; solo se lee
+ * como inventario en "Resumen de cantos" (SongSummaryDashboard).
  */
 interface SongManagerProps {
   /**
@@ -814,13 +815,14 @@ export function SongManager({ puedeBorrar = true }: SongManagerProps) {
           </p>
         </div>
 
-        {/* Agregar canto manualmente (p. ej. de un canal ajeno: la metadata la pones tú) */}
+        {/* Agregar canto: el ÚNICO camino para sumar cantos al catálogo (el canal de
+            YouTube ya no los importa; solo se lee en "Resumen de cantos"). */}
         <button
           onClick={openAddSong}
           className="w-full mb-3 py-3 bg-gradient-to-br from-blue-700 to-blue-900 text-white border-2 border-brand-border rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95"
         >
           <Plus className="w-5 h-5" strokeWidth={3} />
-          Agregar canto manualmente
+          Agregar canto
         </button>
 
         {/* Reportería: cuántos cantos hay por clasificación y qué falta subir */}

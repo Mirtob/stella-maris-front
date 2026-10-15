@@ -119,7 +119,8 @@ npm run dev
 |---|---|---|
 | **Deploy** | Push a `main` → Vercel auto-despliega | — |
 | **Aplicar migración SQL** | Supabase → SQL Editor → pegar el `.sql` | `supabase/migrations/` |
-| **Sincronizar catálogo** | Panel Admin → Sincronizar YouTube | `docs/manuales/MANUAL-CANAL-Y-CONTENIDO.md` |
+| **Agregar cantos** | Panel Admin → Gestión de Cantos (único camino; el canal no importa cantos) | `docs/manuales/MANUAL-CANAL-Y-CONTENIDO.md` |
+| **Inventario del canal** | Panel Admin → Resumen de cantos → Leer el canal (solo lectura) | idem |
 | **Subir partituras** | Drive (carpeta de partituras) con la convención de nombres | Manual del Canal |
 | **CRUD admin** | Panel Admin → Usuarios / Cantos / Capillas / Parroquias | — |
 | **Recuperar cuenta de usuario** | Procedimiento fuera de banda | `docs/RECOVERY-PROCEDURE.md` |
