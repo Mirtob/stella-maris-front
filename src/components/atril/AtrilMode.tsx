@@ -25,6 +25,7 @@ import { VoiceMixer } from './VoiceMixer';
 import { getSongTracks, tieneMezclador, type AudioTrack } from '../../services/songAudio';
 import { esAleluyaDeCanto } from '../../utils/aleluyaEstrofa';
 import { useCantosAlDia } from '../../hooks/useCantosAlDia';
+import { logModuleVisit } from '../../services/usageLog';
 
 interface AtrilModeProps {
   songs: Song[];
@@ -73,6 +74,8 @@ const writeListPref = (open: boolean) => {
  */
 export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, userVoicePart, onClose }: AtrilModeProps) {
   useWakeLock(true);
+  // Cuenta para el registro de uso (el Atril se abre encima de otras pantallas).
+  useEffect(() => { logModuleVisit('atril', userRole); }, [userRole]);
   // La letra, los acordes y la partitura de HOY, no los del día en que se publicó el
   // cantoral: una corrección de último minuto tiene que llegar al atril. Ver el hook.
   const songs = useCantosAlDia(cantosRecibidos);

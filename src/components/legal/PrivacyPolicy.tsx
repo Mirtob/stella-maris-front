@@ -28,7 +28,7 @@ export function PrivacyPolicy({ onBack }: PrivacyPolicyProps) {
             Política de Privacidad
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">
-            Versión 1.0 — última revisión: 10 de junio de 2026
+            Versión 1.1 — última revisión: 16 de octubre de 2026
           </p>
 
           <section className="prose prose-sm sm:prose-base dark:prose-invert max-w-none">
@@ -49,7 +49,7 @@ export function PrivacyPolicy({ onBack }: PrivacyPolicyProps) {
             <ul className="list-disc pl-6 text-slate-700 dark:text-slate-200 leading-relaxed">
               <li><strong>Datos de tu cuenta de Google:</strong> email, nombre completo y foto de perfil (visible públicamente en tu cuenta).</li>
               <li><strong>Datos de tu perfil en la Aplicación:</strong> rol elegido (Coro / Pueblo fiel / Administrador), parroquia(s) seleccionada(s) e instrumento(s) (si eres parte de un coro).</li>
-              <li><strong>Datos de actividad:</strong> cantorales que publicas (si eres coro), cantos que agregas, fecha de tu último acceso.</li>
+              <li><strong>Datos de actividad:</strong> cantorales que publicas (si eres coro), cantos que agregas, fecha de tu último acceso y las secciones de la Aplicación que abres (por ejemplo, Cantorales o Modo Atril) con su fecha y hora. Este registro de uso solo lo ve el administrador principal y sirve para saber qué partes de la Aplicación se usan más y mejorarlas.</li>
               <li><strong>Datos técnicos:</strong> dirección IP, tipo de navegador, modelo de dispositivo (solo para diagnosticar errores).</li>
             </ul>
 
@@ -98,6 +98,7 @@ export function PrivacyPolicy({ onBack }: PrivacyPolicyProps) {
               <li><strong>Mientras tengas cuenta activa:</strong> conservamos tu perfil completo.</li>
               <li><strong>Cantorales publicados:</strong> conservados indefinidamente para uso histórico de la parroquia, salvo solicitud de eliminación.</li>
               <li><strong>Datos técnicos / logs:</strong> 90 días.</li>
+              <li><strong>Registro de uso (secciones abiertas):</strong> 12 meses; se borra antes si eliminas tu cuenta.</li>
               <li><strong>Backups:</strong> 7 días en Supabase (recuperación ante incidentes).</li>
               <li><strong>Tras eliminar tu cuenta:</strong> 30 días para recuperación, luego borrado definitivo.</li>
             </ul>

@@ -13,6 +13,10 @@ import { idsDuplicados } from '../../utils/profileMerge';
 
 type ProfileRow = UserProfile & { createdAt?: string; lastSeenAt?: string };
 
+/** Fecha corta en español de Chile ("16 oct 2026"). */
+const fmtFecha = (iso: string) =>
+  new Date(iso).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' });
+
 // Clave legible (sin caracteres ambiguos) para entregar al usuario.
 function generatePassword(): string {
   const chars = 'abcdefghijkmnpqrstuvwxyz23456789';
@@ -79,13 +83,18 @@ export function ProfileManager() {
   // Fichas que parecen de la misma persona (se marcan en la tarjeta).
   const duplicados = idsDuplicados(users);
 
-  const filteredUsers = users.filter(user => {
-    const matchesText =
-      matchesSearch(user.name, searchTerm) ||
-      matchesSearch(user.email, searchTerm);
-    const matchesRole = filterRole === 'Todos' || user.role === filterRole;
-    return matchesText && matchesRole;
-  });
+  // Los recién registrados SIEMPRE arriba (fecha de alta del perfil, la más nueva
+  // primero). Se ordena aquí y no en el servicio: Recuperación de Cuentas usa el
+  // mismo listado ordenado por última conexión.
+  const filteredUsers = users
+    .filter(user => {
+      const matchesText =
+        matchesSearch(user.name, searchTerm) ||
+        matchesSearch(user.email, searchTerm);
+      const matchesRole = filterRole === 'Todos' || user.role === filterRole;
+      return matchesText && matchesRole;
+    })
+    .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
 
   const getRoleIcon = (role: UserRole) => {
     switch (role) {
@@ -268,6 +277,11 @@ export function ProfileManager() {
         {/* Users List */}
         {!loading && (
           <div className="space-y-3">
+            {filteredUsers.length > 0 && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                Ordenados por fecha de registro: los más recientes primero.
+              </p>
+            )}
             {filteredUsers.map((user) => (
               <div
                 key={user.id}
@@ -344,6 +358,12 @@ export function ProfileManager() {
                         {user.instrument === 'Órgano' && '🎹'}
                       </span>
                       <span>{user.instrument}</span>
+                    </div>
+                  )}
+                  {(user.createdAt || user.lastSeenAt) && (
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400">
+                      {user.createdAt && <span>📅 Registrado: <strong className="text-gray-700 dark:text-gray-200">{fmtFecha(user.createdAt)}</strong></span>}
+                      {user.lastSeenAt && <span>🕒 Última vez: {fmtFecha(user.lastSeenAt)}</span>}
                     </div>
                   )}
                 </div>

@@ -136,6 +136,8 @@ import { songsForBuilder } from './utils/psalmSong';
 import { generateCantoralPDF } from './utils/cantoralPDFGenerator';
 import { getAdminLevel, type AdminLevel } from './services/admin';
 import { upsertCurrentUserProfile, getCurrentUserProfile } from './services/userProfiles';
+import { logModuleVisit } from './services/usageLog';
+import { routeModule } from './utils/usageModules';
 import { setCurrentUserId } from './services/currentUser';
 import { setSentryUserContext, clearSentryUserContext, reportarAtascoAlEntrar } from './services/sentry';
 
@@ -538,6 +540,15 @@ function AppContent() {
   useEffect(() => {
     setCurrentUserId(userProfile?.id);
   }, [userProfile?.id]);
+
+  // Registro de uso: cada pantalla abierta con sesión cuenta como una visita a su
+  // módulo (panel admin → "Uso de la app"). Fire-and-forget; ver services/usageLog.
+  const usageModule = routeModule(route as { screen: string; view?: string });
+  const usageRole = userProfile?.activeRole || userProfile?.role;
+  useEffect(() => {
+    if (!userProfile?.id || !usageModule) return;
+    logModuleVisit(usageModule, usageRole);
+  }, [usageModule, userProfile?.id, usageRole]);
 
   // Verify admin status against Supabase every time the user changes.
   // We never trust userProfile.role === 'Admin' from localStorage on its own;

@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Users, Church, Music, ShieldCheck, Lock, AlertTriangle, Youtube, LifeBuoy, KeyRound, BarChart3, GraduationCap, Megaphone, LayoutDashboard } from 'lucide-react';
+import { Users, Church, Music, ShieldCheck, Lock, AlertTriangle, Youtube, LifeBuoy, KeyRound, BarChart3, GraduationCap, Megaphone, LayoutDashboard, Activity } from 'lucide-react';
 import { ProfileManager } from '../profile/ProfileManager';
 import { ParishManager } from '../profile/ParishManager';
 import { SongManager } from '../songs/SongManager';
 import { YouTubeSyncDialog } from './YouTubeSyncDialog';
 import { SongSummaryDashboard } from './SongSummaryDashboard';
+import { UsageDashboard } from './UsageDashboard';
 import { RecoveryManager } from '../profile/RecoveryManager';
 import { AdminUserAccounts } from './AdminUserAccounts';
 import { SurveyResults } from './SurveyResults';
@@ -12,7 +13,7 @@ import { CourseQuizEditor } from './CourseQuizEditor';
 import { AdminTeam } from './AdminTeam';
 import { BroadcastManager } from './BroadcastManager';
 
-type AdminView = 'menu' | 'users' | 'equipo' | 'avisos' | 'accounts' | 'parishes' | 'songs' | 'resumen-cantos' | 'youtube-sync' | 'recovery' | 'survey' | 'quizzes';
+type AdminView = 'menu' | 'users' | 'equipo' | 'avisos' | 'accounts' | 'parishes' | 'songs' | 'resumen-cantos' | 'uso' | 'youtube-sync' | 'recovery' | 'survey' | 'quizzes';
 
 interface AdminDashboardProps {
   /**
@@ -60,6 +61,10 @@ export function AdminDashboard({ soloCantos = false, enviadoPor }: AdminDashboar
   if (vistaEfectiva === 'songs') {
     // Borrar del catálogo es solo del principal: el ayudante sube y transcribe.
     return <SongManager puedeBorrar={!soloCantos} />;
+  }
+
+  if (vistaEfectiva === 'uso') {
+    return <UsageDashboard onBack={() => setCurrentView('menu')} />;
   }
 
   if (vistaEfectiva === 'resumen-cantos') {
@@ -118,6 +123,24 @@ export function AdminDashboard({ soloCantos = false, enviadoPor }: AdminDashboar
                 <h2 className="text-2xl font-bold text-white mb-1">Gestión de Usuarios</h2>
                 <p className="text-base text-blue-100">
                   Administra perfiles, roles y permisos
+                </p>
+              </div>
+            </div>
+          </button>
+
+          {/* Uso de la app: módulos más usados y usuarios más frecuentes */}
+          <button
+            onClick={() => setCurrentView('uso')}
+            className="w-full bg-gradient-to-br from-brand to-brand-strong rounded-2xl shadow-xl p-6 border-2 border-brand-border hover:border-blue-600 active:scale-98 transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-white/30">
+                <Activity className="w-9 h-9 text-white" strokeWidth={2.5} />
+              </div>
+              <div className="text-left flex-1 min-w-0">
+                <h2 className="text-2xl font-bold text-white mb-1">Uso de la app</h2>
+                <p className="text-base text-blue-100">
+                  Módulos más usados, usuarios frecuentes y registro
                 </p>
               </div>
             </div>
