@@ -187,8 +187,8 @@ function piezaDe(parte: ParteKyriale, p: PiezaAdLibitum): PiezaDelLibitum {
   return { ...p, parte, rotulo: p.nombre ? `${base}, ${p.nombre}` : base };
 }
 
-/** Cómo nombra el libro cada parte (para los ad libitum, que se citan en latín). */
-const CATEGORIA_LATINA: Record<ParteKyriale, string> = {
+/** Cómo nombra el libro cada parte, en latín: los ad libitum y los títulos del cantoral. */
+export const CATEGORIA_LATINA: Record<ParteKyriale, string> = {
   kyrie: 'Kyrie', gloria: 'Gloria', sanctus: 'Sanctus', agnus: 'Agnus Dei',
 };
 

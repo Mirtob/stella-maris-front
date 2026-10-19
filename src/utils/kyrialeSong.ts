@@ -19,7 +19,7 @@ import { Song } from '../types';
 import {
   misaDelKyriale, kyrialeImageUrl, fuenteKyriale, tonosDelPaterNoster,
   paterNosterImageUrl, fuentePaterNoster, credoDelKyriale, credoImageUrl, fuenteCredo,
-  piezaAdLibitum, adLibitumImageUrl, fuenteAdLibitum,
+  piezaAdLibitum, adLibitumImageUrl, fuenteAdLibitum, CATEGORIA_LATINA,
   CATEGORIA_DE_LA_PARTE, type ParteKyriale,
 } from '../data/kyrialeIndex';
 import type { LibroGraduale } from '../data/gradualeIndex';
@@ -59,7 +59,8 @@ function cantoDe(
     if (!pieza) return null;
     return {
       id: `${PREFIJO}${parte}-${massDate}`,
-      title: `${CATEGORIA_DE_LA_PARTE[parte]} gregoriano`,
+      // El subtítulo del cantoral dice qué pieza es: «Kyrie IV ad libitum, Cunctipotens».
+      title: pieza.rotulo,
       category: CATEGORIA_DE_LA_PARTE[parte],
       youtubeId: '',
       duration: '',
@@ -74,7 +75,9 @@ function cantoDe(
   if (!misa || !misa.partes.includes(parte)) return null;
   return {
     id: `${PREFIJO}${parte}-${massDate}`,
-    title: `${CATEGORIA_DE_LA_PARTE[parte]} gregoriano`,
+    // «Kyrie de la Misa VIII, De Angelis», no «Kyrie gregoriano»: el subtítulo del
+    // cantoral es lo que dice de qué Misa es (pedido del 19-oct-2026).
+    title: `${CATEGORIA_LATINA[parte]} de la ${misa.rotulo}`,
     category: CATEGORIA_DE_LA_PARTE[parte],
     youtubeId: '',
     duration: '',
@@ -196,7 +199,7 @@ export function buildCredoSong(massDate: string, eleccion: EleccionCredo | null)
   if (!credo) return null;
   return {
     id: `${PREFIJO}credo-${massDate}`,
-    title: 'Credo gregoriano',
+    title: credo.rotulo,                         // «Credo III», como el resto del ordinario
     category: 'Credo',
     youtubeId: '',
     duration: '',
@@ -206,6 +209,27 @@ export function buildCredoSong(massDate: string, eleccion: EleccionCredo | null)
     gradualeImage: credoImageUrl(credo.libro, credo.numero),
     gradualeFuente: fuenteCredo(credo),
   } as Song;
+}
+
+/**
+ * El título de una pieza del Kyriale, sacado de su imagen: «Kyrie de la Misa VIII, De
+ * Angelis», «Kyrie IV ad libitum, Cunctipotens», «Credo III». `null` si no es del Kyriale.
+ *
+ * Sale de la imagen y no del título guardado porque los cantorales publicados antes del
+ * 19-oct-2026 guardaron «Kyrie gregoriano», que no dice de qué Misa es.
+ */
+export function tituloDelKyriale(song: Pick<Song, 'id' | 'gradualeImage'>): string | null {
+  const id = String(song.id ?? '');
+  const credo = /^\/kyriale\/(romanum|simplex)\/credo\/([^/.]+)\./.exec(song.gradualeImage ?? '');
+  if (id.startsWith(`${PREFIJO}credo-`) && credo) {
+    return credoDelKyriale(credo[1] as LibroGraduale, credo[2])?.rotulo ?? null;
+  }
+  const parte = /^kyriale-(kyrie|gloria|sanctus|agnus)-/.exec(id)?.[1] as ParteKyriale | undefined;
+  const e = parte ? desdeLaImagen(song.gradualeImage) : null;
+  if (!parte || !e) return null;
+  if (e.adLibitum) return piezaAdLibitum(parte, e.numero)?.rotulo ?? null;
+  const misa = misaDelKyriale(e.libro, e.numero);
+  return misa ? `${CATEGORIA_LATINA[parte]} de la ${misa.rotulo}` : null;
 }
 
 /** El Credo que llevaba un cantoral publicado, para reponerlo al editarlo. */

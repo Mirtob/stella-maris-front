@@ -21,7 +21,7 @@ import {
   buildPaterNosterSong, paterNosterDelCantoral, adLibitumDelCantoral,
   buildCredoSong, credoDelCantoral,
 } from '../../src/utils/kyrialeSong';
-import { marcarPartituras } from '../../src/utils/ordinary';
+import { marcarPartituras, tituloVisible } from '../../src/utils/ordinary';
 import { tonosDelPaterNoster } from '../../src/data/kyrialeIndex';
 import { songsForBuilder } from '../../src/utils/psalmSong';
 
@@ -202,6 +202,21 @@ const paterS = buildPaterNosterSong(FECHA, 'simplex', 'A');
 check('el tono del Simplex tiene partitura', paterS?.gradualeImage, '/kyriale/simplex/pater/A.webp');
 check('y se repone con su libro',
   paterNosterDelCantoral([paterS!], FECHA), { libro: 'simplex', tono: 'A' });
+
+// ── El subtítulo dice de qué Misa es (19-oct-2026) ─────────────────────────
+const angelis = buildKyrialeSongs(FECHA, ANGELIS);
+check('«Kyrie de la Misa VIII, De Angelis», no «Kyrie gregoriano»',
+  angelis.find((s) => s.category === 'Kyrie')?.title, 'Kyrie de la Misa VIII, De Angelis');
+check('las partes van en latín',
+  angelis.map((s) => s.title.split(' de la ')[0]).sort(), ['Agnus Dei', 'Gloria', 'Kyrie', 'Sanctus']);
+check('el ad libitum dice qué pieza es', conSuelto.find((s) => s.category === 'Kyrie')?.title,
+  piezasAdLibitum('kyrie').find((p) => p.numero === 'IV')?.rotulo);
+check('el Credo, su número', credo?.title, 'Credo III');
+const viejo = { ...angelis.find((s) => s.category === 'Santo')!, title: 'Santo gregoriano' };
+check('un cantoral publicado antes muestra igual la Misa',
+  tituloVisible(viejo).title, 'Sanctus de la Misa VIII, De Angelis');
+check('un canto del catálogo sigue con su título',
+  tituloVisible({ id: 'abc', title: 'Santo de Palazón', category: 'Santo' }).title, 'Santo de Palazón');
 
 console.log(`\n${pass} ok, ${fail} fallas`);
 if (fail) process.exit(1);

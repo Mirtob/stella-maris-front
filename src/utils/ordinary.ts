@@ -1,5 +1,6 @@
 import { Song } from '../types';
 import { massOrdinary } from '../data/massOrdinary';
+import { tituloDelKyriale } from './kyrialeSong';
 
 /**
  * Partes del ordinario de la Misa que se cantan desde la partitura (no desde
@@ -184,12 +185,18 @@ export function rotuloDeParte(category: string): string {
  * de antes aún «Padre Nuestro (Misa)». Se decide por el id, que los identifica aunque el
  * cantoral ya esté guardado, así que se corrige sin volver a publicar.
  */
-export function tituloVisible(song: Pick<Song, 'id' | 'title' | 'author' | 'category'>): { title: string; author?: string } {
+export function tituloVisible(
+  song: Pick<Song, 'id' | 'title' | 'author' | 'category'> & Partial<Pick<Song, 'gradualeImage'>>,
+): { title: string; author?: string } {
   const id = String(song.id ?? '');
   if (id.startsWith('aclamacion-')) return { title: rotuloDeParte(song.category) };
   if (id.startsWith('padre-nuestro-')) {
     return { title: id.startsWith('padre-nuestro-la') ? 'Pater noster' : 'Padre nuestro' };
   }
+  // El ordinario gregoriano dice de qué Misa es («Kyrie de la Misa VIII, De Angelis»),
+  // también en los cantorales que se publicaron con «Kyrie gregoriano».
+  const delKyriale = tituloDelKyriale(song);
+  if (delKyriale) return { title: delKyriale };
   return { title: song.title, author: song.author };
 }
 

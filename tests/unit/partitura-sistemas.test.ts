@@ -57,6 +57,15 @@ console.log('\n== La indicación sobre una pauta va con ESA pauta ==');
   check('corta antes de la indicación, no después', c.length === 1 && c[0] < 49 + 30, true);
 }
 
+console.log('\n== Gregoriano: la letra lejos de su pauta sigue con ella ==');
+{
+  // Sanctus VIII (19-oct-2026): pauta — 20 en blanco — letra — 15 en blanco — pauta.
+  // El blanco más ancho es el de ARRIBA de la letra, y aun así la letra es de esa pauta.
+  const t = perfil([[31, 'pauta'], [20, 'blanco'], [12, 'letra'], [15, 'blanco'], [31, 'pauta']]);
+  const c = cortesPorSistema(t, W, MIN)!;
+  check('el corte va tras la letra', c.length === 1 && c[0] > 31 + 20 + 12, true);
+}
+
 console.log('\n== Dos estrofas bajo la pauta siguen juntas ==');
 {
   const t = perfil([[31, 'pauta'], [6, 'blanco'], [12, 'letra'], [9, 'blanco'], [12, 'letra'], [30, 'blanco'], [31, 'pauta']]);

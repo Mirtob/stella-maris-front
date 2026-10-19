@@ -59,6 +59,13 @@ CUERPO_INICIAL = 20      # la inicial decorada mide ~24; el ruido del OCR, 10 o 
 # 30 puntos; se sube eso.
 SOBRE_EL_TETRAGRAMA = 32
 
+# Partes cuya inicial el OCR no ve: (libro, Misa) → {parte: (página, altura)} donde
+# empieza, medido sobre el PDF. La Misa IV del Simplex trae DOS Agnus a elegir (n.º 52 y
+# 53); sin la inicial del 52, el Sanctus se lo quedaba pegado al pie (19-oct-2026).
+INICIO_A_MANO = {
+    ("simplex", "IV"): {"agnus": (45, 452.0)},
+}
+
 # Dónde vive el Kyriale dentro de cada libro, y qué nivel de marcador lista sus Misas.
 KYRIALE = {
     "romanum": {"desde": 700, "hasta": 759, "nivel": 3},
@@ -188,9 +195,15 @@ def iniciales_de(pagina) -> list:
     return sorted(fuera)
 
 
-def encabezado_de(pagina, numero: str):
-    """Dónde acaba el encabezado de la Misa en su página. `None` si no se reconoce."""
-    romano = re.compile(r"^" + re.escape(numero) + r"\b")
+def encabezado_de(pagina, numero: str, tope: bool = False):
+    """Dónde acaba el encabezado de la Misa en su página. `None` si no se reconoce.
+
+    Con `tope`, dónde EMPIEZA: es donde termina la Misa anterior. Cortando la anterior
+    donde acaba el encabezado, el Agnus de la VIII se llevaba el «IX» de la siguiente
+    (19-oct-2026).
+    """
+    # Sin distinguir mayúsculas: el OCR lee la «V» de la Misa V como «v».
+    romano = re.compile(r"^" + re.escape(numero) + r"\b", re.IGNORECASE)
     mejor = None
     for b in pagina.get_text("dict")["blocks"]:
         for l in b.get("lines", []):
@@ -202,7 +215,7 @@ def encabezado_de(pagina, numero: str):
                 y = round(l["bbox"][1], 1)
                 if mejor is None or y < mejor[0]:
                     mejor = (y, round(l["bbox"][3], 1))
-    return mejor[1] if mejor else None
+    return (mejor[0] if tope else mejor[1]) if mejor else None
 
 
 def nombre_de(doc, pagina: int) -> str:
@@ -234,6 +247,60 @@ def regiones(doc, ini: tuple, fin: tuple) -> list:
     return salida
 
 
+def marco_de(pagina) -> tuple:
+    """El marco de la página (cabecera, folio), sin comerse la última línea de letra.
+
+    El OCR lee las notas de una pauta como basura sin minúsculas («� V �� �. �») y el
+    marco compartido la tomaba por el folio: en la p. 714 el Agnus de la Misa I perdía
+    el «dona nobis pacem» que va debajo (19-oct-2026). Si bajo ese supuesto folio hay
+    letra cantada (minúsculas), no era el folio.
+    """
+    arriba, abajo = facsimil.marco_de_pagina(pagina)
+    lineas = facsimil.lineas_de(pagina)
+    if any(y0 > abajo and any(c.islower() for c in texto) for y0, _, texto in lineas):
+        abajo = pagina.rect.height
+    # En el Simplex, bajo el título corrido puede venir sólo el número de la pieza
+    # («46»): son cifras sin minúsculas y el marco las tomaba por cabecera, comiéndose el
+    # número y el borde de la pauta del Sanctus de la Misa III.
+    if (len(lineas) >= 2 and re.fullmatch(r"\d{2,3}", lineas[1][2].strip())
+            and arriba >= lineas[1][1]):
+        arriba = lineas[0][1] + 2
+    return arriba, abajo
+
+
+def sin_restos(img):
+    """Quita el renglón de letra de la parte ANTERIOR que asoma arriba de la imagen.
+
+    Red de seguridad de `corte_en_blanco`: si aun así queda arriba un renglón pegado al
+    borde, sin líneas de pauta y ancho, es la última letra de la parte anterior. El
+    «XII. s.» del ángulo es angosto y no se toca. Sólo para el Romanum: en el Simplex
+    ese renglón es el número de la pieza.
+    """
+    ancho, alto = img.size
+    px = img.load()
+    def tinta(y):
+        return sum(1 for x in range(0, ancho, 2) if px[x, y] < 128) * 2
+    filas = [tinta(y) for y in range(min(alto, 120))]
+    hay = [t > max(1, ancho * 0.004) for t in filas]
+    if not hay or not any(hay[:3]):
+        return img
+    y = 0
+    while y < len(hay) and hay[y]:
+        y += 1
+    fin_bloque = y
+    while y < len(hay) and not hay[y]:
+        y += 1
+    if y - fin_bloque < 6 or y >= len(hay):
+        return img
+    if any(t >= ancho * 0.45 for t in filas[:fin_bloque]):
+        return img
+    cols = [x for x in range(0, ancho, 2)
+            if any(px[x, yy] < 128 for yy in range(fin_bloque))]
+    if not cols or (cols[-1] - cols[0]) / ancho < 0.3:
+        return img
+    return img.crop((0, (fin_bloque + y) // 2, ancho, alto))
+
+
 def recortar(doc, marcos, ini: tuple, fin: tuple, destino: str) -> None:
     """Recorta de (pagina, altura) a (pagina, altura) y lo guarda en `destino`."""
     regs = regiones(doc, ini, fin)
@@ -253,6 +320,121 @@ def recortar(doc, marcos, ini: tuple, fin: tuple, destino: str) -> None:
         destino, "WEBP", lossless=True, method=6)
 
 
+def corte_en_blanco(pagina, y: float, inicial: float) -> float:
+    """Dónde cortar entre dos partes: justo bajo la última letra de la anterior.
+
+    Subir una medida fija sobre la inicial caía a veces en medio de la última línea de
+    letra de la parte anterior (el Gloria X perdía la mitad de «in gloria Dei Patris.
+    Amen» y la otra mitad asomaba sobre el Sanctus), o la dejaba entera arriba de la
+    parte nueva (19-oct-2026). El OCR de estas hojas es demasiado ruidoso para fiarse de
+    él, así que se mira la imagen: se busca el tetragrama de la parte nueva y, subiendo
+    por la franja CENTRAL (a la izquierda va el número de modo, a la derecha el siglo),
+    el primer renglón es la letra de la anterior. Sin renglón a la vista, el corte
+    queda donde estaba.
+    """
+    escala = 4                                       # píxeles por punto
+    arriba = max(0.0, inicial - 90)
+    abajo = min(pagina.rect.height, inicial + 8)     # la inicial cuelga del tetragrama
+    px = pagina.get_pixmap(matrix=fitz.Matrix(escala, escala), colorspace=fitz.csGRAY,
+                           clip=fitz.Rect(0, arriba, pagina.rect.width, abajo))
+    datos, ancho, paso = px.samples, px.width, px.stride
+    c0, c1 = int(ancho * 0.15), int(ancho * 0.62)
+
+    def tinta(f, desde, hasta):
+        return sum(1 for x in range(desde, hasta, 2) if datos[f * paso + x] < 128)
+
+    def trazo(f):
+        """El tramo continuo de tinta más largo de la fila (salvando cortes de 4 px)."""
+        mejor = largo = blanco = 0
+        for x in range(ancho):
+            if datos[f * paso + x] < 128:
+                largo += blanco + 1
+                blanco = 0
+            elif largo:
+                blanco += 1
+                if blanco > 4:
+                    mejor, largo, blanco = max(mejor, largo), 0, 0
+        return max(mejor, largo)
+
+    # Una línea de pauta es un TRAZO largo; la letra, por densa que sea, no lo tiene. (Mirar
+    # la tinta total confundía un renglón apretado con una línea tenue del escaneo.)
+    lineas = [f for f in range(px.height) if trazo(f) >= ancho * 0.25]
+    if not lineas:
+        return y
+    # El tetragrama nuevo: el grupo de líneas más bajo. De una a otra hay ~5-8 puntos,
+    # pero alguna tenue no se detecta; entre una pauta y la siguiente hay más de 35.
+    tope = lineas[-1]
+    grupo = []
+    for f in reversed(lineas):
+        if tope - f > 20 * escala:
+            break
+        tope = f
+        grupo.append(f)
+    # Un filete suelto (el libro separa a veces las partes con una raya) no es pauta: en
+    # una pauta hay otra línea a menos de 9 puntos.
+    pautas = [f for f in grupo if any(0 < g - f <= 9 * escala for g in grupo)]
+    if pautas:
+        tope = min(pautas)
+    centro = [tinta(f, c0, c1) > 0 for f in range(px.height)]
+    f = tope - 1
+    while f >= 0:
+        while f >= 0 and centro[f]:                  # lo pegado arriba es de la nueva
+            f -= 1
+        g = f
+        while f >= 0 and not centro[f]:
+            f -= 1
+        if f < 0:
+            return y
+        if g - f < 1 * escala:                       # un respiro de nada: sigue la nueva
+            continue
+        pie = f
+        while f >= 0 and centro[f]:
+            f -= 1
+        alto = (pie - f) / escala
+        if 3 <= alto <= 14:                          # un renglón de letra (con tildes)
+            filetes = [r for r in lineas if pie < r < tope - 18 * escala]
+            if filetes:                              # y el filete, con la letra de arriba
+                return round(arriba + (max(filetes) + 2) / escala, 1)
+            # En medio del blanco que la separa de lo primero que haya debajo (en todo el
+            # ancho: el «XII. s.» del ángulo va a veces pegado a esa letra).
+            sig = pie + 1
+            while sig < tope and tinta(sig, 0, ancho) == 0:
+                sig += 1
+            return round(arriba + (pie + 1 + sig) / 2 / escala, 1)
+        if alto > 14:                                # otra pauta: no se ve la letra
+            return y
+    return y
+
+
+def sobre_el_numero(pagina, y: float, inicial: float) -> float:
+    """En el Simplex cada pieza lleva su número encima («52  ed. Vat. ad lib. II»).
+
+    El corte fijo lo partía por la mitad: medio número al pie de la parte anterior y
+    medio arriba de la suya (19-oct-2026). El OCR lo lee bien, así que se corta justo
+    encima de él.
+    """
+    arriba = []
+    for y0, _, texto in facsimil.lineas_de(pagina):
+        if not inicial - 60 < y0 < inicial - 10:
+            continue
+        if re.search(r"[A-Z]{4}", texto):            # el título corrido («29 ORDINARIUM»)
+            continue
+        if re.match(r"^\d{2,3}\b", texto.strip()):
+            arriba.append(y0 - 3)
+        # A veces el OCR pega el número a la basura de la pauta («G�--f--- 57»); el
+        # «ed. Vat. X» de la derecha va a su altura, con letra más chica.
+        elif re.search(r"ed\.\s*Vat|more\s+\w", texto):
+            arriba.append(y0 - 6)
+    if arriba:
+        return round(min(arriba), 1)
+    # Sin número legible (el «56» de la Misa V no sale en el OCR): justo bajo la última
+    # letra de la parte anterior, que sí se lee; el número está entre ella y la pauta.
+    pies = [y1 for y0, y1, texto in facsimil.lineas_de(pagina)
+            if inicial - 70 < y1 < inicial - 15 and y1 - y0 <= 18
+            and sum(c.islower() for c in texto) >= 3]
+    return round(min(y, max(pies) + 2), 1) if pies else y
+
+
 def misas_del_libro(doc, libro: str) -> list:
     """Las Misas del Kyriale, con el rango de cada una de sus partes."""
     cfg = KYRIALE[libro]
@@ -263,27 +445,40 @@ def misas_del_libro(doc, libro: str) -> list:
              for y, n in iniciales_de(doc[p])]
 
     # El comienzo de cada Misa: su encabezado, no su primera inicial.
-    arranques = []
+    arranques, topes = [], []
     for titulo, pagina in marcadores:
         numero = numero_de(titulo)
         y = encabezado_de(doc[pagina - 1], numero)
         arranques.append((pagina, y if y is not None else 0.0))
+        t = encabezado_de(doc[pagina - 1], numero, tope=True)
+        # Un poco por encima del numeral, que el renglón del PDF lo recorta justo.
+        topes.append((pagina, max(t - 4, 0.0) if t is not None else 0.0))
 
     salida = []
     for i, (titulo, pagina) in enumerate(marcadores):
         numero = numero_de(titulo)
         ini = arranques[i]
-        fin = arranques[i + 1] if i + 1 < len(marcadores) else (cfg["hasta"], 0.0)
+        fin = topes[i + 1] if i + 1 < len(marcadores) else (cfg["hasta"], 0.0)
 
         # Cada parte empieza en su inicial, después de la parte anterior.
         cortes, desde = [], ini
+        a_mano = INICIO_A_MANO.get((libro, numero), {})
         for parte in PARTES[1:]:                  # el Kyrie empieza en el encabezado
+            if parte in a_mano:
+                cortes.append((parte, a_mano[parte]))
+                desde = a_mano[parte]
+                continue
             sig = next(((p, y) for p, y, n in todas
                         if n == parte and desde <= (p, y) < fin), None)
             if sig:
                 # Se sube por encima del tetragrama, sin llegar a morder la parte
                 # anterior (en el peor caso el corte se queda donde estaba).
-                arriba = (sig[0], max(sig[1] - SOBRE_EL_TETRAGRAMA,
+                corte = sig[1] - SOBRE_EL_TETRAGRAMA
+                if libro == "romanum":
+                    corte = corte_en_blanco(doc[sig[0] - 1], corte, sig[1])
+                else:
+                    corte = sobre_el_numero(doc[sig[0] - 1], corte, sig[1])
+                arriba = (sig[0], max(corte,
                                       desde[1] + 1 if desde[0] == sig[0] else 0.0))
                 cortes.append((parte, arriba))
                 desde = arriba
@@ -391,12 +586,15 @@ def main():
                 try:
                     for r in regs:
                         if r["p"] not in marcos:
-                            marcos[r["p"]] = facsimil.marco_de_pagina(doc[r["p"]])
+                            marcos[r["p"]] = marco_de(doc[r["p"]])
                     trozos = [facsimil.trozo(doc, marcos, r) for r in regs]
                     carpeta = os.path.join(SALIDA, libro, clave)
                     os.makedirs(carpeta, exist_ok=True)
                     destino = os.path.join(carpeta, f"{parte}.webp")
-                    facsimil.coser(trozos).save(destino, "WEBP", lossless=True, method=6)
+                    imagen = facsimil.coser(trozos)
+                    if libro == "romanum" and parte != "kyrie":
+                        imagen = sin_restos(imagen)
+                    imagen.save(destino, "WEBP", lossless=True, method=6)
                     total += os.path.getsize(destino)
                     ficha["partes"].append(parte)
                 except Exception as e:            # noqa: BLE001 - se informa y sigue
@@ -409,7 +607,7 @@ def main():
         for tono, pagina in PATER_NOSTER.get(libro, {}).items():
             try:
                 r = {"p": pagina - 1, "y0": 0.0, "y1": doc[pagina - 1].rect.height}
-                marcos.setdefault(r["p"], facsimil.marco_de_pagina(doc[r["p"]]))
+                marcos.setdefault(r["p"], marco_de(doc[r["p"]]))
                 carpeta = os.path.join(SALIDA, libro, "pater")
                 os.makedirs(carpeta, exist_ok=True)
                 destino = os.path.join(carpeta, f"{tono}.webp")

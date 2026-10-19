@@ -159,6 +159,21 @@ export function cortesPorSistema(tinta: ArrayLike<number>, W: number, minHueco: 
       const hueco = bloques[i + 1].a - bloques[i].b - 1;
       if (hueco > ancho) { ancho = hueco; mejor = i; }
     }
+    // Lo que viene justo debajo de una pauta es, casi siempre, SU letra. En el gregoriano
+    // el blanco entre las dos suele ser el más ancho (las notas cuelgan bajo el
+    // tetragrama y la letra va lejos), y la letra de la penúltima línea del Sanctus
+    // quedaba en la hoja siguiente (19-oct-2026). Así que ese primer blanco sólo gana
+    // si dobla a todos los demás: entonces sí es el que separa un sistema del otro y lo
+    // de abajo es una indicación de la pauta siguiente («Todos:»).
+    if (mejor === pautas[k - 1] && pautas[k] - pautas[k - 1] > 1) {
+      let otro = -1;
+      let anchoOtro = -1;
+      for (let i = pautas[k - 1] + 1; i < pautas[k]; i++) {
+        const hueco = bloques[i + 1].a - bloques[i].b - 1;
+        if (hueco > anchoOtro) { anchoOtro = hueco; otro = i; }
+      }
+      if (ancho < 2 * anchoOtro) mejor = otro;
+    }
     cortes.push(Math.round((bloques[mejor].b + 1 + bloques[mejor + 1].a) / 2));
   }
   return cortes;
