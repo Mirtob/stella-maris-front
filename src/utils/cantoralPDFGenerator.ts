@@ -1,8 +1,8 @@
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import { PublishedCantoral, Song } from '../types';
-import { getCurrentLiturgicalSeason } from './liturgicalSeason';
-import { parseYmdLocal, formatYmdForDisplay } from './dateLocal';
+import { coloresDelFolleto } from './coloresFolleto';
+import { formatYmdForDisplay } from './dateLocal';
 import { fechaEnQueSeCanta, MASS_TYPE_LABEL, resolveMassType } from './massType';
 import { recortarConElipsis } from './pdfText';
 import { getChannelUrl } from '../services/youtube';
@@ -266,32 +266,7 @@ function drawJustifiedLine(pdf: any, text: string, x: number, y: number, width: 
 // Colores litúrgicos
 // ──────────────────────────────────────────────
 
-interface LiturgicalColors {
-  primary: [number, number, number];   // color principal (cabeceras, líneas)
-  light: [number, number, number];     // fondo claro
-  textOnPrimary: [number, number, number]; // texto sobre primary
-  seasonName: string;
-}
-
-function getColorsForDate(dateStr: string): LiturgicalColors {
-  // Local, no UTC: en el borde de un tiempo litúrgico el color se iba al anterior.
-  const date = parseYmdLocal(dateStr);
-  const season = getCurrentLiturgicalSeason(date);
-
-  switch (season) {
-    case 'Adviento':
-      return { primary: [91, 33, 182], light: [237, 233, 254], textOnPrimary: [255, 255, 255], seasonName: 'Adviento' };
-    case 'Navidad':
-      return { primary: [180, 130, 32], light: [254, 243, 199], textOnPrimary: [255, 255, 255], seasonName: 'Navidad' };
-    case 'Cuaresma':
-      return { primary: [88, 28, 135], light: [233, 213, 255], textOnPrimary: [255, 255, 255], seasonName: 'Cuaresma' };
-    case 'Pascua':
-      return { primary: [217, 119, 6], light: [254, 243, 199], textOnPrimary: [255, 255, 255], seasonName: 'Pascua' };
-    case 'Tiempo Ordinario':
-    default:
-      return { primary: [21, 128, 61], light: [220, 252, 231], textOnPrimary: [255, 255, 255], seasonName: 'Tiempo Ordinario' };
-  }
-}
+// Mandan los de la celebración, no los del tiempo: ver utils/coloresFolleto.
 
 // ──────────────────────────────────────────────
 // Limpieza de texto
@@ -494,7 +469,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   }
   avanzar(8);
 
-  const colors = getColorsForDate(cantoral.date);
+  const colors = coloresDelFolleto(cantoral.date);
   /**
    * ¿Esta parte del ordinario va sin partitura? El coro lo elige en el constructor con
    * la casilla «Incluir la partitura del ordinario» (pedido del 27-sep-2026); la marca
