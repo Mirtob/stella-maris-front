@@ -14,7 +14,7 @@ import { getPdfFont, getPdfScale } from '../data/pdfStyle';
 import { renderPdfToImages, imposeBooklet, recortarAlComun, MARGEN_ESTRECHO, type PapelFolleto } from './atrilBookletPDF';
 import { repartirEnColumnas, huecosAlFinal, type Pieza, type Colocada } from './pdfColumns';
 import { partirEnSistemas, type TrozoFacsimil } from './facsimilTrozos';
-import { sortCategoriesByMassOrder, isOrdinary, rotuloDeParte, tituloVisible } from './ordinary';
+import { sortCategoriesByMassOrder, isOrdinary, grupoDePartitura, rotuloDeParte, tituloVisible } from './ordinary';
 import { resolveSheetForFolleto } from './ordinarySheetMusic';
 import { ponerCantosAlDia } from '../services/catalogoVigente';
 import { getDrivePdfProxyUrl } from './driveProxy';
@@ -500,7 +500,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
    * la casilla «Incluir la partitura del ordinario» (pedido del 27-sep-2026); la marca
    * viaja en cada canto (ver marcarPartituras en utils/ordinary).
    */
-  const soloLetra = (s: Song) => isOrdinary(s) && !!s.folletoSoloLetra;
+  const soloLetra = (s: Song) => (isOrdinary(s) || grupoDePartitura(s) !== null) && !!s.folletoSoloLetra;
 
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
 

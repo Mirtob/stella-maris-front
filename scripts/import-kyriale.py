@@ -4,6 +4,9 @@ Las Misas del ORDINARIO en gregoriano: Kyrie, Gloria, Sanctus y Agnus Dei.
 
 De dónde salen: el Kyriale está DENTRO del Graduale Romanum (18 Misas, páginas 700-758
 del PDF) y del Graduale Simplex (Ordinarium I-V). No hace falta ningún libro más.
+De los mismos libros salen los Credos (Romanum I-VI, Simplex I-IV), los cantos ad
+libitum del Romanum (Kyries, Glorias, Sanctus y Agnus sueltos) y los tonos del Padre
+Nuestro de los dos libros.
 
 Cómo se encuentra cada parte. La letra cantada no sirve de referencia: "Kyrie" aparece
 cien veces dentro del propio Kyrie, así que dice dónde SUENA pero no dónde EMPIEZA. Lo
@@ -81,6 +84,68 @@ USO = {
 # PDF; el OCR de esas hojas esta demasiado roto para buscar nada en el texto, asi que se
 # anotan y se comprueban mirandolas.
 PATER_NOSTER = {"romanum": {"A": 802, "B": 803, "C": 804}}
+
+# El Padre Nuestro del SIMPLEX no ocupa una pagina por tono: los tres van seguidos
+# (paginas 22-25 del PDF), asi que se recorta de (pagina, altura) a (pagina, altura).
+# Alto del título corrido del Simplex ("AD RITUS COMMUNIONIS  9"), que el marco no reconoce.
+CABECERA_SIMPLEX = 55
+
+PATER_NOSTER_TRAMOS = {
+    "simplex": {"A": ((22, 302), (23, 320)),
+                "B": ((23, 345), (24, 372)),
+                "C": ((24, 405), (25, 450))},
+}
+
+# Los CREDOS (18-oct-2026). El OCR de esas hojas no da una inicial fiable, asi que, como
+# el Padre Nuestro, se miden sobre el PDF: de (pagina, altura) del encabezado hasta
+# (pagina, altura) donde empieza el siguiente. (p, 0.0) = hasta el final de la anterior.
+CREDOS = {
+    "romanum": {"I":   ((759, 58),  (761, 282)),
+                "II":  ((761, 325), (764, 92)),
+                "III": ((764, 105), (766, 360)),
+                "IV":  ((766, 365), (769, 130)),
+                "V":   ((769, 140), (772, 55)),
+                "VI":  ((772, 55),  (775, 0.0))},
+    "simplex": {"I":   ((51, 85),   (54, 0.0)),
+                "II":  ((54, 85),   (57, 0.0)),
+                "III": ((57, 85),   (60, 0.0)),
+                "IV":  ((60, 85),   (63, 0.0))},
+}
+
+# Los CANTUS AD LIBITUM del Romanum: Kyries, Glorias, Sanctus y Agnus sueltos, que no
+# forman Misa y se cantan en lugar de los de la Misa elegida. Varios no se reimprimen
+# ("Cf. supra, XI A, 748"): se recortan de donde el libro remite, y el tercer campo lo
+# dice. Falta el Agnus I: el escaneo trae en blanco el pie de la pagina 786, donde
+# empieza, y medio Agnus no sirve para cantar.
+AD_LIBITUM = {
+    "kyrie": [
+        ("I",    "Clemens rector",           "",                   (775, 92),  (776, 155)),
+        ("II",   "Summe Deus",               "",                   (776, 172), (777, 85)),
+        ("III",  "Rector cosmi pie",         "Misa III, Kyrie A",  (711, 85),  (711, 418)),
+        ("IV",   "Kyrie altissime",          "",                   (777, 140), (778, 92)),
+        ("V",    "Conditor Kyrie omnium",    "Misa I, Kyrie B",    (701, 268), (702, 255)),
+        ("VI",   "Te Christe rex supplices", "Misa I, Kyrie A",    (700, 272), (701, 265)),
+        ("VII",  "Splendor aeterne",         "",                   (778, 145), (778, 405)),
+        ("VIII", "Firmator sancte",          "",                   (778, 406), (779, 165)),
+        ("IX",   "O Pater excelse",          "",                   (779, 178), (779, 405)),
+        ("X",    "Orbis factor",             "Misa XI, Kyrie A",   (738, 112), (738, 310)),
+        ("XI",   "Kyrie salve",              "Misa XVII, Kyrie A", (754, 225), (754, 432)),
+    ],
+    "gloria": [
+        ("I",   "",                "",                   (780, 70),  (781, 400)),
+        ("II",  "",                "",                   (781, 405), (783, 232)),
+        ("III", "",                "Misa III, Gloria B", (711, 425), (713, 418)),
+        ("IV",  "More ambrosiano", "",                   (783, 255), (785, 0.0)),
+    ],
+    "sanctus": [
+        ("I",   "", "", (785, 86),  (785, 312)),
+        ("II",  "", "", (785, 318), (786, 92)),
+        ("III", "", "", (786, 100), (786, 395)),
+    ],
+    "agnus": [
+        ("II",  "", "", (787, 262), (788, 0.0)),
+    ],
+}
 
 NOMBRE_ENTRE_PARENTESIS = re.compile(r"\(\s*([A-ZÆŒ][^)]{3,40})\)")
 ROMANO = re.compile(r"^[IVX]+$")
@@ -167,6 +232,25 @@ def regiones(doc, ini: tuple, fin: tuple) -> list:
         if y1 - y0 > 2:
             salida.append({"p": p, "y0": round(y0, 1), "y1": round(y1, 1)})
     return salida
+
+
+def recortar(doc, marcos, ini: tuple, fin: tuple, destino: str) -> None:
+    """Recorta de (pagina, altura) a (pagina, altura) y lo guarda en `destino`."""
+    regs = regiones(doc, ini, fin)
+    # Estos tramos se midieron a mano, así que el fin manda: el marco automático confundía
+    # el último sistema del Agnus II («dona nobis pacem») con el folio y lo cortaba. De él
+    # sólo se toma la cabecera, y donde no la reconoce (el Simplex) se salta la banda fija
+    # del título corrido, que si no se colaba en medio del Credo y del Pater noster.
+    propios = {}
+    for r in regs:
+        pagina = doc[r["p"]]
+        arriba, _ = facsimil.marco_de_pagina(pagina)
+        if arriba == 0.0 and pagina.rect.height > 560:      # Simplex: 576 de alto
+            arriba = CABECERA_SIMPLEX
+        propios[r["p"]] = (arriba, pagina.rect.height)
+    os.makedirs(os.path.dirname(destino), exist_ok=True)
+    facsimil.coser([facsimil.trozo(doc, propios, r) for r in regs]).save(
+        destino, "WEBP", lossless=True, method=6)
 
 
 def misas_del_libro(doc, libro: str) -> list:
@@ -259,9 +343,38 @@ export interface TonoPaterNoster {
 export const PATER_NOSTER_DATA: Record<string, readonly TonoPaterNoster[]> =
 """
 
+CABECERA_CREDO = """
+/** Un Credo del libro. La imagen es /kyriale/<libro>/credo/<numero>.webp */
+export interface CredoKyriale {
+  /** Numero romano con que el libro lo nombra ("III"). */
+  numero: string;
+  /** Pagina del PDF donde empieza. */
+  pagina: number;
+}
+
+export const CREDO_DATA: Record<string, readonly CredoKyriale[]> =
+"""
+
+CABECERA_AD_LIBITUM = """
+/**
+ * Un canto "ad libitum" del Romanum: un Kyrie, Gloria, Sanctus o Agnus suelto, que no
+ * forma Misa. La imagen es /kyriale/romanum/ad-libitum/<parte>/<numero>.webp
+ */
+export interface PiezaAdLibitum {
+  numero: string;
+  /** Nombre tradicional ("Clemens rector"); vacio si el libro no le da uno. */
+  nombre: string;
+  /** Cuando el libro no lo reimprime y remite a una Misa ("Misa XI, Kyrie A"). */
+  ref: string;
+  pagina: number;
+}
+
+export const AD_LIBITUM_DATA: Record<string, readonly PiezaAdLibitum[]> =
+"""
+
 
 def main():
-    catalogo, paters = {}, {}
+    catalogo, paters, credos, sueltas = {}, {}, {}, {}
     for libro, ruta in PDFS.items():
         if not os.path.exists(ruta):
             print(f"[{libro}] falta {ruta}: corre antes scripts/import-graduale.py")
@@ -305,8 +418,43 @@ def main():
                 tonos.append({"tono": tono, "pagina": pagina})
             except Exception as e:                # noqa: BLE001
                 fallos.append(f"pater/{tono}: {e}")
+        for tono, (ini, fin) in PATER_NOSTER_TRAMOS.get(libro, {}).items():
+            try:
+                recortar(doc, marcos, ini, fin,
+                         os.path.join(SALIDA, libro, "pater", f"{tono}.webp"))
+                tonos.append({"tono": tono, "pagina": ini[0]})
+            except Exception as e:                # noqa: BLE001
+                fallos.append(f"pater/{tono}: {e}")
         if tonos:
             print(f"[{libro}] Padre Nuestro: {len(tonos)} tonos")
+
+        # Los Credos: uno por imagen, en /kyriale/<libro>/credo/<numero>.webp
+        hechos = []
+        for numero, (ini, fin) in CREDOS.get(libro, {}).items():
+            try:
+                recortar(doc, marcos, ini, fin,
+                         os.path.join(SALIDA, libro, "credo", f"{numero}.webp"))
+                hechos.append({"numero": numero, "pagina": ini[0]})
+            except Exception as e:                # noqa: BLE001
+                fallos.append(f"credo/{numero}: {e}")
+        credos[libro] = hechos
+        print(f"[{libro}] Credo: {len(hechos)}")
+
+        # Los cantos ad libitum (solo el Romanum los trae).
+        if libro == "romanum":
+            for parte, piezas in AD_LIBITUM.items():
+                lista = []
+                for numero, nombre, ref, ini, fin in piezas:
+                    try:
+                        recortar(doc, marcos, ini, fin, os.path.join(
+                            SALIDA, libro, "ad-libitum", parte, f"{numero}.webp"))
+                        lista.append({"numero": numero, "nombre": nombre, "ref": ref,
+                                      "pagina": ini[0]})
+                    except Exception as e:        # noqa: BLE001
+                        fallos.append(f"ad-libitum/{parte}/{numero}: {e}")
+                sueltas[parte] = lista
+            print(f"[{libro}] ad libitum: "
+                  + ", ".join(f"{p} {len(l)}" for p, l in sueltas.items()))
 
         doc.close()
         catalogo[libro] = hechas
@@ -321,6 +469,10 @@ def main():
     io.open(DATOS, "w", encoding="utf-8").write(
         CABECERA + json.dumps(catalogo, ensure_ascii=False, indent=1) + " as const;" + chr(10)
         + CABECERA_PATER + json.dumps(paters, ensure_ascii=False, indent=1)
+        + " as const;" + chr(10)
+        + CABECERA_CREDO + json.dumps(credos, ensure_ascii=False, indent=1)
+        + " as const;" + chr(10)
+        + CABECERA_AD_LIBITUM + json.dumps(sueltas, ensure_ascii=False, indent=1)
         + " as const;" + chr(10))
     print(f"indice: {os.path.getsize(DATOS) // 1024} KB")
 

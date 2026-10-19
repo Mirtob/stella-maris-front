@@ -26,9 +26,10 @@ import { buildPsalmSong, conSalmoDelLibro, debeReponerAntifona, esAntifonaEscrit
 import { buildAntiphonSong, conAntifonas, findAntiphonSong } from '../../utils/antiphonSong';
 import { buildGradualeSong, libroDelCantoral,
          misasDelCantoral } from '../../utils/gradualeSong';
-import { buildKyrialeSongs, misaDelCantoral, gloriaDelCantoral,
-         buildPaterNosterSong, paterNosterDelCantoral,
-         type EleccionKyriale } from '../../utils/kyrialeSong';
+import { buildKyrialeSongs, misaDelCantoral, gloriaDelCantoral, adLibitumDelCantoral,
+         buildPaterNosterSong, paterNosterDelCantoral, buildCredoSong, credoDelCantoral,
+         type EleccionKyriale, type EleccionCredo, type PartesKyriale } from '../../utils/kyrialeSong';
+import { clavePaterNoster, desdeClavePaterNoster } from '../../data/kyrialeIndex';
 import { PARTES_CON_PROPIO, parteTienePropio, hayPropios, alternativasDelDia,
          LIBROS, type LibroGraduale } from '../../data/gradualeIndex';
 import { resolveAntiphons, conCita } from '../../data/antiphonIndex';
@@ -307,11 +308,14 @@ export function ChoirView({
    * La Misa del ordinario en gregoriano, y de dónde sale su Gloria.
    *
    * Se guarda UNA Misa, no una parte por parte: el Santo y el Cordero son los de la Misa
-   * del Kyrie, y lo único que puede venir de otra es el Gloria (ver utils/kyrialeSong).
+   * del Kyrie, y lo único que puede venir de otra es el Gloria. Cualquier parte puede ir,
+   * eso sí, con una pieza ad libitum del libro (ver utils/kyrialeSong).
    */
   const [misaGregoriana, setMisaGregoriana] = useState<EleccionKyriale | null>(null);
-  const [gloriaGregoriano, setGloriaGregoriano] = useState<EleccionKyriale | null>(null);
-  /** Tono del Padre Nuestro gregoriano. Va suelto: no pertenece a ninguna Misa. */
+  const [partesGregoriano, setPartesGregoriano] = useState<PartesKyriale>({});
+  /** Credo gregoriano. Va suelto, como el Padre Nuestro: sirve con cualquier Misa. */
+  const [credoGregoriano, setCredoGregoriano] = useState<EleccionCredo | null>(null);
+  /** Tono del Padre Nuestro gregoriano («A» del Romanum, «simplex:A»). Va suelto. */
   const [paterGregoriano, setPaterGregoriano] = useState<string | null>(null);
   /**
    * ¿El folleto lleva la partitura, o solo la letra? Una respuesta por cada bloque del
@@ -341,7 +345,7 @@ export function ChoirView({
   const agregarAlCantoral = (song: Song) => {
     if (misaGregoriana && PARTES_DE_LA_MISA.includes(song.category)) {
       setMisaGregoriana(null);
-      setGloriaGregoriano(null);
+      setPartesGregoriano({});
       toast.info('Se quitó la Misa gregoriana', {
         description: 'El ordinario va con una sola Misa: la que acabas de elegir.',
       });
@@ -432,12 +436,14 @@ export function ChoirView({
       }),
       // El ordinario gregoriano: las cuatro partes salen de una sola elección.
       // Con la aspersión se omite el Kyrie: la Misa gregoriana aporta el resto.
-      ...buildKyrialeSongs(massDate, misaGregoriana, gloriaGregoriano, conAspersion),
-      buildPaterNosterSong(massDate, 'romanum', paterGregoriano),
+      ...buildKyrialeSongs(massDate, misaGregoriana, partesGregoriano, conAspersion),
+      buildCredoSong(massDate, credoGregoriano),
+      buildPaterNosterSong(massDate, desdeClavePaterNoster(paterGregoriano)?.libro ?? null,
+        desdeClavePaterNoster(paterGregoriano)?.tono ?? null),
     ]), { misa: partituraMisa, gregoriano: partituraGregoriano, padreNuestro: partituraPadreNuestro }),
     [cantoral, psalmSong, massDate, antifonaEntrada, antifonaComunion, incluirEntrada,
      incluirComunion, libroGregoriano, misaElegida, tiempoDeLaMisa,
-     misaGregoriana, gloriaGregoriano, paterGregoriano, conAspersion,
+     misaGregoriana, partesGregoriano, credoGregoriano, paterGregoriano, conAspersion,
      partituraMisa, partituraGregoriano, partituraPadreNuestro],
   );
   /**
@@ -485,9 +491,13 @@ export function ChoirView({
     // La Misa del ordinario se lee del Kyrie, que es el que manda; el Gloria puede ser
     // de otra, así que se repone por su cuenta.
     setMisaGregoriana(misaDelCantoral(editingCantoral.songs, editingCantoral.date));
-    setGloriaGregoriano(gloriaDelCantoral(editingCantoral.songs, editingCantoral.date));
-    setPaterGregoriano(
-      paterNosterDelCantoral(editingCantoral.songs, editingCantoral.date)?.tono ?? null);
+    setPartesGregoriano({
+      ...adLibitumDelCantoral(editingCantoral.songs, editingCantoral.date),
+      gloria: gloriaDelCantoral(editingCantoral.songs, editingCantoral.date),
+    });
+    setCredoGregoriano(credoDelCantoral(editingCantoral.songs, editingCantoral.date));
+    const pater = paterNosterDelCantoral(editingCantoral.songs, editingCantoral.date);
+    setPaterGregoriano(pater ? clavePaterNoster(pater.libro, pater.tono) : null);
     // Y si el folleto llevaba la partitura de cada bloque del ordinario o solo la letra.
     setPartituraMisa(llevaPartitura(editingCantoral.songs, 'misa'));
     setPartituraGregoriano(llevaPartitura(editingCantoral.songs, 'gregoriano'));
@@ -914,7 +924,7 @@ export function ChoirView({
                     <label className="block text-xs font-bold text-brand-ink mb-1">
                       {esDelDia
                         ? `Misa del día · ${LIBROS[libro].corto}`
-                        : `Misa del ${LIBROS[libro].corto} para ${tiempoDeLaMisa.toLowerCase()}`}
+                        : `Propios del ${LIBROS[libro].corto} para ${tiempoDeLaMisa.toLowerCase()}`}
                     </label>
                     <select
                       value={misaElegida[libro] ?? ''}
@@ -931,7 +941,7 @@ export function ChoirView({
                     <p className="mt-1 text-xs text-brand-ink-soft">
                       {esDelDia
                         ? `Esta solemnidad tiene ${opciones.length} Misas con cantos distintos en el ${LIBROS[libro].nombre}.`
-                        : `El ${LIBROS[libro].corto} da ${opciones.length} Misas para todo este tiempo y el coro escoge cuál canta.`}
+                        : `El ${LIBROS[libro].corto} da ${opciones.length} juegos de propios (introito, gradual, ofertorio, comunión) para todo este tiempo y el coro escoge cuál canta. Las Misas del Kyriale (Kyrie, Gloria, Santo, Cordero) se eligen en la tarjeta del Kyrie.`}
                     </p>
                   </div>
                 );
@@ -1206,8 +1216,10 @@ export function ChoirView({
                 <KyrialeChoice
                   valor={misaGregoriana}
                   onChange={elegirMisaGregoriana}
-                  gloriaDe={gloriaGregoriano}
-                  onGloriaChange={setGloriaGregoriano}
+                  partes={partesGregoriano}
+                  onPartesChange={setPartesGregoriano}
+                  credo={credoGregoriano}
+                  onCredoChange={setCredoGregoriano}
                   partitura={partituraGregoriano}
                   onPartituraChange={setPartituraGregoriano}
                   sinKyrie={conAspersion}

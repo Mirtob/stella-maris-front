@@ -323,5 +323,213 @@ export const PATER_NOSTER_DATA: Record<string, readonly TonoPaterNoster[]> =
    "pagina": 804
   }
  ],
- "simplex": []
+ "simplex": [
+  {
+   "tono": "A",
+   "pagina": 22
+  },
+  {
+   "tono": "B",
+   "pagina": 23
+  },
+  {
+   "tono": "C",
+   "pagina": 24
+  }
+ ]
+} as const;
+
+/** Un Credo del libro. La imagen es /kyriale/<libro>/credo/<numero>.webp */
+export interface CredoKyriale {
+  /** Numero romano con que el libro lo nombra ("III"). */
+  numero: string;
+  /** Pagina del PDF donde empieza. */
+  pagina: number;
+}
+
+export const CREDO_DATA: Record<string, readonly CredoKyriale[]> =
+{
+ "romanum": [
+  {
+   "numero": "I",
+   "pagina": 759
+  },
+  {
+   "numero": "II",
+   "pagina": 761
+  },
+  {
+   "numero": "III",
+   "pagina": 764
+  },
+  {
+   "numero": "IV",
+   "pagina": 766
+  },
+  {
+   "numero": "V",
+   "pagina": 769
+  },
+  {
+   "numero": "VI",
+   "pagina": 772
+  }
+ ],
+ "simplex": [
+  {
+   "numero": "I",
+   "pagina": 51
+  },
+  {
+   "numero": "II",
+   "pagina": 54
+  },
+  {
+   "numero": "III",
+   "pagina": 57
+  },
+  {
+   "numero": "IV",
+   "pagina": 60
+  }
+ ]
+} as const;
+
+/**
+ * Un canto "ad libitum" del Romanum: un Kyrie, Gloria, Sanctus o Agnus suelto, que no
+ * forma Misa. La imagen es /kyriale/romanum/ad-libitum/<parte>/<numero>.webp
+ */
+export interface PiezaAdLibitum {
+  numero: string;
+  /** Nombre tradicional ("Clemens rector"); vacio si el libro no le da uno. */
+  nombre: string;
+  /** Cuando el libro no lo reimprime y remite a una Misa ("Misa XI, Kyrie A"). */
+  ref: string;
+  pagina: number;
+}
+
+export const AD_LIBITUM_DATA: Record<string, readonly PiezaAdLibitum[]> =
+{
+ "kyrie": [
+  {
+   "numero": "I",
+   "nombre": "Clemens rector",
+   "ref": "",
+   "pagina": 775
+  },
+  {
+   "numero": "II",
+   "nombre": "Summe Deus",
+   "ref": "",
+   "pagina": 776
+  },
+  {
+   "numero": "III",
+   "nombre": "Rector cosmi pie",
+   "ref": "Misa III, Kyrie A",
+   "pagina": 711
+  },
+  {
+   "numero": "IV",
+   "nombre": "Kyrie altissime",
+   "ref": "",
+   "pagina": 777
+  },
+  {
+   "numero": "V",
+   "nombre": "Conditor Kyrie omnium",
+   "ref": "Misa I, Kyrie B",
+   "pagina": 701
+  },
+  {
+   "numero": "VI",
+   "nombre": "Te Christe rex supplices",
+   "ref": "Misa I, Kyrie A",
+   "pagina": 700
+  },
+  {
+   "numero": "VII",
+   "nombre": "Splendor aeterne",
+   "ref": "",
+   "pagina": 778
+  },
+  {
+   "numero": "VIII",
+   "nombre": "Firmator sancte",
+   "ref": "",
+   "pagina": 778
+  },
+  {
+   "numero": "IX",
+   "nombre": "O Pater excelse",
+   "ref": "",
+   "pagina": 779
+  },
+  {
+   "numero": "X",
+   "nombre": "Orbis factor",
+   "ref": "Misa XI, Kyrie A",
+   "pagina": 738
+  },
+  {
+   "numero": "XI",
+   "nombre": "Kyrie salve",
+   "ref": "Misa XVII, Kyrie A",
+   "pagina": 754
+  }
+ ],
+ "gloria": [
+  {
+   "numero": "I",
+   "nombre": "",
+   "ref": "",
+   "pagina": 780
+  },
+  {
+   "numero": "II",
+   "nombre": "",
+   "ref": "",
+   "pagina": 781
+  },
+  {
+   "numero": "III",
+   "nombre": "",
+   "ref": "Misa III, Gloria B",
+   "pagina": 711
+  },
+  {
+   "numero": "IV",
+   "nombre": "More ambrosiano",
+   "ref": "",
+   "pagina": 783
+  }
+ ],
+ "sanctus": [
+  {
+   "numero": "I",
+   "nombre": "",
+   "ref": "",
+   "pagina": 785
+  },
+  {
+   "numero": "II",
+   "nombre": "",
+   "ref": "",
+   "pagina": 785
+  },
+  {
+   "numero": "III",
+   "nombre": "",
+   "ref": "",
+   "pagina": 786
+  }
+ ],
+ "agnus": [
+  {
+   "numero": "II",
+   "nombre": "",
+   "ref": "",
+   "pagina": 787
+  }
+ ]
 } as const;

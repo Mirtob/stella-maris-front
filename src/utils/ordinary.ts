@@ -209,13 +209,19 @@ const DEL_PADRE_NUESTRO = new Set([
 
 /** A qué bloque pertenece una parte del ordinario; `null` si no es del ordinario. */
 export function grupoDePartitura(song: Pick<Song, 'id' | 'category'>): GrupoPartitura | null {
-  if (!isOrdinary(song)) return null;
+  const delKyriale = String(song.id).startsWith('kyriale-');
+  // El Credo gregoriano no es "ordinario" para el resto de la app (el Credo del catálogo
+  // se canta de la letra), pero va con la Misa del Kyriale: su partitura se decide ahí.
+  if (!isOrdinary(song)) return delKyriale && song.category === 'Credo' ? 'gregoriano' : null;
   if (DEL_PADRE_NUESTRO.has(song.category)) return 'padreNuestro';
-  return String(song.id).startsWith('kyriale-') ? 'gregoriano' : 'misa';
+  return delKyriale ? 'gregoriano' : 'misa';
 }
 
 /** El texto latino de la parte, para el gregoriano que va "solo letra" (no trae letra). */
 function letraLatina(category: string): string | undefined {
+  // El Credo cantado del ordinario sólo trae el comienzo; el texto entero está en el
+  // Credo rezado ('creed'), que no lleva categoría.
+  if (category === 'Credo') return massOrdinary.find((m) => m.id === 'creed')?.latin;
   return massOrdinary.find((m) => m.category === category && m.latin)?.latin;
 }
 

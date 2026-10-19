@@ -13,11 +13,15 @@
 import {
   misasDelKyriale, misasConGloria, misaDelKyriale, kyrialeImageUrl,
   parteKyrialeDe, CATEGORIAS_DEL_KYRIALE, fuenteKyriale,
+  credosDelKyriale, piezasAdLibitum, todosLosTonosDelPaterNoster,
+  clavePaterNoster, desdeClavePaterNoster,
 } from '../../src/data/kyrialeIndex';
 import {
   buildKyrialeSongs, isKyrialeSong, misaDelCantoral, gloriaDelCantoral,
-  buildPaterNosterSong, paterNosterDelCantoral,
+  buildPaterNosterSong, paterNosterDelCantoral, adLibitumDelCantoral,
+  buildCredoSong, credoDelCantoral,
 } from '../../src/utils/kyrialeSong';
+import { marcarPartituras } from '../../src/utils/ordinary';
 import { tonosDelPaterNoster } from '../../src/data/kyrialeIndex';
 import { songsForBuilder } from '../../src/utils/psalmSong';
 
@@ -52,7 +56,19 @@ check('la imagen vive donde la deja el importador',
   kyrialeImageUrl('romanum', 'XI', 'kyrie'), '/kyriale/romanum/XI/kyrie.webp');
 check('el pie dice libro, Misa y página',
   fuenteKyriale(misaDelKyriale('romanum', 'XI')!),
-  'Graduale Romanum · Misa XI · Orbis factor · p. 738');
+  'Graduale Romanum · Misa XI, Orbis factor · p. 738');
+
+// 18-oct-2026: el combo dice «Misa VIII, De Angelis», con número romano y nombre.
+check('rótulo: número romano y nombre', misaDelKyriale('romanum', 'VIII')?.rotulo,
+  'Misa VIII, De Angelis');
+check('la I es Lux et origo', misaDelKyriale('romanum', 'I')?.rotulo, 'Misa I, Lux et origo');
+check('sin nombre, sólo el número', misaDelKyriale('romanum', 'XVI')?.rotulo, 'Misa XVI');
+check('las del Simplex dicen de qué libro son',
+  misaDelKyriale('simplex', 'I')?.rotulo, 'Misa I del Simplex');
+check('todas las Misas del Romanum, de la I a la XVIII',
+  misasDelKyriale().filter((m) => m.libro === 'romanum').map((m) => m.numero),
+  ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII',
+   'XIV', 'XV', 'XVI', 'XVII', 'XVIII']);
 
 // En ferias, Adviento y Cuaresma no se canta el Gloria, y el libro no lo trae.
 check('la XVI no trae Gloria',
@@ -71,7 +87,7 @@ check('y cada una en su parte de la Misa',
   cantos.map((s) => s.category).sort(),
   ['Cordero de Dios', 'Gloria', 'Kyrie', 'Santo']);
 check('todas de la misma Misa',
-  [...new Set(cantos.map((s) => s.massName))], ['Gregoriana XI · Orbis factor']);
+  [...new Set(cantos.map((s) => s.massName))], ['Misa XI, Orbis factor (gregoriana)']);
 check('el Kyrie lleva su partitura',
   cantos.find((s) => s.category === 'Kyrie')?.gradualeImage,
   '/kyriale/romanum/XI/kyrie.webp');
@@ -135,6 +151,57 @@ check('se recupera el tono al editar',
 check('y sale del borrador como los demás',
   songsForBuilder([pater!, { id: 'c1', category: 'Entrada' } as any]).map((s) => s.id),
   ['c1']);
+
+// ── Kyries y demás ad libitum ──────────────────────────────────────────────
+check('once Kyries ad libitum', piezasAdLibitum('kyrie').length, 11);
+check('cuatro Glorias, tres Sanctus',
+  [piezasAdLibitum('gloria').length, piezasAdLibitum('sanctus').length], [4, 3]);
+check('rótulo del ad libitum', piezasAdLibitum('kyrie')[0].rotulo, 'Kyrie I ad libitum, Clemens rector');
+const KYRIE_IV = { libro: 'romanum' as const, numero: 'IV', adLibitum: true };
+const conSuelto = buildKyrialeSongs(FECHA, ANGELIS, { kyrie: KYRIE_IV });
+check('el Kyrie ad libitum reemplaza al de la Misa',
+  conSuelto.find((s) => s.category === 'Kyrie')?.gradualeImage,
+  '/kyriale/romanum/ad-libitum/kyrie/IV.webp');
+check('y el Santo sigue siendo el de la Misa',
+  conSuelto.find((s) => s.category === 'Santo')?.gradualeImage,
+  '/kyriale/romanum/VIII/sanctus.webp');
+check('el Kyrie de OTRA Misa no se acepta (la regla sigue)',
+  buildKyrialeSongs(FECHA, ANGELIS, { kyrie: ORBIS })
+    .find((s) => s.category === 'Kyrie')?.gradualeImage,
+  '/kyriale/romanum/VIII/kyrie.webp');
+check('al editar, la Misa se lee aunque el Kyrie sea ad libitum',
+  misaDelCantoral(conSuelto, FECHA), ANGELIS);
+check('y el Kyrie ad libitum se repone', adLibitumDelCantoral(conSuelto, FECHA), { kyrie: KYRIE_IV });
+check('un Gloria ad libitum también vale',
+  buildKyrialeSongs(FECHA, FERIAS, { gloria: { libro: 'romanum', numero: 'IV', adLibitum: true } })
+    .find((s) => s.category === 'Gloria')?.gradualeImage,
+  '/kyriale/romanum/ad-libitum/gloria/IV.webp');
+
+// ── El Credo ───────────────────────────────────────────────────────────────
+check('seis Credos del Romanum y cuatro del Simplex', credosDelKyriale().length, 10);
+const credo = buildCredoSong(FECHA, { libro: 'romanum', numero: 'III' });
+check('el Credo va en su parte', credo?.category, 'Credo');
+check('con su partitura', credo?.gradualeImage, '/kyriale/romanum/credo/III.webp');
+check('se repone al editar', credoDelCantoral([credo!], FECHA), { libro: 'romanum', numero: 'III' });
+check('un Credo que no existe no viaja',
+  buildCredoSong(FECHA, { libro: 'romanum', numero: 'IX' }), null);
+check('solo letra: el Credo gregoriano lleva el texto latino entero',
+  marcarPartituras([credo!], { misa: false, gregoriano: false, padreNuestro: false })[0].lyrics
+    ?.includes('vitam venturi saeculi'), true);
+check('con partitura no se le pone letra',
+  marcarPartituras([credo!], { misa: false, gregoriano: true, padreNuestro: false })[0].folletoSoloLetra,
+  undefined);
+
+// ── Los tonos del Simplex ──────────────────────────────────────────────────
+check('tres tonos por libro', todosLosTonosDelPaterNoster().length, 6);
+check('la clave del Romanum es la de siempre', clavePaterNoster('romanum', 'A'), 'A');
+check('la del Simplex lleva el libro', clavePaterNoster('simplex', 'B'), 'simplex:B');
+check('y se lee de vuelta', desdeClavePaterNoster('simplex:B'), { libro: 'simplex', tono: 'B' });
+check('una clave vieja es del Romanum', desdeClavePaterNoster('C'), { libro: 'romanum', tono: 'C' });
+const paterS = buildPaterNosterSong(FECHA, 'simplex', 'A');
+check('el tono del Simplex tiene partitura', paterS?.gradualeImage, '/kyriale/simplex/pater/A.webp');
+check('y se repone con su libro',
+  paterNosterDelCantoral([paterS!], FECHA), { libro: 'simplex', tono: 'A' });
 
 console.log(`\n${pass} ok, ${fail} fallas`);
 if (fail) process.exit(1);

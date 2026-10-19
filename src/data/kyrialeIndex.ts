@@ -12,8 +12,8 @@
  * Los propios del día (introito, gradual, ofertorio, comunión) viven aparte, en
  * `gradualeIndex`: esos cambian cada domingo, y estos no.
  */
-import { KYRIALE_DATA, PATER_NOSTER_DATA, type MisaKyriale,
-         type TonoPaterNoster } from './kyrialeIndex.data';
+import { KYRIALE_DATA, PATER_NOSTER_DATA, CREDO_DATA, AD_LIBITUM_DATA, type MisaKyriale,
+         type TonoPaterNoster, type CredoKyriale, type PiezaAdLibitum } from './kyrialeIndex.data';
 import type { LibroGraduale } from './gradualeIndex';
 import { LIBROS } from './gradualeIndex';
 
@@ -38,12 +38,17 @@ export function parteKyrialeDe(categoria: string): ParteKyriale | null {
 /** Una Misa del Kyriale, ya identificada por su libro. */
 export interface MisaDelKyriale extends MisaKyriale {
   libro: LibroGraduale;
-  /** Cómo se llama en la app: "XI · Orbis factor" o, si no tiene nombre, sólo "XVI". */
+  /**
+   * Cómo se llama en la app: «Misa XI, Orbis factor», o «Misa XVI» si no tiene nombre.
+   * Las del Simplex dicen de qué libro son («Misa I del Simplex»): su numeración es
+   * otra, y la Misa I del Simplex no es Lux et origo.
+   */
   rotulo: string;
 }
 
-function rotuloDe(misa: MisaKyriale): string {
-  return misa.nombre ? `${misa.numero} · ${misa.nombre}` : misa.numero;
+function rotuloDe(misa: MisaKyriale, libro: LibroGraduale): string {
+  const numero = libro === 'simplex' ? `Misa ${misa.numero} del Simplex` : `Misa ${misa.numero}`;
+  return misa.nombre ? `${numero}, ${misa.nombre}` : numero;
 }
 
 /** Todas las Misas disponibles, Romanum primero. */
@@ -51,7 +56,7 @@ export function misasDelKyriale(): MisaDelKyriale[] {
   const salida: MisaDelKyriale[] = [];
   for (const libro of ['romanum', 'simplex'] as LibroGraduale[]) {
     for (const misa of Object.values(KYRIALE_DATA[libro]) as MisaKyriale[]) {
-      salida.push({ ...misa, libro, rotulo: rotuloDe(misa) });
+      salida.push({ ...misa, libro, rotulo: rotuloDe(misa, libro) });
     }
   }
   return salida;
@@ -60,7 +65,7 @@ export function misasDelKyriale(): MisaDelKyriale[] {
 /** Una Misa concreta. `null` si no existe (por ejemplo, tras cambiar el índice). */
 export function misaDelKyriale(libro: LibroGraduale, numero: string): MisaDelKyriale | null {
   const misa = (KYRIALE_DATA[libro] as Record<string, MisaKyriale>)[numero];
-  return misa ? { ...misa, libro, rotulo: rotuloDe(misa) } : null;
+  return misa ? { ...misa, libro, rotulo: rotuloDe(misa, libro) } : null;
 }
 
 /** Las Misas que traen Gloria: las únicas que sirven para reemplazarlo. */
@@ -77,7 +82,7 @@ export function kyrialeImageUrl(
 
 /** De dónde sale, para el pie de la partitura. */
 export function fuenteKyriale(misa: MisaDelKyriale): string {
-  return `${LIBROS[misa.libro].nombre} · Misa ${misa.rotulo} · p. ${misa.pagina}`;
+  return `${LIBROS[misa.libro].nombre} · ${misa.rotulo} · p. ${misa.pagina}`;
 }
 
 /** Cómo se llama cada parte en la app (el rótulo que ve el coro). */
@@ -104,7 +109,104 @@ export function paterNosterImageUrl(libro: LibroGraduale, tono: string): string 
   return `/kyriale/${libro}/pater/${tono}.webp`;
 }
 
+/** Todos los tonos del Padre Nuestro, de los dos libros. */
+export function todosLosTonosDelPaterNoster(): { libro: LibroGraduale; tono: TonoPaterNoster }[] {
+  return (['romanum', 'simplex'] as LibroGraduale[])
+    .flatMap((libro) => tonosDelPaterNoster(libro).map((tono) => ({ libro, tono })));
+}
+
+/**
+ * La clave con que se guarda el tono elegido: «A» es el tono A del Romanum (así se
+ * guardaba antes de que hubiera tonos del Simplex) y «simplex:A» el del Simplex.
+ */
+export function clavePaterNoster(libro: LibroGraduale, tono: string): string {
+  return libro === 'romanum' ? tono : `${libro}:${tono}`;
+}
+
+export function desdeClavePaterNoster(clave: string | null): { libro: LibroGraduale; tono: string } | null {
+  if (!clave) return null;
+  const [a, b] = clave.split(':');
+  return b ? { libro: a as LibroGraduale, tono: b } : { libro: 'romanum', tono: a };
+}
+
 /** De donde sale, para el pie de la partitura. */
 export function fuentePaterNoster(libro: LibroGraduale, tono: TonoPaterNoster): string {
   return `${LIBROS[libro].nombre} · Padre Nuestro, tono ${tono.tono} · p. ${tono.pagina}`;
+}
+
+/* ─── El Credo ────────────────────────────────────────────────────────────────────
+ * No es parte de ninguna Misa del Kyriale: el libro trae los Credos aparte (seis el
+ * Romanum, cuatro el Simplex) y cualquiera va con cualquier Misa. Se elige solo, como
+ * el Padre Nuestro.
+ */
+
+export interface CredoDelLibro extends CredoKyriale {
+  libro: LibroGraduale;
+  /** «Credo III», o «Credo I del Simplex». */
+  rotulo: string;
+}
+
+function credoDe(libro: LibroGraduale, c: CredoKyriale): CredoDelLibro {
+  return { ...c, libro, rotulo: libro === 'simplex' ? `Credo ${c.numero} del Simplex` : `Credo ${c.numero}` };
+}
+
+/** Todos los Credos, Romanum primero. */
+export function credosDelKyriale(): CredoDelLibro[] {
+  return (['romanum', 'simplex'] as LibroGraduale[])
+    .flatMap((libro) => (CREDO_DATA[libro] ?? []).map((c) => credoDe(libro, c)));
+}
+
+export function credoDelKyriale(libro: LibroGraduale, numero: string): CredoDelLibro | null {
+  const c = (CREDO_DATA[libro] ?? []).find((x) => x.numero === numero);
+  return c ? credoDe(libro, c) : null;
+}
+
+export function credoImageUrl(libro: LibroGraduale, numero: string): string {
+  return `/kyriale/${libro}/credo/${numero}.webp`;
+}
+
+export function fuenteCredo(credo: CredoDelLibro): string {
+  return `${LIBROS[credo.libro].nombre} · ${credo.rotulo} · p. ${credo.pagina}`;
+}
+
+/* ─── Los cantos «ad libitum» ─────────────────────────────────────────────────────
+ * Kyries, Glorias, Sanctus y Agnus sueltos que el Romanum trae al final del Kyriale
+ * para cantarlos EN LUGAR de los de la Misa. No forman Misa, así que no rompen la regla
+ * del Santo y el Cordero: no se mezclan dos Misas, se usa la pieza que el libro ofrece
+ * para eso. Sólo el Romanum los trae.
+ */
+
+export interface PiezaDelLibitum extends PiezaAdLibitum {
+  parte: ParteKyriale;
+  /** «Kyrie I ad libitum, Clemens rector». */
+  rotulo: string;
+}
+
+function piezaDe(parte: ParteKyriale, p: PiezaAdLibitum): PiezaDelLibitum {
+  const base = `${CATEGORIA_LATINA[parte]} ${p.numero} ad libitum`;
+  return { ...p, parte, rotulo: p.nombre ? `${base}, ${p.nombre}` : base };
+}
+
+/** Cómo nombra el libro cada parte (para los ad libitum, que se citan en latín). */
+const CATEGORIA_LATINA: Record<ParteKyriale, string> = {
+  kyrie: 'Kyrie', gloria: 'Gloria', sanctus: 'Sanctus', agnus: 'Agnus Dei',
+};
+
+/** Las piezas ad libitum de una parte, en el orden del libro. */
+export function piezasAdLibitum(parte: ParteKyriale): PiezaDelLibitum[] {
+  return (AD_LIBITUM_DATA[parte] ?? []).map((p) => piezaDe(parte, p));
+}
+
+export function piezaAdLibitum(parte: ParteKyriale, numero: string): PiezaDelLibitum | null {
+  const p = (AD_LIBITUM_DATA[parte] ?? []).find((x) => x.numero === numero);
+  return p ? piezaDe(parte, p) : null;
+}
+
+export function adLibitumImageUrl(parte: ParteKyriale, numero: string): string {
+  return `/kyriale/romanum/ad-libitum/${parte}/${numero}.webp`;
+}
+
+export function fuenteAdLibitum(pieza: PiezaDelLibitum): string {
+  const ref = pieza.ref ? ` (= ${pieza.ref})` : '';
+  return `${LIBROS.romanum.nombre} · ${pieza.rotulo}${ref} · p. ${pieza.pagina}`;
 }

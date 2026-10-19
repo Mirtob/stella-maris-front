@@ -9,14 +9,17 @@ import {
   PadreNuestroIdioma, construirPadreNuestro, construirAclamacion, idiomaEnElCantoral,
   aclamacionesEnElCantoral, misaDelCantoral, esPadreNuestroDelCantoral,
 } from '../../utils/padreNuestroYAclamaciones';
-import { tonosDelPaterNoster, paterNosterImageUrl } from '../../data/kyrialeIndex';
+import {
+  todosLosTonosDelPaterNoster, paterNosterImageUrl, clavePaterNoster, desdeClavePaterNoster,
+} from '../../data/kyrialeIndex';
+import { LIBROS } from '../../data/gradualeIndex';
 import { CasillaPartitura } from './CasillaPartitura';
 
 interface PadreNuestroYAclamacionesProps {
   cantoral: Song[];
   onAdd: (song: Song) => void;
   onRemove: (songId: string, category?: string) => void;
-  /** Tono del Padre Nuestro gregoriano del Kyriale (A, B, C), o `null`. */
+  /** Tono del Padre Nuestro gregoriano: «A» (Romanum) o «simplex:A», o `null`. */
   paterDelKyriale: string | null;
   /** Pone o quita ese tono. Se elige aquí y en ningún otro lado. */
   onPaterDelKyrialeChange: (tono: string | null) => void;
@@ -46,7 +49,8 @@ export function PadreNuestroYAclamaciones({
 
   const idioma = idiomaEnElCantoral(cantoral);
   const puestas = aclamacionesEnElCantoral(cantoral);
-  const tonos = tonosDelPaterNoster('romanum');
+  const tonos = todosLosTonosDelPaterNoster();
+  const tonoElegido = desdeClavePaterNoster(paterDelKyriale);
   const version: Version = paterDelKyriale ? `tono:${paterDelKyriale}` : idioma;
   const gregoriano = version === 'la' || !!paterDelKyriale;
   /** «¿Incluir las demás aclamaciones?» Queda en Sí si ya hay alguna puesta. */
@@ -150,12 +154,15 @@ export function PadreNuestroYAclamaciones({
           <p className="text-xs text-brand-ink-soft mb-1">¿Cuál partitura del Pater noster?</p>
           <div className="flex flex-wrap gap-2" role="group" aria-label="Partitura del Pater noster">
             {boton(version === 'la', 'La de la parroquia (Drive)', () => elegirVersion('la'), 'piedra')}
-            {tonos.map((t) => boton(
-              paterDelKyriale === t.tono, `Tono ${t.tono} · Kyriale`,
-              () => elegirVersion(`tono:${t.tono}`), 'piedra',
-            ))}
+            {tonos.map(({ libro, tono }) => {
+              const clave = clavePaterNoster(libro, tono.tono);
+              return boton(
+                paterDelKyriale === clave, `Tono ${tono.tono} · ${LIBROS[libro].corto}`,
+                () => elegirVersion(`tono:${clave}`), 'piedra',
+              );
+            })}
           </div>
-          {paterDelKyriale && (
+          {tonoElegido && (
             <>
               <button
                 type="button"
@@ -168,8 +175,8 @@ export function PadreNuestroYAclamaciones({
               {verTono && (
                 <div className="mt-2 overflow-x-auto rounded-lg bg-white p-2">
                   <img
-                    src={paterNosterImageUrl('romanum', paterDelKyriale)}
-                    alt={`Padre Nuestro, tono ${paterDelKyriale}`}
+                    src={paterNosterImageUrl(tonoElegido.libro, tonoElegido.tono)}
+                    alt={`Padre Nuestro, tono ${tonoElegido.tono} del ${LIBROS[tonoElegido.libro].corto}`}
                     loading="lazy"
                     className="block mx-auto w-full"
                   />
