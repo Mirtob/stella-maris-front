@@ -513,7 +513,7 @@ export function InstallApp({ onBack, parishes = [], role, loggedIn = false, onLo
 
         {/* Portada */}
         <div className="text-center">
-          <img src={logoStellaMaris} alt="" className="w-24 h-24 mx-auto mb-3 rounded-2xl shadow-lg" />
+          <img src={logoStellaMaris} alt="" className="w-24 h-24 mx-auto mb-3 rounded-full drop-shadow-lg" />
           <h1 className="text-3xl sm:text-4xl font-bold text-brand-ink leading-tight">
             Instala Stella Maris
           </h1>
