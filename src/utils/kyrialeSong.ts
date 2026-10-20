@@ -20,9 +20,10 @@ import {
   misaDelKyriale, kyrialeImageUrl, fuenteKyriale, tonosDelPaterNoster,
   paterNosterImageUrl, fuentePaterNoster, credoDelKyriale, credoImageUrl, fuenteCredo,
   piezaAdLibitum, adLibitumImageUrl, fuenteAdLibitum, CATEGORIA_LATINA,
-  CATEGORIA_DE_LA_PARTE, type ParteKyriale,
+  CATEGORIA_DE_LA_PARTE, misasDelKyriale, credosDelKyriale, piezasAdLibitum,
+  todosLosTonosDelPaterNoster, type ParteKyriale,
 } from '../data/kyrialeIndex';
-import type { LibroGraduale } from '../data/gradualeIndex';
+import { LIBROS, type LibroGraduale } from '../data/gradualeIndex';
 
 const PREFIJO = 'kyriale-';
 
@@ -273,4 +274,72 @@ export function paterNosterDelCantoral<T extends Pick<Song, 'id' | 'gradualeImag
   const canto = songs.find((s) => String(s.id) === `${PREFIJO}pater-${massDate}`);
   const m = /^\/kyriale\/(romanum|simplex)\/pater\/([^/.]+)\./.exec(canto?.gradualeImage ?? '');
   return m ? { libro: m[1] as LibroGraduale, tono: m[2] } : null;
+}
+
+/* ─── El Kyriale en el Banco de Partituras ────────────────────────────────────────
+ * El libro entero a la vista, sin pasar por el constructor: las Misas con sus partes,
+ * los Credos, las piezas ad libitum y los tonos del Padre Nuestro. Cada entrada trae
+ * sus "cantos" ya armados, así el Modo Atril los abre como cualquier otro.
+ */
+
+/** Una entrada del banco: una Misa (varias partes) o una pieza suelta. */
+export interface EntradaDelKyriale {
+  clave: string;
+  titulo: string;
+  /** Para qué la propone el libro, o de qué libro es. */
+  detalle?: string;
+  cantos: Song[];
+}
+
+export interface GrupoDelKyriale {
+  id: 'romanum' | 'simplex' | 'credos' | 'ad-libitum' | 'pater';
+  titulo: string;
+  entradas: EntradaDelKyriale[];
+}
+
+const ORDEN_DE_LA_MISA: ParteKyriale[] = ['kyrie', 'gloria', 'sanctus', 'agnus'];
+
+/** Todo el Kyriale, agrupado como lo trae el libro. */
+export function kyrialeDelBanco(): GrupoDelKyriale[] {
+  const misas = (libro: LibroGraduale): EntradaDelKyriale[] =>
+    misasDelKyriale().filter((m) => m.libro === libro).map((m) => {
+      const clave = `banco-${m.libro}-${m.numero}`;
+      const cantos = buildKyrialeSongs(clave, { libro: m.libro, numero: m.numero })
+        .sort((a, b) => ORDEN_DE_LA_MISA.indexOf(parteDelId(a)) - ORDEN_DE_LA_MISA.indexOf(parteDelId(b)));
+      return { clave, titulo: m.rotulo, detalle: m.uso || undefined, cantos };
+    });
+
+  const credos = credosDelKyriale().map((c) => {
+    const clave = `banco-credo-${c.libro}-${c.numero}`;
+    return { clave, titulo: c.rotulo, cantos: [buildCredoSong(clave, c)!].filter(Boolean) };
+  });
+
+  const adLibitum = ORDEN_DE_LA_MISA.flatMap((parte) => piezasAdLibitum(parte).map((p) => {
+    const clave = `banco-adlib-${parte}-${p.numero}`;
+    const canto = cantoDe(clave, { libro: 'romanum', numero: p.numero, adLibitum: true }, parte);
+    return { clave, titulo: p.rotulo, detalle: p.ref ? `= ${p.ref}` : undefined, cantos: canto ? [canto] : [] };
+  }));
+
+  const pater = todosLosTonosDelPaterNoster().map(({ libro, tono }) => {
+    const clave = `banco-pater-${libro}-${tono.tono}`;
+    const canto = buildPaterNosterSong(clave, libro, tono.tono);
+    return {
+      clave,
+      titulo: `Pater noster, tono ${tono.tono}`,
+      detalle: LIBROS[libro].nombre,
+      cantos: canto ? [{ ...canto, title: `Pater noster, tono ${tono.tono}` }] : [],
+    };
+  });
+
+  return ([
+    { id: 'romanum', titulo: `Misas del ${LIBROS.romanum.nombre}`, entradas: misas('romanum') },
+    { id: 'simplex', titulo: `Misas del ${LIBROS.simplex.nombre}`, entradas: misas('simplex') },
+    { id: 'credos', titulo: 'Credos', entradas: credos },
+    { id: 'ad-libitum', titulo: 'Piezas ad libitum', entradas: adLibitum },
+    { id: 'pater', titulo: 'Pater noster', entradas: pater },
+  ] as GrupoDelKyriale[]).map((g) => ({ ...g, entradas: g.entradas.filter((e) => e.cantos.length > 0) }));
+}
+
+function parteDelId(song: Pick<Song, 'id'>): ParteKyriale {
+  return (/^kyriale-(kyrie|gloria|sanctus|agnus)-/.exec(String(song.id))?.[1] ?? 'kyrie') as ParteKyriale;
 }

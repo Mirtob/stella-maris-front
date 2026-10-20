@@ -7,6 +7,7 @@ import { matchesSearch } from '../../utils/textSearch';
 import { EmptyState } from '../common/EmptyState';
 import { FavoriteButton } from './FavoriteButton';
 import { AtrilSongButton } from '../atril/AtrilSongButton';
+import { KyrialeLibrary, cuantasDelKyriale } from './KyrialeLibrary';
 
 interface SheetMusicLibraryProps {
   onPlaySong: (song: Song) => void;
@@ -353,7 +354,15 @@ export function SheetMusicLibrary({ onPlaySong, userRole, userInstrument, userVo
             );
           })}
 
-          {filteredParts.length === 0 && (
+          {/* El Kyriale: antes sólo se veía al elegirlo en el constructor. */}
+          <KyrialeLibrary
+            searchTerm={searchTerm}
+            userRole={userRole}
+            userInstrument={userInstrument}
+            userVoicePart={userVoicePart}
+          />
+
+          {filteredParts.length === 0 && cuantasDelKyriale(searchTerm) === 0 && (
             <EmptyState
               compact
               Icon={SearchX}
