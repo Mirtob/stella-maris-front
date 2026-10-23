@@ -18,11 +18,21 @@ import { lyricsHaveChords } from './songReport';
 
 export type ContentMode = 'score' | 'chords' | 'lyrics';
 
+/** Lo que el músico eligió con el selector Partitura / Acordes del Atril. */
+export type VistaAtril = 'score' | 'chords';
+
 export interface PerfilAtril {
   puebloFiel: boolean;
   organo: boolean;
   /** Voz del corista (SATB, viento…), si tiene. */
   voicePart?: string;
+  /** Vista elegida a mano; sin ella manda el instrumento. Solo para el coro. */
+  vista?: VistaAtril;
+}
+
+/** La vista que el instrumento da por defecto, la que muestra el selector al abrir. */
+export function vistaPorDefecto(p: PerfilAtril): VistaAtril {
+  return p.organo || p.voicePart ? 'score' : 'chords';
 }
 
 /** La partitura (URL de Drive) que le toca a este perfil en este canto. */
@@ -37,6 +47,10 @@ export function partituraDelAtril(s: Song, p: PerfilAtril): string | undefined {
 /** Qué mostrar de un canto: partitura, letra con acordes o solo letra. */
 export function modoDelAtril(s: Song, p: PerfilAtril): ContentMode {
   if (p.puebloFiel) return isOrdinary(s) && partituraDelPueblo(s) ? 'score' : 'lyrics';
+  // Vista elegida a mano: se respeta mientras el canto tenga con qué; si no, lo otro,
+  // para que ningún canto quede en blanco por el cambio.
+  if (p.vista === 'chords') return s.lyrics?.trim() || !partituraDelAtril(s, p) ? 'chords' : 'score';
+  if (p.vista === 'score') return partituraDelAtril(s, p) ? 'score' : 'chords';
   // Polifonía: quien tiene voz asignada y el canto trae SU partitura, ve la partitura
   // aunque no sea organista — es justamente para lo que la subió el coro.
   if (hasPartSheet(s.sheets, p.voicePart)) return 'score';

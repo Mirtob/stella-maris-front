@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { Song, InstrumentType, UserRole } from '../types';
 import { sheetForPart, FULL_SCORE } from './sheetParts';
-import { modoDelAtril, partituraDelAtril } from './atrilModo';
+import { modoDelAtril, partituraDelAtril, type VistaAtril } from './atrilModo';
 import { getDrivePdfProxyUrl } from './driveProxy';
 import { sortByMassOrder, rotuloDeParte, tituloVisible } from './ordinary';
 import { transposeContent, getChordNotation, getTransposedKey, keyPrefersFlats, type ChordNotation } from './chordTranspose';
@@ -391,6 +391,8 @@ export interface AtrilPrintOptions {
   notation?: ChordNotation;
   /** Voz del corista: imprime SU partitura, como la ve en pantalla. */
   voicePart?: string;
+  /** Vista elegida con el selector Partitura / Acordes: se imprime lo que se ve. */
+  vista?: VistaAtril;
 }
 
 export async function generateAtrilPrintable(opts: AtrilPrintOptions): Promise<{ blob: Blob; url: string }> {
@@ -404,7 +406,7 @@ export async function generateAtrilPrintable(opts: AtrilPrintOptions): Promise<{
   const hasChords = !isPuebloFiel;
 
   // El mismo criterio que la pantalla del Atril (utils/atrilModo).
-  const perfil = { puebloFiel: isPuebloFiel, organo: isOrgano, voicePart: opts.voicePart };
+  const perfil = { puebloFiel: isPuebloFiel, organo: isOrgano, voicePart: opts.voicePart, vista: opts.vista };
   const modeFor = (s: Song) => modoDelAtril(s, perfil);
 
   // Carta vertical.

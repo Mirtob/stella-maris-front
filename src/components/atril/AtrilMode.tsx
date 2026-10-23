@@ -1,7 +1,7 @@
 import { abrirOGuardarPdf } from '../../utils/descargarPdf';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ZoomIn, ZoomOut, ChevronUp, ChevronDown, RotateCcw, Play, Pause, Maximize2, Minimize2, Music, List, Printer, Loader, Timer, Minus, Plus, MoreVertical, Headphones } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, ChevronUp, ChevronDown, RotateCcw, Play, Pause, Maximize2, Minimize2, Music, List, Printer, Loader, Timer, Minus, Plus, MoreVertical, Headphones, FileMusic, Guitar } from 'lucide-react';
 import { toast } from 'sonner';
 import { Song, UserRole, InstrumentType } from '../../types';
 import { transposeContent, getTransposedKey, keyPrefersFlats, formatTransposition, getChordNotation, setChordNotation, type ChordNotation } from '../../utils/chordTranspose';
@@ -13,7 +13,7 @@ import { useMetronome } from '../../hooks/useMetronome';
 import { Tour } from '../tour/Tour';
 import { atrilTips, hasSeenTip, markTipSeen } from '../tour/tours';
 import { isOrdinary, sortByMassOrder, rotuloDeParte, tituloVisible } from '../../utils/ordinary';
-import { modoDelAtril, partituraDelAtril, type ContentMode } from '../../utils/atrilModo';
+import { modoDelAtril, partituraDelAtril, vistaPorDefecto, type ContentMode, type VistaAtril } from '../../utils/atrilModo';
 import { getDrivePdfProxyUrl } from '../../utils/driveProxy';
 import { cycleForBookId } from '../../data/psalmIndex';
 import { generateAtrilPrintable } from '../../utils/atrilBookletPDF';
@@ -111,6 +111,9 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
   const [activeIndex, setActiveIndex] = useState(0);
   const [printing, setPrinting] = useState(false);
   const [showMetro, setShowMetro] = useState(false);
+  // Partitura ↔ letra con acordes, elegida a mano en la barra. null = lo que dé el
+  // instrumento del perfil; no se guarda: es para cambiar al vuelo en el ensayo.
+  const [vista, setVista] = useState<VistaAtril | null>(null);
   // Repertorio: panel que se saca de la vista. En el teléfono tapaba la partitura y
   // dejaba los botones de arriba fuera de pantalla; en el computador tampoco hace falta
   // tenerlo fijo, porque los cantos ya vienen en el orden de la Misa. Arranca cerrado y
@@ -204,17 +207,21 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
   };
 
   /** Qué mostrar de cada canto según rol + instrumento (utils/atrilModo). */
-  const perfil = { puebloFiel: isPuebloFiel, organo: isOrgano, voicePart };
+  const perfil = { puebloFiel: isPuebloFiel, organo: isOrgano, voicePart, vista: vista ?? undefined };
   const modeFor = (s: Song): ContentMode => modoDelAtril(s, perfil);
+  const vistaActual = vista ?? vistaPorDefecto(perfil);
+  // El selector solo aparece si hay entre qué elegir: algún canto con partitura y
+  // alguno con letra. Al Pueblo fiel no se le ofrece (no ve acordes).
+  const puedeCambiarVista = hasChords
+    && orderedSongs.some((s2) => !!partituraDelAtril(s2, perfil))
+    && orderedSongs.some((s2) => !!s2.lyrics?.trim());
 
   const setTransposition = (i: number, v: number) =>
     setTranspositions(prev => ({ ...prev, [i]: ((v % 12) + 12) % 12 }));
 
   const instrumentLabel = isPuebloFiel
     ? 'Letra'
-    : voicePart
-      ? `${voicePart} · Partituras`
-      : isOrgano ? 'Órgano · Partituras' : 'Guitarra · Acordes';
+    : `${voicePart || (isOrgano ? 'Órgano' : 'Guitarra')} · ${vistaActual === 'score' ? 'Partituras' : 'Acordes'}`;
 
   const zoomIn = () => {
     setFontScale(s => Math.min(3, +(s + 0.15).toFixed(2)));
@@ -317,6 +324,7 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
         transpositions,
         notation,
         voicePart,
+        vista: vista ?? undefined,
       });
       // En iPhone la ventana se bloquea (el toque se perdió mientras se generaba) y el
       // atributo `download` Safari lo ignora: el botón parecía no hacer nada.
@@ -346,7 +354,7 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
           Zoom y Pantalla completa—; el resto vive en el menú "⋮", para que ningún botón
           se salga de la pantalla. Desde `sm` se ve todo en línea, como siempre. */}
       <div className="relative flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 bg-slate-950 border-b border-white/10 flex-shrink-0 min-w-0">
-        <button onClick={onClose} className={`${btn} w-10 h-10 sm:w-auto sm:h-11 sm:px-3 sm:gap-2 flex-shrink-0`} aria-label="Salir del atril">
+        <button onClick={onClose} className={`${btn} w-9 h-9 sm:w-auto sm:h-11 sm:px-3 sm:gap-2 flex-shrink-0`} aria-label="Salir del atril">
           <X className="w-5 h-5" strokeWidth={2.5} />
           <span className="font-bold text-sm hidden sm:inline">Salir</span>
         </button>
@@ -358,7 +366,7 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
           aria-label={showList ? 'Ocultar repertorio' : 'Ver repertorio'}
           aria-expanded={showList}
           title="Repertorio de la Misa"
-          className={`${btn} w-10 h-10 sm:w-11 sm:h-11 flex-shrink-0 ${showList ? 'bg-amber-500/30 border-amber-400' : ''}`}
+          className={`${btn} w-9 h-9 sm:w-11 sm:h-11 flex-shrink-0 ${showList ? 'bg-amber-500/30 border-amber-400' : ''}`}
         >
           <List className="w-6 h-6" strokeWidth={2.5} />
         </button>
@@ -372,6 +380,45 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
           </div>
         )}
         <div className="flex-1 sm:hidden" />
+
+        {/* Partitura ↔ Acordes: cambio rápido para todo el cantoral; el canto que no
+            tiene lo pedido muestra lo que sí tiene. En el teléfono es un solo botón que
+            alterna (dos no caben junto al menú "⋮"); desde `sm`, las dos opciones. */}
+        {puedeCambiarVista && (
+          <button
+            onClick={() => setVista(vistaActual === 'score' ? 'chords' : 'score')}
+            aria-label={vistaActual === 'score' ? 'Cambiar a letra con acordes' : 'Cambiar a partitura'}
+            title={vistaActual === 'score' ? 'Ver letra con acordes' : 'Ver partituras'}
+            className={`${btn} sm:hidden w-9 h-9 flex-shrink-0 text-amber-300 border-amber-400`}
+          >
+            {vistaActual === 'score'
+              ? <FileMusic className="w-6 h-6" strokeWidth={2.5} />
+              : <Guitar className="w-6 h-6" strokeWidth={2.5} />}
+          </button>
+        )}
+        {puedeCambiarVista && (
+          <div
+            role="group"
+            aria-label="Ver partitura o letra con acordes"
+            className="hidden sm:flex flex-shrink-0 rounded-xl bg-white/10 border border-white/20 p-0.5"
+          >
+            {([
+              ['score', 'Partitura', FileMusic],
+              ['chords', 'Acordes', Guitar],
+            ] as const).map(([v, etiqueta, Icono]) => (
+              <button
+                key={v}
+                onClick={() => setVista(v)}
+                aria-pressed={vistaActual === v}
+                title={v === 'score' ? 'Ver partituras' : 'Ver letra con acordes'}
+                className={`flex items-center justify-center gap-1.5 h-10 px-3 rounded-lg text-sm font-bold transition-colors ${vistaActual === v ? 'bg-amber-500 text-slate-950' : 'text-white/80 hover:bg-white/10'}`}
+              >
+                <Icono className="w-5 h-5" strokeWidth={2.5} />
+                <span>{etiqueta}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Cambio rápido de voz: solo si algún canto de HOY trae partituras por voz.
             No toca el perfil — es para el que dobla en otra parte esta vez. */}
@@ -395,8 +442,8 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
         )}
 
         {/* Zoom global (letra y partitura) */}
-        <button onClick={zoomOut} className={`${btn} w-10 h-10 sm:w-11 sm:h-11 flex-shrink-0`} aria-label="Reducir"><ZoomOut className="w-6 h-6" strokeWidth={2.5} /></button>
-        <button data-tour="atril-zoom" onClick={zoomIn} className={`${btn} w-10 h-10 sm:w-11 sm:h-11 flex-shrink-0`} aria-label="Agrandar"><ZoomIn className="w-6 h-6" strokeWidth={2.5} /></button>
+        <button onClick={zoomOut} className={`${btn} w-9 h-9 sm:w-11 sm:h-11 flex-shrink-0`} aria-label="Reducir"><ZoomOut className="w-6 h-6" strokeWidth={2.5} /></button>
+        <button data-tour="atril-zoom" onClick={zoomIn} className={`${btn} w-9 h-9 sm:w-11 sm:h-11 flex-shrink-0`} aria-label="Agrandar"><ZoomIn className="w-6 h-6" strokeWidth={2.5} /></button>
 
         {/* Cifrado de acordes global: latino (Do, Re…) ↔ americano (C, D…) */}
         {hasChords && (
@@ -429,14 +476,14 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
         </button>
 
         {/* Modo concentración */}
-        <button data-tour="atril-concentracion" onClick={toggleFocus} className={`${btn} w-10 h-10 sm:w-11 sm:h-11 flex-shrink-0`} aria-label={focus ? 'Salir de pantalla completa' : 'Pantalla completa'}>
+        <button data-tour="atril-concentracion" onClick={toggleFocus} className={`${btn} w-9 h-9 sm:w-11 sm:h-11 flex-shrink-0`} aria-label={focus ? 'Salir de pantalla completa' : 'Pantalla completa'}>
           {focus ? <Minimize2 className="w-6 h-6" strokeWidth={2.5} /> : <Maximize2 className="w-6 h-6" strokeWidth={2.5} />}
         </button>
 
         {/* Menú "⋮" — solo en pantalla chica: lo que no cabe en la barra */}
         <button
           onClick={() => setMenuOpen(o => !o)}
-          className={`${btn} md:hidden w-10 h-10 flex-shrink-0 ${menuOpen ? 'bg-white/25' : ''}`}
+          className={`${btn} md:hidden w-9 h-9 flex-shrink-0 ${menuOpen ? 'bg-white/25' : ''}`}
           aria-label="Más opciones"
           aria-expanded={menuOpen}
         >
