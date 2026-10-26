@@ -761,7 +761,9 @@ export function SongManager({ puedeBorrar = true }: SongManagerProps) {
 
   const handleApprove = async (song: Song) => {
     const { data } = await getSupabaseClient().auth.getSession();
-    const who = data.session?.user?.email || 'admin';
+    // El id, no el correo: `songs` la lee cualquiera (también sin sesión), y el correo
+    // del admin quedaba a la vista del público (20261027_puntos_bajos).
+    const who = data.session?.user?.id || 'admin';
     const r = await approveSong(song.id, who);
     if (!r.ok) { toast.error('No se pudo aprobar', { description: r.error }); return; }
     setSongs(prev => prev.map(s => s.id === song.id ? { ...s, approvalStatus: 'approved' } : s));

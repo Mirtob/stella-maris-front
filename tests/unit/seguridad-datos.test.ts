@@ -107,5 +107,27 @@ console.log('\n=== Seguridad de los datos ===\n');
   checkTrue('el frontend no lee claves secretas con VITE_', fugas.length === 0, fugas.join('; '));
 }
 
+// ── 6. Puntos bajos (20261027) ────────────────────────────────────────────────
+{
+  const apis = readdirSync(join(RAIZ, 'api')).filter((f) => f.endsWith('.ts'));
+  const conAnon = apis.filter((f) => {
+    const s = readFileSync(join(RAIZ, 'api', f), 'utf8');
+    const i = s.indexOf('async function distributedCheck(');
+    if (i === -1) return false;
+    const cuerpo = s.slice(i, s.indexOf('\n}\n', i));
+    return !/process\.env\.SUPABASE_SERVICE_ROLE_KEY \|\| process\.env\.VITE_SUPABASE_ANON_KEY/.test(cuerpo);
+  });
+  checkTrue('el limitador llama al RPC con la service key en todos los endpoints',
+    conAnon.length === 0, conAnon.join(', '));
+
+  const redir = ['notify-cantoral.ts', 'push.ts'].filter((f) =>
+    /destino\.startsWith\('\/'\) \?/.test(readFileSync(join(RAIZ, 'api', f), 'utf8')));
+  checkTrue('los avisos no aceptan //otro-sitio como destino', redir.length === 0, redir.join(', '));
+
+  const sm = readFileSync(join(RAIZ, 'src', 'components', 'songs', 'SongManager.tsx'), 'utf8');
+  checkTrue('aprobar un canto guarda el id, no el correo',
+    /session\?\.user\?\.id \|\| 'admin'/.test(sm) && !/session\?\.user\?\.email \|\| 'admin'/.test(sm));
+}
+
 console.log(`\n${fail === 0 ? 'TODO OK' : 'HAY FALLAS'} — ${pass} ok, ${fail} fallidas\n`);
 process.exit(fail === 0 ? 0 : 1);

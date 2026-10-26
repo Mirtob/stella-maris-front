@@ -58,14 +58,16 @@ function clientIp(req: VercelRequest): string {
  */
 async function distributedCheck(key: string, limit: number, windowSeconds: number): Promise<{ allowed: boolean; remaining: number } | null> {
   const url = (process.env.VITE_SUPABASE_URL || '').trim();
-  const anon = (process.env.VITE_SUPABASE_ANON_KEY || '').trim();
-  if (!url || !anon) return null;
+  // Service key: desde 20261027 el RPC ya no lo puede llamar anon (cualquiera le
+  // gastaba el cupo a otra IP). La anon queda de respaldo si falta la service key.
+  const clave = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '').trim();
+  if (!url || !clave) return null;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 2000);
   try {
     const r = await fetch(`${url}/rest/v1/rpc/api_rate_limit`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: anon, Authorization: `Bearer ${anon}` },
+      headers: { 'Content-Type': 'application/json', apikey: clave, Authorization: `Bearer ${clave}` },
       body: JSON.stringify({ p_key: key, p_limit: limit, p_window_seconds: windowSeconds }),
       signal: ctrl.signal,
     });
