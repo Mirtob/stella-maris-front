@@ -294,7 +294,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // no el árbol entero como /api/sheets.
   if (folder !== undefined) {
     if (!idValido(folder)) return res.status(400).json({ error: 'Parametro folder invalido' });
-    const apiKey = (process.env.VITE_GOOGLE_DRIVE_API_KEY || '').trim();
+    // La misma clave que el resto del archivo (GOOGLE_API_KEY primero): leer solo la
+    // VITE_ dejaba sin audios a quien migrara la variable a su nombre server-only.
+    const apiKey = API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'API key no configurada' });
     try {
       const params = new URLSearchParams({

@@ -121,6 +121,26 @@ interface Song {
   tags?: string[];
 }
 
+/** Cuántos cantos entran al prompt como máximo (el catálogo completo hoy ronda 150). */
+const MAX_SONGS = 400;
+
+/** ¿Quien llama es Coro o Admin? Lo responde la base con el token de esa persona. */
+async function callerIsChoirOrAdmin(token: string): Promise<boolean> {
+  const url = (process.env.VITE_SUPABASE_URL || '').trim();
+  const anon = (process.env.VITE_SUPABASE_ANON_KEY || '').trim();
+  if (!url || !anon) return false;
+  try {
+    const r = await fetch(`${url}/rest/v1/rpc/is_choir_or_admin`, {
+      method: 'POST',
+      headers: { apikey: anon, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    return r.ok && (await r.json()) === true;
+  } catch {
+    return false;
+  }
+}
+
 async function callGemini(apiKey: string, prompt: string, model: string): Promise<string> {
   // Intentar con formato API key en query param (formato estándar)
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -160,19 +180,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'GEMINI_API_KEY no configurada en Vercel' });
   }
 
+  // Cada llamada la paga la clave de Gemini: sin sesión, cualquiera podía usar el
+  // endpoint como un LLM gratis (el texto de los "cantos" llega tal cual al prompt).
+  // Solo quien arma cantorales (Coro o Admin), verificado contra la base con SU token.
+  const authHeader = (req.headers.authorization as string) || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!token) return res.status(401).json({ error: 'No autenticado' });
+  if (!(await callerIsChoirOrAdmin(token))) {
+    return res.status(403).json({ error: 'Solo el coro o un administrador pueden pedir sugerencias' });
+  }
+
   // Guard: sin cuerpo (POST vacío), req.body es undefined y desestructurarlo lanzaba
   // una excepción no capturada → 500 FUNCTION_INVOCATION_FAILED. Con `?? {}` cae al
   // 400 "No hay cantos disponibles" de más abajo, como cualquier otro body inválido.
-  const { songs, season, date, specialDay } = (req.body ?? {}) as {
+  const raw = (req.body ?? {}) as {
     songs: Song[];
     season: string;
     date: string;
     specialDay?: string;
   };
 
-  if (!songs || songs.length === 0) {
+  if (!Array.isArray(raw.songs) || raw.songs.length === 0) {
     return res.status(400).json({ error: 'No hay cantos disponibles para sugerir' });
   }
+
+  // Topes de tamaño: el prompt (y la factura) no puede crecer a voluntad de quien llama.
+  const corto = (x: unknown, n: number) => String(x ?? '').slice(0, n);
+  const songs: Song[] = raw.songs.slice(0, MAX_SONGS).map((s) => ({
+    title: corto(s?.title, 120),
+    category: corto(s?.category, 40),
+    author: s?.author ? corto(s.author, 80) : undefined,
+    liturgicalSeason: s?.liturgicalSeason ? corto(s.liturgicalSeason, 40) : undefined,
+  } as Song));
+  const season = corto(raw.season, 60);
+  const date = corto(raw.date, 40);
+  const specialDay = raw.specialDay ? corto(raw.specialDay, 120) : undefined;
 
   // Agrupar cantos por categoría para el prompt
   const byCategory: Record<string, string[]> = {};

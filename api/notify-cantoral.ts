@@ -88,6 +88,44 @@ async function callerIsPrincipalAdmin(token: string): Promise<boolean> {
 }
 
 /**
+ * De esos cantorales, los que quien llama tiene derecho a anunciar.
+ *
+ * Vale el autor (cubre al coro invitado, que publica en una parroquia ajena), quien
+ * cubre la parroquia según la base (`user_covers_parish` con SU token, la misma regla
+ * que las policies) y el admin principal.
+ */
+async function soloLosDeQuienAvisa<T extends { parish_name: string; created_by?: string | null }>(
+  token: string, cantorales: T[],
+): Promise<T[]> {
+  if (cantorales.length === 0) return [];
+  if (await callerIsPrincipalAdmin(token)) return cantorales;
+  const ur = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: ANON, Authorization: `Bearer ${token}` } });
+  const uid = ur.ok ? (await ur.json())?.id : null;
+  if (!uid) return [];
+
+  const cubre = new Map<string, boolean>();
+  const cubreParroquia = async (p: string): Promise<boolean> => {
+    if (!cubre.has(p)) {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/user_covers_parish`, {
+          method: 'POST',
+          headers: { apikey: ANON, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ p_unidad: p }),
+        });
+        cubre.set(p, r.ok && (await r.json()) === true);
+      } catch { cubre.set(p, false); }
+    }
+    return cubre.get(p)!;
+  };
+
+  const out: T[] = [];
+  for (const c of cantorales) {
+    if (c.created_by === uid || (await cubreParroquia(String(c.parish_name)))) out.push(c);
+  }
+  return out;
+}
+
+/**
  * Diócesis de una parroquia guardada en una suscripción.
  *
  * Las parroquias se guardan como "Parroquia X - Diócesis Y · Capilla Z": la diócesis es
@@ -518,7 +556,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/published_cantorals?id=in.(${encodeURIComponent(ids.join(','))})&select=id,parish_name,liturgical_date,mass_time,date,status`,
+      `${SUPABASE_URL}/rest/v1/published_cantorals?id=in.(${encodeURIComponent(ids.join(','))})&select=id,parish_name,liturgical_date,mass_time,date,status,created_by`,
       { headers: svcHeaders },
     );
     if (!r.ok) {
@@ -526,7 +564,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'No se pudo leer los cantorales' });
     }
     const rows = await r.json();
-    const published = (Array.isArray(rows) ? rows : []).filter((c: any) => c.status === 'published' && c.parish_name);
+    const vigentes = (Array.isArray(rows) ? rows : []).filter((c: any) => c.status === 'published' && c.parish_name);
+
+    // Solo se avisa de lo propio: el cantoral lo publicó quien llama, o su coro cubre
+    // esa parroquia, o es el admin principal. Los ids de los cantorales son públicos, y
+    // sin esto cualquier cuenta de Coro hacía sonar los teléfonos de otra parroquia.
+    const published = await soloLosDeQuienAvisa(token, vigentes);
+    if (vigentes.length > 0 && published.length === 0) {
+      return res.status(403).json({ error: 'Solo puedes avisar de cantorales de tu parroquia' });
+    }
     if (published.length === 0) {
       // Caso silencioso: los ids no existen, no están 'published' o no traen parroquia.
       await logRun({

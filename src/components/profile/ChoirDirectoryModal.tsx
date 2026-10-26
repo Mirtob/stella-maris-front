@@ -12,7 +12,7 @@ const waLink = (phone: string) => {
 
 /**
  * Directorio de coros: lista las fichas de contacto publicadas por los coros para que
- * puedan buscarse e intercambiar partituras/datos. Lectura para cualquier autenticado.
+ * puedan buscarse e intercambiar partituras/datos. Lectura solo para coros con parroquia declarada (20261026_contactos_solo_coros).
  */
 export function ChoirDirectoryModal({ onClose }: { onClose: () => void }) {
   const [entries, setEntries] = useState<Entry[]>([]);

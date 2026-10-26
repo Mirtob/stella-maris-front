@@ -12,7 +12,7 @@ interface Props {
 /**
  * Ficha de contacto del coro (perfil Coro): nombre del coro, parroquia, correo, teléfono
  * y otros datos, para que los coros intercambien partituras/información. Visible para
- * cualquier usuario autenticado (directorio); cada coro edita solo la suya.
+ * los coros con parroquia declarada (directorio); cada coro edita solo la suya.
  */
 export function ChoirContactCard({ userId, defaultParish }: Props) {
   const [c, setC] = useState<ChoirContact>({ ...EMPTY_CHOIR_CONTACT, parish: defaultParish || '' });
