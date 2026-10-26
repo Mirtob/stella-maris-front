@@ -1,10 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createHash } from 'crypto';
+import { createHash, randomInt } from 'crypto';
 
 // Recuperación de clave self-service para cuentas usuario/clave.
 // El login es por usuario → el email de auth es sintético, así que el reset
 // nativo de Supabase no le llega al usuario. Aquí enviamos un CÓDIGO al correo
-// de recuperación (o al que ingrese) usando Resend, y lo validamos server-side.
+// de recuperación guardado en el perfil usando Resend, y lo validamos server-side.
 // El estado del código vive en user_metadata (no requiere tabla nueva).
 //
 // Endpoint PÚBLICO (el usuario olvidó su clave, no puede autenticarse).
@@ -150,7 +150,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Correo inválido' });
     }
     try {
-      const q = `${URL}/rest/v1/user_profiles?recovery_email=ilike.${encodeURIComponent(emailIn)}&select=email,name`;
+      // ilike sin mayúsculas, pero con los comodines escapados: "%@gmail.com" no debe
+      // calzar con todos los correos de respaldo.
+      const literal = emailIn.replace(/[\\%_]/g, (c) => `\\${c}`);
+      const q = `${URL}/rest/v1/user_profiles?recovery_email=ilike.${encodeURIComponent(literal)}&select=email,name`;
       const pr = await fetch(q, { headers: svc });
       const rows: any[] = pr.ok ? await pr.json() : [];
       // El nombre de usuario es la parte local del email sintético de auth.
@@ -192,25 +195,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (action === 'request') {
       if (!RESEND_KEY) return res.status(500).json({ error: 'Envío de correo no configurado (RESEND_API_KEY)' });
 
-      // Correo destino: el de recuperación guardado, o el que ingrese el usuario.
+      // El código va SOLO al correo de respaldo que el dueño guardó con su sesión
+      // iniciada (Ajustes). Antes, si no había uno, se aceptaba el correo que escribiera
+      // quien pedía el código y se guardaba: bastaba saber un nombre de usuario para
+      // quedarse con la cuenta. Sin correo guardado, la clave la restablece el admin.
       const profRes = await fetch(`${URL}/rest/v1/user_profiles?id=eq.${uid}&select=recovery_email`, { headers: svc });
       const prof = profRes.ok ? await profRes.json() : [];
-      const storedRecovery = (prof[0]?.recovery_email || '').trim();
-      const provided = String(body.email || '').trim();
+      const target = (prof[0]?.recovery_email || '').trim();
+      if (!target) return res.status(200).json({ needsAdmin: true });
 
-      let target = storedRecovery;
-      if (!target) {
-        if (!provided) return res.status(200).json({ needsEmail: true });
-        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(provided)) return res.status(400).json({ error: 'Correo inválido' });
-        target = provided;
-        // Guardarlo como correo de recuperación para la próxima vez.
-        await fetch(`${URL}/rest/v1/user_profiles?id=eq.${uid}`, {
-          method: 'PATCH', headers: { ...svc, Prefer: 'return=minimal' },
-          body: JSON.stringify({ recovery_email: provided }),
-        });
-      }
-
-      const code = String(Math.floor(100000 + Math.random() * 900000)); // 6 dígitos
+      const code = String(randomInt(100000, 1000000)); // 6 dígitos
       const expISO = new Date(Date.now() + CODE_TTL_MIN * 60_000).toISOString();
       await fetch(`${URL}/auth/v1/admin/users/${uid}`, {
         method: 'PUT', headers: svc,

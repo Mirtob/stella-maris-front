@@ -12,8 +12,8 @@ export function ForgotPassword({ onClose }: ForgotPasswordProps) {
   const [flow, setFlow] = useState<'password' | 'username'>('password');
   const [step, setStep] = useState<'request' | 'code' | 'done'>('request');
   const [username, setUsername] = useState('');
-  const [needsEmail, setNeedsEmail] = useState(false);
-  const [email, setEmail] = useState('');
+  // La cuenta no tiene correo de respaldo: solo un administrador puede restablecerla.
+  const [needsAdmin, setNeedsAdmin] = useState(false);
   const [maskedTo, setMaskedTo] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -25,16 +25,11 @@ export function ForgotPassword({ onClose }: ForgotPasswordProps) {
   const handleRequest = async () => {
     const u = username.trim().toLowerCase();
     if (!u) { toast.error('Escribe tu usuario'); return; }
-    if (needsEmail && !email.trim()) { toast.error('Escribe un correo para enviarte el código'); return; }
     setSubmitting(true);
-    const r = await requestPasswordReset(u, needsEmail ? email.trim() : undefined);
+    const r = await requestPasswordReset(u);
     setSubmitting(false);
     if (!r.ok) { toast.error('No se pudo enviar', { description: r.error }); return; }
-    if (r.needsEmail) {
-      setNeedsEmail(true);
-      toast.info('No tienes correo de recuperación. Ingresa uno para enviarte el código.');
-      return;
-    }
+    if (r.needsAdmin) { setNeedsAdmin(true); return; }
     setMaskedTo(r.to || 'tu correo');
     setStep('code');
     toast.success(`Código enviado a ${r.to || 'tu correo'}`);
@@ -84,15 +79,13 @@ export function ForgotPassword({ onClose }: ForgotPasswordProps) {
                 Escribe tu usuario. Te enviaremos un código a tu correo de recuperación.
               </p>
               <label className="text-base text-gray-600 dark:text-gray-300 mb-1 block">Usuario</label>
-              <input value={username} onChange={(e) => setUsername(e.target.value)} autoCapitalize="none" placeholder="usuario" className={`${inputCls} mb-3`} disabled={needsEmail} />
-              {needsEmail && (
-                <>
-                  <label className="text-base text-gray-600 dark:text-gray-300 mb-1 block">Correo para enviarte el código</label>
-                  <div className="relative mb-3">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-                    <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoCapitalize="none" placeholder="tucorreo@ejemplo.com" className={`${inputCls} pl-10`} />
-                  </div>
-                </>
+              <input value={username} onChange={(e) => { setUsername(e.target.value); setNeedsAdmin(false); }} autoCapitalize="none" placeholder="usuario" className={`${inputCls} mb-3`} />
+              {needsAdmin && (
+                <div role="alert" className="mb-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/30 border-2 border-amber-300 dark:border-amber-700 text-sm text-amber-900 dark:text-amber-100">
+                  Esta cuenta no tiene <strong>correo de respaldo</strong>, así que no podemos enviarte
+                  un código. Pide al administrador de tu parroquia que te restablezca la clave.
+                  Cuando vuelvas a entrar, agrega un correo de respaldo en <strong>Ajustes</strong>.
+                </div>
               )}
               <button onClick={handleRequest} disabled={submitting} className="w-full bg-gradient-to-br from-blue-700 to-blue-900 text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all font-bold disabled:opacity-50">
                 {submitting ? <Loader className="w-5 h-5 animate-spin" /> : <Mail className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />}

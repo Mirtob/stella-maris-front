@@ -204,8 +204,9 @@ SELECT p.proname, p.prosecdef AS security_definer, p.proconfig AS config
 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
 WHERE n.nspname = 'public' AND p.proname IN ('user_covers_parish', 'is_choir_or_admin');
 
--- Cuántos perfiles NO declaran parroquia (a esos la política no los bloquea, a
--- propósito). Si el número es alto, conviene revisar por qué no sincronizan.
+-- Cuántos perfiles NO declaran parroquia. Desde 20261026_parroquia_obligatoria esos
+-- NO pueden publicar ni borrar (antes la política los dejaba pasar en todas las
+-- parroquias). Si el número es alto, conviene revisar por qué no sincronizan.
 SELECT count(*) AS perfiles_sin_parroquia
 FROM user_profiles
 WHERE COALESCE(array_length(parishes, 1), 0) = 0

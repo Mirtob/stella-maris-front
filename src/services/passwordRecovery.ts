@@ -1,5 +1,5 @@
 // Recuperación de clave self-service (cuentas usuario/clave). Endpoint público.
-async function call(action: string, payload: Record<string, unknown>): Promise<{ ok: boolean; error?: string; needsEmail?: boolean; sent?: boolean; to?: string }> {
+async function call(action: string, payload: Record<string, unknown>): Promise<{ ok: boolean; error?: string; needsAdmin?: boolean; sent?: boolean; to?: string }> {
   try {
     const r = await fetch('/api/recover-password', {
       method: 'POST',
@@ -14,9 +14,12 @@ async function call(action: string, payload: Record<string, unknown>): Promise<{
   }
 }
 
-/** Pide el código de recuperación. Si no hay correo de respaldo, pide uno (needsEmail). */
-export function requestPasswordReset(username: string, email?: string) {
-  return call('request', email ? { username, email } : { username });
+/**
+ * Pide el código de recuperación. Llega solo al correo de respaldo guardado en el
+ * perfil; si no hay ninguno, `needsAdmin` (la clave la restablece un administrador).
+ */
+export function requestPasswordReset(username: string) {
+  return call('request', { username });
 }
 
 /** Confirma el código y fija la nueva clave. */

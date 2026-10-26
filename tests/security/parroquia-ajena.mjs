@@ -108,6 +108,25 @@ celAjena === 201 ? mal('AGREGÓ celebración en parroquia ajena') : bien('no pue
 const global = await celebrar('global');
 global === 201 ? mal('creó una celebración GLOBAL sin ser admin') : bien('no puede crear celebraciones globales', `http=${global}`);
 
+// ── Coro SIN parroquia (20261026_parroquia_obligatoria) ─────────────────────
+// Antes, un perfil sin parroquia "cubría" todas: podía publicar donde quisiera y
+// borrar los cantorales de cualquier parroquia. El borrado no se prueba borrando
+// (si el agujero siguiera abierto se llevaría datos reales): se le pregunta a la
+// misma función que usa la policy.
+await fetch(`${SB}/rest/v1/user_profiles?id=eq.${UID}`, {
+  method: 'PATCH', headers: H,
+  body: JSON.stringify({ parishes: [], parish_name: '' }),
+});
+const cubre = await (await fetch(`${SB}/rest/v1/rpc/user_covers_parish`, {
+  method: 'POST', headers: H, body: JSON.stringify({ p_unidad: AJENA }),
+})).json();
+cubre === false
+  ? bien('sin parroquia no cubre ninguna (no puede borrar cantorales ajenos)')
+  : mal('SIN parroquia cubre cualquier parroquia: puede borrar cantorales ajenos', `respuesta=${JSON.stringify(cubre)}`);
+
+const sinParroquia = await publicar(AJENA);
+sinParroquia === 201 ? mal('SIN parroquia PUBLICÓ en una parroquia ajena') : bien('sin parroquia no puede publicar', `http=${sinParroquia}`);
+
 // ── Limpieza ────────────────────────────────────────────────────────────────
 for (const c of creados) {
   if (typeof c === 'string') await fetch(`${SB}/rest/v1/published_cantorals?id=eq.${c}`, { method: 'DELETE', headers: H });
