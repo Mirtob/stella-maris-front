@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CargandoLogo } from '../common/CargandoLogo';
-import { History, Calendar, Church, ChevronDown, ChevronUp, Play, Clock, Trash2, Filter, Download, Search, Copy } from 'lucide-react';
+import { History, Calendar, Church, ChevronDown, ChevronUp, Play, Clock, Trash2, Filter, Download, Search, Copy, ScrollText } from 'lucide-react';
 import { PublishedCantoral, Song } from '../../types';
 import { sortCategoriesByMassOrder, massCategoryIcon, rotuloDeParte, tituloVisible } from '../../utils/ordinary';
 import { generateChoirBooklet, voicesInCantoral } from '../../utils/atrilBookletPDF';
@@ -14,6 +14,9 @@ import { LiturgicalColorBadge } from '../liturgy/LiturgicalColorBadge';
 import { EmptyState } from '../common/EmptyState';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../common/ConfirmDialog';
+import { PapeleraModal } from './PapeleraModal';
+import { RegistroCambiosModal } from './RegistroCambiosModal';
+import { DIAS_PAPELERA } from '../../services/papelera';
 
 interface CantoralHistoryProps {
   cantorals: PublishedCantoral[];
@@ -28,6 +31,8 @@ interface CantoralHistoryProps {
   defaultParish?: string;
   /** Voz del corista: preselecciona su parte al descargar el cuadernillo. */
   userVoicePart?: string;
+  /** Un cantoral volvió de la papelera: refrescar los publicados de la app. */
+  onCantoralRestored?: (cantoral: PublishedCantoral) => void;
 }
 
 // Diócesis → País (el string del cantoral es "Parroquia - Diócesis · Capilla", sin país;
@@ -51,7 +56,7 @@ function metaOf(parishName?: string | null) {
   return { parishFull, chapel: chapel || '', parish, diocese, country };
 }
 
-export function CantoralHistory({ onPlaySong, onDeleteCantoral, onClone, isAdmin, managedParishes, defaultParish, userVoicePart}: CantoralHistoryProps) {
+export function CantoralHistory({ onPlaySong, onDeleteCantoral, onClone, isAdmin, managedParishes, defaultParish, userVoicePart, onCantoralRestored }: CantoralHistoryProps) {
   // Borrar solo se permite en cantorales gestionables (los de la propia parroquia; el
   // admin puede todos). Refleja lo que hace la RLS.
   const managedSet = new Set(managedParishes ?? []);
@@ -73,6 +78,8 @@ export function CantoralHistory({ onPlaySong, onDeleteCantoral, onClone, isAdmin
   const [search, setSearch] = useState('');
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [showPapelera, setShowPapelera] = useState(false);
+  const [showRegistro, setShowRegistro] = useState(false);
 
   // Años disponibles (global, consulta liviana) + cantorales del AÑO seleccionado
   // (se cargan desde el servidor: solo ese año, no todo el archivo).
@@ -292,6 +299,22 @@ export function CantoralHistory({ onPlaySong, onDeleteCantoral, onClone, isAdmin
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Papelera y registro: lo borrado se puede recuperar, y queda dicho quién lo hizo */}
+        <div className="grid grid-cols-2 gap-3 mb-8">
+          <button
+            onClick={() => setShowPapelera(true)}
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-base font-bold text-slate-800 dark:text-slate-100 bg-white/60 dark:bg-white/10 border-2 border-white/60 dark:border-white/20 shadow active:scale-95 transition-all"
+          >
+            <Trash2 className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} /> Papelera
+          </button>
+          <button
+            onClick={() => setShowRegistro(true)}
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-base font-bold text-indigo-900 dark:text-indigo-100 bg-white/60 dark:bg-white/10 border-2 border-white/60 dark:border-white/20 shadow active:scale-95 transition-all"
+          >
+            <ScrollText className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} /> Registro de cambios
+          </button>
         </div>
 
         {/* Buscar por País / Diócesis / Parroquia / Capilla (cascada) + texto libre */}
@@ -633,10 +656,10 @@ export function CantoralHistory({ onPlaySong, onDeleteCantoral, onClone, isAdmin
 
       <ConfirmDialog
         open={!!pendingDeleteCantoral}
-        title="Eliminar del historial"
-        message={`¿Estás seguro de eliminar este cantoral del historial?`}
+        title="Enviar a la papelera"
+        message={`El cantoral se guarda ${DIAS_PAPELERA} días en la Papelera: ahí lo puedes restaurar.`}
         details={pendingDeleteCantoral ? `${pendingDeleteCantoral.parishName} · ${pendingDeleteCantoral.liturgicalDate} · ${pendingDeleteCantoral.massTime}` : undefined}
-        confirmLabel="Sí, eliminar"
+        confirmLabel="Sí, a la papelera"
         cancelLabel="Cancelar"
         variant="danger"
         onConfirm={() => {
@@ -653,6 +676,22 @@ export function CantoralHistory({ onPlaySong, onDeleteCantoral, onClone, isAdmin
         }}
         onCancel={() => setPendingDeleteId(null)}
       />
+
+      {showPapelera && (
+        <PapeleraModal
+          isAdmin={isAdmin}
+          onClose={() => setShowPapelera(false)}
+          onRestored={(c) => {
+            if (c.date.slice(0, 4) === selectedYear) {
+              setYearCantorals(prev => (prev.some(x => x.id === c.id) ? prev : [...prev, c]));
+            }
+            onCantoralRestored?.(c);
+          }}
+        />
+      )}
+      {showRegistro && (
+        <RegistroCambiosModal mostrarParroquia={isAdmin} onClose={() => setShowRegistro(false)} />
+      )}
     </div>
   );
 }

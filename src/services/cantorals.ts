@@ -193,7 +193,8 @@ export async function updateCantoral(cantoral: PublishedCantoral): Promise<{ ok:
   }
 }
 
-/** Elimina un cantoral por ID (solo el creador puede). */
+/** "Elimina" un cantoral por ID. En la base es un envío a la papelera (30 días, se
+ *  puede restaurar): lo hace un trigger, ver services/papelera.ts. */
 export async function deleteCantoral(id: string): Promise<{ ok: boolean; error?: string }> {
   try {
     const sb = getSupabaseClient();

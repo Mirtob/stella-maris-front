@@ -204,7 +204,7 @@ export function CantoralManager({ cantorals, onEdit, onDelete, onShare }: Cantor
       <ConfirmDialog
         open={!!pendingDeleteCantoral}
         title="Eliminar cantoral"
-        message="¿Estás seguro de eliminar este cantoral? Esta acción no se puede deshacer."
+        message="El cantoral se guarda 30 días en la Papelera (Historial → Papelera): ahí lo puedes restaurar."
         details={pendingDeleteCantoral ? `${pendingDeleteCantoral.parishName} · ${pendingDeleteCantoral.liturgicalDate} · ${pendingDeleteCantoral.massTime}` : undefined}
         confirmLabel="Sí, eliminar"
         cancelLabel="Cancelar"

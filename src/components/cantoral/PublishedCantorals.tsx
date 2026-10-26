@@ -743,7 +743,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
       <ConfirmDialog
         open={!!pendingDeleteCantoral}
         title="Eliminar cantoral"
-        message="¿Eliminar este cantoral publicado? Esta acción no se puede deshacer."
+        message="El cantoral se guarda 30 días en la Papelera (Historial → Papelera): ahí lo puedes restaurar."
         details={pendingDeleteCantoral ? `${pendingDeleteCantoral.parishName} · ${pendingDeleteCantoral.liturgicalDate} · ${pendingDeleteCantoral.massTime}` : undefined}
         confirmLabel="Sí, eliminar"
         cancelLabel="Cancelar"

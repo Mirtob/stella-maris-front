@@ -713,7 +713,7 @@ async function parishHasCantoral(parish: string, dates: string[]): Promise<boole
   // espacio de más en la parroquia del perfil hacía creer que NO había cantoral y el
   // coro recibía el recordatorio de "publica" aunque ya lo hubiera publicado.
   const escapado = parish.trim().replace(/[\\%_]/g, (m) => `\\${m}`);
-  const url = `${SUPABASE_URL}/rest/v1/published_cantorals?parish_name=ilike.${encodeURIComponent(escapado)}&or=${encodeURIComponent(orExpr)}&select=id&limit=1`;
+  const url = `${SUPABASE_URL}/rest/v1/published_cantorals?parish_name=ilike.${encodeURIComponent(escapado)}&or=${encodeURIComponent(orExpr)}&deleted_at=is.null&select=id&limit=1`;
   const r = await fetch(url, { headers: svcHeaders });
   if (!r.ok) return false;
   const rows = await r.json();

@@ -560,7 +560,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/published_cantorals?id=in.(${encodeURIComponent(ids.join(','))})&select=id,parish_name,liturgical_date,mass_time,date,status,created_by`,
+      `${SUPABASE_URL}/rest/v1/published_cantorals?id=in.(${encodeURIComponent(ids.join(','))})&deleted_at=is.null&select=id,parish_name,liturgical_date,mass_time,date,status,created_by`,
       { headers: svcHeaders },
     );
     if (!r.ok) {

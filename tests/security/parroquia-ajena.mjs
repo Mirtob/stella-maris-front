@@ -128,6 +128,9 @@ const sinParroquia = await publicar(AJENA);
 sinParroquia === 201 ? mal('SIN parroquia PUBLICÓ en una parroquia ajena') : bien('sin parroquia no puede publicar', `http=${sinParroquia}`);
 
 // ── Limpieza ────────────────────────────────────────────────────────────────
+// Desde 20261028 los cantorales borrados con un token de usuario van a la papelera:
+// los de esta prueba quedan ahí (fecha 28-dic, "PRUEBA DE PERMISOS") y se purgan solos
+// a los 30 días. El admin principal los puede eliminar antes desde la Papelera.
 for (const c of creados) {
   if (typeof c === 'string') await fetch(`${SB}/rest/v1/published_cantorals?id=eq.${c}`, { method: 'DELETE', headers: H });
   else await fetch(`${SB}/rest/v1/custom_liturgical_dates?id=eq.${c.cld}`, { method: 'DELETE', headers: H });

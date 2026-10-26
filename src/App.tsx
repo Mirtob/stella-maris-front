@@ -1821,6 +1821,7 @@ function AppContent() {
             },
             onConsumeCantoralDate: () => { setFechaParaConstructor(null); setParroquiaParaConstructor(null); },
             onDeleteCantoral: handleDeleteCantoral,
+            onCantoralRestored: () => { refrescarCantorales().then(setPublishedCantorals).catch(() => undefined); },
             onEditCantoral: handleEditCantoral,
             onCancelEdit: handleCancelEdit,
             onCloneCantoral: handleCloneCantoral,
@@ -1877,6 +1878,8 @@ interface ViewProps {
   onPublishCantoral: (cantorals: PublishedCantoral[]) => Promise<void>;
   navigate: (view: string) => void;
   onDeleteCantoral: (id: string) => Promise<void>;
+  /** Un cantoral volvió de la papelera (Historial): recargar los publicados. */
+  onCantoralRestored: () => void;
   onEditCantoral: (id: string) => void;
   onCancelEdit: () => void;
   onCloneCantoral: (cantoral: PublishedCantoral) => void;
@@ -2054,6 +2057,7 @@ function renderView(p: ViewProps): ReactElement | null {
             cantorals={p.publishedCantorals}
             onPlaySong={p.onPlaySong}
             onDeleteCantoral={p.onDeleteCantoral}
+            onCantoralRestored={p.onCantoralRestored}
             onClone={p.onCloneCantoral}
             isAdmin={p.isVerifiedAdmin}
             userVoicePart={effectiveVoicePart(p.userProfile.voicePart, p.userProfile.instrument)}
