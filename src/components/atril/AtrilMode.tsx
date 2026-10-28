@@ -26,6 +26,7 @@ import { getSongTracks, tieneMezclador, type AudioTrack } from '../../services/s
 import { esAleluyaDeCanto } from '../../utils/aleluyaEstrofa';
 import { useCantosAlDia } from '../../hooks/useCantosAlDia';
 import { logModuleVisit } from '../../services/usageLog';
+import { permitirGiro, fijarVertical } from '../../utils/orientacion';
 
 interface AtrilModeProps {
   songs: Song[];
@@ -54,6 +55,11 @@ const writeAudioPref = (v: '1' | '0') => {
 };
 
 /** Si el repertorio queda abierto o cerrado se recuerda entre Misas (no es una preferencia de perfil). */
+/** Aviso de cómo volver a ver los controles: una sola vez por dispositivo. */
+const AVISO_FOCO_KEY = 'atril.avisoPantallaCompleta';
+const leerPref = (k: string): string | null => { try { return localStorage.getItem(k); } catch { return null; } };
+const escribirPref = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* modo privado */ } };
+
 const LIST_PREF_KEY = 'atril.showList';
 const readListPref = (): boolean => {
   try { return localStorage.getItem(LIST_PREF_KEY) === '1'; } catch { return false; }
@@ -70,10 +76,20 @@ const writeListPref = (open: boolean) => {
  *  - Guitarra (u otro del coro) → letra con acordes encima.
  *  - Pueblo fiel → solo letra (partitura en las partes fijas del ordinario).
  * La transposición es POR CANTO; la notación (latino/americano) y el zoom son globales.
- * La pantalla se mantiene encendida (useWakeLock).
+ * La pantalla se mantiene encendida (useWakeLock) y gira con el dispositivo: en
+ * horizontal la partitura se lee a todo el ancho (utils/orientacion).
  */
 export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, userVoicePart, onClose }: AtrilModeProps) {
   useWakeLock(true);
+  // El Atril se puede leer en horizontal; al salir, la app instalada vuelve a vertical.
+  useEffect(() => {
+    permitirGiro();
+    return () => {
+      // Salir del atril estando en pantalla completa dejaba la app entera así.
+      try { if (document.fullscreenElement) document.exitFullscreen?.(); } catch { /* sin la API */ }
+      fijarVertical();
+    };
+  }, []);
   // Cuenta para el registro de uso (el Atril se abre encima de otras pantallas).
   useEffect(() => { logModuleVisit('atril', userRole); }, [userRole]);
   // La letra, los acordes y la partitura de HOY, no los del día en que se publicó el
@@ -124,6 +140,58 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
   const [menuOpen, setMenuOpen] = useState(false);
   const metro = useMetronome(90);
 
+  // ── Pantalla completa ────────────────────────────────────────────────────
+  // En pantalla completa los controles se esconden solos y vuelven al tocar la
+  // partitura: toda la pantalla es para leer.
+  const [controles, setControles] = useState(true);
+  const ocultarRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /** ¿Se entró de verdad a pantalla completa del navegador? (en iPhone no existe) */
+  const enFullscreenRef = useRef(false);
+
+  /** Muestra los controles y, en pantalla completa, programa que se vuelvan a esconder. */
+  const mostrarControles = () => {
+    setControles(true);
+    if (ocultarRef.current) clearTimeout(ocultarRef.current);
+    ocultarRef.current = setTimeout(() => setControles(false), 3500);
+  };
+  useEffect(() => () => { if (ocultarRef.current) clearTimeout(ocultarRef.current); }, []);
+  // Fuera de pantalla completa siempre se ven; con un menú abierto, no se esconden.
+  useEffect(() => {
+    if (!focus) {
+      if (ocultarRef.current) clearTimeout(ocultarRef.current);
+      setControles(true);
+    } else if (menuOpen && ocultarRef.current) {
+      clearTimeout(ocultarRef.current);
+    } else if (!menuOpen) {
+      mostrarControles();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus, menuOpen]);
+
+  // Salir de pantalla completa con el botón Atrás de Android (o Esc del navegador): el
+  // atril tiene que enterarse, si no se quedaba "en pantalla completa" sin estarlo.
+  useEffect(() => {
+    const alCambiar = () => {
+      if (document.fullscreenElement) return;
+      if (enFullscreenRef.current) {
+        enFullscreenRef.current = false;
+        setFocus(false);
+      }
+    };
+    document.addEventListener('fullscreenchange', alCambiar);
+    return () => document.removeEventListener('fullscreenchange', alCambiar);
+  }, []);
+
+  // ── Pantalla baja (teléfono acostado) ─────────────────────────────────────
+  // En horizontal un teléfono tiene ~360 px de alto: con las barras de siempre quedaba
+  // menos de la mitad para la partitura. Bajo cierto alto, todo se compacta.
+  const [bajo, setBajo] = useState(() => typeof window !== 'undefined' && window.innerHeight < 520);
+  useEffect(() => {
+    const medir = () => setBajo(window.innerHeight < 520);
+    window.addEventListener('resize', medir);
+    return () => window.removeEventListener('resize', medir);
+  }, []);
+
   const toggleList = () => setShowList((v) => { writeListPref(!v); return !v; });
   /** ¿El repertorio flota sobre el contenido? (en pantallas chicas sí, y hay que cerrarlo) */
   const listFloats = () => typeof window !== 'undefined' && window.innerWidth < 1024;
@@ -132,6 +200,69 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
   const sectionRefs = useRef<(HTMLElement | null)[]>([]);
   const rafRef = useRef<number | undefined>(undefined);
   const accRef = useRef(0);
+
+  // ── Seguir leyendo donde se iba al girar ──────────────────────────────────
+  // Al girar, cambia el ancho, se repintan las hojas y todo cambia de alto: el scroll
+  // quedaba en otro canto. Se anota mientras se lee en qué canto y a qué altura de él
+  // (fracción), y tras el giro se vuelve ahí.
+  const lecturaRef = useRef<{ idx: number; frac: number } | null>(null);
+  useEffect(() => {
+    const root = scrollRef.current;
+    if (!root) return;
+    const anotar = () => {
+      const top = root.getBoundingClientRect().top;
+      for (let i = 0; i < sectionRefs.current.length; i++) {
+        const sec = sectionRefs.current[i];
+        if (!sec) continue;
+        const r = sec.getBoundingClientRect();
+        if (r.bottom > top + 1) {
+          lecturaRef.current = { idx: i, frac: r.height ? (top - r.top) / r.height : 0 };
+          return;
+        }
+      }
+    };
+    const volver = () => {
+      const l = lecturaRef.current;
+      const sec = l ? sectionRefs.current[l.idx] : null;
+      if (!l || !sec) return;
+      const r = sec.getBoundingClientRect();
+      root.scrollTop += r.top - root.getBoundingClientRect().top + Math.max(0, l.frac) * r.height;
+    };
+    // Tras el giro se reajusta en CADA cuadro durante 1,5 s: el alto sigue cambiando
+    // mientras se repintan las partituras, y una o dos correcciones sueltas llegaban
+    // antes o después de tiempo. Si la persona toca o desplaza, se le deja el control.
+    let girando = false;
+    let hasta = 0;
+    let raf = 0;
+    const seguir = () => {
+      volver();
+      if (girando && performance.now() < hasta) raf = requestAnimationFrame(seguir);
+      else { girando = false; raf = 0; }
+    };
+    const alRedimensionar = () => {
+      girando = true;
+      hasta = performance.now() + 1500;
+      if (!raf) raf = requestAnimationFrame(seguir);
+    };
+    const soltar = () => {
+      girando = false;
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    };
+    // Mientras gira, el scroll se mueve solo: no se anota, o se perdería el lugar.
+    const alDesplazar = () => { if (!girando) anotar(); };
+    anotar();
+    root.addEventListener('scroll', alDesplazar, { passive: true });
+    root.addEventListener('pointerdown', soltar, { passive: true });
+    root.addEventListener('wheel', soltar, { passive: true });
+    window.addEventListener('resize', alRedimensionar);
+    return () => {
+      root.removeEventListener('scroll', alDesplazar);
+      root.removeEventListener('pointerdown', soltar);
+      root.removeEventListener('wheel', soltar);
+      window.removeEventListener('resize', alRedimensionar);
+      soltar();
+    };
+  }, [songs.length]);
 
   const isPuebloFiel = userRole === 'Pueblo fiel';
   const isOrgano = userInstrument === 'Órgano';
@@ -300,12 +431,29 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
   const toggleFocus = () => {
     const next = !focus;
     setFocus(next);
+    setMenuOpen(false);
     // Concentración = la mayor superficie posible para la partitura.
     if (next && showList) toggleList();
     try {
-      if (next) document.documentElement.requestFullscreen?.();
-      else if (document.fullscreenElement) document.exitFullscreen?.();
-    } catch { /* iOS u otros sin soporte → no-op */ }
+      if (next) {
+        const pedido = document.documentElement.requestFullscreen?.();
+        pedido
+          ?.then(() => {
+            enFullscreenRef.current = true;
+            // En pantalla completa el navegador SIEMPRE deja liberar el giro, aunque el
+            // teléfono todavía tenga guardado el manifest viejo (vertical).
+            permitirGiro();
+          })
+          .catch(() => { /* sin permiso: queda la pantalla completa "de la app" */ });
+      } else if (document.fullscreenElement) {
+        enFullscreenRef.current = false;
+        document.exitFullscreen?.();
+      }
+    } catch { /* iPhone u otros sin soporte → solo la pantalla completa de la app */ }
+    if (next && !leerPref(AVISO_FOCO_KEY)) {
+      escribirPref(AVISO_FOCO_KEY, '1');
+      toast.info('Toca la partitura para ver u ocultar los controles', { duration: 4000 });
+    }
   };
 
   // Imprimir: genera un PDF VERTICAL (carta) tal cual se ve el atril — documento
@@ -353,7 +501,15 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
       {/* Barra superior. En el teléfono solo queda lo imprescindible —Salir, Repertorio,
           Zoom y Pantalla completa—; el resto vive en el menú "⋮", para que ningún botón
           se salga de la pantalla. Desde `sm` se ve todo en línea, como siempre. */}
-      <div className="relative flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 bg-slate-950 border-b border-white/10 flex-shrink-0 min-w-0">
+      {/* En pantalla completa la barra FLOTA sobre la partitura (no le quita alto) y se
+          esconde sola; vuelve al tocar la partitura. Sin backdrop-blur a propósito: haría
+          de marco a los `fixed` de adentro y el fondo del menú "⋮" quedaría encerrado. */}
+      <div
+        onPointerDown={() => { if (focus) mostrarControles(); }}
+        className={`${focus
+          ? `absolute top-0 inset-x-0 z-40 bg-slate-950/95 shadow-xl transition-transform duration-300 ${controles ? '' : '-translate-y-full pointer-events-none'}`
+          : 'relative bg-slate-950'} flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 ${bajo ? 'py-1' : 'py-2'} border-b border-white/10 flex-shrink-0 min-w-0`}
+      >
         <button onClick={onClose} className={`${btn} w-9 h-9 sm:w-auto sm:h-11 sm:px-3 sm:gap-2 flex-shrink-0`} aria-label="Salir del atril">
           <X className="w-5 h-5" strokeWidth={2.5} />
           <span className="font-bold text-sm hidden sm:inline">Salir</span>
@@ -373,12 +529,10 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
 
         {/* El título solo desde `sm`: en el teléfono cada canto ya lo muestra en su
             cabecera pegajosa, y ese espacio hace falta para los botones. */}
-        {!focus && (
-          <div className="min-w-0 flex-1 hidden sm:block">
-            <div className="font-bold truncate leading-tight">{activeSong?.title ?? 'Atril'}</div>
-            <div className="text-xs text-amber-300/90 truncate">{instrumentLabel}</div>
-          </div>
-        )}
+        <div className="min-w-0 flex-1 hidden sm:block">
+          <div className="font-bold truncate leading-tight">{activeSong?.title ?? 'Atril'}</div>
+          {!bajo && <div className="text-xs text-amber-300/90 truncate">{instrumentLabel}</div>}
+        </div>
         <div className="flex-1 sm:hidden" />
 
         {/* Partitura ↔ Acordes: cambio rápido para todo el cantoral; el canto que no
@@ -603,6 +757,17 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
           ref={scrollRef}
           className="flex-1 overflow-y-auto bg-slate-900 pb-40"
           onPointerDown={() => { if (playing) setPlaying(false); }}
+          onClick={(e) => {
+            if (!focus) return;
+            // Los botones de cada canto (transpositor, favorito…) hacen lo suyo.
+            if ((e.target as HTMLElement).closest('button, a, select, input, label')) return;
+            if (controles) {
+              if (ocultarRef.current) clearTimeout(ocultarRef.current);
+              setControles(false);
+            } else {
+              mostrarControles();
+            }
+          }}
         >
           {orderedSongs.length === 0 ? (
             <div className="h-full flex items-center justify-center text-white/50">No hay cantos en el cantoral</div>
@@ -629,14 +794,27 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
                   key={`${s.id}::${s.category}::${i}`}
                   data-idx={i}
                   ref={(el) => { sectionRefs.current[i] = el; }}
-                  className="scroll-mt-0 border-b-4 border-slate-800"
+                  className={`scroll-mt-0 ${focus ? 'border-b-2' : 'border-b-4'} border-slate-800`}
                 >
                   {/* Cabecera de la sección: momento + título (+ tono/transpositor si hay acordes) */}
-                  <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-2 bg-slate-950/95 backdrop-blur border-b border-white/10">
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[11px] font-bold text-amber-300/80 uppercase tracking-wide truncate">{rotuloDeParte(s.category)}</div>
-                      <div className="font-bold leading-tight truncate">{tituloVisible(s).title}</div>
-                    </div>
+                  {/* En pantalla completa la cabecera no se pega arriba (taparía la
+                      partitura todo el rato) y va en una sola línea delgada. */}
+                  <div className={focus
+                    ? 'relative flex items-center gap-2 px-2 py-0.5 bg-slate-950/70 border-b border-white/10'
+                    : `sticky top-0 z-10 flex items-center gap-3 ${bajo ? 'px-3 py-1' : 'px-4 py-2'} bg-slate-950/95 backdrop-blur border-b border-white/10`}
+                  >
+                    {focus ? (
+                      <div className="min-w-0 flex-1 text-sm leading-tight truncate">
+                        <span className="text-[11px] font-bold text-amber-300/80 uppercase tracking-wide">{rotuloDeParte(s.category)}</span>
+                        <span className="text-white/40"> · </span>
+                        <span className="font-bold">{tituloVisible(s).title}</span>
+                      </div>
+                    ) : (
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[11px] font-bold text-amber-300/80 uppercase tracking-wide truncate">{rotuloDeParte(s.category)}</div>
+                        <div className="font-bold leading-tight truncate">{tituloVisible(s).title}</div>
+                      </div>
+                    )}
                     {showChordsHere && s.lyrics && (
                       <div className="flex items-center gap-1 flex-shrink-0" {...(i === activeIndex ? { 'data-tour': 'atril-transpositor' } : {})}>
                         {key && <span className="text-xs text-amber-300 mr-1 hidden sm:inline">Tono: {key}</span>}
@@ -687,7 +865,12 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
                   </div>
 
                   {/* Contenido de la sección */}
-                  <div className="px-3 sm:px-6 py-4">
+                  {/* En pantalla completa la partitura va de borde a borde; la letra conserva
+                      un margen mínimo para no pegarse al canto de la pantalla. */}
+                  <div className={focus
+                    ? (s.gradualeImage || isPsalm || showScore ? 'px-0 py-0.5' : 'px-3 py-2')
+                    : bajo ? 'px-3 sm:px-4 py-2' : 'px-3 sm:px-6 py-4'}
+                  >
                     {s.gradualeImage ? (
                       /* Propio gregoriano: el tetragrama, y nada más. No lleva la
                          condición de rol de las otras partituras — el gregoriano lo
@@ -721,7 +904,7 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
                         )}
                       </>
                     ) : showScore ? (
-                      <PdfPages proxyUrl={proxy!} driveViewUrl={scoreUrl!} title={s.title} zoom={pdfZoom} />
+                      <PdfPages proxyUrl={proxy!} driveViewUrl={scoreUrl!} title={s.title} zoom={pdfZoom} compacto={focus} />
                     ) : lyrics ? (
                       <div style={{ zoom: fontScale } as any}>
                         {showChordsHere ? <LyricsWithChords lyrics={lyrics} /> : <LyricsOnly lyrics={lyrics} applyReadingPrefs={false} />}
@@ -770,12 +953,13 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
 
       {/* En concentración la barra de velocidad se recoge en un botón flotante: en un
           teléfono esos ~70px de alto son partitura. La velocidad se deja elegida antes
-          de entrar; tocar la pantalla sigue pausando. */}
+          de entrar; tocar la pantalla sigue pausando. El botón se esconde junto con la
+          barra de arriba y vuelve al tocar la partitura. */}
       {focus && (
         <button
           onClick={() => setPlaying(p => !p)}
           // A la izquierda: la derecha de cada cabecera lleva transpositor y favorito.
-          className={`${btn} fixed left-4 w-14 h-14 z-20 shadow-xl bg-slate-800/90`}
+          className={`${btn} fixed left-4 w-14 h-14 z-20 shadow-xl bg-slate-800/90 transition-opacity duration-300 ${controles ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
           aria-label={playing ? 'Pausar desplazamiento' : 'Iniciar desplazamiento'}
         >
@@ -785,8 +969,8 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
 
       {/* Barra de autoscroll global (letra y partituras) */}
       {!focus && (
-      <div data-tour="atril-autoscroll" className="flex items-center gap-3 px-4 py-3 bg-slate-950 border-t border-white/10 flex-shrink-0" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
-        <button onClick={() => setPlaying(p => !p)} className={`${btn} w-12 h-12 flex-shrink-0`} aria-label={playing ? 'Pausar desplazamiento' : 'Iniciar desplazamiento'}>
+      <div data-tour="atril-autoscroll" className={`flex items-center gap-3 px-4 ${bajo ? 'py-1' : 'py-3'} bg-slate-950 border-t border-white/10 flex-shrink-0`} style={{ paddingBottom: `calc(${bajo ? '0.25rem' : '0.75rem'} + env(safe-area-inset-bottom, 0px))` }}>
+        <button onClick={() => setPlaying(p => !p)} className={`${btn} ${bajo ? 'w-10 h-10' : 'w-12 h-12'} flex-shrink-0`} aria-label={playing ? 'Pausar desplazamiento' : 'Iniciar desplazamiento'}>
           {playing ? <Pause className="w-6 h-6" fill="currentColor" /> : <Play className="w-6 h-6" fill="currentColor" />}
         </button>
         <span className="text-xs text-white/60 flex-shrink-0">Velocidad</span>

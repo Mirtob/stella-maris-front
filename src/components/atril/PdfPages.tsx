@@ -15,6 +15,8 @@ interface PdfPagesProps {
    *  libro (un salmo por página) se pasa fromPage = toPage = página de la celebración. */
   fromPage?: number;
   toPage?: number;
+  /** Pantalla completa del atril: la hoja de borde a borde y casi sin separación. */
+  compacto?: boolean;
 }
 
 /**
@@ -32,7 +34,7 @@ interface PdfPagesProps {
  * Ahora: se carga y se pinta al acercarse, se libera al alejarse (conservando el alto
  * para que el scroll no salte), y si algo falla se DICE.
  */
-export function PdfPages({ proxyUrl, driveViewUrl, title, zoom, fromPage, toPage }: PdfPagesProps) {
+export function PdfPages({ proxyUrl, driveViewUrl, title, zoom, fromPage, toPage, compacto }: PdfPagesProps) {
   const raizRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [pdf, setPdf] = useState<any>(null);
@@ -44,6 +46,29 @@ export function PdfPages({ proxyUrl, driveViewUrl, title, zoom, fromPage, toPage
   /** Alto de lo ya pintado, para reservarlo cuando se libere y el scroll no salte. */
   const [altoReservado, setAltoReservado] = useState(0);
   const [pintado, setPintado] = useState(false);
+  /** Ancho disponible. Cambia al girar el teléfono o la tablet: hay que volver a pintar
+   *  a la medida nueva, si no la hoja queda chica en horizontal o se sale en vertical. */
+  const [ancho, setAncho] = useState(0);
+  const anchoMedido = useRef(0);
+
+  useEffect(() => {
+    const el = raizRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const ro = new ResizeObserver(() => {
+      // Se espera a que el giro termine: durante la animación llegan varios anchos y
+      // pintar cada uno sería tirar trabajo (y memoria) a la basura.
+      if (t) clearTimeout(t);
+      t = setTimeout(() => {
+        const w = el.clientWidth;
+        // La primera medida solo se anota: la hoja ya se pinta a ese ancho al cargar.
+        if (anchoMedido.current === 0) { anchoMedido.current = w; return; }
+        if (Math.abs(anchoMedido.current - w) > 4) { anchoMedido.current = w; setAncho(w); }
+      }, 200);
+    });
+    ro.observe(el);
+    return () => { if (t) clearTimeout(t); ro.disconnect(); };
+  }, []);
 
   // ── ¿Estamos cerca? ───────────────────────────────────────────────────────
   // Dos umbrales distintos a propósito: se pinta con antelación (una pantalla y media)
@@ -169,11 +194,15 @@ export function PdfPages({ proxyUrl, driveViewUrl, title, zoom, fromPage, toPage
     let cancelled = false;
     (async () => {
       try {
+        // Al volver a pintar (giro, zoom), se sostiene el alto de lo que había mientras
+        // se pinta lo nuevo: si no, la sección encoge a cero un instante y el scroll salta.
+        const altoPrevio = container.childElementCount > 0 ? container.getBoundingClientRect().height : 0;
+        if (altoPrevio) container.style.minHeight = `${altoPrevio}px`;
         container.innerHTML = '';
         // Ojo con el 0: mientras el elemento no tiene ancho medido, un `- 8` lo dejaba
         // NEGATIVO y el lienzo salía inválido (otra hoja en blanco sin error).
         const medido = container.clientWidth || raizRef.current?.clientWidth || 0;
-        const containerWidth = Math.max(240, medido - 8);
+        const containerWidth = Math.max(240, medido - (compacto ? 0 : 8));
         const from = Math.max(1, fromPage ?? 1);
         const to = Math.min(pdf.numPages, toPage ?? pdf.numPages);
         for (let pageNum = from; pageNum <= to; pageNum++) {
@@ -185,9 +214,9 @@ export function PdfPages({ proxyUrl, driveViewUrl, title, zoom, fromPage, toPage
 
           const canvas = document.createElement('canvas');
           canvas.style.display = 'block';
-          canvas.style.margin = '0 auto 10px';
+          canvas.style.margin = compacto ? '0 auto 2px' : '0 auto 10px';
           canvas.style.maxWidth = '100%';
-          canvas.style.borderRadius = '6px';
+          canvas.style.borderRadius = compacto ? '0' : '6px';
           canvas.style.background = '#ffffff';
           const ctx = canvas.getContext('2d');
           if (!ctx) continue;
@@ -199,14 +228,19 @@ export function PdfPages({ proxyUrl, driveViewUrl, title, zoom, fromPage, toPage
           canvas.width = viewport.width * dpr;
           canvas.height = viewport.height * dpr;
           canvas.style.width = viewport.width + 'px';
-          canvas.style.height = viewport.height + 'px';
+          // Alto automático (no en px): si el contenedor se angosta antes de volver a
+          // pintar —el instante del giro—, `maxWidth` achica la hoja y el alto la sigue.
+          // Con el alto fijo la partitura quedaba estirada.
+          canvas.style.height = 'auto';
           ctx.scale(dpr, dpr);
           container.appendChild(canvas);
           await page.render({ canvasContext: ctx, viewport }).promise;
           if (cancelled) return;
         }
+        container.style.minHeight = '';
         if (!cancelled) setPintado(true);
       } catch {
+        container.style.minHeight = '';
         // Antes esto quedaba en silencio y el corista veía un hueco vacío. Si no se
         // pudo pintar, se dice y se ofrece abrirla en Drive.
         if (!cancelled) setError(true);
@@ -214,7 +248,7 @@ export function PdfPages({ proxyUrl, driveViewUrl, title, zoom, fromPage, toPage
     })();
 
     return () => { cancelled = true; };
-  }, [pdf, zoom, fromPage, toPage, cerca]);
+  }, [pdf, zoom, fromPage, toPage, cerca, ancho, compacto]);
 
   // El aviso de "cargando" dura hasta que hay PÍXELES, no hasta que llega el archivo.
   // Entre que pdf.js termina de leer el PDF y termina de pintar las páginas hay un

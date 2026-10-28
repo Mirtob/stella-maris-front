@@ -19,10 +19,15 @@ function detalleDelError(error: unknown): string {
   return `${nombre}: ${msg}`.slice(0, 180);
 }
 import { reportDisplayMode, registerPwaServiceWorker } from "./services/push";
+import { fijarVertical } from "./utils/orientacion";
 
 // Inicializar Sentry ANTES de renderizar la app.
 // Si VITE_SENTRY_DSN no está configurada, queda inactivo silenciosamente.
 initSentry();
+
+// El manifest permite girar (por el Modo Atril); el resto de la app instalada sigue en
+// vertical. Ver utils/orientacion.
+fijarVertical();
 
 // Limpiar service workers y cachés viejos ANTES de renderizar la app
 // Esto garantiza que todos los usuarios siempre vean la versión más reciente
