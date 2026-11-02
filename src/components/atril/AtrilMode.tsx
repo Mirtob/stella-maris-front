@@ -1,7 +1,7 @@
 import { abrirOGuardarPdf } from '../../utils/descargarPdf';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ZoomIn, ZoomOut, ChevronUp, ChevronDown, RotateCcw, Play, Pause, Maximize2, Minimize2, Music, List, Printer, Loader, Timer, Minus, Plus, MoreVertical, Headphones, FileMusic, Guitar } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, ChevronUp, ChevronDown, RotateCcw, Play, Pause, Maximize2, Minimize2, Music, List, Printer, Loader, Timer, Minus, Plus, MoreVertical, Headphones, FileMusic, Guitar, MicVocal } from 'lucide-react';
 import { toast } from 'sonner';
 import { Song, UserRole, InstrumentType } from '../../types';
 import { transposeContent, getTransposedKey, keyPrefersFlats, formatTransposition, getChordNotation, setChordNotation, type ChordNotation } from '../../utils/chordTranspose';
@@ -135,8 +135,8 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
   // tenerlo fijo, porque los cantos ya vienen en el orden de la Misa. Arranca cerrado y
   // se recuerda la elección.
   const [showList, setShowList] = useState(readListPref);
-  // Menú "más" de la barra superior: en pantallas chicas guarda lo secundario para que
-  // Salir, Repertorio, Zoom y Pantalla completa entren siempre.
+  // Menú "más" de la barra superior: guarda lo secundario para que Salir, Repertorio,
+  // Voz, Zoom y Pantalla completa entren siempre, en teléfono y en tablet.
   const [menuOpen, setMenuOpen] = useState(false);
   const metro = useMetronome(90);
 
@@ -498,9 +498,11 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
   // salía por el lado, dejando fuera Pantalla completa y el menú "⋮".
   return createPortal(
     <div className="fixed inset-0 z-[100] flex flex-col bg-slate-900 text-white">
-      {/* Barra superior. En el teléfono solo queda lo imprescindible —Salir, Repertorio,
-          Zoom y Pantalla completa—; el resto vive en el menú "⋮", para que ningún botón
-          se salga de la pantalla. Desde `sm` se ve todo en línea, como siempre. */}
+      {/* Barra superior, por prioridad. Siempre a la vista: Salir, Repertorio,
+          Partitura/Acordes, Voz, Zoom, Pantalla completa y el menú "⋮". Lo secundario
+          (cifrado, metrónomo, imprimir, audios) vive en el menú y solo sale en línea desde
+          `xl`: en la tablet todo en línea empujaba Pantalla completa fuera de la pantalla
+          (1-nov-2026). Las etiquetas con texto aparecen desde `lg`. */}
       {/* En pantalla completa la barra FLOTA sobre la partitura (no le quita alto) y se
           esconde sola; vuelve al tocar la partitura. Sin backdrop-blur a propósito: haría
           de marco a los `fixed` de adentro y el fondo del menú "⋮" quedaría encerrado. */}
@@ -510,9 +512,9 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
           ? `absolute top-0 inset-x-0 z-40 bg-slate-950/95 shadow-xl transition-transform duration-300 ${controles ? '' : '-translate-y-full pointer-events-none'}`
           : 'relative bg-slate-950'} flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 ${bajo ? 'py-1' : 'py-2'} border-b border-white/10 flex-shrink-0 min-w-0`}
       >
-        <button onClick={onClose} className={`${btn} w-9 h-9 sm:w-auto sm:h-11 sm:px-3 sm:gap-2 flex-shrink-0`} aria-label="Salir del atril">
+        <button onClick={onClose} className={`${btn} w-9 h-9 sm:w-11 sm:h-11 lg:w-auto lg:px-3 lg:gap-2 flex-shrink-0`} aria-label="Salir del atril">
           <X className="w-5 h-5" strokeWidth={2.5} />
-          <span className="font-bold text-sm hidden sm:inline">Salir</span>
+          <span className="font-bold text-sm hidden lg:inline">Salir</span>
         </button>
 
         {/* Repertorio: abrir/cerrar. Es el botón que reemplaza a la barra lateral fija. */}
@@ -536,14 +538,14 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
         <div className="flex-1 sm:hidden" />
 
         {/* Partitura ↔ Acordes: cambio rápido para todo el cantoral; el canto que no
-            tiene lo pedido muestra lo que sí tiene. En el teléfono es un solo botón que
-            alterna (dos no caben junto al menú "⋮"); desde `sm`, las dos opciones. */}
+            tiene lo pedido muestra lo que sí tiene. En teléfono y tablet es un solo botón
+            que alterna; desde `lg`, las dos opciones con su nombre. */}
         {puedeCambiarVista && (
           <button
             onClick={() => setVista(vistaActual === 'score' ? 'chords' : 'score')}
             aria-label={vistaActual === 'score' ? 'Cambiar a letra con acordes' : 'Cambiar a partitura'}
             title={vistaActual === 'score' ? 'Ver letra con acordes' : 'Ver partituras'}
-            className={`${btn} sm:hidden w-9 h-9 flex-shrink-0 text-amber-300 border-amber-400`}
+            className={`${btn} lg:hidden w-9 h-9 sm:w-11 sm:h-11 flex-shrink-0 text-amber-300 border-amber-400`}
           >
             {vistaActual === 'score'
               ? <FileMusic className="w-6 h-6" strokeWidth={2.5} />
@@ -554,7 +556,7 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
           <div
             role="group"
             aria-label="Ver partitura o letra con acordes"
-            className="hidden sm:flex flex-shrink-0 rounded-xl bg-white/10 border border-white/20 p-0.5"
+            className="hidden lg:flex flex-shrink-0 rounded-xl bg-white/10 border border-white/20 p-0.5"
           >
             {([
               ['score', 'Partitura', FileMusic],
@@ -575,13 +577,27 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
         )}
 
         {/* Cambio rápido de voz: solo si algún canto de HOY trae partituras por voz.
-            No toca el perfil — es para el que dobla en otra parte esta vez. */}
+            No toca el perfil — es para el que dobla en otra parte esta vez. Es un botón
+            con el <select> nativo encima, invisible: en el teléfono ocupa lo mismo que
+            un ícono (la voz va abreviada en la esquina) y al tocarlo abre la lista del
+            sistema. Desde `sm` muestra el nombre de la voz. */}
         {!isPuebloFiel && partsInCantoral.length > 0 && (
+          <label
+            title="Cambiar de voz o instrumento"
+            className={`${btn} relative w-9 h-9 sm:w-auto sm:h-11 sm:px-2.5 sm:gap-1.5 flex-shrink-0 cursor-pointer focus-within:border-amber-400 ${voicePart ? 'text-amber-300 border-amber-400' : ''}`}
+          >
+            <MicVocal className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2.5} />
+            <span className="hidden sm:block text-sm font-bold max-w-[6.5rem] truncate">{voicePart || 'General'}</span>
+            {voicePart && (
+              <span aria-hidden="true" className="sm:hidden absolute -bottom-1 -right-1 rounded-md bg-amber-400 px-1 text-[10px] leading-4 font-black text-slate-950">
+                {voicePart.slice(0, 3)}
+              </span>
+            )}
           <select
             value={voicePart}
             onChange={(e) => setVoicePart(e.target.value)}
             aria-label="Voz o instrumento"
-            className="hidden md:block flex-shrink-0 max-w-[7.5rem] truncate bg-white/10 border border-white/25 rounded-lg px-2 py-1.5 text-sm font-bold text-white focus:outline-none focus:border-amber-400"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           >
             <option value="" className="text-black">Partitura general</option>
             {partsInCantoral.map(p => (
@@ -593,6 +609,7 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
               <option value={voicePart} className="text-black">{voicePart}</option>
             )}
           </select>
+          </label>
         )}
 
         {/* Zoom global (letra y partitura) */}
@@ -603,7 +620,7 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
         {hasChords && (
           <button
             onClick={() => changeNotation(notation === 'latin' ? 'american' : 'latin')}
-            className={`${btn} hidden md:flex px-2 h-11 flex-shrink-0 text-xs font-bold`}
+            className={`${btn} hidden xl:flex px-2 h-11 flex-shrink-0 text-xs font-bold`}
             aria-label="Cambiar cifrado de acordes (latino/americano)"
             title="Cifrado latino / americano"
           >
@@ -615,7 +632,7 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
         {hasChords && (
           <button
             onClick={() => setShowMetro((s) => !s)}
-            className={`${btn} hidden md:flex w-11 h-11 flex-shrink-0 ${showMetro || metro.running ? 'bg-amber-500/30 border-amber-400' : ''}`}
+            className={`${btn} hidden xl:flex w-11 h-11 flex-shrink-0 ${showMetro || metro.running ? 'bg-amber-500/30 border-amber-400' : ''}`}
             aria-label="Metrónomo"
             aria-pressed={showMetro}
             title="Metrónomo"
@@ -625,7 +642,7 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
         )}
 
         {/* Imprimir el atril (PDF vertical, tal cual se ve) */}
-        <button onClick={handlePrint} disabled={printing} className={`${btn} hidden md:flex w-11 h-11 flex-shrink-0 disabled:opacity-60`} aria-label="Imprimir" title="Imprimir (PDF vertical, tal cual se ve)">
+        <button onClick={handlePrint} disabled={printing} className={`${btn} hidden xl:flex w-11 h-11 flex-shrink-0 disabled:opacity-60`} aria-label="Imprimir" title="Imprimir (PDF vertical, tal cual se ve)">
           {printing ? <Loader className="w-6 h-6 animate-spin" /> : <Printer className="w-6 h-6" strokeWidth={2.5} />}
         </button>
 
@@ -634,10 +651,11 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
           {focus ? <Minimize2 className="w-6 h-6" strokeWidth={2.5} /> : <Maximize2 className="w-6 h-6" strokeWidth={2.5} />}
         </button>
 
-        {/* Menú "⋮" — solo en pantalla chica: lo que no cabe en la barra */}
+        {/* Menú "⋮": lo secundario. Desde `xl` eso va en línea y el menú solo queda si
+            hay audios de ensayo que activar. */}
         <button
           onClick={() => setMenuOpen(o => !o)}
-          className={`${btn} md:hidden w-9 h-9 flex-shrink-0 ${menuOpen ? 'bg-white/25' : ''}`}
+          className={`${btn} ${puedeHaberAudios ? '' : 'xl:hidden'} w-9 h-9 sm:w-11 sm:h-11 flex-shrink-0 ${menuOpen ? 'bg-white/25' : ''}`}
           aria-label="Más opciones"
           aria-expanded={menuOpen}
         >
@@ -647,40 +665,21 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
         {menuOpen && (
           <>
             <button
-              className="fixed inset-0 z-40 cursor-default md:hidden"
+              className="fixed inset-0 z-40 cursor-default"
               onClick={() => setMenuOpen(false)}
               aria-label="Cerrar el menú"
               tabIndex={-1}
             />
-            <div className="absolute right-2 top-full mt-1 z-50 w-60 rounded-2xl bg-slate-900 border border-white/20 shadow-2xl p-2 space-y-1 md:hidden">
-              <div className="px-2 pb-1">
+            <div className="absolute right-2 top-full mt-1 z-50 w-60 rounded-2xl bg-slate-900 border border-white/20 shadow-2xl p-2 space-y-1">
+              <div className="px-2 pb-1 sm:hidden">
                 <div className="font-bold truncate leading-tight">{activeSong?.title ?? 'Atril'}</div>
                 <div className="text-xs text-amber-300/90 truncate">{instrumentLabel}</div>
               </div>
 
-              {!isPuebloFiel && partsInCantoral.length > 0 && (
-                <label className="block px-2 py-1">
-                  <span className="text-[11px] text-white/50 font-bold">Voz o instrumento</span>
-                  <select
-                    value={voicePart}
-                    onChange={(e) => setVoicePart(e.target.value)}
-                    className="w-full mt-1 bg-white/10 border border-white/25 rounded-lg px-2 py-2 text-sm font-bold text-white focus:outline-none focus:border-amber-400"
-                  >
-                    <option value="" className="text-black">Partitura general</option>
-                    {partsInCantoral.map(p => (
-                      <option key={p} value={p} className="text-black">{p}</option>
-                    ))}
-                    {voicePart && !partsInCantoral.includes(voicePart) && (
-                      <option value={voicePart} className="text-black">{voicePart}</option>
-                    )}
-                  </select>
-                </label>
-              )}
-
               {/* El menú NO se cierra al tocar estas: son de las que se tocan varias veces
                   seguidas o dejan algo abierto abajo. */}
               {hasChords && (
-                <button onClick={() => changeNotation(notation === 'latin' ? 'american' : 'latin')} className={menuItem}>
+                <button onClick={() => changeNotation(notation === 'latin' ? 'american' : 'latin')} className={`${menuItem} xl:hidden`}>
                   <Music className="w-5 h-5" strokeWidth={2.5} />
                   Cifrado: <span className="text-amber-300">{notation === 'latin' ? 'Do·Re' : 'C·D'}</span>
                 </button>
@@ -688,7 +687,7 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
               {hasChords && (
                 <button
                   onClick={() => { setShowMetro(s => !s); setMenuOpen(false); }}
-                  className={`${menuItem} ${showMetro || metro.running ? 'text-amber-300' : ''}`}
+                  className={`${menuItem} xl:hidden ${showMetro || metro.running ? 'text-amber-300' : ''}`}
                   aria-pressed={showMetro}
                 >
                   <Timer className="w-5 h-5" strokeWidth={2.5} />
@@ -708,7 +707,7 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
               <button
                 onClick={() => { setMenuOpen(false); handlePrint(); }}
                 disabled={printing}
-                className={`${menuItem} disabled:opacity-60`}
+                className={`${menuItem} xl:hidden disabled:opacity-60`}
               >
                 {printing ? <Loader className="w-5 h-5 animate-spin" /> : <Printer className="w-5 h-5" strokeWidth={2.5} />}
                 Imprimir
