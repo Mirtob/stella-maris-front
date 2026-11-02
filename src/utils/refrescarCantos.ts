@@ -67,6 +67,9 @@ const refrescables = (fuente: Song): Partial<Song> => ({
   // tiene que llegar también a los cantorales ya publicados: si no, siguen buscando por
   // el nombre viejo. (Las cuatro partes de Nebreda estaban escritas de tres formas.)
   massName: fuente.massName,
+  // Si es obra instrumental decide si el pueblo la ve: marcarla en el catálogo tiene que
+  // sacarla también de los cantorales ya publicados.
+  instrumental: fuente.instrumental,
 });
 
 /**

@@ -20,6 +20,7 @@ import { ponerCantosAlDia } from '../services/catalogoVigente';
 import { getDrivePdfProxyUrl } from './driveProxy';
 import { getCelebrationsForDate } from './liturgicalCalendar';
 import { celebracionesDePortada } from './celebracionesPortada';
+import { cantoralParaElPueblo } from './instrumental';
 
 interface PDFGeneratorOptions {
   cantoral: PublishedCantoral;
@@ -467,6 +468,8 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   } catch {
     /* sin catálogo se imprime la copia guardada */
   }
+  // El folleto es del pueblo: las obras instrumentales del coro (bronces, elevación) no van.
+  cantoral = cantoralParaElPueblo(cantoral);
   avanzar(8);
 
   const colors = coloresDelFolleto(cantoral.date);

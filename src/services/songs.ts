@@ -46,6 +46,9 @@ export interface SongInput {
   lyrics?: string | null;
   isLiturgical?: boolean;
   nonLiturgicalCategory?: Song['nonLiturgicalCategory'] | null;
+  /** Obra solo instrumental (columna de la migración 20261102). Solo se envía si viene
+   *  definida: así el alta y la edición siguen andando antes de aplicar la migración. */
+  instrumental?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +98,7 @@ function rowToSong(row: Record<string, unknown>): Song {
     lyrics:                row.lyrics as string | undefined,
     isLiturgical:          (row.is_liturgical as boolean) ?? true,
     nonLiturgicalCategory: row.non_liturgical_category as Song['nonLiturgicalCategory'],
+    instrumental:          (row.instrumental as boolean) ?? false,
     approvalStatus:        row.approval_status as Song['approvalStatus'],
     approvedBy:            row.approved_by as string | undefined,
     approvedAt:            row.approved_at as string | undefined,
@@ -123,6 +127,7 @@ function songInputToRow(input: SongInput): Record<string, unknown> {
     lyrics:                input.lyrics ?? null,
     is_liturgical:         input.isLiturgical ?? true,
     non_liturgical_category: input.nonLiturgicalCategory ?? null,
+    ...(input.instrumental !== undefined ? { instrumental: input.instrumental } : {}),
     approval_status:       'approved',
   };
 }
@@ -259,6 +264,7 @@ export async function updateSong(
     if (input.lyrics !== undefined)           row.lyrics                 = input.lyrics;
     if (input.isLiturgical !== undefined)     row.is_liturgical          = input.isLiturgical;
     if (input.nonLiturgicalCategory !== undefined) row.non_liturgical_category = input.nonLiturgicalCategory;
+    if (input.instrumental !== undefined)     row.instrumental           = input.instrumental;
 
     const { error } = await sb.from('songs').update(row).eq('id', id);
     if (error) return { ok: false, error: error.message };

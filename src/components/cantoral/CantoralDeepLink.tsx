@@ -11,6 +11,7 @@ import { PlaylistPlayer } from '../songs/PlaylistPlayer';
 import { LyricsOnly } from '../songs/LyricsOnly';
 import { esAleluyaDeCanto } from '../../utils/aleluyaEstrofa';
 import { groupSongsByMassPart, massCategoryIcon, rotuloDeParte, tituloVisible } from '../../utils/ordinary';
+import { cantoralParaElPueblo } from '../../utils/instrumental';
 import { hasAnyVideo } from '../../utils/songVideo';
 import {
   getDeferredInstallPrompt,
@@ -71,7 +72,8 @@ export function CantoralDeepLink({ cantoralId, onOpenInApp, onOpenInstall, onCan
           // Defensa en profundidad: aunque RLS filtre un borrador, la UI lo rechaza.
           setError('Este cantoral aún no está publicado. Vuelve a intentar cuando el coro lo publique.');
         } else {
-          setCantoral(c);
+          // Es la vista del pueblo: sin las obras instrumentales del coro.
+          setCantoral(cantoralParaElPueblo(c));
         }
         setLoading(false);
       })

@@ -31,6 +31,8 @@ const MOMENT_OPTIONS: { value: MassMoment; label: string }[] = [
   { value: 'respuesta_oracion_universal', label: 'Respuesta a Oración Universal' },
   { value: 'ofertorio', label: 'Ofertorio' },
   { value: 'santo', label: 'Santo' },
+  // El toque de la elevación (bronces). Siempre instrumental: no la ve el pueblo.
+  { value: 'elevacion', label: 'Elevación' },
   { value: 'aclamacion_consagracion', label: 'Aclamación Consagración' },
   { value: 'amen_doxologia', label: 'Amén (Doxología)' },
   { value: 'padre_nuestro', label: 'Padre Nuestro' },
@@ -119,6 +121,8 @@ export function SongManager({ puedeBorrar = true }: SongManagerProps) {
     driveFileId: '', duration: '', originalKey: '', massName: '', lyrics: '',
     seasons: [] as string[], instruments: [] as InstrumentType[],
     isLiturgical: true, nonLiturgicalCategory: '' as string,
+    // Obra solo instrumental (bronces, elevación): la ve solo el coro.
+    instrumental: false,
     // Polifonía: carpeta del canto en Drive + partituras por voz detectadas en ella.
     driveFolderId: '', sheets: [] as SongSheet[],
   };
@@ -344,6 +348,35 @@ export function SongManager({ puedeBorrar = true }: SongManagerProps) {
    * todavía usa, tiene que seguir viéndose para poder quitársela. Sin esa unión
    * quedaría pegada al canto y sin forma de sacarla desde la app.
    */
+  /**
+   * «Obra instrumental»: un ofertorio para bronces, el toque de la elevación. No tiene
+   * letra ni la canta la asamblea, así que la ve solo el coro (ver utils/instrumental).
+   * La elevación lo es siempre; ahí la casilla queda marcada y fija.
+   */
+  const renderInstrumentalBlock = (form: SongForm, setForm: Dispatch<SetStateAction<SongForm>>) => {
+    const porLaElevacion = form.moments.includes('elevacion');
+    const on = form.instrumental || porLaElevacion;
+    return (
+      <label className={`flex items-start gap-3 p-3 rounded-xl border-2 ${on ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'border-gray-200 dark:border-slate-600'} ${porLaElevacion ? 'opacity-80' : 'cursor-pointer'}`}>
+        <input
+          type="checkbox"
+          checked={on}
+          disabled={porLaElevacion}
+          onChange={(e) => setForm(prev => ({ ...prev, instrumental: e.target.checked }))}
+          className="mt-1 w-5 h-5 accent-amber-600 flex-shrink-0"
+        />
+        <span className="text-sm">
+          <span className="font-bold text-gray-900 dark:text-white">Obra instrumental (bronces, órgano solo)</span>
+          <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            {porLaElevacion
+              ? 'El toque de la elevación siempre es instrumental.'
+              : 'Sin letra para la asamblea. Solo la ve el coro: no sale en el folleto ni en la vista del Pueblo fiel.'}
+          </span>
+        </span>
+      </label>
+    );
+  };
+
   const renderSeasonsBlock = (form: SongForm, setForm: Dispatch<SetStateAction<SongForm>>) => {
     const catalog = tags.map(t => t.label);
     const orphans = form.seasons.filter(s => !catalog.includes(s));
@@ -580,6 +613,7 @@ export function SongManager({ puedeBorrar = true }: SongManagerProps) {
     'Respuesta a Oración Universal',
     'Ofertorio',
     'Santo',
+    'Elevación',
     'Aclamación Consagración',
     'Amén (Doxología)',
     'Padre Nuestro',
@@ -644,6 +678,7 @@ export function SongManager({ puedeBorrar = true }: SongManagerProps) {
       instruments: songVersionChips(song.instruments),
       isLiturgical: !nonLit,
       nonLiturgicalCategory: song.nonLiturgicalCategory || '',
+      instrumental: !!song.instrumental,
     });
   };
 
@@ -690,6 +725,9 @@ export function SongManager({ puedeBorrar = true }: SongManagerProps) {
       liturgicalSeasons: f.seasons as unknown as LiturgicalSeason[],
       isLiturgical: f.isLiturgical,
       nonLiturgicalCategory: f.isLiturgical ? null : (f.nonLiturgicalCategory as Song['nonLiturgicalCategory']) || null,
+      // Solo si cambió: la columna es de la migración 20261102 y, sin aplicarla, mandarla
+      // siempre rompería el guardado de cualquier canto.
+      ...(f.instrumental !== !!editSong.instrumental ? { instrumental: f.instrumental } : {}),
     });
     setSavingSong(false);
     if (!r.ok) { toast.error('No se pudo guardar', { description: r.error }); return; }
@@ -751,6 +789,8 @@ export function SongManager({ puedeBorrar = true }: SongManagerProps) {
       liturgicalSeasons: na.seasons as unknown as LiturgicalSeason[],
       isLiturgical: na.isLiturgical,
       nonLiturgicalCategory: na.isLiturgical ? null : (na.nonLiturgicalCategory as Song['nonLiturgicalCategory']) || null,
+      // Solo si va marcada (misma razón que al editar: la columna es nueva).
+      ...(na.instrumental ? { instrumental: true } : {}),
     });
     setAddingSong(false);
     if (!r.ok) { toast.error('No se pudo agregar el canto', { description: r.error }); return; }
@@ -1144,6 +1184,8 @@ export function SongManager({ puedeBorrar = true }: SongManagerProps) {
 
               {renderSeasonsBlock(f, setF)}
 
+              {renderInstrumentalBlock(f, setF)}
+
               {/* Litúrgico / No litúrgico */}
               <div>
                 <label className="text-sm text-gray-600 dark:text-gray-300 mb-1 block">Tipo de canto</label>
@@ -1425,6 +1467,8 @@ export function SongManager({ puedeBorrar = true }: SongManagerProps) {
               </div>
 
               {renderSeasonsBlock(na, setNa)}
+
+              {renderInstrumentalBlock(na, setNa)}
 
               {/* Litúrgico / No litúrgico */}
               <div>

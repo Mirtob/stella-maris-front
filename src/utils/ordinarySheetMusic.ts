@@ -1,5 +1,6 @@
 import { Song } from '../types';
 import { isOrdinary } from './ordinary';
+import { esParteDeBronce, nombreDeParteDeBronce } from './sheetParts';
 
 /**
  * Resuelve la partitura (PDF de Drive) de una parte del ordinario que no la tiene
@@ -228,7 +229,9 @@ export function pickOrdinarySheet(
     // Y, si todavía empatan, la partitura completa antes que la de una sola voz: para el
     // coro (tarjeta y Atril) es la que sirve. Al folleto no le afecta: ahí ya se filtró a
     // la Voz antes de elegir.
-    const completa = /(^|\s)(voz( \d)?|soprano|alto|contralto|tenor|bajo|hombres|mujeres)$/.test(norm(sinExtension(f.name))) ? 0 : 0.05;
+    // La parte de un bronce («…-Trompeta_en_Sib_1») tampoco es la completa.
+    const completa = /(^|\s)(voz( \d)?|soprano|alto|contralto|tenor|bajo|hombres|mujeres)$/.test(norm(sinExtension(f.name)))
+      || nombreDeParteDeBronce(f.name) ? 0 : 0.05;
     const score = (folderMatch || nameMassMatch || massTokens.length === 0 ? 1 : 0.5)
       + (folderMatch ? 3 : 0) + (nameMassMatch ? 2 : 0) + matiz * 0.25 + nombraLaParte + completa;
     if (score > bestScore) { bestScore = score; best = f; }
@@ -300,10 +303,15 @@ export function elegirParaElFolleto(song: Song, files: DriveFile[]): DriveFile |
  * La partitura del PUEBLO en un canto ya armado: la Voz entre sus partituras por voz, o
  * la del canto si no las trae. La usa el Modo Atril del Pueblo fiel, que no debe ver la
  * partitura coral completa.
+ *
+ * Si el canto trae arreglo de bronces y no hay Voz, no se cae a la partitura general:
+ * esa lleva los bronces apilados, y el arreglo es solo del coro. El pueblo ve la letra.
  */
 export function partituraDelPueblo(song: Pick<Song, 'sheets' | 'sheetMusicUrl'>): string | undefined {
-  const voz = (song.sheets ?? []).find((sh) => esLaVoz({ id: sh.fileId, name: sh.fileName }));
-  return voz ? `https://drive.google.com/file/d/${voz.fileId}/preview` : song.sheetMusicUrl;
+  const sheets = song.sheets ?? [];
+  const voz = sheets.find((sh) => esLaVoz({ id: sh.fileId, name: sh.fileName }));
+  if (voz) return `https://drive.google.com/file/d/${voz.fileId}/preview`;
+  return sheets.some((sh) => esParteDeBronce(sh.part)) ? undefined : song.sheetMusicUrl;
 }
 
 /** El nombre sin su extensión ("Santo - Manzano-Voz.pdf" → "Santo - Manzano-Voz"). */

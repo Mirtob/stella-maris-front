@@ -12,9 +12,10 @@
  */
 import { Song } from '../types';
 import { isOrdinary } from './ordinary';
-import { hasPartSheet, sheetForPart } from './sheetParts';
+import { esParteDeBronce, hasPartSheet, sheetForPart } from './sheetParts';
 import { partituraDelPueblo } from './ordinarySheetMusic';
 import { lyricsHaveChords } from './songReport';
+import { esInstrumental } from './instrumental';
 
 export type ContentMode = 'score' | 'chords' | 'lyrics';
 
@@ -54,7 +55,20 @@ export function modoDelAtril(s: Song, p: PerfilAtril): ContentMode {
   // Polifonía: quien tiene voz asignada y el canto trae SU partitura, ve la partitura
   // aunque no sea organista — es justamente para lo que la subió el coro.
   if (hasPartSheet(s.sheets, p.voicePart)) return 'score';
+  // La obra instrumental no tiene letra: sin partitura no habría nada que mostrar.
+  if (esInstrumental(s)) return partituraDelAtril(s, p) ? 'score' : 'chords';
   if (p.organo) return s.sheetMusicUrl ? 'score' : 'chords';
   if (isOrdinary(s) && s.sheetMusicUrl && !lyricsHaveChords(s.lyrics)) return 'score';
   return 'chords'; // Guitarra u otro instrumento del coro
+}
+
+/**
+ * ¿Este bronce no toca en este canto? Pasa cuando el canto no trae parte para su
+ * instrumento: el Atril se lo dice («Tacet») en vez de dejarlo buscando en la
+ * partitura general una línea que no existe. La obra instrumental nunca: aunque traiga
+ * un solo PDF, esa partitura es justamente la de los bronces.
+ */
+export function tacetDelBronce(s: Song, p: PerfilAtril): boolean {
+  if (p.puebloFiel || !esParteDeBronce(p.voicePart) || esInstrumental(s)) return false;
+  return !hasPartSheet(s.sheets, p.voicePart);
 }

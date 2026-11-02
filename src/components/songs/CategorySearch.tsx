@@ -11,6 +11,7 @@ import { CasillaPartitura } from '../cantoral/CasillaPartitura';
 import { getCurrentLiturgicalSeason, isAlleluiaTitleInLent } from '../../utils/liturgicalSeason';
 import { categoryToMoment } from '../../utils/category';
 import { filterByInstrument } from '../../utils/instrument';
+import { esInstrumental } from '../../utils/instrumental';
 import { parseYmdLocal } from '../../utils/dateLocal';
 import { isOrdinary } from '../../utils/ordinary';
 import { resolveOrdinarySheetMusic } from '../../utils/ordinarySheetMusic';
@@ -607,6 +608,16 @@ export function CategorySearch({
                       )}
 
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        {/* Obra instrumental: el coro la toca, pero el pueblo no la ve
+                            (ni en el folleto ni en su vista). Se avisa al elegirla. */}
+                        {esInstrumental(song) && (
+                          <span
+                            className="inline-flex items-center gap-1 bg-amber-600 text-white px-2.5 py-1 rounded-lg text-sm font-bold border border-amber-800 shadow-sm"
+                            title="Solo la ve el coro: no sale en el folleto ni en la vista del Pueblo fiel"
+                          >
+                            📯 Instrumental · solo coro
+                          </span>
+                        )}
                         {parteDe(song) !== category && (
                           <span className="inline-flex items-center gap-1 bg-sky-600 text-white px-2.5 py-1 rounded-lg text-sm font-bold border border-sky-800 shadow-sm">
                             {parteDe(song) === 'Rito de Aspersión' ? '💧 ' : ''}{parteDe(song)}

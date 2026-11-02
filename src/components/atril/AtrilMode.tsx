@@ -13,7 +13,7 @@ import { useMetronome } from '../../hooks/useMetronome';
 import { Tour } from '../tour/Tour';
 import { atrilTips, hasSeenTip, markTipSeen } from '../tour/tours';
 import { isOrdinary, sortByMassOrder, rotuloDeParte, tituloVisible } from '../../utils/ordinary';
-import { modoDelAtril, partituraDelAtril, vistaPorDefecto, type ContentMode, type VistaAtril } from '../../utils/atrilModo';
+import { modoDelAtril, partituraDelAtril, tacetDelBronce, vistaPorDefecto, type ContentMode, type VistaAtril } from '../../utils/atrilModo';
 import { getDrivePdfProxyUrl } from '../../utils/driveProxy';
 import { cycleForBookId } from '../../data/psalmIndex';
 import { generateAtrilPrintable } from '../../utils/atrilBookletPDF';
@@ -27,6 +27,7 @@ import { esAleluyaDeCanto } from '../../utils/aleluyaEstrofa';
 import { useCantosAlDia } from '../../hooks/useCantosAlDia';
 import { logModuleVisit } from '../../services/usageLog';
 import { permitirGiro, fijarVertical } from '../../utils/orientacion';
+import { sinInstrumentales } from '../../utils/instrumental';
 
 interface AtrilModeProps {
   songs: Song[];
@@ -270,7 +271,8 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
   const hasChords = !isPuebloFiel;
 
   // Repertorio en orden de la Misa (Entrada → Kyrie → … → Salida).
-  const orderedSongs = sortByMassOrder(songs);
+  // Las obras instrumentales (bronces, elevación) son del coro: el Pueblo fiel no las ve.
+  const orderedSongs = sortByMassOrder(isPuebloFiel ? sinInstrumentales(songs) : songs);
 
   /**
    * ¿Hay algún canto que PODRÍA traer audios? Es lo único que se mira para decidir si
@@ -813,6 +815,16 @@ export function AtrilMode({ songs: cantosRecibidos, userRole, userInstrument, us
                         <div className="text-[11px] font-bold text-amber-300/80 uppercase tracking-wide truncate">{rotuloDeParte(s.category)}</div>
                         <div className="font-bold leading-tight truncate">{tituloVisible(s).title}</div>
                       </div>
+                    )}
+                    {/* El bronce no toca en este canto: se le dice, en vez de dejarlo
+                        buscando su línea en la partitura general. */}
+                    {tacetDelBronce(s, perfil) && (
+                      <span
+                        className="flex-shrink-0 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide bg-white/10 text-white/70"
+                        title={`Este canto no trae parte de ${voicePart}`}
+                      >
+                        Tacet
+                      </span>
                     )}
                     {showChordsHere && s.lyrics && (
                       <div className="flex items-center gap-1 flex-shrink-0" {...(i === activeIndex ? { 'data-tour': 'atril-transpositor' } : {})}>

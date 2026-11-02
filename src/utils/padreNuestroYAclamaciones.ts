@@ -22,16 +22,21 @@ import { massOrdinary } from '../data/massOrdinary';
 import {
   DriveFile, esLaVoz, pdfsDelPadreNuestro, pickOrdinarySheet,
 } from './ordinarySheetMusic';
-import { detectSheets } from './sheetParts';
+import { detectSheets, sinSufijoDeBronce } from './sheetParts';
 import { isKyrialeSong } from './kyrialeSong';
+import { ELEVACION } from './instrumental';
 
 export type PadreNuestroIdioma = 'es' | 'la';
 
 const urlDe = (f: DriveFile) => `https://drive.google.com/file/d/${f.id}/preview`;
 
-/** Nombre de la obra: el archivo sin extensión y sin el sufijo de voz. */
-const obraDe = (nombre: string) => nombre
-  .replace(/\.[^.]+$/, '')
+/**
+ * Nombre de la obra: el archivo sin extensión y sin el sufijo de voz o de bronce.
+ * El de bronce se corta desde el guion, con todo lo que siga: MuseScore escribe
+ * «Obra-Trompeta_en_Sib_1», y sin esto el arreglo de bronces quedaba fuera de las
+ * partituras de la aclamación.
+ */
+const obraDe = (nombre: string) => sinSufijoDeBronce(nombre)
   .replace(/[\s_-]*(voz|soprano|alto|contralto|tenor|bajo|hombres|mujeres)([\s_]*\d)?$/i, '')
   .trim()
   .toLowerCase();
@@ -157,4 +162,57 @@ export function misaDelCantoral(cantoral: Song[]): string | undefined {
   return ['Santo', 'Kyrie', 'Cordero de Dios', 'Gloria']
     .map((cat) => cantoral.find((s) => s.category === cat && s.massName)?.massName)
     .find(Boolean);
+}
+
+/** Sin acentos ni mayúsculas, para comparar títulos y carpetas. */
+const plano = (x: string) => x.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+/**
+ * Los toques de elevación que se pueden elegir (pedido del 2-nov-2026): primero los del
+ * catálogo y después las obras de la carpeta «Elevación» del Drive que el catálogo no
+ * tiene. Así basta subir el toque al Drive para poder usarlo, sin darlo de alta.
+ *
+ * En el Drive cada obra es una carpeta (o un PDF suelto) con su partitura general y una
+ * por instrumento («Toque-Trompeta_en_Sib_1.pdf»); la general es la que no trae sufijo.
+ * Son obras instrumentales: el pueblo no las ve (utils/instrumental).
+ */
+export function obrasDeElevacion(files: DriveFile[], catalogo: Song[] = []): Song[] {
+  const delCatalogo = catalogo.filter((s) => s.category === ELEVACION);
+  const yaEstan = new Set(delCatalogo.map((s) => plano(s.title)));
+
+  const deLaElevacion = files.filter((f) => /\.pdf$/i.test(f.name)
+    && ((f.path ?? '').split('/').some((seg) => plano(seg).includes('elevacion'))
+      || plano(f.name).includes('elevacion')));
+  const porObra = new Map<string, DriveFile[]>();
+  for (const f of deLaElevacion) {
+    const k = `${f.path ?? ''}|${obraDe(f.name)}`;
+    porObra.set(k, [...(porObra.get(k) ?? []), f]);
+  }
+
+  const delDrive: Song[] = [];
+  for (const grupo of porObra.values()) {
+    const obra = obraDe(grupo[0].name);
+    const general = grupo.find((f) => plano(f.name.replace(/\.[^.]+$/, '')) === obra) ?? grupo[0];
+    const titulo = general.name.replace(/\.[^.]+$/, '').trim();
+    if (yaEstan.has(plano(titulo))) continue;
+    delDrive.push({
+      id: `elevacion-${general.id}`,
+      title: titulo,
+      category: ELEVACION,
+      youtubeId: '',
+      duration: '0:00',
+      version: 'Coro',
+      isLiturgical: true,
+      instrumental: true,
+      sheetMusicUrl: urlDe(general),
+      sheets: voces(general, files),
+    });
+  }
+  delDrive.sort((a, b) => a.title.localeCompare(b.title));
+  return [...delCatalogo, ...delDrive];
+}
+
+/** La obra de elevación lista para el cantoral (con su id propio de esta Misa). */
+export function construirElevacion(obra: Song): Song {
+  return { ...obra, id: `${obra.id}::elevacion-${Date.now()}`, category: ELEVACION, instrumental: true };
 }

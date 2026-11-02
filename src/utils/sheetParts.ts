@@ -55,7 +55,46 @@ const EQUIVALENTS: string[][] = [
   ['corno', 'trompa', 'horn'],
   ['violonchelo', 'violoncello', 'cello', 'chelo'],
   ['saxofon', 'saxo', 'sax'],
+  ['fliscorno', 'flugelhorn'],
 ];
+
+/**
+ * Los bronces (viento-metal), en los nombres con que MuseScore y los músicos los
+ * escriben. Sirve para dos cosas: que una parte de bronce nunca se tome por la
+ * partitura general ni llegue al pueblo, y avisar en el Atril al trompetista cuando
+ * un canto no trae parte para él.
+ */
+const BRONCES = [
+  'trompeta', 'trumpet', 'trombon', 'trombone', 'tuba', 'corno', 'trompa', 'horn',
+  'bombardino', 'euphonium', 'eufonio', 'fliscorno', 'flugelhorn', 'cornetin', 'cornet',
+];
+
+/** ¿Esta parte es de un bronce? ('Trompeta en Sib 1', 'Trombón 2', 'Tuba'). */
+export function esParteDeBronce(part?: string): boolean {
+  if (!part) return false;
+  const n = norm(part);
+  return BRONCES.some((b) => n === b || n.startsWith(`${b} `));
+}
+
+/**
+ * El sufijo de bronce que MuseScore agrega al nombre de la obra: «Aclamación-Trompeta_en_Sib_1».
+ * Se exige el guion o el guion bajo antes del instrumento, para que una obra titulada
+ * «Toque de trompeta» no pase por una parte.
+ */
+const SUFIJO_DE_BRONCE = new RegExp(`[-_]\\s*(${BRONCES.join('|')})(?![a-z]).*$`, 'i');
+
+const sinAcentosNiExtension = (fileName: string) =>
+  fileName.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\.[^.]+$/, '');
+
+/** ¿El NOMBRE del archivo es el de una parte de bronce? */
+export function nombreDeParteDeBronce(fileName: string): boolean {
+  return SUFIJO_DE_BRONCE.test(sinAcentosNiExtension(fileName));
+}
+
+/** El nombre del archivo sin extensión, sin acentos y sin su sufijo de bronce. */
+export function sinSufijoDeBronce(fileName: string): string {
+  return sinAcentosNiExtension(fileName).replace(SUFIJO_DE_BRONCE, '');
+}
 
 /**
  * Si alguien no tiene partitura propia, a qué otra parte recurrir ANTES del full score.
@@ -185,7 +224,7 @@ export function detectSheets(files: { id: string; name: string }[], ext = 'pdf')
 export const COMMON_PARTS = [
   'Soprano', 'Alto', 'Tenor', 'Bajo',
   'Órgano', 'Piano', 'Guitarra',
-  'Flauta', 'Trompeta', 'Trombón', 'Bombardino', 'Corno', 'Clarinete', 'Saxofón',
+  'Flauta', 'Trompeta', 'Trombón', 'Bombardino', 'Corno', 'Tuba', 'Clarinete', 'Saxofón',
   'Violín', 'Viola', 'Violonchelo', 'Contrabajo',
 ];
 

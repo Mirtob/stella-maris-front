@@ -71,7 +71,7 @@ Es lo único que la app usa para agrupar. Usa estos nombres, que son las etiquet
 `MOMENT_OPTIONS`:
 
 `Entrada` · `Rito de Aspersión` · `Salmo` · `Aleluya` · `Post Evangelio` ·
-`Respuesta a Oración Universal` · `Ofertorio` · `Comunión` · `Salida` · `Exposición`
+`Respuesta a Oración Universal` · `Ofertorio` · `Elevación` · `Comunión` · `Salida` · `Exposición`
 
 Las partes del ordinario (Kyrie, Gloria, Santo, Cordero de Dios, Padre Nuestro, Aclamación
 Consagración, Amén, Tuyo es el Reino) **no** llevan carpeta propia: van dentro de `Misas`.
@@ -129,6 +129,61 @@ app toma como partitura principal del canto.
 
 En la ficha del canto se enlaza **la carpeta** (no cada PDF) desde el bloque *Partituras por
 voz*, y de ahí se deducen las voces solas.
+
+### Bronces (y otros instrumentos)
+
+Hay dos clases de material, y se suben distinto.
+
+**1. Arreglo de bronces de un canto o una aclamación.** El canto sigue siendo del pueblo; a
+su carpeta se le agregan los PDF de cada instrumento, con el nombre que les da MuseScore
+(`<Obra>-<Instrumento>.pdf`):
+
+```
+📁 Aclamaciones
+└── 📁 Consagración
+    ├── 📄 Anunciamos tu muerte.pdf                     ← partitura general
+    ├── 📄 Anunciamos tu muerte-Voz.pdf                 ← la del pueblo (folleto)
+    ├── 📄 Anunciamos tu muerte-Trompeta_en_Sib_1.pdf
+    ├── 📄 Anunciamos tu muerte-Trompeta_en_Sib_2.pdf
+    └── 📄 Anunciamos tu muerte-Trombón.pdf
+```
+
+- El instrumento va **después de un guion** (`-Trompeta…`). Así la app lo distingue de una
+  obra que se llame, por ejemplo, «Toque de trompeta».
+- Se reconocen: trompeta, trombón, tuba, corno/trompa, bombardino/eufonio, fliscorno,
+  cornetín (y sus nombres en inglés).
+- **Incluye siempre la `-Voz`.** El pueblo ve esa. Si un canto con bronces no trae Voz, el
+  pueblo ve la letra, nunca la partitura general, porque esa trae los bronces.
+- Para un canto del catálogo, enlaza la carpeta en *Partituras por voz*. Las aclamaciones
+  y el Padre Nuestro la toman solos de Drive.
+
+**2. Obra solo instrumental** (un ofertorio para bronces, el toque de la elevación). Va en
+la carpeta de su momento, como un canto polifónico:
+
+```
+📁 Elevación
+└── 📁 Toque de elevación
+    ├── 📄 Toque de elevación.pdf
+    ├── 📄 Toque de elevación-Trompeta_en_Sib_1.pdf
+    └── 📄 Toque de elevación-Trombón.pdf
+📁 Ofertorio
+└── 📁 Fanfarria de ofertorio
+    └── …
+```
+
+En *Gestión de cantos* se crea como cualquier canto, sin letra, y se marca **Obra
+instrumental** (el momento *Elevación* la marca solo). Así:
+
+- solo la ve el coro: no sale en el folleto, ni en el enlace del QR, ni en la vista y el
+  Modo Atril del Pueblo fiel;
+- sirve con cualquier instrumento de la Misa (no es versión de guitarra ni de órgano);
+- el **toque de elevación** se elige en la tarjeta *Padre Nuestro y aclamaciones* del
+  constructor, en la lista «¿Qué aclamaciones incluimos?». Basta con subirlo a la
+  carpeta `Elevación` del Drive: no hace falta darlo de alta en *Gestión de cantos*
+  (si se da de alta, el del catálogo aparece primero). Con varios toques, se elige cuál.
+
+Cada músico pone su instrumento en su perfil, en *«¿Qué voz cantas o qué instrumento tocas en la polifonía?»* (p. ej. `Trompeta`).
+En el Atril ve su parte, y en los cantos sin parte para él aparece **Tacet**.
 
 ---
 

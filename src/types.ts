@@ -14,6 +14,7 @@ export type MassMoment =
   | 'respuesta_oracion_universal'
   | 'ofertorio'
   | 'santo'
+  | 'elevacion'
   | 'aclamacion_consagracion'
   | 'amen_doxologia'
   | 'padre_nuestro'
@@ -51,6 +52,7 @@ export const MASS_MOMENT_LABELS: Record<MassMoment, string> = {
   respuesta_oracion_universal:   'Respuesta a Oración Universal',
   ofertorio:                     'Ofertorio',
   santo:                         'Santo',
+  elevacion:                     'Elevación',
   aclamacion_consagracion:       'Aclamación Consagración',
   amen_doxologia:                'Amén (Doxología)',
   padre_nuestro:                 'Padre Nuestro',
@@ -95,6 +97,9 @@ export interface Song {
   /** Parte del ordinario que en el folleto va SOLO con su letra, sin la partitura. Lo
    *  elige el coro en el constructor (ver marcarPartituras en utils/ordinary). */
   folletoSoloLetra?: boolean;
+  /** Obra solo instrumental (bronces, órgano solo): sin letra y sin asamblea. La ve el
+   *  coro, nunca el Pueblo fiel ni el folleto. Ver utils/instrumental. */
+  instrumental?: boolean;
   duration: string;
   artist?: string;
   author?: string;

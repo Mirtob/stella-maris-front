@@ -1,4 +1,5 @@
 import { Song, InstrumentType } from '../types';
+import { esInstrumental } from './instrumental';
 
 /**
  * ¿Este canto sirve para el instrumento con el que toca el coro hoy?
@@ -33,6 +34,9 @@ function normalizeInstrument(value: string): string {
 
 export function songMatchesInstrument(song: Song, instrument?: InstrumentType): boolean {
   if (!instrument) return true;
+  // La obra instrumental (bronces, elevación) no es una versión de guitarra ni de
+  // órgano: la toca otro grupo y sirve para la Misa que sea.
+  if (esInstrumental(song)) return true;
 
   // Preferir el arreglo; caer a `version` solo si el canto viene de una fuente
   // antigua que no lo trae (mocks, catálogo importado sin instrumentos).

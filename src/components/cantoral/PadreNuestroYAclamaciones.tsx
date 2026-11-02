@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { Song } from '../../types';
@@ -8,12 +8,14 @@ import { listarPartituras } from '../../utils/ordinarySheetMusic';
 import {
   PadreNuestroIdioma, construirPadreNuestro, construirAclamacion, idiomaEnElCantoral,
   aclamacionesEnElCantoral, misaDelCantoral, esPadreNuestroDelCantoral,
+  obrasDeElevacion, construirElevacion,
 } from '../../utils/padreNuestroYAclamaciones';
 import {
   todosLosTonosDelPaterNoster, paterNosterImageUrl, clavePaterNoster, desdeClavePaterNoster,
 } from '../../data/kyrialeIndex';
 import { LIBROS } from '../../data/gradualeIndex';
 import { CasillaPartitura } from './CasillaPartitura';
+import { ELEVACION } from '../../utils/instrumental';
 
 interface PadreNuestroYAclamacionesProps {
   cantoral: Song[];
@@ -53,9 +55,20 @@ export function PadreNuestroYAclamaciones({
   const tonoElegido = desdeClavePaterNoster(paterDelKyriale);
   const version: Version = paterDelKyriale ? `tono:${paterDelKyriale}` : idioma;
   const gregoriano = version === 'la' || !!paterDelKyriale;
-  /** «¿Incluir las demás aclamaciones?» Queda en Sí si ya hay alguna puesta. */
-  const [quiereAclamaciones, setQuiereAclamaciones] = useState(puestas.length > 0);
-  const conAclamaciones = quiereAclamaciones || puestas.length > 0;
+
+  /**
+   * Los toques de elevación que hay (catálogo + carpeta «Elevación» del Drive). Se
+   * cargan al abrir: el listado del Drive queda en memoria y lo usan las demás casillas.
+   */
+  const [obrasElevacion, setObrasElevacion] = useState<Song[] | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    listarPartituras()
+      .then((files) => { if (vivo) setObrasElevacion(obrasDeElevacion(files, catalogo)); })
+      .catch(() => { if (vivo) setObrasElevacion([]); });
+    return () => { vivo = false; };
+  }, [catalogo]);
+  const elevacionPuesta = cantoral.find((s) => s.category === ELEVACION);
 
   const quitarPadreNuestro = () =>
     cantoral.filter(esPadreNuestroDelCantoral).forEach((s) => onRemove(s.id, s.category));
@@ -84,14 +97,15 @@ export function PadreNuestroYAclamaciones({
     }
   };
 
-  /** «No» a las aclamaciones: se cierra la lista y se quitan las que hubiera. */
-  const elegirAclamaciones = (si: boolean) => {
-    setQuiereAclamaciones(si);
-    if (si) return;
-    for (const a of ACLAMACIONES) {
-      cantoral.filter((s) => s.category === a.category).forEach((s) => onRemove(s.id, s.category));
-    }
+  /** Pone el toque de elevación elegido (o lo quita con `null`). Uno solo por Misa. */
+  const elegirElevacion = (obra: Song | null) => {
+    cantoral.filter((s) => s.category === ELEVACION).forEach((s) => onRemove(s.id, s.category));
+    if (obra) onAdd(construirElevacion(obra));
   };
+  /** La obra del listado que corresponde a la que está puesta (su id es `<obra>::…`). */
+  const obraPuesta = elevacionPuesta
+    ? obrasElevacion?.find((o) => String(elevacionPuesta.id).startsWith(`${o.id}::`))
+    : undefined;
 
   const alternarAclamacion = async (a: Aclamacion) => {
     setOcupado(a.id);
@@ -131,6 +145,66 @@ export function PadreNuestroYAclamaciones({
       {rotulo}
     </button>
   );
+
+  const filaClase = 'flex items-start gap-3 p-3 rounded-xl bg-white/60 dark:bg-white/5 border-2 border-blue-200 dark:border-blue-800 cursor-pointer hover:bg-white/90 dark:hover:bg-white/10 transition-colors';
+
+  const casilla = (a: Aclamacion) => (
+    <label key={a.id} className={filaClase}>
+      <input
+        type="checkbox"
+        checked={puestas.includes(a.id)}
+        disabled={ocupado !== null}
+        onChange={() => alternarAclamacion(a)}
+        className="mt-1 w-5 h-5 flex-shrink-0 accent-blue-700"
+      />
+      <span className="text-sm text-brand-ink-soft">
+        <strong className="text-brand-ink">{a.titulo}</strong>
+        <br />
+        <span className="text-xs">{a.resumen}</span>
+      </span>
+    </label>
+  );
+
+  /** La elevación no es una aclamación cantada: es un toque de bronces, solo del coro. */
+  const casillaElevacion = () => {
+    const obras = obrasElevacion ?? [];
+    const sinObras = obrasElevacion !== null && obras.length === 0;
+    return (
+      <div key="elevacion" className={`${filaClase} flex-col !gap-2 ${sinObras && !elevacionPuesta ? 'opacity-70' : ''}`}>
+        <label className="flex items-start gap-3 cursor-pointer w-full">
+          <input
+            type="checkbox"
+            checked={!!elevacionPuesta}
+            disabled={ocupado !== null || obrasElevacion === null || (sinObras && !elevacionPuesta)}
+            onChange={() => elegirElevacion(elevacionPuesta ? null : obras[0] ?? null)}
+            className="mt-1 w-5 h-5 flex-shrink-0 accent-blue-700"
+          />
+          <span className="text-sm text-brand-ink-soft">
+            <strong className="text-brand-ink">Elevación (toque de bronces)</strong>
+            <br />
+            <span className="text-xs">
+              {obrasElevacion === null
+                ? 'Buscando los toques en el Drive…'
+                : sinObras
+                  ? 'Aún no hay toques: súbelos a la carpeta «Elevación» del Drive.'
+                  : 'Solo para el coro: el pueblo no lo ve, ni en su vista ni en el folleto.'}
+            </span>
+          </span>
+        </label>
+        {elevacionPuesta && obras.length > 1 && (
+          <select
+            value={obraPuesta?.id ?? ''}
+            onChange={(e) => elegirElevacion(obras.find((o) => o.id === e.target.value) ?? null)}
+            aria-label="Toque de elevación"
+            className="ml-8 w-[calc(100%-2rem)] px-3 py-2 rounded-lg text-sm text-gray-900 bg-white border-2 border-blue-200 focus:outline-none focus:border-blue-500"
+          >
+            {!obraPuesta && <option value="">{elevacionPuesta.title}</option>}
+            {obras.map((o) => <option key={o.id} value={o.id}>{o.title}</option>)}
+          </select>
+        )}
+      </div>
+    );
+  };
 
   return (
     <section
@@ -187,41 +261,17 @@ export function PadreNuestroYAclamaciones({
         </div>
       )}
 
-      {/* Aclamaciones: primero si van, después cuáles. */}
-      <p className="text-sm font-semibold text-brand-ink-soft mt-3 mb-2">¿Incluir las demás aclamaciones?</p>
-      <div className="flex gap-2 mb-2" role="group" aria-label="Incluir las demás aclamaciones">
-        {boton(!conAclamaciones, 'No', () => elegirAclamaciones(false))}
-        {boton(conAclamaciones, 'Sí', () => elegirAclamaciones(true))}
+      {/* Aclamaciones: una lista para marcar las que van, en el orden de la Misa. El
+          toque de la elevación va entre la oración universal y la aclamación. */}
+      <p className="text-sm font-semibold text-brand-ink-soft mt-3 mb-2">¿Qué aclamaciones incluimos?</p>
+      <div className="space-y-2" role="group" aria-label="Aclamaciones">
+        {casilla(ACLAMACIONES[0])}
+        {casillaElevacion()}
+        {ACLAMACIONES.slice(1).map(casilla)}
+        <p className="text-xs text-blue-700 dark:text-blue-300">
+          La partitura sale del Drive (carpeta de la Misa o «Aclamaciones»); si no está, va la letra.
+        </p>
       </div>
-      {conAclamaciones && (
-        <div className="space-y-2">
-          {ACLAMACIONES.map((a) => {
-            const puesta = puestas.includes(a.id);
-            return (
-              <label
-                key={a.id}
-                className="flex items-start gap-3 p-3 rounded-xl bg-white/60 dark:bg-white/5 border-2 border-blue-200 dark:border-blue-800 cursor-pointer hover:bg-white/90 dark:hover:bg-white/10 transition-colors"
-              >
-                <input
-                  type="checkbox"
-                  checked={puesta}
-                  disabled={ocupado !== null}
-                  onChange={() => alternarAclamacion(a)}
-                  className="mt-1 w-5 h-5 flex-shrink-0 accent-blue-700"
-                />
-                <span className="text-sm text-brand-ink-soft">
-                  <strong className="text-brand-ink">{a.titulo}</strong>
-                  <br />
-                  <span className="text-xs">{a.resumen}</span>
-                </span>
-              </label>
-            );
-          })}
-          <p className="text-xs text-blue-700 dark:text-blue-300">
-            La partitura sale del Drive (carpeta de la Misa o «Aclamaciones»); si no está, va la letra.
-          </p>
-        </div>
-      )}
 
       {/* La partitura, solo cuando hay algo de esta tarjeta que cantar. */}
       {(version !== null || puestas.length > 0) && (

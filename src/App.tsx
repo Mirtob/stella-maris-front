@@ -111,6 +111,7 @@ import {
 } from './services/cantorals';
 import { olvidarDatosDeLaMisa } from './utils/borradorMisa';
 import { refrescarCantos } from './utils/refrescarCantos';
+import { cantoralParaElPueblo } from './utils/instrumental';
 import { leerCatalogoVigente } from './services/catalogoVigente';
 import { EVENTO_CATALOGO } from './services/songs';
 import { EVENTO_FOLLETO, type FolletoGuardado } from './utils/guardarFolleto';
@@ -1674,6 +1675,11 @@ function AppContent() {
   // se ofrecen los botones. Ver utils/parishVisit.
   const deVisita = esVisita(userProfile);
   if (deVisita) effectiveRole = 'Pueblo fiel';
+  // Lo que ve el Pueblo fiel no trae las obras instrumentales (bronces, elevación):
+  // son material del coro. Ver utils/instrumental.
+  const cantoralesDelRol = effectiveRole === 'Pueblo fiel'
+    ? publishedCantorals.map(cantoralParaElPueblo)
+    : publishedCantorals;
 
   return (
     <div>
@@ -1724,7 +1730,7 @@ function AppContent() {
 
       {effectiveRole === 'Pueblo fiel' && (
         <NotificationBell
-          cantorals={publishedCantorals.filter(c => c.status === 'published')}
+          cantorals={cantoralesDelRol.filter(c => c.status === 'published')}
           onListen={handleListen}
         />
       )}
@@ -1802,7 +1808,7 @@ function AppContent() {
             isSongAdmin,
             activeParishName,
             cantoral,
-            publishedCantorals,
+            publishedCantorals: cantoralesDelRol,
             loadingCantorals,
             editingCantoralId,
             editingCantoral: editingCantoralId

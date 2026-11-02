@@ -7,6 +7,7 @@ import { Song } from '../types';
 import { getLiturgicalInfoForDate } from './liturgicalCalendar';
 import { isLent } from './liturgicalSeason';
 import { parseYmdLocal } from './dateLocal';
+import { esInstrumental } from './instrumental';
 
 export interface LiturgicalWarning {
   level: 'warn' | 'info';
@@ -48,6 +49,16 @@ export function validateCantoral(songs: Song[], ctx: { date: string }): Liturgic
       level: 'warn',
       code: 'alleluia-lent',
       message: 'En Cuaresma el Aleluya se sustituye por la Aclamación al Evangelio.',
+    });
+  }
+
+  // Obras solo instrumentales en Cuaresma: el órgano y los demás instrumentos solo
+  // sostienen el canto (IGMR 313), salvo el domingo Laetare, solemnidades y fiestas.
+  if (lent && !isSolemnityOrFeast && info?.key !== '4thSundayOfLent' && songs.some(esInstrumental)) {
+    out.push({
+      level: 'warn',
+      code: 'instrumental-lent',
+      message: 'En Cuaresma los instrumentos solo sostienen el canto (IGMR 313): las obras solo instrumentales se reservan para el domingo Laetare, solemnidades y fiestas.',
     });
   }
 
