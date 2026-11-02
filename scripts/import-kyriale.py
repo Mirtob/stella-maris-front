@@ -111,8 +111,8 @@ CREDOS = {
                 "II":  ((761, 325), (764, 92)),
                 "III": ((764, 105), (766, 360)),
                 "IV":  ((766, 365), (769, 130)),
-                "V":   ((769, 140), (772, 55)),
-                "VI":  ((772, 55),  (775, 0.0))},
+                "V":   ((769, 140), (772, 48)),
+                "VI":  ((772, 48),  (775, 0.0))},   # 48: sobre el numeral «VI» (50,4)
     "simplex": {"I":   ((51, 85),   (54, 0.0)),
                 "II":  ((54, 85),   (57, 0.0)),
                 "III": ((57, 85),   (60, 0.0)),
@@ -247,6 +247,35 @@ def regiones(doc, ini: tuple, fin: tuple) -> list:
     return salida
 
 
+def cabecera_de(pagina) -> float:
+    """Dónde acaba el título corrido de la página, sin comerse la pauta que lo sigue.
+
+    `marco_de_pagina` acepta DOS líneas de cabecera, y el OCR lee la pauta que abre la
+    página como una línea corta y sin minúsculas («I • • J ••», «II I», «G G =»): pasaba
+    por segunda cabecera y se cortaba el primer sistema de la página. Así el Agnus VIII,
+    los Gloria III, XI y XIII (este hasta en medio de la letra), el Agnus XVI, los Credos
+    II, V y VI y el Kyrie ad libitum VIII perdían una pauta (1-nov-2026). La segunda
+    línea sólo es cabecera si trae una palabra de verdad: cuatro mayúsculas seguidas.
+    """
+    arriba, _ = facsimil.marco_de_pagina(pagina)
+    lineas = facsimil.lineas_de(pagina)
+    if (len(lineas) >= 2 and abs(arriba - (lineas[1][1] + 2)) < 0.01
+            and not re.search(r"[A-ZÆŒ]{4}", lineas[1][2])):
+        arriba = lineas[0][1] + 2 if facsimil.es_cabecera(lineas[0][2]) else 0.0
+    # Y a veces el OCR pega el título y la pauta en UNA línea («773 KYRIALE, CREDO II
+    # G • • •», p. 763): el título mide ~14 de alto; si mide más, se corta en el primer
+    # renglón en blanco bajo el título, mirando la imagen.
+    if lineas and abs(arriba - (lineas[0][1] + 2)) < 0.01 and lineas[0][1] - lineas[0][0] > 20:
+        y0 = lineas[0][0]
+        px = pagina.get_pixmap(dpi=72, colorspace=fitz.csGRAY,
+                               clip=fitz.Rect(0, y0, pagina.rect.width, arriba))
+        for f in range(8, px.height):
+            fila = px.samples[f * px.stride:f * px.stride + px.width]
+            if min(fila) > 128:
+                return y0 + f
+    return arriba
+
+
 def marco_de(pagina) -> tuple:
     """El marco de la página (cabecera, folio), sin comerse la última línea de letra.
 
@@ -255,7 +284,7 @@ def marco_de(pagina) -> tuple:
     el «dona nobis pacem» que va debajo (19-oct-2026). Si bajo ese supuesto folio hay
     letra cantada (minúsculas), no era el folio.
     """
-    arriba, abajo = facsimil.marco_de_pagina(pagina)
+    arriba, abajo = cabecera_de(pagina), facsimil.marco_de_pagina(pagina)[1]
     lineas = facsimil.lineas_de(pagina)
     if any(y0 > abajo and any(c.islower() for c in texto) for y0, _, texto in lineas):
         abajo = pagina.rect.height
@@ -311,8 +340,11 @@ def recortar(doc, marcos, ini: tuple, fin: tuple, destino: str) -> None:
     propios = {}
     for r in regs:
         pagina = doc[r["p"]]
-        arriba, _ = facsimil.marco_de_pagina(pagina)
-        if arriba == 0.0 and pagina.rect.height > 560:      # Simplex: 576 de alto
+        if pagina.rect.height > 560:                         # Simplex: 576 de alto
+            arriba, _ = facsimil.marco_de_pagina(pagina)
+        else:
+            arriba = cabecera_de(pagina)
+        if arriba == 0.0 and pagina.rect.height > 560:
             arriba = CABECERA_SIMPLEX
         propios[r["p"]] = (arriba, pagina.rect.height)
     os.makedirs(os.path.dirname(destino), exist_ok=True)
@@ -406,6 +438,58 @@ def corte_en_blanco(pagina, y: float, inicial: float) -> float:
     return y
 
 
+def bajo_el_numeral(pagina, y: float) -> float:
+    """El comienzo del Kyrie, por debajo del pie del numeral grande de la Misa.
+
+    El OCR da el borde de abajo del «VII» un poco más arriba que sus serifas, y estas
+    asomaban como «— — —» sobre el Kyrie (VII, VIII, XII). Si hay tinta en los 4 puntos
+    de abajo, el corte va al primer renglón en blanco que la sigue (1-nov-2026).
+    """
+    # La ventana empieza 1,5 puntos ARRIBA: al rasterizar, la primera fila del recorte
+    # arrastra tinta de un poco más arriba del corte.
+    escala, y0 = 4, max(0.0, y - 1.5)
+    px = pagina.get_pixmap(matrix=fitz.Matrix(escala, escala), colorspace=fitz.csGRAY,
+                           clip=fitz.Rect(0, y0, pagina.rect.width, min(pagina.rect.height, y + 12)))
+    datos, paso = px.samples, px.stride
+    # 200 y no 128: el pie de las serifas sale gris acá y negro en el binarizado final.
+    blancas = [min(datos[f * paso:f * paso + px.width]) >= 200 for f in range(px.height)]
+    tinta = [f for f in range(min(int((y - y0 + 4) * escala), px.height)) if not blancas[f]]
+    if not tinta:
+        return y
+    for f in range(tinta[-1] + 1, px.height):
+        if blancas[f]:
+            return round(max(y, y0 + (f + 2) / escala), 1)
+    return y
+
+
+def a_renglon_blanco(pagina, y: float, inicial: float) -> float:
+    """Si el corte atraviesa tinta, lo baja al primer renglón en blanco de todo el ancho.
+
+    Red de seguridad de `corte_en_blanco`: cuando en la franja central de la última
+    línea de letra sólo caen los asteriscos («e  *  **  e-lé-i-son»), no la reconoce
+    como renglón y deja el corte fijo, que partía esa letra por la mitad; `sin_restos`
+    borraba después la otra mitad, y el Kyrie II y el XIII perdían su último renglón
+    (1-nov-2026). Un corte que ya cae en blanco no se toca.
+    """
+    escala = 4
+    hasta = min(pagina.rect.height, inicial)
+    if hasta - y < 1:
+        return y
+    px = pagina.get_pixmap(matrix=fitz.Matrix(escala, escala), colorspace=fitz.csGRAY,
+                           clip=fitz.Rect(0, y, pagina.rect.width, hasta))
+    datos, paso = px.samples, px.stride
+
+    def blanca(f):
+        return min(datos[f * paso:f * paso + px.width]) >= 128
+
+    if blanca(0):
+        return y
+    for f in range(1, px.height):
+        if blanca(f):
+            return round(y + (f + 1) / escala, 1)
+    return y
+
+
 def sobre_el_numero(pagina, y: float, inicial: float) -> float:
     """En el Simplex cada pieza lleva su número encima («52  ed. Vat. ad lib. II»).
 
@@ -458,6 +542,8 @@ def misas_del_libro(doc, libro: str) -> list:
     for i, (titulo, pagina) in enumerate(marcadores):
         numero = numero_de(titulo)
         ini = arranques[i]
+        if libro == "romanum":
+            ini = (ini[0], bajo_el_numeral(doc[ini[0] - 1], ini[1]))
         fin = topes[i + 1] if i + 1 < len(marcadores) else (cfg["hasta"], 0.0)
 
         # Cada parte empieza en su inicial, después de la parte anterior.
@@ -476,6 +562,7 @@ def misas_del_libro(doc, libro: str) -> list:
                 corte = sig[1] - SOBRE_EL_TETRAGRAMA
                 if libro == "romanum":
                     corte = corte_en_blanco(doc[sig[0] - 1], corte, sig[1])
+                    corte = a_renglon_blanco(doc[sig[0] - 1], corte, sig[1])
                 else:
                     corte = sobre_el_numero(doc[sig[0] - 1], corte, sig[1])
                 arriba = (sig[0], max(corte,
@@ -587,6 +674,13 @@ def main():
                     for r in regs:
                         if r["p"] not in marcos:
                             marcos[r["p"]] = marco_de(doc[r["p"]])
+                    # Un trozo de menos de 15 de alto no alcanza para una pauta con su
+                    # letra: es la franja que queda entre la cabecera de la página
+                    # siguiente y el encabezado de la Misa que empieza ahí (en el Agnus
+                    # III del Simplex traía una raya suelta al pie).
+                    regs = [r for r in regs
+                            if min(r["y1"], marcos[r["p"]][1])
+                            - max(r["y0"], marcos[r["p"]][0]) >= 15] or regs
                     trozos = [facsimil.trozo(doc, marcos, r) for r in regs]
                     carpeta = os.path.join(SALIDA, libro, clave)
                     os.makedirs(carpeta, exist_ok=True)
