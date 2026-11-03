@@ -39,6 +39,8 @@ const CELEBRATION_ALIASES: Record<string, string> = {
   'Jesucristo, Rey del Universo': '34.º Domingo T.O. — Cristo Rey',
   'Natividad del Señor': 'Natividad del Señor (Misa del día)',
   'Domingo de la Divina Misericordia (2.º de Pascua)': '2.º Domingo de Pascua',
+  'Conmemoración de Todos los Fieles Difuntos': 'Conmemoración de los Difuntos',
+  'Dedicación de la Basílica de Letrán': 'Dedicación de la Basílica de San Juan de Letrán',
 };
 
 /**

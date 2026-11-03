@@ -87,6 +87,34 @@ const NAME_ES = {
   exaltationOfTheHolyCross: 'Exaltación de la Santa Cruz',
   presentationOfTheLord: 'Presentación del Señor',
   josephHusbandOfMary: 'San José, Esposo de la Virgen María',
+  // Las que romcal (locale 'en') deja en inglés. Antes se traducían al cargar, en
+  // utils/liturgicalCalendar, pero el cron de avisos lee este JSON tal cual y mandaba
+  // «Dedication of the Lateran Basilica»; y faltaba «All Souls» (2-nov-2026).
+  allSouls: 'Conmemoración de Todos los Fieles Difuntos',
+  birthOfTheBlessedVirginMary: 'Natividad de la Santísima Virgen María',
+  chairOfSaintPeterApostle: 'Cátedra de San Pedro, Apóstol',
+  conversionOfSaintPaulApostle: 'Conversión de San Pablo, Apóstol',
+  dedicationOfTheLateranBasilica: 'Dedicación de la Basílica de Letrán',
+  holyInnocentsMartyrs: 'Santos Inocentes, Mártires',
+  immaculateHeartOfMary: 'Inmaculado Corazón de María',
+  saintAndrewTheApostle: 'San Andrés, Apóstol',
+  saintBartholomewTheApostle: 'San Bartolomé, Apóstol',
+  saintBridgetOfSwedenReligious: 'Santa Brígida de Suecia, Religiosa, Patrona de Europa',
+  saintJamesApostle: 'Santiago, Apóstol',
+  saintJohnTheApostleAndEvangelist: 'San Juan, Apóstol y Evangelista',
+  saintLawrenceOfRomeDeaconAndMartyr: 'San Lorenzo, Diácono y Mártir',
+  saintLukeTheEvangelist: 'San Lucas, Evangelista',
+  saintMarkTheEvangelist: 'San Marcos, Evangelista',
+  saintMaryMagdalene: 'Santa María Magdalena',
+  saintMatthewApostleAndEvangelist: 'San Mateo, Apóstol y Evangelista',
+  saintMatthiasTheApostle: 'San Matías, Apóstol',
+  saintStephenTheFirstMartyr: 'San Esteban, Protomártir',
+  saintThomasTheApostle: 'Santo Tomás, Apóstol',
+  saintsMichaelGabrielAndRaphaelArchangels: 'Santos Arcángeles Miguel, Gabriel y Rafael',
+  saintsPhilipAndJamesApostles: 'Santos Felipe y Santiago, Apóstoles',
+  saintsSimonAndJudeApostles: 'Santos Simón y Judas, Apóstoles',
+  theExaltationOfTheHolyCross: 'Exaltación de la Santa Cruz',
+  visitationOfTheBlessedVirginMary: 'Visitación de la Santísima Virgen María',
 };
 
 const SUNDAY_SEASON_ES = {
@@ -113,8 +141,9 @@ function spanishName(entry) {
     return `${n}.º Domingo ${prep} ${seasonEs}`;
   }
 
-  // Fallback: nombre en inglés de romcal (raro; celebraciones menores).
-  return entry.name;
+  // Sin traducción: se corta el script en vez de dejar el nombre en inglés, que
+  // llegaba así al cantoral publicado y a las notificaciones. Agrégala a NAME_ES.
+  throw new Error(`Falta el nombre en español de «${entry.name}» (key: ${key}) en NAME_ES`);
 }
 
 /** Extrae 'YYYY-MM-DD' del campo moment de romcal (moment | Date | ISO string).
