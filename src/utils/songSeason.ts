@@ -20,6 +20,7 @@
  *    la comparación normaliza acentos, mayúsculas y guiones.
  */
 import { Song } from '../types';
+import { calculateEaster } from './liturgicalCalendar';
 
 /** Sin acentos, minúsculas, guiones y espacios unificados. */
 const normalizar = (s: string): string =>
@@ -82,19 +83,85 @@ export function seasonOfTag(tag: string): string | null {
 }
 
 /**
+ * Etiquetas de la Semana Santa. Atan a la Cuaresma, pero con la fecha de la Misa se
+ * piden más: un «Viernes Santo» no se ofrece el 2.º domingo de Cuaresma, solo esa
+ * semana. Sin fecha se comportan como antes (toda la Cuaresma).
+ */
+const DE_SEMANA_SANTA = new Set([
+  'semana santa', 'domingo de ramos', 'jueves santo', 'viernes santo', 'misa crismal',
+]);
+
+/** ¿La fecha cae en Semana Santa? Del Domingo de Ramos al Sábado Santo. */
+export function esSemanaSanta(fecha: Date): boolean {
+  const pascua = calculateEaster(fecha.getFullYear());
+  const ramos = new Date(pascua.getFullYear(), pascua.getMonth(), pascua.getDate() - 7);
+  const dia = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+  return dia >= ramos && dia < pascua;
+}
+
+interface Atadura { tiempo: string; semanaSanta: boolean }
+
+/** Las etiquetas del canto que lo atan a una época (las temáticas no cuentan). */
+function ataduras(song: Pick<Song, 'liturgicalSeasons' | 'liturgicalSeason'>): Atadura[] {
+  return songSeasons(song).flatMap((tag) => {
+    const tiempo = seasonOfTag(tag);
+    return tiempo ? [{ tiempo, semanaSanta: DE_SEMANA_SANTA.has(normalizar(tag)) }] : [];
+  });
+}
+
+const coincide = (a: Atadura, season: string, fecha?: Date) =>
+  a.semanaSanta && fecha ? esSemanaSanta(fecha) : normalizar(a.tiempo) === normalizar(season);
+
+/**
  * ¿El canto sirve para ese tiempo litúrgico?
  *
  * Sirve si no lleva ninguna etiqueta que lo ate a una época (sin etiquetas, o solo
- * temáticas), o si alguna de las que sí atan apunta a este tiempo.
+ * temáticas), o si alguna de las que sí atan apunta a este tiempo. Con `fecha` (la de
+ * la Misa), las etiquetas de Semana Santa valen solo esa semana.
  */
 export function songMatchesSeason(
   song: Pick<Song, 'liturgicalSeasons' | 'liturgicalSeason'>,
   season: string,
+  fecha?: Date,
 ): boolean {
-  const ataduras = songSeasons(song)
-    .map(seasonOfTag)
-    .filter((t): t is string => t !== null);
+  const at = ataduras(song);
+  if (at.length === 0) return true;   // no ata a ninguna época
+  return at.some(a => coincide(a, season, fecha));
+}
 
-  if (ataduras.length === 0) return true;   // no ata a ninguna época
-  return ataduras.some(t => normalizar(t) === normalizar(season));
+/**
+ * Qué tan propio del tiempo es el canto (menor = primero), para ordenar lo que se
+ * ofrece al armar el cantoral (pedido del 4-nov-2026: en Adviento, Cuaresma, Pascua o
+ * Semana Santa, primero los cantos que llevan esa etiqueta).
+ *  0 · de Semana Santa, y la Misa cae en Semana Santa
+ *  1 · etiquetado para este tiempo
+ *  2 · sirve todo el año
+ *  3 · de otro tiempo (solo se ve buscándolo)
+ */
+export function rangoDelTiempo(
+  song: Pick<Song, 'liturgicalSeasons' | 'liturgicalSeason'>,
+  season: string,
+  fecha?: Date,
+): number {
+  const at = ataduras(song);
+  if (at.length === 0) return 2;
+  if (fecha && esSemanaSanta(fecha) && at.some(a => a.semanaSanta)) return 0;
+  return at.some(a => coincide(a, season, fecha)) ? 1 : 3;
+}
+
+/** Los cantos ordenados por `rangoDelTiempo`, sin alterar el orden dentro de cada rango. */
+export function ordenarPorTiempo<T extends Pick<Song, 'liturgicalSeasons' | 'liturgicalSeason'>>(
+  songs: T[], season: string, fecha?: Date,
+): T[] {
+  return songs
+    .map((song, i) => ({ song, i, r: rangoDelTiempo(song, season, fecha) }))
+    .sort((a, b) => a.r - b.r || a.i - b.i)
+    .map(({ song }) => song);
+}
+
+/** Los tiempos a los que ata el canto, para rotularlo («Navidad», «Semana Santa»). */
+export function tiemposDelCanto(song: Pick<Song, 'liturgicalSeasons' | 'liturgicalSeason'>): string[] {
+  const vistos = new Set<string>();
+  for (const a of ataduras(song)) vistos.add(a.semanaSanta ? 'Semana Santa' : a.tiempo);
+  return [...vistos];
 }

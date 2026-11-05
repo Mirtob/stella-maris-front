@@ -4,7 +4,7 @@ import { Song, InstrumentType } from '../../types';
 import { useSongs } from '../../hooks/useSongs';
 import { getCategoryColors } from '../../utils/colors';
 import { matchesSearch } from '../../utils/textSearch';
-import { songMatchesSeason } from '../../utils/songSeason';
+import { songMatchesSeason, ordenarPorTiempo, rangoDelTiempo, tiemposDelCanto } from '../../utils/songSeason';
 import { estaEnParte, partesUsadas as usadoEnPartes, ordenarSugerencias } from '../../utils/cantoralParts';
 import { AddGloriaDialog } from '../cantoral/AddGloriaDialog';
 import { CasillaPartitura } from '../cantoral/CasillaPartitura';
@@ -158,16 +158,20 @@ export function CategorySearch({
     // Filtrar por tiempo litúrgico. La regla vive en utils/songSeason y la comparte
     // el carrusel de sugerencias: tenerla en dos sitios fue justo lo que las hizo
     // divergir (el carrusel llegó a ofrecer cantos de Navidad en Tiempo Ordinario).
-    const suggestedSongs = categorySongs.filter(song => songMatchesSeason(song, currentSeason));
-    
+    const suggestedSongs = categorySongs.filter(song => songMatchesSeason(song, currentSeason, massDateObj));
+
     // Solo los del instrumento con el que se toca esta Misa
     const forInstrument = filterByInstrument(suggestedSongs, preferredInstrument);
 
     // Quita los ya usados EN ESTA parte (en otras siguen disponibles) y ofrece
     // primero el canto cuya parte PRINCIPAL es esta: un canto de Entrada que además
     // sirve para Comunión se sugiere antes en Entrada, y solo si ya se usó ahí
-    // asoma en las demás (regla en utils/cantoralParts).
-    const ordenados = ordenarSugerencias(forInstrument, category, categoryMoment, cantoral);
+    // asoma en las demás (regla en utils/cantoralParts). Por encima de eso manda el
+    // tiempo: en Adviento, primero los cantos etiquetados de Adviento.
+    const ordenados = ordenarPorTiempo(
+      ordenarSugerencias(forInstrument, category, categoryMoment, cantoral),
+      currentSeason, massDateObj,
+    );
 
     // Retornar solo los primeros 3 como sugerencias
     return ordenados.slice(0, 3);
@@ -194,9 +198,21 @@ export function CategorySearch({
   const emptyForInstrument =
     categorySongs.length === 0 && categorySongsAnyInstrument.length > 0;
   
+  // La lista muestra solo los cantos del tiempo de la Misa (pedido del 4-nov-2026):
+  // un canto de Navidad no aparece en Tiempo Ordinario. Los de otros tiempos siguen
+  // disponibles, pero hay que buscarlos por nombre. Los propios del tiempo, primero.
+  const delTiempo = ordenarPorTiempo(
+    categorySongs.filter(song => songMatchesSeason(song, currentSeason, massDateObj)),
+    currentSeason, massDateObj,
+  );
+  const deOtrosTiempos = categorySongs.filter(song => !songMatchesSeason(song, currentSeason, massDateObj));
+  const buscando = searchTerm.trim().length > 0;
+  // En un tiempo fuerte se marca lo propio del tiempo; en el Ordinario no hace falta.
+  const tiempoFuerte = currentSeason !== 'Tiempo Ordinario';
+
   // Búsqueda insensible a acentos: "comunion" encuentra "Comunión",
   // "tu reino" encuentra "Tú Reinarás", etc.
-  const filteredSongs = categorySongs.filter(song =>
+  const filteredSongs = (buscando ? [...delTiempo, ...deOtrosTiempos] : delTiempo).filter(song =>
     matchesSearch(song.title, searchTerm) ||
     matchesSearch(song.artist, searchTerm) ||
     matchesSearch(song.author, searchTerm) ||
@@ -404,7 +420,7 @@ export function CategorySearch({
           <div className="text-left min-w-0">
             <div className="text-base sm:text-xl font-bold leading-tight break-words">{titulo ?? category}</div>
             <div className="text-base opacity-90">
-              {categorySongs.length} {categorySongs.length === 1 ? 'canto disponible' : 'cantos disponibles'}
+              {delTiempo.length} {delTiempo.length === 1 ? 'canto' : 'cantos'} para {currentSeason}
             </div>
           </div>
         </div>
@@ -536,6 +552,12 @@ export function CategorySearch({
               className="w-full pl-12 pr-4 py-4 rounded-xl text-lg text-brand-ink bg-white/70 dark:bg-white/15 border-2 border-white/60 dark:border-white/20 focus:outline-none focus:ring-4 focus:ring-blue-400/30 focus:border-blue-600 dark:focus:border-blue-400 placeholder-blue-700/70 dark:placeholder-blue-300/70 transition-all"
             />
           </div>
+          {!buscando && deOtrosTiempos.length > 0 && delTiempo.length > 0 && (
+            <p className="-mt-2 mb-4 text-sm text-blue-800 dark:text-blue-200">
+              Se muestran los cantos para {currentSeason}. Hay {deOtrosTiempos.length}{' '}
+              {deOtrosTiempos.length === 1 ? 'canto' : 'cantos'} de otros tiempos: búscalos por nombre.
+            </p>
+          )}
 
           {/* Songs List */}
           <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
@@ -565,6 +587,16 @@ export function CategorySearch({
                     <p className="text-sm text-blue-800 dark:text-blue-200">
                       Pídele al administrador que sincronice el canal de YouTube
                       para cargar el catálogo.
+                    </p>
+                  </>
+                ) : !buscando && deOtrosTiempos.length > 0 ? (
+                  <>
+                    <p className="text-xl font-bold text-brand-ink-soft mb-2">
+                      No hay cantos para {currentSeason} en este momento
+                    </p>
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      Hay {deOtrosTiempos.length}{' '}
+                      {deOtrosTiempos.length === 1 ? 'canto' : 'cantos'} de otros tiempos: búscalos por nombre.
                     </p>
                   </>
                 ) : (
@@ -616,6 +648,20 @@ export function CategorySearch({
                             title="Solo la ve el coro: no sale en el folleto ni en la vista del Pueblo fiel"
                           >
                             📯 Instrumental · solo coro
+                          </span>
+                        )}
+                        {/* De otro tiempo: solo llega aquí buscándolo por nombre. */}
+                        {rangoDelTiempo(song, currentSeason, massDateObj) === 3 && (
+                          <span
+                            className="inline-flex items-center gap-1 bg-slate-600 text-white px-2.5 py-1 rounded-lg text-sm font-bold border border-slate-800 shadow-sm"
+                            title={`No es para ${currentSeason}`}
+                          >
+                            Fuera de tiempo · {tiemposDelCanto(song).join(', ')}
+                          </span>
+                        )}
+                        {tiempoFuerte && rangoDelTiempo(song, currentSeason, massDateObj) <= 1 && (
+                          <span className="inline-flex items-center gap-1 bg-violet-700 text-white px-2.5 py-1 rounded-lg text-sm font-bold border border-violet-900 shadow-sm">
+                            Propio de {rangoDelTiempo(song, currentSeason, massDateObj) === 0 ? 'Semana Santa' : currentSeason}
                           </span>
                         )}
                         {parteDe(song) !== category && (

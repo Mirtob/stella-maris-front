@@ -8,6 +8,7 @@ import { EmptyState } from '../common/EmptyState';
 import { FavoriteButton } from './FavoriteButton';
 import { AtrilSongButton } from '../atril/AtrilSongButton';
 import { KyrialeLibrary, cuantasDelKyriale } from './KyrialeLibrary';
+import { seasonOfTag } from '../../utils/songSeason';
 
 interface SheetMusicLibraryProps {
   onPlaySong: (song: Song) => void;
@@ -99,13 +100,18 @@ export function SheetMusicLibrary({ onPlaySong, userRole, userInstrument, userVo
     if (n.includes('cuaresma')) return 'Cuaresma';
     if (n.includes('pascua')) return 'Pascua';
     if (n.includes('ordinario')) return 'Ordinario';
+    // Días y solemnidades dentro de un tiempo (Semana Santa → Cuaresma, Pentecostés →
+    // Pascua), con la misma tabla del constructor (utils/songSeason).
+    const tiempo = seasonOfTag(raw);
+    if (tiempo) return tiempo === 'Tiempo Ordinario' ? 'Ordinario' : tiempo;
     return null;
   };
 
   // Agrupar cantos de una parte por tiempo litúrgico. Cada canto cae en al menos
-  // un bucket: los que no matchean ninguna temporada específica (vacíos, Semana
-  // Santa, Pentecostés, tags especiales, etc.) van a "Todas las temporadas" para
-  // que nunca se pierdan en la lista.
+  // un bucket: los que no matchean ninguna temporada específica (vacíos, temáticas
+  // como Virgen María, etiquetas nuevas, etc.) van a "Todas las temporadas" para
+  // que nunca se pierdan en la lista. El banco muestra TODO, sea cual sea el tiempo
+  // en curso: el filtro por tiempo es solo del constructor.
   const groupByLiturgicalSeason = (songs: Song[]): Record<string, Song[]> => {
     const grouped: Record<string, Song[]> = {};
 

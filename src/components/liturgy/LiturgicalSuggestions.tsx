@@ -4,7 +4,8 @@ import { toast } from 'sonner';
 import { Song, InstrumentType } from '../../types';
 import { useSongs } from '../../hooks/useSongs';
 import { getCurrentLiturgicalSeason, isAlleluiaTitleInLent } from '../../utils/liturgicalSeason';
-import { songMatchesSeason } from '../../utils/songSeason';
+import { songMatchesSeason, ordenarPorTiempo } from '../../utils/songSeason';
+import { parseYmdLocal } from '../../utils/dateLocal';
 import { filterByInstrument } from '../../utils/instrument';
 
 interface LiturgicalSuggestionsProps {
@@ -14,9 +15,11 @@ interface LiturgicalSuggestionsProps {
   /** Instrumento de esta Misa. Sin él, el carrusel sugeriría cantos de versiones
    *  que el coro no puede tocar (y que el constructor sí oculta). */
   preferredInstrument?: InstrumentType;
+  /** Fecha de la Misa (YYYY-MM-DD): el tiempo se calcula contra ella, no contra hoy. */
+  massDate?: string;
 }
 
-export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = [], preferredInstrument }: LiturgicalSuggestionsProps) {
+export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = [], preferredInstrument, massDate }: LiturgicalSuggestionsProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [autoScroll, setAutoScroll] = useState(true);
 
@@ -77,7 +80,8 @@ export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = 
   };
 
   // Obtener sugerencias según el tiempo litúrgico actual
-  const liturgicalSeason = getCurrentLiturgicalSeason();
+  const fechaMisa = massDate ? parseYmdLocal(massDate) : new Date();
+  const liturgicalSeason = getCurrentLiturgicalSeason(fechaMisa);
 
   /**
    * Cantos que sirven para el tiempo litúrgico de hoy y que todavía no están en el
@@ -91,15 +95,15 @@ export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = 
    */
   const getSuggestedSongs = (): Song[] => {
     // En Cuaresma no se canta el Aleluya: no ofrecer cantos que lo anuncian.
-    const hoy = new Date();
     const fueraDeTiempo = (song: Song) =>
-      song.category === 'Aleluya' && isAlleluiaTitleInLent(song.title, hoy);
+      song.category === 'Aleluya' && isAlleluiaTitleInLent(song.title, fechaMisa);
 
-    return realSongs
+    // Los propios del tiempo primero: en Adviento, los etiquetados de Adviento.
+    return ordenarPorTiempo(realSongs
       .filter(song =>
-        songMatchesSeason(song, liturgicalSeason)
+        songMatchesSeason(song, liturgicalSeason, fechaMisa)
         && !fueraDeTiempo(song)
-        && !cantoral.some(c => c.id === song.id))
+        && !cantoral.some(c => c.id === song.id)), liturgicalSeason, fechaMisa)
       .slice(0, 4);
   };
 

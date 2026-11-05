@@ -13,7 +13,9 @@
  * ("Tiempo Ordinario" y "tiempo-ordinario" conviven) y hay etiquetas TEMÁTICAS
  * (Virgen María, Gregoriano) que no atan a ninguna época.
  */
-import { songMatchesSeason, songSeasons, seasonOfTag } from '../../src/utils/songSeason';
+import {
+  songMatchesSeason, songSeasons, seasonOfTag, esSemanaSanta, rangoDelTiempo, ordenarPorTiempo, tiemposDelCanto,
+} from '../../src/utils/songSeason';
 import type { Song } from '../../src/types';
 
 let pass = 0, fail = 0;
@@ -114,6 +116,38 @@ check('ninguno es de Navidad', enOrdinario.some(s => s.id === 'navidad-1'), fals
 check('ninguno es de Cuaresma', enOrdinario.some(s => s.id.startsWith('cuar-')), false);
 check('las cuatro primeras sugerencias son del tiempo correcto',
   enOrdinario.slice(0, 4).every(s => songMatchesSeason(s, 'Tiempo Ordinario')), true);
+
+// Pedido del 4-nov-2026: el constructor lista solo los cantos del tiempo de la Misa
+// (los de otros tiempos se encuentran buscándolos), los propios del tiempo van
+// primero, y los de Semana Santa valen solo esa semana.
+console.log('\n== Semana Santa ==');
+// Pascua 2027: 28 de marzo → Ramos el 21, Viernes Santo el 26.
+const ramos27 = new Date(2027, 2, 21), viernes27 = new Date(2027, 2, 26), cuar2 = new Date(2027, 1, 21);
+check('el Domingo de Ramos es Semana Santa', esSemanaSanta(ramos27), true);
+check('el Viernes Santo es Semana Santa', esSemanaSanta(viernes27), true);
+check('el 2.º domingo de Cuaresma no', esSemanaSanta(cuar2), false);
+check('el domingo de Pascua no', esSemanaSanta(new Date(2027, 2, 28)), false);
+const viernesSanto = conTemporadas('Viernes Santo');
+check('un canto de Viernes Santo no se ofrece el 2.º domingo de Cuaresma',
+  songMatchesSeason(viernesSanto, 'Cuaresma', cuar2), false);
+check('…sí en Semana Santa', songMatchesSeason(viernesSanto, 'Cuaresma', viernes27), true);
+check('sin fecha, como antes: toda la Cuaresma', songMatchesSeason(viernesSanto, 'Cuaresma'), true);
+check('un canto con Semana Santa y Cuaresma sirve toda la Cuaresma',
+  songMatchesSeason(conTemporadas('Cuaresma', 'Semana Santa'), 'Cuaresma', cuar2), true);
+
+console.log('\n== Lo propio del tiempo primero ==');
+const adv = new Date(2026, 10, 29);
+check('de Adviento en Adviento → 1', rangoDelTiempo(conTemporadas('Adviento'), 'Adviento', adv), 1);
+check('sin etiqueta → 2', rangoDelTiempo(canto(), 'Adviento', adv), 2);
+check('de Navidad en Adviento → 3 (solo buscándolo)', rangoDelTiempo(conTemporadas('Navidad'), 'Adviento', adv), 3);
+check('de Semana Santa en Semana Santa → 0',
+  rangoDelTiempo(conTemporadas('Cuaresma', 'Semana Santa'), 'Cuaresma', ramos27), 0);
+const mezcla = [canto({ id: 'todo' }), canto({ id: 'mar', liturgicalSeasons: ['Virgen María'] as any }),
+  canto({ id: 'adv', liturgicalSeasons: ['Adviento'] as any })];
+check('en Adviento el de Adviento va primero, el resto en su orden',
+  ordenarPorTiempo(mezcla, 'Adviento', adv).map(s => s.id), ['adv', 'todo', 'mar']);
+check('rótulo de los tiempos del canto',
+  tiemposDelCanto(conTemporadas('Navidad', 'Virgen María', 'Viernes Santo')), ['Navidad', 'Semana Santa']);
 
 console.log(`\n${pass} ok, ${fail} fallas`);
 if (fail > 0) process.exit(1);

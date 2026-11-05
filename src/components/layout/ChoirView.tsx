@@ -1015,6 +1015,7 @@ export function ChoirView({
             onPlaySong={playSongForThisMass}
             cantoral={cantoral}
             preferredInstrument={preferredInstrument}
+            massDate={massDate}
           />
         </div>
 
