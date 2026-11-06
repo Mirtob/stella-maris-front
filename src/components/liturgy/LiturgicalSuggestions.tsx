@@ -6,6 +6,8 @@ import { useSongs } from '../../hooks/useSongs';
 import { getCurrentLiturgicalSeason, isAlleluiaTitleInLent } from '../../utils/liturgicalSeason';
 import { songMatchesSeason, ordenarPorTiempo } from '../../utils/songSeason';
 import { parseYmdLocal } from '../../utils/dateLocal';
+import { usadoEnLaMisa } from '../../utils/cantoralParts';
+import { bloqueadoPorLaAnterior, type PreviousUsage } from '../../utils/previousUsage';
 import { filterByInstrument } from '../../utils/instrument';
 
 interface LiturgicalSuggestionsProps {
@@ -17,9 +19,11 @@ interface LiturgicalSuggestionsProps {
   preferredInstrument?: InstrumentType;
   /** Fecha de la Misa (YYYY-MM-DD): el tiempo se calcula contra ella, no contra hoy. */
   massDate?: string;
+  /** Uso en la Misa anterior: lo que fue su Entrada no se sugiere de Entrada. */
+  previousUsage?: PreviousUsage | null;
 }
 
-export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = [], preferredInstrument, massDate }: LiturgicalSuggestionsProps) {
+export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = [], preferredInstrument, massDate, previousUsage }: LiturgicalSuggestionsProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [autoScroll, setAutoScroll] = useState(true);
 
@@ -103,7 +107,8 @@ export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = 
       .filter(song =>
         songMatchesSeason(song, liturgicalSeason, fechaMisa)
         && !fueraDeTiempo(song)
-        && !cantoral.some(c => c.id === song.id)), liturgicalSeason, fechaMisa)
+        && !usadoEnLaMisa(cantoral, song.id)
+        && !bloqueadoPorLaAnterior(previousUsage, song.id, song.category)), liturgicalSeason, fechaMisa)
       .slice(0, 4);
   };
 
@@ -130,9 +135,7 @@ export function LiturgicalSuggestions({ onAddToCantoral, onPlaySong, cantoral = 
     setCurrentIndex((prev) => (prev - 1 + suggestedSongs.length) % suggestedSongs.length);
   };
 
-  const isInCantoral = (songId: string) => {
-    return cantoral.some(s => s.id === songId);
-  };
+  const isInCantoral = (songId: string) => usadoEnLaMisa(cantoral, songId);
 
   if (suggestedSongs.length === 0) {
     return null;

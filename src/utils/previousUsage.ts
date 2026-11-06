@@ -7,11 +7,26 @@ export interface UsageOccurrence {
   label: string;
   /** true = misma celebración ANUAL de otro año; false = ventana semanal reciente. */
   annual: boolean;
+  /** true = es la Misa anterior de la parroquia: esa ya no avisa, BLOQUEA (ver abajo). */
+  anterior?: boolean;
 }
 
 export interface PreviousUsage {
   byId: Record<string, { title: string; occ: UsageOccurrence[] }>;
+  /**
+   * La Misa anterior de la parroquia (la publicada más reciente antes de la fecha de
+   * la que se arma) y las partes donde se usó cada canto. Ver bloqueadoPorLaAnterior.
+   */
+  anterior?: { date: string; partes: Record<string, string[]> } | null;
 }
+
+/**
+ * Partes que rotan de una Misa a la siguiente (pedido del 4-nov-2026): un canto que
+ * fue la Entrada de la Misa anterior no puede volver a ser la Entrada, pero sí el
+ * Ofertorio o la Comunión. El ordinario, el salmo y el Aleluya quedan fuera: se
+ * mantienen a propósito durante un tiempo.
+ */
+export const PARTES_QUE_ROTAN = ['Entrada', 'Post Evangelio', 'Ofertorio', 'Comunión', 'Salida'];
 
 const baseId = (id: string) => (id || '').split('::')[0];
 const norm = (s?: string) =>
@@ -60,11 +75,33 @@ export function resolveAnnualTarget(todayYmd: string, selectedDate?: string | nu
  */
 export function computeUsage(
   cantorals: PublishedCantoral[],
-  opts: { excludeId?: string | null; todayYmd: string; weeks?: number; annualName?: string | null },
+  opts: {
+    excludeId?: string | null; todayYmd: string; weeks?: number; annualName?: string | null;
+    /** Fecha de la Misa que se arma: la anterior es la última publicada ANTES de ella. */
+    massYmd?: string | null;
+  },
 ): PreviousUsage {
   const weeks = opts.weeks ?? 4;
   const today = parseYmd(opts.todayYmd);
   const published = cantorals.filter((c) => c.status === 'published' && c.id !== opts.excludeId);
+
+  // La Misa anterior. Otra Misa del MISMO día (10:00 y 12:00) no cuenta: suelen
+  // compartir los cantos a propósito.
+  const hasta = opts.massYmd || opts.todayYmd;
+  const prev = published
+    .filter((c) => (opts.massYmd ? c.date < hasta : c.date <= hasta))
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))[0];
+  let anterior: PreviousUsage['anterior'] = null;
+  if (prev) {
+    const partes: Record<string, string[]> = {};
+    for (const s of prev.songs ?? []) {
+      const id = baseId(s.id);
+      if (!id || !s.category) continue;
+      (partes[id] ??= []);
+      if (!partes[id].includes(s.category)) partes[id].push(s.category);
+    }
+    anterior = { date: prev.date, partes };
+  }
 
   const byId: PreviousUsage['byId'] = {};
   const addCantoral = (c: PublishedCantoral, label: string, annual: boolean) => {
@@ -77,7 +114,7 @@ export function computeUsage(
       if (!byId[id]) byId[id] = { title: s.title, occ: [] };
     }
     for (const id of Object.keys(parts)) {
-      if (parts[id].length) byId[id].occ.push({ parts: parts[id], label, annual });
+      if (parts[id].length) byId[id].occ.push({ parts: parts[id], label, annual, anterior: c.id === prev?.id });
     }
   };
 
@@ -101,7 +138,18 @@ export function computeUsage(
     for (const c of annual) addCantoral(c, `${c.liturgicalDate} ${c.date.slice(0, 4)}`, true);
   }
 
-  return { byId };
+  return { byId, anterior };
+}
+
+/**
+ * ¿El canto queda bloqueado en esta parte porque fue ESA parte en la Misa anterior?
+ * Solo en las partes que rotan; en las demás partes sigue disponible.
+ */
+export function bloqueadoPorLaAnterior(
+  usage: PreviousUsage | null | undefined, songId: string, parte: string,
+): boolean {
+  if (!usage?.anterior || !PARTES_QUE_ROTAN.includes(parte)) return false;
+  return usage.anterior.partes[baseId(songId)]?.includes(parte) ?? false;
 }
 
 export function previousUseOf(usage: PreviousUsage | null | undefined, songId: string) {

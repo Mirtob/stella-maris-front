@@ -5,7 +5,7 @@ import { useSongs } from '../../hooks/useSongs';
 import { getCategoryColors } from '../../utils/colors';
 import { matchesSearch } from '../../utils/textSearch';
 import { songMatchesSeason, ordenarPorTiempo, rangoDelTiempo, tiemposDelCanto } from '../../utils/songSeason';
-import { estaEnParte, partesUsadas as usadoEnPartes, ordenarSugerencias } from '../../utils/cantoralParts';
+import { estaEnParte, partesUsadas as usadoEnPartes, ordenarSugerencias, usadoEnLaMisa } from '../../utils/cantoralParts';
 import { AddGloriaDialog } from '../cantoral/AddGloriaDialog';
 import { CasillaPartitura } from '../cantoral/CasillaPartitura';
 import { getCurrentLiturgicalSeason, isAlleluiaTitleInLent } from '../../utils/liturgicalSeason';
@@ -15,7 +15,7 @@ import { esInstrumental } from '../../utils/instrumental';
 import { parseYmdLocal } from '../../utils/dateLocal';
 import { isOrdinary } from '../../utils/ordinary';
 import { resolveOrdinarySheetMusic } from '../../utils/ordinarySheetMusic';
-import { previousUseOf, type PreviousUsage, type UsageOccurrence } from '../../utils/previousUsage';
+import { previousUseOf, bloqueadoPorLaAnterior, type PreviousUsage, type UsageOccurrence } from '../../utils/previousUsage';
 import { RepeatSongDialog } from '../cantoral/RepeatSongDialog';
 import { FavoriteButton } from './FavoriteButton';
 import { AtrilSongButton } from '../atril/AtrilSongButton';
@@ -95,18 +95,18 @@ export function CategorySearch({
   // guardados en el momento 'aleluya'.
   const categoryMoment = categoryToMoment(category);
 
-  /**
-   * ¿Este canto ya está usado EN ESTA PARTE de la Misa?
-   *
-   * Antes bastaba con estar en el cantoral, en cualquier parte: un canto etiquetado
-   * para Entrada, Comunión y Salida se bloqueaba entero al usarlo una vez. Ahora se
-   * bloquea solo aquí y sigue disponible en sus otras partes, hasta usarlo en todas.
-   */
+  /** ¿Este canto está agregado EN ESTA tarjeta? (para marcarlo «Agregado»). */
   const isInCantoral = (songId: string) =>
     partesDeLaTarjeta.some(p => estaEnParte(cantoral, songId, p));
 
   /** Partes de la Misa donde este canto YA se está usando (para avisarlo en la ficha). */
   const partesUsadas = (songId: string) => usadoEnPartes(cantoral, songId, category);
+
+  /** Fue ESTA parte en la Misa anterior: aquí no se repite, en sus otras partes sí. */
+  const fueLaAnterior = (song: Song) => bloqueadoPorLaAnterior(previousUsage, song.id, parteDe(song));
+  /** No se puede agregar aquí: ya está en esta Misa (en cualquier parte), o fue esta
+   *  parte en la Misa anterior (regla en utils/cantoralParts). */
+  const bloqueado = (song: Song) => usadoEnLaMisa(cantoral, song.id) || fueLaAnterior(song);
 
   /** Las partes que se eligen en esta tarjeta: la suya y sus alternativas. */
   const partesDeLaTarjeta = [category, ...partesAlternativas];
@@ -161,7 +161,8 @@ export function CategorySearch({
     const suggestedSongs = categorySongs.filter(song => songMatchesSeason(song, currentSeason, massDateObj));
 
     // Solo los del instrumento con el que se toca esta Misa
-    const forInstrument = filterByInstrument(suggestedSongs, preferredInstrument);
+    const forInstrument = filterByInstrument(suggestedSongs, preferredInstrument)
+      .filter(song => !fueLaAnterior(song));
 
     // Quita los ya usados EN ESTA parte (en otras siguen disponibles) y ofrece
     // primero el canto cuya parte PRINCIPAL es esta: un canto de Entrada que además
@@ -232,15 +233,20 @@ export function CategorySearch({
   };
 
   const handleAddSong = (rawSong: Song, skipRepeatCheck = false) => {
+    if (bloqueado(rawSong)) return;
+
     // ¿Ya se usó este canto en el cantoral anterior (la "semana pasada")? Avisamos para
     // fomentar variedad antes de agregarlo. En Adviento/Cuaresma sugerimos otra parte.
     // OJO: no avisamos en el ORDINARIO (Kyrie/Gloria/Santo/Cordero/Padre Nuestro): esas
     // partes se mantienen a propósito durante un tiempo litúrgico.
     const ORDINARY_PARTS = ['Kyrie', 'Gloria', 'Santo', 'Cordero de Dios', 'Padre Nuestro', 'Credo'];
     if (!skipRepeatCheck && !ORDINARY_PARTS.includes(category)) {
+      // La Misa anterior ya no se avisa: si fue esta parte, está bloqueado; si fue
+      // otra, usarlo aquí es justo la rotación que se busca.
       const prev = previousUseOf(previousUsage, rawSong.id);
-      if (prev && prev.occ.length) {
-        setPendingRepeat({ song: rawSong, occ: prev.occ, title: prev.title || rawSong.title });
+      const occ = prev?.occ.filter(o => !o.anterior) ?? [];
+      if (prev && occ.length) {
+        setPendingRepeat({ song: rawSong, occ, title: prev.title || rawSong.title });
         return;
       }
     }
@@ -699,10 +705,19 @@ export function CategorySearch({
                       )}
                       {/* Ya se usa en otra parte de la Misa: se puede usar aquí igual,
                           pero conviene saberlo antes de repetirlo. */}
+                      {/* Ya se usa en otra parte de esta Misa: un canto va una sola vez. */}
                       {!isInCantoral(song.id) && partesUsadas(song.id).length > 0 && (
-                        <div className="flex items-center gap-1 bg-amber-500/20 rounded-full px-2.5 py-1 border border-amber-500" title={`Ya está en: ${partesUsadas(song.id).join(', ')}`}>
+                        <div className="flex items-center gap-1 bg-amber-500/20 rounded-full px-2.5 py-1 border border-amber-500" title={`Ya está en: ${partesUsadas(song.id).join(', ')}. Para usarlo aquí, quítalo de allá.`}>
                           <span className="text-[11px] font-bold text-amber-800 dark:text-amber-200">
                             Ya en {partesUsadas(song.id).join(' y ')}
+                          </span>
+                        </div>
+                      )}
+                      {/* Fue esta parte en la Misa anterior: rota a otra parte. */}
+                      {!usadoEnLaMisa(cantoral, song.id) && fueLaAnterior(song) && (
+                        <div className="flex items-center gap-1 bg-slate-500/20 rounded-full px-2.5 py-1 border border-slate-500" title="Se puede usar en otra parte de esta Misa">
+                          <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200">
+                            Fue {['Entrada', 'Comunión', 'Salida'].includes(parteDe(song)) ? 'la' : 'el'} {parteDe(song)} de la Misa anterior
                           </span>
                         </div>
                       )}
@@ -720,7 +735,7 @@ export function CategorySearch({
                         Ver Detalles
                       </button>
 
-                      {!isInCantoral(song.id) && (
+                      {!bloqueado(song) && (
                         <button
                           onClick={() => handleAddSong(song)}
                           className="bg-gradient-to-br from-green-600 to-green-700 text-white py-3 px-5 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold border-2 border-green-800 shadow-md hover:shadow-lg hover:from-green-700 hover:to-green-800"

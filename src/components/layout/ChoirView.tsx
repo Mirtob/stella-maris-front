@@ -542,9 +542,12 @@ export function ChoirView({
       todayYmd: today,
       weeks: 4,
       annualName: annual?.name ?? null,
+      // La Misa anterior se cuenta desde la fecha de ESTA Misa: lo que fue su Entrada
+      // no vuelve a ser la Entrada (utils/previousUsage, bloqueadoPorLaAnterior).
+      massYmd: massDate,
     });
     // `celebrations` es estable durante la sesión (depende solo de hoy).
-  }, [parishCantorals, editingCantoralId, selectedCelebration]);
+  }, [parishCantorals, editingCantoralId, selectedCelebration, massDate]);
 
   // La aspersión aplica en tiempo pascual; si se está preparando la Vigilia o el
   // Domingo de Resurrección, también (aunque hoy aún sea Cuaresma).
@@ -1016,6 +1019,7 @@ export function ChoirView({
             cantoral={cantoral}
             preferredInstrument={preferredInstrument}
             massDate={massDate}
+            previousUsage={previousUsage}
           />
         </div>
 

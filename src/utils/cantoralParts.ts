@@ -2,19 +2,29 @@
  * Un canto, varias partes de la Misa.
  *
  * Un canto puede llevar etiquetas de más de una parte (p. ej. principal Comunión y
- * además Entrada y Ofertorio). La regla del constructor:
+ * además Entrada y Ofertorio). La regla del constructor (pedido del 4-nov-2026):
  *
- *  - Se ocupa por PARTE, no por canto: usarlo en Entrada lo bloquea SOLO en Entrada,
- *    y sigue disponible en Comunión y Ofertorio hasta que se use en todas.
- *  - Se sugiere primero en su etiqueta principal; una vez usado ahí, pasa a asomar
- *    en las secundarias. Así el ciclo se recorre sin que el coro tenga que pensarlo.
+ *  - En UNA Misa, un canto se usa una sola vez: elegido de Entrada, queda bloqueado
+ *    en todas las demás partes de esa Misa (usadoEnLaMisa).
+ *  - De una Misa a la siguiente rota: el que fue la Entrada no puede volver a ser la
+ *    Entrada, pero sí el Ofertorio o la Comunión (bloqueadoPorLaAnterior, en
+ *    utils/previousUsage).
+ *  - Se sugiere primero en su etiqueta principal.
  *
- * La identidad de un canto dentro del cantoral es, por tanto, el par (id, parte):
- * el mismo id puede aparecer dos veces en partes distintas y son cosas distintas.
+ * (Hasta el 4-nov-2026 se bloqueaba solo la parte donde se usó y el mismo canto podía
+ * ser Entrada y Comunión de la misma Misa.)
  */
 import type { Song } from '../types';
 
-/** ¿Este canto ya se usa EN ESTA parte? (lo que bloquea el botón "Agregar"). */
+/** El canto sin el sufijo de esta Misa («<id>::aclamacion-…» es el mismo canto). */
+const baseId = (id: string) => (id || '').split('::')[0];
+
+/** ¿Este canto ya se usa en ALGUNA parte de esta Misa? Entonces no se puede repetir. */
+export function usadoEnLaMisa(cantoral: Song[], songId: string): boolean {
+  return cantoral.some(s => baseId(s.id) === baseId(songId));
+}
+
+/** ¿Este canto ya se usa EN ESTA parte? (para marcarlo «Agregado» en su tarjeta). */
 export function estaEnParte(cantoral: Song[], songId: string, parte: string): boolean {
   return cantoral.some(s => s.id === songId && s.category === parte);
 }
@@ -42,7 +52,7 @@ export function rangoSugerencia(
   return (esPrincipal ? 0 : 2) + (partesUsadas(cantoral, song.id, parte).length > 0 ? 1 : 0);
 }
 
-/** Sugerencias de una parte: quita lo ya usado AQUÍ y ordena por preferencia. */
+/** Sugerencias de una parte: quita lo ya usado en la Misa y ordena por preferencia. */
 export function ordenarSugerencias(
   songs: Song[],
   parte: string,
@@ -50,7 +60,7 @@ export function ordenarSugerencias(
   cantoral: Song[],
 ): Song[] {
   return songs
-    .filter(song => !estaEnParte(cantoral, song.id, parte))
+    .filter(song => !usadoEnLaMisa(cantoral, song.id))
     .map((song, i) => ({ song, i }))
     .sort((a, b) =>
       rangoSugerencia(a.song, parte, parteMoment, cantoral)
