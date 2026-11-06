@@ -3,7 +3,7 @@ import QRCode from 'qrcode';
 import { PublishedCantoral, Song } from '../types';
 import { coloresDelFolleto } from './coloresFolleto';
 import { formatYmdForDisplay } from './dateLocal';
-import { fechaEnQueSeCanta, MASS_TYPE_LABEL, resolveMassType } from './massType';
+import { fechaEnQueSeCanta, resolveMassType } from './massType';
 import { recortarConElipsis } from './pdfText';
 import { getChannelUrl } from '../services/youtube';
 import logoStellaMaris from 'figma:asset/44767b9307cb7c59bba6fc5a03063ff51488551e.png';
@@ -18,8 +18,9 @@ import { sortCategoriesByMassOrder, isOrdinary, grupoDePartitura, rotuloDeParte,
 import { resolveSheetForFolleto } from './ordinarySheetMusic';
 import { ponerCantosAlDia } from '../services/catalogoVigente';
 import { getDrivePdfProxyUrl } from './driveProxy';
-import { getCelebrationsForDate } from './liturgicalCalendar';
+import { getCelebrationsForDate, rangoDeCelebracion } from './liturgicalCalendar';
 import { celebracionesDePortada } from './celebracionesPortada';
+import { lugarDePortada, repartirPortada, tituloDePortada, type LineaDePortada } from './portadaFolleto';
 import { cantoralParaElPueblo } from './instrumental';
 
 interface PDFGeneratorOptions {
@@ -489,7 +490,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   const fontFamily = getPdfFont(cantoral.pdfFont).jsFont;
   // `scale` NO es constante: el cuerpo del folleto se rearma con una escala menor si
   // con la elegida no cabría en una sola hoja (ver "ajuste a una hoja" más abajo). La
-  // portada se dibuja antes, siempre con la escala elegida por quien publica.
+  // portada no la usa: su letra se ajusta sola al espacio (ver utils/portadaFolleto).
   const escalaBase = getPdfScale(cantoral.pdfSize);
   let scale = escalaBase;
   const adv = (n: number) => n * scale; // escala los avances verticales (interlineado)
@@ -569,8 +570,8 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   };
 
   // ─── PORTADA ───
-  // Guirnalda completa arriba y abajo; todo el texto centrado horizontal y
-  // verticalmente en el espacio entre ambas.
+  // Guirnalda completa arriba y abajo; entre ambas, cuatro bloques centrados que llenan
+  // el espacio: el encabezado, la celebración, la fecha y hora, y el lugar.
   // parseYmdLocal, no new Date(): 'YYYY-MM-DD' se parsea como medianoche UTC y en
   // Chile (UTC-4) eso cae el día anterior — la portada salía con la fecha de ayer.
   //
@@ -580,7 +581,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   // sábado. El nombre de la celebración sí sigue siendo el del domingo, y el color y
   // el tiempo litúrgico se siguen sacando de `cantoral.date`.
   const formattedDate = formatYmdForDisplay(fechaEnQueSeCanta(cantoral));
-  const tipoMisa = MASS_TYPE_LABEL[resolveMassType(cantoral)];
+  const tipoMisa = resolveMassType(cantoral);
 
   // Lo que se celebra ADEMÁS ese día, y la celebración que quedó desplazada por esta.
   // El constructor ya lo decía en pantalla; la portada no, y era justo donde hacía
@@ -601,44 +602,44 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
     coverBottom = pageH - 16 - gH;
   }
 
-  type CoverLine = { t: string; s: number; b: boolean; c: [number, number, number]; h: number };
-  const coverLines: CoverLine[] = ([
-    { t: 'Cantoral de la Misa', s: 24, b: true, c: colors.primary, h: 14 },
-    { t: `Tiempo: ${colors.seasonName}`, s: 11, b: false, c: colors.primary, h: 9 },
-    { t: cleanText(cantoral.liturgicalDate), s: 16, b: false, c: [80, 80, 80], h: 11 },
-    // Un domingo que desaparece sin explicación se lee como un error de la app.
-    { t: enLugarDe ? cleanText(`En lugar de ${enLugarDe}`) : '', s: 10, b: false, c: [130, 130, 130] as [number, number, number], h: 8 },
-    { t: tambienSeCelebra.length > 0 ? cleanText(`También se celebra: ${tambienSeCelebra.join(' · ')}`) : '', s: 11, b: false, c: [100, 100, 100] as [number, number, number], h: 8 },
-    { t: cleanText(formattedDate), s: 12, b: false, c: [100, 100, 100], h: 9 },
-    // Se nombra el tipo cuando no es la Misa del día: sin esto, la portada de una Misa
-    // del sábado por la tarde no explica por qué la celebración es la del domingo.
-    // Cadena vacía (no null) para que la quite el .filter de abajo, como la del coro.
-    { t: resolveMassType(cantoral) !== 'dia' ? cleanText(tipoMisa) : '', s: 11, b: false, c: [120, 120, 120] as [number, number, number], h: 8 },
-    { t: cleanText(cantoral.massTime), s: 14, b: true, c: [60, 60, 60], h: 14 },
-    { t: cleanText(cantoral.parishName), s: 12, b: false, c: [80, 80, 80], h: 8 },
-    { t: cantoral.choirName ? `Coro: ${cleanText(cantoral.choirName)}` : '', s: 11, b: false, c: [80, 80, 80], h: 8 },
-  ] as CoverLine[]).filter(l => l.t.trim() !== '');
+  const tituloMisa = tituloDePortada(
+    cantoral.liturgicalDate, tipoMisa, rangoDeCelebracion(cantoral.liturgicalDate, cantoral.date));
+  const lugar = lugarDePortada(cantoral.parishName);
+  const gris = (n: number): [number, number, number] => [n, n, n];
 
-  // Cada línea se parte en las que hagan falta para no salirse de la hoja: el nombre
-  // de una celebración puede ser largo ("Solemnidad de …, patronos de la parroquia") y
-  // antes se escribía de corrido, pasándose de los dos bordes. Se mide con la fuente y
-  // el tamaño de esa línea, que es lo que decide dónde corta.
-  const anchoUtil = pageW - margin * 2;
-  const lineasPortada = coverLines.flatMap((l) => {
-    pdf.setFont('helvetica', l.b ? 'bold' : 'normal');
-    pdf.setFontSize(l.s);
-    const partes = pdf.splitTextToSize(l.t, anchoUtil) as string[];
-    return partes.map(t => ({ ...l, t }));
-  });
+  const bloquesPortada: LineaDePortada[][] = [
+    [{ texto: 'Cantoral para la Misa de', puntos: 19, color: colors.primary }],
+    [
+      { texto: cleanText(tituloMisa), puntos: 30, negrita: true, color: colors.primary, parejo: true },
+      // Un domingo que desaparece sin explicación se lee como un error de la app.
+      { texto: enLugarDe ? cleanText(`En lugar de ${enLugarDe}`) : '', puntos: 10, color: gris(130) },
+      { texto: tambienSeCelebra.length > 0 ? cleanText(`También se celebra: ${tambienSeCelebra.join(' · ')}`) : '', puntos: 10, color: gris(100) },
+    ],
+    [
+      { texto: cleanText(formattedDate), puntos: 15, color: gris(80) },
+      { texto: cleanText(cantoral.massTime), puntos: 17, negrita: true, color: gris(60) },
+    ],
+    [
+      ...lugar.parroquia.map((texto): LineaDePortada => ({ texto: cleanText(texto), puntos: 14, color: gris(80) })),
+      { texto: cleanText(lugar.diocesis), puntos: 12, color: gris(100) },
+    ],
+  ];
 
-  const totalH = lineasPortada.reduce((s, l) => s + adv(l.h), 0);
-  let cy = coverTop + Math.max(0, (coverBottom - coverTop - totalH) / 2);
-  for (const line of lineasPortada) {
-    pdf.setFont('helvetica', line.b ? 'bold' : 'normal');
-    pdf.setFontSize(line.s);
-    pdf.setTextColor(...line.c);
-    pdf.text(line.t, pageW / 2, cy + adv(line.h) * 0.72, { align: 'center' });
-    cy += adv(line.h);
+  // Se mide con la fuente real y el tamaño sin escalar: la portada calcula el suyo.
+  const fijarFuentePortada = (puntos: number, negrita: boolean) => {
+    pdf.setFont('helvetica', negrita ? 'bold' : 'normal');
+    _setFontSize(puntos);
+  };
+  const lineasPortada = repartirPortada(
+    bloquesPortada,
+    (t, puntos, negrita) => { fijarFuentePortada(puntos, negrita); return pdf.getTextWidth(t); },
+    pageW - margin * 2,
+    coverBottom - coverTop,
+  );
+  for (const l of lineasPortada) {
+    fijarFuentePortada(l.puntos, l.negrita);
+    pdf.setTextColor(...l.color);
+    pdf.text(l.texto, pageW / 2, coverTop + l.y, { align: 'center' });
   }
 
   // ─── CUERPO DEL FOLLETO: DOS COLUMNAS CONTINUAS ───

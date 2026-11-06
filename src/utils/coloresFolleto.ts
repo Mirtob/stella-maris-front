@@ -7,7 +7,7 @@ export interface ColoresFolleto {
   primary: [number, number, number];   // color principal (cabeceras, líneas)
   light: [number, number, number];     // fondo claro
   textOnPrimary: [number, number, number]; // texto sobre primary
-  /** El tiempo litúrgico, para la portada ("Tiempo: Tiempo Ordinario"). */
+  /** El nombre del tiempo litúrgico. La portada ya no lo imprime (6-nov-2026). */
   seasonName: string;
 }
 

@@ -226,6 +226,19 @@ export function getLiturgicalDateForDate(date: string, customDates?: LiturgicalD
   return getCelebrationsForDate(date, customDates).principal;
 }
 
+/**
+ * El rango de una celebración según el calendario. `null` si no figura en él: las
+ * agregadas a mano no cuentan, porque se guardan todas como 'feast' sin que nadie lo elija.
+ */
+export function rangoDeCelebracion(nombre: string, fecha: string): LiturgicalDate['type'] | null {
+  const delDia = byDate.get(fecha);
+  const hit = delDia?.name === nombre ? delDia : GEN.find((e) => e.name === nombre);
+  if (hit) return genToLitDate(hit).type;
+  const year = parseYmdLocal(fecha).getFullYear();
+  if (inGeneratedRange(year)) return null;
+  return calculateLiturgicalYear(year).find((d) => d.name === nombre)?.type ?? null;
+}
+
 /** Fecha 'YYYY-MM-DD' de una celebración por nombre, dentro (o cerca) de un año. */
 export function getDateForLiturgicalName(name: string, year: number, customDates?: LiturgicalDate[]): string | null {
   const custom = mergeCustom(customDates).find((d) => d.name === name);
