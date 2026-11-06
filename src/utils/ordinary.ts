@@ -227,7 +227,7 @@ export function grupoDePartitura(song: Pick<Song, 'id' | 'category'>): GrupoPart
 }
 
 /** El texto latino de la parte, para el gregoriano que va "solo letra" (no trae letra). */
-function letraLatina(category: string): string | undefined {
+export function letraLatina(category: string): string | undefined {
   // El Credo cantado del ordinario sólo trae el comienzo; el texto entero está en el
   // Credo rezado ('creed'), que no lleva categoría.
   if (category === 'Credo') return massOrdinary.find((m) => m.id === 'creed')?.latin;

@@ -120,7 +120,7 @@ const RESERVA_TITULO = 22;
  * que la pauta no quede ahogada contra el borde. Si la imagen es toda blanca o el
  * canvas no se deja leer, devuelve la original: recortar es una mejora, no un requisito.
  */
-async function recortarMargenes(img: HTMLImageElement): Promise<HTMLImageElement | null> {
+export async function recortarMargenes(img: HTMLImageElement): Promise<HTMLImageElement | null> {
   const AIRE = 8;
   const UMBRAL = 245;           // por encima de esto es papel, no tinta
   try {
@@ -167,7 +167,7 @@ async function recortarMargenes(img: HTMLImageElement): Promise<HTMLImageElement
   }
 }
 
-async function loadImage(src: string): Promise<HTMLImageElement | null> {
+export async function loadImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -278,7 +278,7 @@ function drawJustifiedLine(pdf: any, text: string, x: number, y: number, width: 
  * jsPDF (fuentes default) solo soporta Latin-1.
  * Eliminar/reemplazar todo lo que rompe: emojis, comillas tipográficas, guiones largos, etc.
  */
-function cleanText(text: string): string {
+export function cleanText(text: string): string {
   if (!text) return '';
   return text
     // Comillas tipográficas → simples
@@ -394,7 +394,7 @@ function drawStyledLines(pdf: any, lines: StyledWord[][], x: number, yStart: num
   return y;
 }
 
-function cleanLyrics(lyrics: string): string {
+export function cleanLyrics(lyrics: string): string {
   if (!lyrics) return '';
 
   // NOTA: se CONSERVAN los marcadores de formato (**negrita**, *cursiva*, __subrayado__,
