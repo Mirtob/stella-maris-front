@@ -97,6 +97,12 @@ export interface LineaDePortada {
   color: Color;
   /** Reparte los renglones parejos, sin dejar una palabra sola en el último. */
   parejo?: boolean;
+  /**
+   * Tope del alto (fracción del área) que puede ocupar esta línea con todos sus
+   * renglones. Si se pasa, se achica TODA la portada —no solo esta línea— para que las
+   * proporciones entre título, fecha y lugar sigan siendo las mismas.
+   */
+  altoMaximo?: number;
 }
 
 export interface LineaColocada {
@@ -169,6 +175,7 @@ export function repartirPortada(
       const mide = (t: string) => medir(t, puntos, negrita);
       const renglones = (l.parejo ? partirParejo : partir)(l.texto, ancho, mide);
       if (renglones.some((r) => mide(r) > ancho)) cabe = false;
+      if (l.altoMaximo && renglones.length * altoDeLinea(puntos) > alto * l.altoMaximo) cabe = false;
       return renglones.map((texto) => ({ texto, puntos, negrita, color: l.color }));
     }));
     const total = armados.flat().reduce((s, l) => s + altoDeLinea(l.puntos), 0);
@@ -195,3 +202,10 @@ export function repartirPortada(
   }
   return colocadas;
 }
+
+/**
+ * Lo más que puede ocupar el título principal del alto de la portada. Un nombre corto
+ * nunca llega (sale grande, en dos renglones); uno largo ya no se estira a cuatro o
+ * cinco renglones enormes: la portada entera se achica pareja y gana aire.
+ */
+export const TITULO_ALTO_MAXIMO = 0.26;

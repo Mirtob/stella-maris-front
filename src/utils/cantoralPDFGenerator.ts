@@ -20,7 +20,7 @@ import { ponerCantosAlDia } from '../services/catalogoVigente';
 import { getDrivePdfProxyUrl } from './driveProxy';
 import { getCelebrationsForDate, rangoDeCelebracion } from './liturgicalCalendar';
 import { celebracionesDePortada } from './celebracionesPortada';
-import { lugarDePortada, repartirPortada, tituloDePortada, type LineaDePortada } from './portadaFolleto';
+import { lugarDePortada, repartirPortada, tituloDePortada, TITULO_ALTO_MAXIMO, type LineaDePortada } from './portadaFolleto';
 import { cantoralParaElPueblo } from './instrumental';
 
 interface PDFGeneratorOptions {
@@ -610,7 +610,7 @@ export async function generateCantoralPDF(options: PDFGeneratorOptions): Promise
   const bloquesPortada: LineaDePortada[][] = [
     [{ texto: 'Cantoral para la Misa de', puntos: 19, color: colors.primary }],
     [
-      { texto: cleanText(tituloMisa), puntos: 30, negrita: true, color: colors.primary, parejo: true },
+      { texto: cleanText(tituloMisa), puntos: 30, negrita: true, color: colors.primary, parejo: true, altoMaximo: TITULO_ALTO_MAXIMO },
       // Un domingo que desaparece sin explicación se lee como un error de la app.
       { texto: enLugarDe ? cleanText(`En lugar de ${enLugarDe}`) : '', puntos: 10, color: gris(130) },
       { texto: tambienSeCelebra.length > 0 ? cleanText(`También se celebra: ${tambienSeCelebra.join(' · ')}`) : '', puntos: 10, color: gris(100) },

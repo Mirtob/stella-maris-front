@@ -29,6 +29,8 @@ interface PublishedCantoralsProps {
   /** La parroquia activa es una VISITA (no es del perfil). Cambia los textos:
    *  aquí no es "tu coro" ni "tu parroquia". Ver utils/parishVisit. */
   visiting?: boolean;
+  /** De visita con sesión de Coro: se ve como el Pueblo fiel, pero con Modo Atril. */
+  atrilDeVisita?: boolean;
   /** Editar un cantoral publicado (solo Coro/Admin). */
   onEdit?: (cantoralId: string) => void;
   /** Clonar: usar este cantoral como base para una Misa nueva (solo Coro/Admin). */
@@ -53,7 +55,7 @@ const secondaryActionBtn =
 const iconManageBtn =
   'w-11 h-11 flex-shrink-0 bg-white/60 dark:bg-white/5 text-blue-900 dark:text-blue-100 border border-blue-200/70 dark:border-white/10 rounded-lg flex items-center justify-center active:scale-95 transition-all';
 
-export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onListen, userRole, userInstrument, userVoicePart, userParishName, visiting = false, onEdit, onClone, onDelete, onShare }: PublishedCantoralsProps) {
+export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onListen, userRole, userInstrument, userVoicePart, userParishName, visiting = false, atrilDeVisita = false, onEdit, onClone, onDelete, onShare }: PublishedCantoralsProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewingOrdinary, setViewingOrdinary] = useState<string | null>(null);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
@@ -66,6 +68,8 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
   const [pdfCantoral, setPdfCantoral] = useState<PublishedCantoral | null>(null);
   // Coro y Admin pueden gestionar (editar/eliminar); el Pueblo fiel solo ve.
   const canManage = userRole !== 'Pueblo fiel';
+  // El Modo Atril es del coro: en casa por su rol y, de visita, por su sesión de Coro.
+  const puedeAtril = userRole === 'Coro' || atrilDeVisita;
   const pendingDeleteCantoral = pendingDeleteId ? cantorals.find(c => c.id === pendingDeleteId) : null;
   // Filtros del archivo (solo Coro)
   const [archiveParish, setArchiveParish] = useState<string>('all');
@@ -267,7 +271,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
 
             {/* Modo Atril — solo Coro: leer el repertorio de esta Misa como un solo
                 documento (partituras si es Órgano, letra con acordes si es Guitarra). */}
-            {userRole === 'Coro' && (
+            {puedeAtril && (
               <button
                 onClick={() => setAtrilCantoral(cantoral)}
                 className="w-full bg-gradient-to-br from-slate-700 to-slate-900 text-white py-3.5 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-base font-bold shadow-lg border-2 border-slate-600"
@@ -567,7 +571,7 @@ export function PublishedCantorals({ cantorals, loading = false, onPlaySong, onL
   return (
     <div className="w-full max-w-md md:max-w-2xl mx-auto min-h-screen p-4 sm:p-5 md:p-6 pb-24 bg-gradient-to-br from-amber-100 via-amber-50 to-orange-100 dark:from-slate-900 dark:via-blue-950 dark:to-indigo-950 transition-colors">
       {/* Modo Atril de un cantoral publicado (solo Coro). Overlay a pantalla completa. */}
-      {atrilCantoral && userRole === 'Coro' && (
+      {atrilCantoral && puedeAtril && (
         <AtrilMode
           songs={atrilCantoral.songs}
           userRole="Coro"

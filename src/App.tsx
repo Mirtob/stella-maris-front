@@ -1674,10 +1674,13 @@ function AppContent() {
   // cantorales es del coro de casa (y la RLS lo bloquea igual), así que ni siquiera
   // se ofrecen los botones. Ver utils/parishVisit.
   const deVisita = esVisita(userProfile);
+  // Pero el miembro del coro que visita sigue leyendo como coro: ve la misma lista
+  // que el Pueblo fiel (sin gestión) y además el Modo Atril de cada cantoral.
+  const visitaComoCoro = deVisita && effectiveRole === 'Coro';
   if (deVisita) effectiveRole = 'Pueblo fiel';
   // Lo que ve el Pueblo fiel no trae las obras instrumentales (bronces, elevación):
   // son material del coro. Ver utils/instrumental.
-  const cantoralesDelRol = effectiveRole === 'Pueblo fiel'
+  const cantoralesDelRol = effectiveRole === 'Pueblo fiel' && !visitaComoCoro
     ? publishedCantorals.map(cantoralParaElPueblo)
     : publishedCantorals;
 
@@ -1804,6 +1807,7 @@ function AppContent() {
             view,
             userProfile,
             effectiveRole,
+            visitaComoCoro,
             isVerifiedAdmin,
             isSongAdmin,
             activeParishName,
@@ -1866,6 +1870,8 @@ interface ViewProps {
   view: ViewState;
   userProfile: UserProfile;
   effectiveRole: UserRole;
+  /** De visita en otra parroquia con sesión de Coro: lista del Pueblo fiel + Modo Atril. */
+  visitaComoCoro: boolean;
   isVerifiedAdmin: boolean;
   /** Admin limitado al catálogo de cantos (ayuda a subir y transcribir). */
   isSongAdmin: boolean;
@@ -1939,6 +1945,7 @@ function renderView(p: ViewProps): ReactElement | null {
             userVoicePart={effectiveVoicePart(p.userProfile.voicePart, p.userProfile.instrument)}
             userParishName={p.activeParishName}
             visiting={esVisita(p.userProfile)}
+            atrilDeVisita={p.visitaComoCoro}
             // El Pueblo fiel puede compartir el QR (no editar/eliminar).
             onShare={p.onShareCantoral}
           />
@@ -1975,6 +1982,7 @@ function renderView(p: ViewProps): ReactElement | null {
           userInstrument={p.userProfile.instrument}
           userParishName={p.activeParishName}
           visiting={esVisita(p.userProfile)}
+          atrilDeVisita={p.visitaComoCoro}
           // Editar/Eliminar solo Coro/Admin; Compartir (QR) lo puede usar también el Pueblo fiel.
           // "Usar como base" (clonar) va SOLO en el Historial (los publicados duran poco).
           onEdit={p.effectiveRole !== 'Pueblo fiel' ? p.onEditCantoral : undefined}

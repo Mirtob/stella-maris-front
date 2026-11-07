@@ -4,7 +4,7 @@
  * HU (6-nov-2026): «Cantoral para la Misa de» / tipo de Misa + celebración / fecha y hora /
  * parroquia y diócesis, centrados y ocupando todo el espacio. El coro ya no va.
  */
-import { conPreposicion, lugarDePortada, repartirPortada, tituloDePortada } from '../../src/utils/portadaFolleto';
+import { conPreposicion, lugarDePortada, repartirPortada, tituloDePortada, TITULO_ALTO_MAXIMO } from '../../src/utils/portadaFolleto';
 import { rangoDeCelebracion } from '../../src/utils/liturgicalCalendar';
 
 let pass = 0, fail = 0;
@@ -106,6 +106,24 @@ for (const [nombre, titulo] of [
 const parejo = repartirPortada(bloques('I Vísperas de la Solemnidad de Jesucristo, Rey del Universo'), medir, 180, 170)
   .filter((x) => x.negrita);
 check('sin palabra suelta en el último renglón', parejo[parejo.length - 1].texto.includes(' '), true);
+
+console.log('\n== Un título largo no se agiganta ==');
+{
+  const conTope = (titulo: string) => [
+    [{ texto: 'Cantoral para la Misa de', puntos: 19, color: negro }],
+    [{ texto: titulo, puntos: 30, negrita: true, color: negro, parejo: true, altoMaximo: TITULO_ALTO_MAXIMO }],
+    [{ texto: 'domingo, 22 de noviembre de 2026', puntos: 15, color: negro }],
+  ];
+  const largo = 'Misa del día de la Solemnidad de San Pedro y San Pablo, Apóstoles, patronos de la parroquia';
+  const l = repartirPortada(conTope(largo), medir, 180, 190);
+  const titulo = l.filter((x) => x.negrita);
+  const altoTitulo = titulo.reduce((s, x) => s + x.puntos * 0.3528 * 1.22, 0);
+  check('el título largo no pasa su tope de alto', altoTitulo <= 190 * TITULO_ALTO_MAXIMO + 0.01, true);
+  // Se achica toda la portada pareja: el título sigue 30/19 veces la primera línea.
+  check('la proporción con el encabezado se mantiene', Math.abs(titulo[0].puntos / l[0].puntos - 30 / 19) < 0.001, true);
+  const corto = repartirPortada(conTope('Misa del día de Pentecostés'), medir, 180, 190).filter((x) => x.negrita);
+  check('el corto sigue más grande que el largo', corto[0].puntos > titulo[0].puntos, true);
+}
 
 console.log(`\n${pass} ok, ${fail} con fallas`);
 if (fail) process.exit(1);
