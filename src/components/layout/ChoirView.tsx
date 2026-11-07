@@ -545,9 +545,11 @@ export function ChoirView({
       // La Misa anterior se cuenta desde la fecha de ESTA Misa: lo que fue su Entrada
       // no vuelve a ser la Entrada (utils/previousUsage, bloqueadoPorLaAnterior).
       massYmd: massDate,
+      // Cada parroquia (o capilla) rota por su cuenta: lo publicado en otra no cuenta.
+      parroquia: destino,
     });
     // `celebrations` es estable durante la sesión (depende solo de hoy).
-  }, [parishCantorals, editingCantoralId, selectedCelebration, massDate]);
+  }, [parishCantorals, editingCantoralId, selectedCelebration, massDate, destino]);
 
   // La aspersión aplica en tiempo pascual; si se está preparando la Vigilia o el
   // Domingo de Resurrección, también (aunque hoy aún sea Cuaresma).

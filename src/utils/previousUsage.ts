@@ -79,11 +79,19 @@ export function computeUsage(
     excludeId?: string | null; todayYmd: string; weeks?: number; annualName?: string | null;
     /** Fecha de la Misa que se arma: la anterior es la última publicada ANTES de ella. */
     massYmd?: string | null;
+    /**
+     * Parroquia (o capilla) donde se publicará la Misa que se arma. Cada comunidad lleva
+     * su propia rotación: la Salida de ayer en Pirque no impide usarla mañana en
+     * Valdivia de Paine. Sin ella se cuentan todos (compatibilidad).
+     */
+    parroquia?: string | null;
   },
 ): PreviousUsage {
   const weeks = opts.weeks ?? 4;
   const today = parseYmd(opts.todayYmd);
-  const published = cantorals.filter((c) => c.status === 'published' && c.id !== opts.excludeId);
+  const destino = norm(opts.parroquia ?? '');
+  const published = cantorals.filter((c) => c.status === 'published' && c.id !== opts.excludeId
+    && (!destino || norm(c.parishName) === destino));
 
   // La Misa anterior. Otra Misa del MISMO día (10:00 y 12:00) no cuenta: suelen
   // compartir los cantos a propósito.

@@ -124,5 +124,19 @@ check('editando la Misa anterior, no se bloquea contra sí misma',
 check('sin Misa anterior, nada bloqueado',
   bloqueadoPorLaAnterior(computeUsage([], { todayYmd: '2026-11-04', massYmd: '2026-11-08' }), 'akathistos', 'Entrada'), false);
 
+console.log('\n== Cada parroquia rota por su cuenta ==');
+const enParroquia = (c: PublishedCantoral, parishName: string) => ({ ...c, parishName }) as PublishedCantoral;
+const pirque = enParroquia(misa('p1', '2026-11-07', [EN_PARTE(soloEntrada, 'Salida')]), 'Parroquia Pirque - Diócesis X');
+const valdivia = enParroquia(misa('v1', '2026-11-01', [EN_PARTE(akathistos, 'Salida')]), 'Parroquia Valdivia - Diócesis X');
+const usoValdivia = computeUsage([pirque, valdivia],
+  { todayYmd: '2026-11-07', massYmd: '2026-11-08', parroquia: 'parroquia valdivia - diócesis x ' });
+check('la Salida publicada en otra parroquia no bloquea',
+  bloqueadoPorLaAnterior(usoValdivia, 'solo-entrada', 'Salida'), false);
+check('la anterior es la de ESTA parroquia, aunque haya otra más reciente',
+  bloqueadoPorLaAnterior(usoValdivia, 'akathistos', 'Salida'), true);
+check('en la misma parroquia sí bloquea',
+  bloqueadoPorLaAnterior(computeUsage([pirque, valdivia],
+    { todayYmd: '2026-11-07', massYmd: '2026-11-08', parroquia: 'Parroquia Pirque - Diócesis X' }), 'solo-entrada', 'Salida'), true);
+
 console.log(`\n${pass} ok, ${fail} fallas`);
 if (fail > 0) process.exit(1);
